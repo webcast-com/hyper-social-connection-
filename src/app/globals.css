@@ -1,2 +1,6 @@
 @import "tailwindcss";
-.dark { background: #111; color: #fff; }
+.dark { background: #0f172a; color: #f8fafc; }
+.dark body { background: #0f172a; color: #f8fafc; }
+.dark .bg-white { background: #1e293b; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .border-gray-200 { border-color: #334155; }
