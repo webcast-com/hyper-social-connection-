@@ -7,7 +7,7 @@ import { notifications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getViewer } from '@/lib/viewer';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Hyper',
