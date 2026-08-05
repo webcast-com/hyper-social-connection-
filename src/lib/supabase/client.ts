@@ -1,1 +1,1 @@
-export const supabaseConfig = { url: 'https://xyz.supabase.co', anonKey: 'key' };
+export const supabaseConfig = { url: 'https://pjzhjzqzmajbastavmkd.supabase.co', anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqemhqenF6bWFqYmFzdGF2bWtkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDk5NzQ5MSwiZXhwIjoyMTAwNTczNDkxfQ.OIocIiZK4EbGyWYV5jZmKlK-2j37b0KIAgHtX1a_H-4' };
