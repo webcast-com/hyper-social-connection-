@@ -3,9 +3,11 @@ import {
   users, posts, comments, likes, follows, messages, notifications, stories, groups, groupMembers,
 } from '@/db/schema';
 import bcrypt from 'bcryptjs';
+import { ensureMigrated } from '@/lib/migrate';
 
 export async function ensureSeeded() {
   try {
+    await ensureMigrated();
     const existing = await db.select({ id: users.id }).from(users).limit(1);
     if (existing.length > 0) {
       return;

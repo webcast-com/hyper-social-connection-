@@ -4,6 +4,7 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { updateProfile } from '@/app/actions';
+import AvatarField from '@/components/AvatarField';
 
 export default async function Settings() {
   const currentUser = await getViewer();
@@ -34,13 +35,14 @@ export default async function Settings() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Avatar URL</label>
-          <input
-            name="avatar"
-            type="text"
-            defaultValue={currentUser.avatar || ''}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          />
+          <label className="block text-sm font-medium text-gray-700">Profile picture</label>
+          <div className="mt-1">
+            <AvatarField
+              fieldName="avatar"
+              userName={currentUser.name}
+              initialUrl={currentUser.avatar || ''}
+            />
+          </div>
         </div>
 
         <div>

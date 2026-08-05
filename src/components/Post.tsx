@@ -51,6 +51,15 @@ export default function Post({ post, currentUser }: { post: any, currentUser: an
       {post.imageUrl && (
         <img src={post.imageUrl} alt="Post image" className="w-full object-contain max-h-[500px] border-y border-gray-100" />
       )}
+      {post.videoUrl && (
+        <video
+          src={post.videoUrl}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full max-h-[500px] bg-black border-y border-gray-100"
+        />
+      )}
 
       <div className="px-4 py-2 flex items-center justify-between text-gray-500 text-sm border-b border-gray-200">
         <div className="flex items-center space-x-1">

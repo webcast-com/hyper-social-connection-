@@ -16,6 +16,7 @@ export const posts = pgTable("posts", {
   userId: integer("user_id").references(() => users.id).notNull(),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
   privacy: text("privacy").default('public').notNull(), // 'public', 'friends'
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

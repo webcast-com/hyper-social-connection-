@@ -4,6 +4,7 @@ import { users, posts, follows, likes, comments } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import Post from '@/components/Post';
+import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -60,15 +61,10 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           {/* Avatar + Name Row */}
           <div className="px-4 md:px-8 pb-4 flex flex-col md:flex-row md:items-end justify-between -mt-16 relative z-10">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
-              <div className="relative w-36 h-36 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden group">
-                {profileUser.avatar ? (
-                  <img src={profileUser.avatar} alt={profileUser.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-5xl text-white font-bold">
-                    {profileUser.name.charAt(0)}
-                  </div>
-                )}
-              </div>
+              <ProfilePictureUpload
+                user={profileUser}
+                editable={currentUser.id === profileUser.id}
+              />
               <div className="mb-2">
                 <h1 className="text-3xl font-extrabold text-gray-900">{profileUser.name}</h1>
                 <p className="text-gray-500 text-sm font-medium">

@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const secretKey = process.env.JWT_SECRET || 'super-secret-key-for-facebook-clone';
+const secretKey = process.env.JWT_SECRET || 'super-secret-key-for-hyper';
 const key = new TextEncoder().encode(secretKey);
 
 export async function encrypt(payload: any) {

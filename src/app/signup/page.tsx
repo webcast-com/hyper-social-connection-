@@ -24,7 +24,7 @@ export default function Signup() {
 
   return (
     <div className="bg-white p-8 rounded-lg shadow-md w-96 flex flex-col items-center">
-      <h1 className="text-4xl font-bold text-blue-600 mb-2">facebook</h1>
+      <h1 className="text-4xl font-bold text-blue-600 mb-2">hyper</h1>
       <p className="text-gray-600 mb-6 text-center text-sm">Create a new account. It's quick and easy.</p>
       <form onSubmit={handleSubmit} className="w-full flex flex-col space-y-4">
         <input

@@ -51,7 +51,7 @@ export default function Login() {
     <div className="w-full max-w-4xl flex flex-col items-center px-4 py-8 gap-8">
       {/* Hero */}
       <div className="text-center">
-        <h1 className="text-6xl font-extrabold text-blue-600 tracking-tight mb-2">facebook</h1>
+        <h1 className="text-6xl font-extrabold text-blue-600 tracking-tight mb-2">hyper</h1>
         <p className="text-gray-500 text-lg">Connect with friends and the world around you.</p>
       </div>
 
