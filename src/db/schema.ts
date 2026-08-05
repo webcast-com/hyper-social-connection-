@@ -73,7 +73,7 @@ export const follows = pgTable("follows", {
   };
 });
 
-export const messages = pgTable("messages", {
+export const messages = pgTable("social_messages", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id").references(() => users.id).notNull(),
   receiverId: integer("receiver_id").references(() => users.id).notNull(),
