@@ -17,10 +17,21 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   if (profileUserRes.length === 0) return <div className="p-8 text-center text-gray-500">User not found.</div>;
   const profileUser = profileUserRes[0];
 
-  const allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
-  const allUsers = await db.select().from(users);
-  const allLikes = await db.select().from(likes);
-  const allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+  let allPosts: typeof posts.$inferSelect[] = [];
+  let allUsers: typeof users.$inferSelect[] = [profileUser];
+  let allLikes: typeof likes.$inferSelect[] = [];
+  let allComments: typeof comments.$inferSelect[] = [];
+
+  try {
+    allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
+    allUsers = await db.select().from(users);
+    allLikes = await db.select().from(likes);
+    allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+  } catch {
+    allPosts = [];
+    allLikes = [];
+    allComments = [];
+  }
 
   const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
   const isFollowing = isFollowingRes.length > 0;
