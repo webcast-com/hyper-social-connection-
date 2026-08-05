@@ -1,0 +1,186 @@
+import { getViewer } from '@/lib/viewer';
+import { db } from '@/db';
+import { users, posts, follows, likes, comments } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
+import Post from '@/components/Post';
+import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
+import Link from 'next/link';
+
+export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
+  const currentUser = await getViewer();
+  const { id } = await params;
+
+  const profileId = parseInt(id);
+  const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
+  if (profileUserRes.length === 0) return <div className="p-8 text-center text-gray-500">User not found.</div>;
+  const profileUser = profileUserRes[0];
+
+  const allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
+  const allUsers = await db.select().from(users);
+  const allLikes = await db.select().from(likes);
+  const allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+
+  const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
+  const isFollowing = isFollowingRes.length > 0;
+
+  const followersRes = await db.select({ user: users }).from(follows)
+    .leftJoin(users, eq(follows.followerId, users.id))
+    .where(eq(follows.followingId, profileId));
+  const followingRes = await db.select({ user: users }).from(follows)
+    .leftJoin(users, eq(follows.followingId, users.id))
+    .where(eq(follows.followerId, profileId));
+
+  const enrichedPosts = allPosts.map(post => ({
+    ...post,
+    user: allUsers.find(u => u.id === post.userId),
+    likes: allLikes.filter(l => l.postId === post.id),
+    comments: allComments
+      .filter(c => c.postId === post.id)
+      .map(c => ({ ...c, user: allUsers.find(u => u.id === c.userId) }))
+      .reverse(),
+  }));
+
+  const photoPosts = enrichedPosts.filter(p => p.imageUrl);
+
+  return (
+    <div className="bg-gray-100 min-h-screen pb-12">
+      {/* Cover + Avatar */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-5xl mx-auto">
+          {/* Cover Photo */}
+          <div className="relative h-64 md:h-80 rounded-b-2xl overflow-hidden bg-gradient-to-br from-blue-400 to-indigo-500 group">
+            {profileUser.coverPhoto ? (
+              <img src={profileUser.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600" />
+            )}
+          </div>
+
+          {/* Avatar + Name Row */}
+          <div className="px-4 md:px-8 pb-4 flex flex-col md:flex-row md:items-end justify-between -mt-16 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <div className="relative w-36 h-36 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden group">
+                {profileUser.avatar ? (
+                  <img src={profileUser.avatar} alt={profileUser.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-5xl text-white font-bold">
+                    {profileUser.name.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <div className="mb-2">
+                <h1 className="text-3xl font-extrabold text-gray-900">{profileUser.name}</h1>
+                <p className="text-gray-500 text-sm font-medium">
+                  <span className="font-bold text-gray-700">{followersRes.length}</span> followers &nbsp;·&nbsp;
+                  <span className="font-bold text-gray-700">{followingRes.length}</span> following
+                </p>
+                {profileUser.bio && (
+                  <p className="text-gray-600 text-sm mt-1 max-w-md">{profileUser.bio}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-4 md:mt-0 md:mb-2">
+              {currentUser.id !== profileUser.id ? (
+                <>
+                  <form action={async () => {
+                    'use server';
+                    const { toggleFollow } = await import('@/app/actions');
+                    await toggleFollow(profileId);
+                  }}>
+                    <button type="submit" className={`px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm ${isFollowing ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                      {isFollowing ? '✓ Following' : '+ Follow'}
+                    </button>
+                  </form>
+                  <Link
+                    href={`/messages/${profileId}`}
+                    className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4" /> Message
+                  </Link>
+                </>
+              ) : (
+                <Link href="/settings" className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
+                  <Camera className="w-4 h-4" /> Edit Profile
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs + Content */}
+      <div className="max-w-5xl mx-auto mt-4 px-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: About + Photos + Friends */}
+        <div className="space-y-4">
+          {/* About Card */}
+          <div className="bg-white rounded-2xl shadow p-5">
+            <h3 className="font-bold text-lg mb-3">About</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">{profileUser.bio || 'No bio yet.'}</p>
+            <div className="mt-3 space-y-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-red-400" /> Joined {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+            </div>
+          </div>
+
+          {/* Photos */}
+          {photoPosts.length > 0 && (
+            <div className="bg-white rounded-2xl shadow p-5">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-lg">Photos</h3>
+                <span className="text-blue-600 text-sm font-semibold cursor-pointer">See all</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                {photoPosts.slice(0, 9).map(p => (
+                  <div key={p.id} className="aspect-square overflow-hidden rounded-lg">
+                    <img src={p.imageUrl!} alt="post" className="w-full h-full object-cover hover:scale-110 transition-transform duration-200 cursor-pointer" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Friends */}
+          <div className="bg-white rounded-2xl shadow p-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <UsersIcon className="w-5 h-5 text-blue-500" /> Followers
+              </h3>
+              <span className="text-blue-600 text-sm font-semibold">{followersRes.length}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {followersRes.slice(0, 6).map(({ user: u }) => u && (
+                <Link key={u.id} href={`/profile/${u.id}`} className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity">
+                  {u.avatar ? (
+                    <img src={u.avatar} alt={u.name} className="w-14 h-14 rounded-xl object-cover" />
+                  ) : (
+                    <div className="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold">
+                      {u.name.charAt(0)}
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-600 text-center truncate w-full">{u.name.split(' ')[0]}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Posts */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-xl font-bold text-gray-800 ml-1">Posts</h2>
+          {enrichedPosts.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow p-10 text-center text-gray-400">
+              <div className="text-5xl mb-3">📝</div>
+              <div className="font-semibold">No posts yet</div>
+            </div>
+          ) : (
+            enrichedPosts.map(post => (
+              <Post key={post.id} post={post} currentUser={currentUser} />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
