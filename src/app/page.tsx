@@ -25,15 +25,26 @@ export default async function Home() {
     user: allUsers.find(u => u.id === s.userId),
   }));
 
-  const enrichedPosts = allPosts.map(post => ({
-    ...post,
-    user: allUsers.find(u => u.id === post.userId),
-    likes: allLikes.filter(l => l.postId === post.id),
-    comments: allComments
-      .filter(c => c.postId === post.id)
-      .map(c => ({ ...c, user: allUsers.find(u => u.id === c.userId) }))
-      .reverse(),
-  }));
+  const enrichedPosts = allPosts
+    .map(post => {
+      const author = allUsers.find(u => u.id === post.userId);
+      if (!author) return null;
+
+      return {
+        ...post,
+        user: author,
+        likes: allLikes.filter(l => l.postId === post.id),
+        comments: allComments
+          .filter(c => c.postId === post.id)
+          .map(c => {
+            const author = allUsers.find(u => u.id === c.userId);
+            return author ? { ...c, user: author } : null;
+          })
+          .filter((comment): comment is NonNullable<typeof comment> => comment !== null)
+          .reverse(),
+      };
+    })
+    .filter((post): post is NonNullable<typeof post> => post !== null);
 
   const otherUsers = allUsers.filter(u => u.id !== currentUser.id);
 

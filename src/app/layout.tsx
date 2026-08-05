@@ -16,9 +16,14 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();
-  const unread = await db.select({ id: notifications.id }).from(notifications).where(
-    and(eq(notifications.userId, user.id), eq(notifications.isRead, 0)),
-  );
+  let unread: { id: string }[] = [];
+  try {
+    unread = await db.select({ id: notifications.id }).from(notifications).where(
+      and(eq(notifications.userId, user.id), eq(notifications.isRead, 0)),
+    );
+  } catch {
+    unread = [];
+  }
 
   return (
     <html lang="en">
