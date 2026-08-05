@@ -10,16 +10,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const connectionString =
   process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_2 ||
   process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_PRISMA_URL_2 ||
   process.env.POSTGRES_URL_NON_POOLING ||
-  (process.env.POSTGRES_HOST && process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD
-    ? `postgresql://${encodeURIComponent(process.env.POSTGRES_USER)}:${encodeURIComponent(process.env.POSTGRES_PASSWORD)}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DATABASE || 'postgres'}`
-    : undefined);
+  process.env.POSTGRES_URL_NON_POOLING_2 ||
+  (process.env.POSTGRES_HOST_2 && process.env.POSTGRES_PASSWORD_2
+    ? `postgresql://${encodeURIComponent(process.env.POSTGRES_USER_2 || 'postgres')}:${encodeURIComponent(process.env.POSTGRES_PASSWORD_2)}@${process.env.POSTGRES_HOST_2}:${process.env.POSTGRES_PORT_2 || '5432'}/${process.env.POSTGRES_DATABASE_2 || 'postgres'}`
+    : process.env.POSTGRES_HOST && process.env.POSTGRES_PASSWORD
+      ? `postgresql://${encodeURIComponent(process.env.POSTGRES_USER || 'postgres')}:${encodeURIComponent(process.env.POSTGRES_PASSWORD)}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DATABASE || 'postgres'}`
+      : undefined);
 
-const isRemoteDatabase = Boolean(connectionString && !/(localhost|127\\.0\\.1)/i.test(connectionString));
+const normalizedConnectionString = connectionString
+  ? (() => {
+      const url = new URL(connectionString);
+      url.searchParams.delete('sslmode');
+      return url.toString();
+    })()
+  : undefined;
+const isRemoteDatabase = Boolean(normalizedConnectionString && !/(localhost|127\\.0\\.1)/i.test(normalizedConnectionString));
 
 export const pool = new Pool({
-  connectionString,
+  connectionString: normalizedConnectionString,
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
