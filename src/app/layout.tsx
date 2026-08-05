@@ -10,8 +10,8 @@ import { getViewer } from '@/lib/viewer';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Facebook Clone',
-  description: 'A public Facebook-style social network demo',
+  title: 'Hyper',
+  description: 'A public social network demo',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

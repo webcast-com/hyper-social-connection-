@@ -110,7 +110,7 @@ export default async function Home() {
                   )}
                   <div>
                     <div className="font-semibold text-sm">{u.name}</div>
-                    <div className="text-xs text-gray-400 truncate max-w-[100px]">{u.bio?.slice(0, 25) || 'Facebook user'}</div>
+                    <div className="text-xs text-gray-400 truncate max-w-[100px]">{u.bio?.slice(0, 25) || 'Hyper user'}</div>
                   </div>
                 </Link>
                 <Link href={`/profile/${u.id}`} className="text-xs text-blue-600 font-semibold hover:bg-blue-50 px-2 py-1 rounded-lg">

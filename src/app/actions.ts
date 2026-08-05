@@ -26,15 +26,17 @@ async function createNotification(userId: number, actorId: number, type: string,
 
 export async function createPost(formData: FormData) {
   const userId = await getUserId();
-  const content = formData.get('content') as string;
+  const content = ((formData.get('content') as string) || '').trim();
   const imageUrl = formData.get('imageUrl') as string | null;
+  const videoUrl = formData.get('videoUrl') as string | null;
 
-  if (!content) throw new Error('Content is required');
+  if (!content && !imageUrl && !videoUrl) throw new Error('Content or media is required');
 
   await db.insert(posts).values({
     userId,
     content,
     imageUrl: imageUrl || null,
+    videoUrl: videoUrl || null,
   });
 
   revalidatePath('/');
@@ -107,14 +109,25 @@ export async function updateProfile(formData: FormData) {
   const bio = formData.get('bio') as string;
   const avatar = formData.get('avatar') as string;
   const coverPhoto = formData.get('coverPhoto') as string;
-  
+
   await db.update(users).set({
     name,
     bio,
     avatar,
     coverPhoto,
   }).where(eq(users.id, userId));
-  
+
+  revalidatePath('/settings');
+  revalidatePath(`/profile/${userId}`);
+}
+
+export async function updateAvatar(avatarUrl: string) {
+  const userId = await getUserId();
+  if (!avatarUrl) return;
+
+  await db.update(users).set({ avatar: avatarUrl }).where(eq(users.id, userId));
+
+  revalidatePath('/');
   revalidatePath('/settings');
   revalidatePath(`/profile/${userId}`);
 }
