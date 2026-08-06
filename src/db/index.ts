@@ -1,6 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schema";
 
-const supabaseUrl = process.env.SUPABASE_URL || "https://xyz.supabase.co";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "key";
+export { supabase } from "./supabase";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Postgres connection used by drizzle and raw SQL. Set DATABASE_URL in
+// .env.local to your Supabase connection string (see .env.example).
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+export const db = drizzle(pool, { schema });

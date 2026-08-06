@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/db';
+import { supabase } from '@/db/supabase';
 
 export default function RealTimeChat() {
   const [messages, setMessages] = useState<string[]>([]);
