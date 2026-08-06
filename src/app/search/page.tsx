@@ -59,13 +59,15 @@ export default function SearchPage() {
                 {userResults.map((user: any) => (
                   <Link key={user.id} href={`/profile/${user.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {user.name.charAt(0)}
                       </div>
                     )}
-                    <div className="font-semibold">{user.name}</div>
+                    <div className="font-semibold min-w-0">
+                      <span className="block truncate">{user.name}</span>
+                    </div>
                   </Link>
                 ))}
               </div>

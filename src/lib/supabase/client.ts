@@ -1,4 +1,16 @@
-export const supabaseConfig = {
-  url: 'https://pjzhjzqzmajbastavmkd.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqemhqenF6bWFqYmFzdGF2bWtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTc0OTEsImV4cCI6MjEwMDU3MzQ5MX0.iTGgXDcJZqlNRCv5hh9lyFWs5Q5SHZRg-v78ttI7frQ',
-};
+import { createBrowserClient } from "@supabase/ssr";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./config";
+
+/**
+ * Creates a browser-side Supabase client (safe to bundle into client
+ * components). Uses @supabase/ssr so the session is stored in cookies —
+ * this lets the proxy and route handlers (e.g. the OAuth callback) read
+ * and refresh it.
+ *
+ * Call it from event handlers / effects (never at module scope, so the
+ * module can also be imported during server-side rendering of client
+ * components).
+ */
+export function createClient() {
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}

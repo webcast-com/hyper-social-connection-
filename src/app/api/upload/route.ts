@@ -3,6 +3,9 @@ import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { getViewer } from '@/lib/viewer';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
+import { createClient } from '@/lib/supabase/server';
+import { defaultStorageBucket, uploadToStorage } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +60,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `File too large. Max ${mb} MB for ${kind}s.` }, { status: 413 });
     }
 
+    // ── Supabase Storage (full integration mode) ──────────────────────────
+    if (isSupabaseConfigured) {
+      const supabase = await createClient();
+      const bucket = defaultStorageBucket();
+      const knownExt = kind === 'image' ? IMAGE_TYPES[file.type] : VIDEO_TYPES[file.type];
+      const originalExt = file.name.includes('.') ? sanitizeExt(file.name.split('.').pop() || '') : '';
+      const ext = knownExt || originalExt || 'bin';
+      const storagePath = `${kind}s/${randomUUID()}.${ext}`;
+
+      const url = await uploadToStorage(bucket, storagePath, file, supabase);
+      if (url) {
+        return NextResponse.json({
+          url,
+          kind,
+          type: file.type,
+          size: file.size,
+          name: file.name,
+        });
+      }
+      // Upload failed (bucket missing, RLS, unreachable project, …) — fall
+      // through to the local-disk path so the app keeps working.
+      console.warn('[upload] Supabase Storage failed, using local disk fallback');
+    }
+
+    // ── Local disk fallback (unchanged behavior) ──────────────────────────
     const knownExt = kind === 'image' ? IMAGE_TYPES[file.type] : VIDEO_TYPES[file.type];
     const originalExt = file.name.includes('.') ? sanitizeExt(file.name.split('.').pop() || '') : '';
     const ext = knownExt || originalExt || 'bin';

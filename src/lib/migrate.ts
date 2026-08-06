@@ -131,6 +131,9 @@ export async function ensureMigrated() {
     )`,
     // Video upload support for posts (new nullable column, existing rows untouched)
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url text`,
+    // Supabase Auth integration: link profiles to auth.users via auth_id (uuid).
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_id uuid`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_id_unique" ON "users" ("auth_id")`,
   ];
 
   for (const statement of statements) {

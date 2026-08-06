@@ -52,9 +52,9 @@ export default async function Home() {
   const otherUsers = allUsers.filter(u => u.id !== currentUser.id);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-4">
       {/* Left Sidebar */}
-      <div className="hidden md:flex flex-col space-y-1 pt-2">
+      <div className="hidden lg:flex flex-col space-y-1 pt-2">
         <Link href={`/profile/${currentUser.id}`} className="flex items-center space-x-3 p-2 hover:bg-gray-200 rounded-xl cursor-pointer transition-colors">
           {currentUser.avatar ? (
             <img src={currentUser.avatar} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
@@ -92,7 +92,7 @@ export default async function Home() {
       </div>
 
       {/* Main Feed */}
-      <div className="md:col-span-2 max-w-2xl mx-auto w-full space-y-0">
+      <div className="lg:col-span-2 max-w-2xl mx-auto w-full space-y-0">
         <Stories user={currentUser} stories={enrichedStories} />
         <CreatePost user={currentUser} />
         {enrichedPosts.length === 0 && (
@@ -108,7 +108,7 @@ export default async function Home() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="hidden md:flex flex-col space-y-4 pt-2">
+      <div className="hidden lg:flex flex-col space-y-4 pt-2">
         <div>
           <h3 className="text-gray-500 font-semibold text-sm uppercase tracking-wide mb-2 px-1">People you may know</h3>
           <div className="space-y-2">

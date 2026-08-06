@@ -5,6 +5,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
+import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -70,14 +71,11 @@ export default async function Profile({ params }: { params: Promise<{ id: string
       {/* Cover + Avatar */}
       <div className="bg-white shadow-sm">
         <div className="max-w-5xl mx-auto">
-          {/* Cover Photo */}
-          <div className="relative h-64 md:h-80 rounded-b-2xl overflow-hidden bg-gradient-to-br from-blue-400 to-indigo-500 group">
-            {profileUser.coverPhoto ? (
-              <img src={profileUser.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600" />
-            )}
-          </div>
+          {/* Cover Photo — uploaded from the device (editable on your own profile) */}
+          <CoverPhotoUpload
+            user={profileUser}
+            editable={currentUser.id === profileUser.id}
+          />
 
           {/* Avatar + Name Row */}
           <div className="px-4 md:px-8 pb-4 flex flex-col md:flex-row md:items-end justify-between -mt-16 relative z-10">
@@ -99,28 +97,28 @@ export default async function Profile({ params }: { params: Promise<{ id: string
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 mt-4 md:mt-0 md:mb-2">
+            <div className="flex gap-2 mt-4 md:mt-0 md:mb-2 w-full sm:w-auto">
               {currentUser.id !== profileUser.id ? (
                 <>
                   <form action={async () => {
                     'use server';
                     const { toggleFollow } = await import('@/app/actions');
                     await toggleFollow(profileId);
-                  }}>
-                    <button type="submit" className={`px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm ${isFollowing ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                  }} className="flex-1 sm:flex-none">
+                    <button type="submit" className={`w-full sm:w-auto px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm ${isFollowing ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
                       {isFollowing ? '✓ Following' : '+ Follow'}
                     </button>
                   </form>
                   <Link
                     href={`/messages/${profileId}`}
-                    className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
+                    className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
                   >
-                    <MessageCircle className="w-4 h-4" /> Message
+                    <MessageCircle className="w-4 h-4 shrink-0" /> Message
                   </Link>
                 </>
               ) : (
-                <Link href="/settings" className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
-                  <Camera className="w-4 h-4" /> Edit Profile
+                <Link href="/settings" className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
+                  <Camera className="w-4 h-4 shrink-0" /> Edit Profile
                 </Link>
               )}
             </div>

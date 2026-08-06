@@ -159,6 +159,21 @@ export async function updateAvatar(avatarUrl: string) {
   revalidatePath(`/profile/${userId}`);
 }
 
+export async function updateCoverPhoto(coverUrl: string) {
+  const userId = await getUserId();
+  // Empty string clears the cover photo (falls back to the gradient).
+  const coverPhoto = coverUrl?.trim() || null;
+
+  try {
+    await db.update(users).set({ coverPhoto }).where(eq(users.id, userId));
+  } catch (e) {
+    console.warn('[action:updateCoverPhoto] DB unavailable:', (e as Error)?.message);
+  }
+
+  revalidatePath('/settings');
+  revalidatePath(`/profile/${userId}`);
+}
+
 export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   const content = formData.get('content') as string;

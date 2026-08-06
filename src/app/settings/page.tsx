@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { updateProfile } from '@/app/actions';
 import AvatarField from '@/components/AvatarField';
+import CoverPhotoField from '@/components/CoverPhotoField';
 
 export default async function Settings() {
   const currentUser = await getViewer();
@@ -46,13 +47,15 @@ export default async function Settings() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Cover Photo URL</label>
-          <input
-            name="coverPhoto"
-            type="text"
-            defaultValue={currentUser.coverPhoto || ''}
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-          />
+          <label className="block text-sm font-medium text-gray-700">Cover photo</label>
+          <p className="text-xs text-gray-500 mt-0.5">Upload a photo from your device.</p>
+          <div className="mt-2">
+            <CoverPhotoField
+              fieldName="coverPhoto"
+              userName={currentUser.name}
+              initialUrl={currentUser.coverPhoto || ''}
+            />
+          </div>
         </div>
 
         <button

@@ -5,11 +5,11 @@ import { LoaderCircle, Upload, X } from 'lucide-react';
 import { uploadMediaFile } from '@/lib/upload';
 
 /**
- * Settings-form field for the profile picture: upload a real image from the
- * device (no URL entry). Persists through the hidden input (name={fieldName})
- * so the existing updateProfile server action keeps saving it.
+ * Settings-form field for the cover photo: upload from the device (no URL
+ * entry). Persists through the classic hidden input (name={fieldName}) so
+ * the existing updateProfile server action keeps saving it.
  */
-export default function AvatarField({
+export default function CoverPhotoField({
   fieldName,
   userName,
   initialUrl,
@@ -28,7 +28,7 @@ export default function AvatarField({
     e.target.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file for your profile picture.');
+      setError('Please choose an image file for your cover photo.');
       return;
     }
 
@@ -36,7 +36,7 @@ export default function AvatarField({
     setUploading(true);
     try {
       const media = await uploadMediaFile(file);
-      if (media.kind !== 'image') throw new Error('Profile picture must be an image.');
+      if (media.kind !== 'image') throw new Error('Cover photo must be an image.');
       setUrl(media.url);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
@@ -47,23 +47,22 @@ export default function AvatarField({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-gray-100 shrink-0">
-          {url ? (
-            <img src={url} alt={userName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-2xl text-white font-bold">
-              {userName.charAt(0)}
-            </div>
-          )}
-        </div>
+      <div className="relative h-32 w-full rounded-lg overflow-hidden bg-gradient-to-br from-blue-400 to-indigo-600 border border-gray-200">
+        {url ? (
+          <img src={url} alt={`${userName} cover`} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600" />
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
           className="hidden"
           onChange={handleFileChange}
-          aria-label="Upload profile picture"
+          aria-label="Upload cover photo"
         />
         <button
           type="button"
@@ -76,7 +75,7 @@ export default function AvatarField({
           ) : (
             <Upload className="w-4 h-4" />
           )}
-          {uploading ? 'Uploading…' : url ? 'Change photo' : 'Upload photo'}
+          {uploading ? 'Uploading…' : url ? 'Change cover photo' : 'Upload cover photo'}
         </button>
         {url && (
           <button
@@ -88,6 +87,7 @@ export default function AvatarField({
           </button>
         )}
       </div>
+
       <input name={fieldName} type="hidden" value={url} />
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
