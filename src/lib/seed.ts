@@ -1,4 +1,4 @@
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import {
   users, posts, comments, likes, follows, messages, notifications, stories, groups, groupMembers,
 } from '@/db/schema';
@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { ensureMigrated } from '@/lib/migrate';
 
 export async function ensureSeeded() {
+  if (!hasDatabase) return;
   try {
     await ensureMigrated();
     const existing = await db.select({ id: users.id }).from(users).limit(1);

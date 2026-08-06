@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { users, follows, posts } from '@/db/schema';
 import { eq, desc, ne, and } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -9,23 +9,27 @@ import { Users, Sparkles } from 'lucide-react';
 export default async function Discover() {
   const currentUser = await getViewer();
 
-  // Discover people you don't follow
-  const followingIds = await db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, currentUser.id));
+  let followingIds: { id: number }[] = [];
+  let discoverUsers: any[] = [];
+  let trendingPosts: any[] = [];
+  if (hasDatabase) {
+    try {
+      followingIds = await db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, currentUser.id));
+      discoverUsers = await db.select().from(users).where(
+        and(
+          ne(users.id, currentUser.id),
+        )
+      ).limit(20);
+      trendingPosts = await db.select({ post: posts, user: users }).from(posts)
+        .leftJoin(users, eq(posts.userId, users.id))
+        .orderBy(desc(posts.createdAt))
+        .limit(5);
+    } catch (err) {
+      console.warn('[discover] DB query failed:', (err as Error)?.message);
+    }
+  }
   const followingIdsSet = new Set(followingIds.map(f => f.id));
-
-  const discoverUsers = await db.select().from(users).where(
-    and(
-      ne(users.id, currentUser.id),
-    )
-  ).limit(20);
-  
   const filteredUsers = discoverUsers.filter(u => !followingIdsSet.has(u.id));
-
-  // Trending posts (most recent 5)
-  const trendingPosts = await db.select({ post: posts, user: users }).from(posts)
-    .leftJoin(users, eq(posts.userId, users.id))
-    .orderBy(desc(posts.createdAt))
-    .limit(5);
 
   return (
     <div className="max-w-5xl mx-auto p-4 mt-6">

@@ -1,4 +1,4 @@
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { groups, users, groupMembers } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -7,7 +7,14 @@ import { createGroup } from '@/app/actions';
 import { Users, Plus } from 'lucide-react';
 
 export default async function GroupsPage() {
-  const allGroups = await db.select().from(groups).orderBy(desc(groups.createdAt));
+  let allGroups: any[] = [];
+  if (hasDatabase) {
+    try {
+      allGroups = await db.select().from(groups).orderBy(desc(groups.createdAt));
+    } catch (err) {
+      console.warn('[groups] DB query failed:', (err as Error)?.message);
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-4 mt-6">

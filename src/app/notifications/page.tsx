@@ -9,7 +9,13 @@ import { getNotifications, markNotificationRead } from '@/app/actions';
 
 export default async function NotificationsPage() {
   await getViewer();
-  const notificationsData = await getNotifications();
+  let notificationsData: any[] = [];
+  try {
+    notificationsData = await getNotifications();
+  } catch (err) {
+    console.warn('[notifications] DB query failed:', (err as Error)?.message);
+    notificationsData = [];
+  }
 
   const iconMap: Record<string, React.ReactNode> = {
     like: <Heart className="text-red-500 w-5 h-5" />,

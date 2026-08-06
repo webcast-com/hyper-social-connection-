@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { users } from '@/db/schema';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -7,7 +7,17 @@ import Link from 'next/link';
 export default async function Messages() {
   const viewer = await getViewer();
 
-  const allUsers = await db.select().from(users);
+  let allUsers: any[] = [];
+  if (hasDatabase) {
+    try {
+      allUsers = await db.select().from(users);
+    } catch (err) {
+      console.warn('[messages] DB query failed:', (err as Error)?.message);
+      allUsers = [viewer];
+    }
+  } else {
+    allUsers = [viewer];
+  }
   
   return (
     <div className="flex h-[calc(100vh-3.5rem)] bg-white max-w-6xl mx-auto mt-4 rounded-lg shadow overflow-hidden">

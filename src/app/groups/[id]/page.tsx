@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { users, groups, groupMembers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -12,17 +12,35 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   const { id } = await params;
 
   const groupId = parseInt(id);
-  const groupRes = await db.select().from(groups).where(eq(groups.id, groupId));
-  if (groupRes.length === 0) redirect('/groups');
-  const group = groupRes[0];
+  let groupRes: any[] = [];
+  let members: any[] = [];
+  let admin: any = null;
+  let group: any = null;
+  if (hasDatabase) {
+    try {
+      groupRes = await db.select().from(groups).where(eq(groups.id, groupId));
+      if (groupRes.length === 0) redirect('/groups');
+      group = groupRes[0];
 
-  const members = await db.select({ user: users }).from(groupMembers)
-    .leftJoin(users, eq(groupMembers.userId, users.id))
-    .where(eq(groupMembers.groupId, groupId));
+      members = await db.select({ user: users }).from(groupMembers)
+        .leftJoin(users, eq(groupMembers.userId, users.id))
+        .where(eq(groupMembers.groupId, groupId));
 
-  const isMember = members.some(m => m.user?.id === viewer.id);
-  const adminRes = await db.select().from(users).where(eq(users.id, group.adminId));
-  const admin = adminRes[0];
+      const adminRes = await db.select().from(users).where(eq(users.id, group.adminId));
+      admin = adminRes[0];
+    } catch (err) {
+      console.warn('[group detail] DB query failed:', (err as Error)?.message);
+      if (!group) {
+        group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: viewer.id };
+        members = [{ user: viewer }];
+      }
+    }
+  } else {
+    group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: viewer.id };
+    members = [{ user: viewer }];
+  }
+
+  const isMember = members.some((m: any) => m.user?.id === viewer.id);
 
   return (
     <div className="max-w-5xl mx-auto p-4 mt-6">
