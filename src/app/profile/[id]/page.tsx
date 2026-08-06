@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { users, posts, follows, likes, comments } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -13,24 +13,45 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   const { id } = await params;
 
   const profileId = parseInt(id);
-  const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
-  if (profileUserRes.length === 0) return <div className="p-8 text-center text-gray-500">User not found.</div>;
-  const profileUser = profileUserRes[0];
+  let profileUser: any = null;
+  let allPosts: any[] = [];
+  let allUsers: any[] = [];
+  let allLikes: any[] = [];
+  let allComments: any[] = [];
+  let isFollowing = false;
+  let followersRes: any[] = [];
+  let followingRes: any[] = [];
 
-  const allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
-  const allUsers = await db.select().from(users);
-  const allLikes = await db.select().from(likes);
-  const allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+  if (hasDatabase) {
+    try {
+      const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
+      if (profileUserRes.length === 0) return <div className="p-8 text-center text-gray-500">User not found.</div>;
+      profileUser = profileUserRes[0];
 
-  const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
-  const isFollowing = isFollowingRes.length > 0;
+      allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
+      allUsers = await db.select().from(users);
+      allLikes = await db.select().from(likes);
+      allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
 
-  const followersRes = await db.select({ user: users }).from(follows)
-    .leftJoin(users, eq(follows.followerId, users.id))
-    .where(eq(follows.followingId, profileId));
-  const followingRes = await db.select({ user: users }).from(follows)
-    .leftJoin(users, eq(follows.followingId, users.id))
-    .where(eq(follows.followerId, profileId));
+      const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
+      isFollowing = isFollowingRes.length > 0;
+
+      followersRes = await db.select({ user: users }).from(follows)
+        .leftJoin(users, eq(follows.followerId, users.id))
+        .where(eq(follows.followingId, profileId));
+      followingRes = await db.select({ user: users }).from(follows)
+        .leftJoin(users, eq(follows.followingId, users.id))
+        .where(eq(follows.followerId, profileId));
+      if (allUsers.length === 0) allUsers = [currentUser, profileUser];
+    } catch (err) {
+      console.warn('[profile] DB query failed:', (err as Error)?.message);
+      profileUser = currentUser;
+      allUsers = [currentUser];
+    }
+  } else {
+    profileUser = currentUser;
+    allUsers = [currentUser];
+  }
 
   const enrichedPosts = allPosts.map(post => ({
     ...post,

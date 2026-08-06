@@ -1,4 +1,4 @@
-import { pool } from '@/db';
+import { pool, hasDatabase } from '@/db';
 
 let migrated = false;
 
@@ -17,6 +17,11 @@ let migrated = false;
 export async function ensureMigrated() {
   if (migrated) return;
   migrated = true;
+
+  if (!hasDatabase || !pool) {
+    console.warn('[migrate] DATABASE_URL not set — skipping schema bootstrap (pages will use fallback/mock data)');
+    return;
+  }
 
   // Tables first, in dependency order (FK targets before dependents).
   const statements = [

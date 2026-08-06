@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { users, messages } from '@/db/schema';
 import { eq, or, and, asc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -12,18 +12,31 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
 
   const receiverId = parseInt(id);
-  const allUsers = await db.select().from(users);
-  
-  const receiverRes = await db.select().from(users).where(eq(users.id, receiverId));
-  if (receiverRes.length === 0) redirect('/messages');
-  const receiver = receiverRes[0];
+  let allUsers: any[] = [];
+  let receiver: any = null;
+  let chatMessages: any[] = [];
+  if (hasDatabase) {
+    try {
+      allUsers = await db.select().from(users);
+      const receiverRes = await db.select().from(users).where(eq(users.id, receiverId));
+      if (receiverRes.length === 0) redirect('/messages');
+      receiver = receiverRes[0];
 
-  const chatMessages = await db.select().from(messages).where(
-    or(
-      and(eq(messages.senderId, viewer.id), eq(messages.receiverId, receiverId)),
-      and(eq(messages.senderId, receiverId), eq(messages.receiverId, viewer.id))
-    )
-  ).orderBy(asc(messages.createdAt));
+      chatMessages = await db.select().from(messages).where(
+        or(
+          and(eq(messages.senderId, viewer.id), eq(messages.receiverId, receiverId)),
+          and(eq(messages.senderId, receiverId), eq(messages.receiverId, viewer.id))
+        )
+      ).orderBy(asc(messages.createdAt));
+    } catch (err) {
+      console.warn('[messages:id] DB query failed:', (err as Error)?.message);
+      allUsers = [viewer];
+      receiver = { id: receiverId, name: 'Demo User', avatar: null };
+    }
+  } else {
+    allUsers = [viewer];
+    receiver = { id: receiverId, name: 'Demo User', avatar: null };
+  }
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] bg-white max-w-6xl mx-auto mt-4 rounded-lg shadow overflow-hidden">

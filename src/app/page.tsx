@@ -1,5 +1,5 @@
 import { getViewer } from '@/lib/viewer';
-import { db } from '@/db';
+import { db, hasDatabase } from '@/db';
 import { posts, users, likes, comments } from '@/db/schema';
 import { stories as storiesTable } from '@/db/schema';
 import { eq, desc, gte } from 'drizzle-orm';
@@ -12,13 +12,27 @@ import { Compass, Users } from 'lucide-react';
 export default async function Home() {
   const currentUser = await getViewer();
 
-  const allPosts = await db.select().from(posts).orderBy(desc(posts.createdAt));
-  const allUsers = await db.select().from(users);
-  const allLikes = await db.select().from(likes);
-  const allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
-  const activeStories = await db.select().from(storiesTable)
-    .where(gte(storiesTable.expiresAt, new Date()))
-    .orderBy(desc(storiesTable.createdAt));
+  let allPosts: any[] = [];
+  let allUsers: any[] = [];
+  let allLikes: any[] = [];
+  let allComments: any[] = [];
+  let activeStories: any[] = [];
+  if (hasDatabase) {
+    try {
+      allPosts = await db.select().from(posts).orderBy(desc(posts.createdAt));
+      allUsers = await db.select().from(users);
+      allLikes = await db.select().from(likes);
+      allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+      activeStories = await db.select().from(storiesTable)
+        .where(gte(storiesTable.expiresAt, new Date()))
+        .orderBy(desc(storiesTable.createdAt));
+    } catch (err) {
+      console.warn('[home] DB query failed, rendering empty feed:', (err as Error)?.message);
+      allUsers = [currentUser];
+    }
+  } else {
+    allUsers = [currentUser];
+  }
 
   const enrichedStories = activeStories.map(s => ({
     ...s,
