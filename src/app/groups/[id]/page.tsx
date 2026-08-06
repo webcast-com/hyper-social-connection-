@@ -96,17 +96,17 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               {members.map(({ user: u }) => u && (
                 <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center space-x-3 hover:bg-gray-50 rounded-lg p-1 transition-colors">
                   {u.avatar ? (
-                    <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                    <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shrink-0">
                       {u.name.charAt(0)}
                     </div>
                   )}
-                  <div>
-                    <div className="font-semibold text-sm">{u.name}</div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{u.name}</div>
                     {u.id === group.adminId && (
                       <div className="flex items-center gap-1 text-xs text-yellow-600">
-                        <Crown className="w-3 h-3" /> Admin
+                        <Crown className="w-3 h-3 shrink-0" /> Admin
                       </div>
                     )}
                   </div>

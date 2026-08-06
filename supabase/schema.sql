@@ -6,6 +6,9 @@
 --
 -- SAFE: purely additive. No DROP / TRUNCATE, and every statement is guarded
 -- with IF NOT EXISTS, so it can be re-run without touching existing data.
+--
+-- After this, also run `supabase/policies.sql` (RLS + Realtime) and
+-- `supabase/storage.sql` (media buckets). See SUPABASE_SETUP.md.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -19,9 +22,14 @@ CREATE TABLE IF NOT EXISTS "users" (
   "avatar" text,
   "cover_photo" text,
   "bio" text,
+  "auth_id" uuid,
   "created_at" timestamp DEFAULT now() NOT NULL,
   CONSTRAINT "users_email_unique" UNIQUE("email")
 );
+
+-- Link profiles to Supabase Auth (auth.users.id). Purely additive — legacy
+-- rows keep a NULL auth_id and still work through the legacy JWT path.
+CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_id_unique" ON "users" ("auth_id");
 
 -- ---------------------------------------------------------------------------
 -- posts

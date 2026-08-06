@@ -55,14 +55,14 @@ export default async function NotificationsPage() {
                   <div className="p-2 bg-gray-50 rounded-full shrink-0">
                     {iconMap[notification.type] || <Bell className="text-gray-500 w-5 h-5" />}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
                       <img 
                         src={actor?.avatar || ''} 
                         alt={actor?.name || 'User'} 
-                        className="w-8 h-8 rounded-full object-cover" 
+                        className="w-8 h-8 rounded-full object-cover shrink-0" 
                       />
-                      <span className="font-semibold">{actor?.name || 'Someone'}</span>
+                      <span className="font-semibold truncate">{actor?.name || 'Someone'}</span>
                     </div>
                     <p className="text-sm text-gray-700 mt-1">
                       {notification.type === 'like' && 'liked your post.'}

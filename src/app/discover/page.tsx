@@ -37,8 +37,8 @@ export default async function Discover() {
         <Sparkles className="text-yellow-500" /> Discover
       </h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
           <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-6 text-white shadow-lg mb-6">
             <h2 className="text-xl font-bold mb-2">Discover People</h2>
             <p className="text-blue-50">Follow new people to see their posts in your feed.</p>
@@ -51,20 +51,20 @@ export default async function Discover() {
             <div className="space-y-3">
               {filteredUsers.slice(0, 6).map(user => (
                 <Link key={user.id} href={`/profile/${user.id}`} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors">
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 min-w-0">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full object-cover" />
+                      <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
                         {user.name.charAt(0)}
                       </div>
                     )}
-                    <div>
-                      <div className="font-bold">{user.name}</div>
-                      <div className="text-xs text-gray-500">{user.bio || 'No bio'}</div>
+                    <div className="min-w-0">
+                      <div className="font-bold truncate">{user.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{user.bio || 'No bio'}</div>
                     </div>
                   </div>
-                  <span className="text-blue-600 text-sm font-semibold">View Profile</span>
+                  <span className="text-blue-600 text-sm font-semibold shrink-0 ml-3">View Profile</span>
                 </Link>
               ))}
             </div>
@@ -72,7 +72,7 @@ export default async function Discover() {
         </div>
 
         <div>
-          <div className="bg-white rounded-xl shadow p-6 sticky top-20">
+          <div className="bg-white rounded-xl shadow p-6 md:sticky md:top-20">
             <h3 className="font-bold text-lg mb-4">Trending Posts</h3>
             <div className="space-y-4">
               {trendingPosts.map((res: any) => (

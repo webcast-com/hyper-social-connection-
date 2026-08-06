@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { createPost } from '@/app/actions';
-import { Image as ImageIcon, Video, Smile, Upload, Link2, LoaderCircle } from 'lucide-react';
+import { createPost, createStory } from '@/app/actions';
+import { Image as ImageIcon, Video, Smile, Upload, Link2, LoaderCircle, Camera } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import { uploadMediaFile } from '@/lib/upload';
 
@@ -17,6 +17,33 @@ export default function CreatePost({ user }: { user: any }) {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+
+  // Story creation from the composer (device upload, no URL).
+  const storyFileRef = useRef<HTMLInputElement>(null);
+  const [storyUploading, setStoryUploading] = useState(false);
+  const [storyError, setStoryError] = useState('');
+
+  const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setStoryError('Please choose an image file for your story.');
+      return;
+    }
+
+    setStoryError('');
+    setStoryUploading(true);
+    try {
+      const media = await uploadMediaFile(file);
+      if (media.kind !== 'image') throw new Error('Story must be an image.');
+      await createStory(media.url);
+    } catch (err: any) {
+      setStoryError(err?.message || 'Upload failed');
+    } finally {
+      setStoryUploading(false);
+    }
+  };
 
   const handleEmojiSelect = (emoji: string) => {
     setPostValue(prev => prev + emoji);
@@ -162,8 +189,8 @@ export default function CreatePost({ user }: { user: any }) {
             aria-haspopup="menu"
             aria-expanded={showAttachMenu}
           >
-            <ImageIcon className="text-green-500" />
-            <span>Photo/video</span>
+            <ImageIcon className="text-green-500 shrink-0" />
+            <span className="whitespace-nowrap text-sm">Photo/video</span>
           </button>
           {showAttachMenu && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-30 overflow-hidden">
@@ -194,9 +221,36 @@ export default function CreatePost({ user }: { user: any }) {
             </div>
           )}
         </div>
+        {/* Story — upload an image from the device (no URL) */}
+        <div className="flex-1 relative">
+          <input
+            ref={storyFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleStoryFileChange}
+            aria-label="Upload story image"
+          />
+          <button
+            type="button"
+            onClick={() => storyFileRef.current?.click()}
+            disabled={storyUploading}
+            className="w-full flex items-center justify-center space-x-2 hover:bg-gray-100 p-2 rounded-lg text-gray-500 font-semibold disabled:opacity-60"
+          >
+            {storyUploading ? (
+              <LoaderCircle className="w-4 h-4 text-purple-500 animate-spin shrink-0" />
+            ) : (
+              <Camera className="text-purple-500 shrink-0" />
+            )}
+            <span className="whitespace-nowrap text-sm">{storyUploading ? 'Adding…' : 'Story'}</span>
+          </button>
+          {storyError && (
+            <p className="text-xs text-red-600 text-center mt-1">{storyError}</p>
+          )}
+        </div>
         <button className="flex-1 flex items-center justify-center space-x-2 hover:bg-gray-100 p-2 rounded-lg text-gray-500 font-semibold">
-          <Smile className="text-yellow-500" />
-          <span>Feeling/activity</span>
+          <Smile className="text-yellow-500 shrink-0" />
+          <span className="whitespace-nowrap text-sm">Feeling/activity</span>
         </button>
       </div>
     </div>

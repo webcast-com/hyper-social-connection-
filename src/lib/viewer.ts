@@ -3,9 +3,12 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
 import { ensureSeeded } from '@/lib/seed';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
+import { createClient } from '@/lib/supabase/server';
+import { ensureProfileForSupabaseUser } from '@/lib/supabase/profile';
 
-// Static fallback used when DATABASE_URL is not configured or the DB is
-// unreachable — lets every page render in preview/offline mode instead of 500-ing.
+// Static fallback used when no database and no Supabase project are
+// configured — lets every page render in preview/offline mode instead of 500-ing.
 export const FALLBACK_VIEWER = {
   id: 1,
   name: 'Alex Johnson',
@@ -18,6 +21,23 @@ export const FALLBACK_VIEWER = {
 } as const;
 
 export async function getViewer() {
+  // ── Full Supabase Auth integration ──────────────────────────────────────
+  // When the project is configured, the signed-in Supabase user is resolved
+  // to their `users` row (creating/linking it on the fly if needed).
+  if (isSupabaseConfigured) {
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const profile = await ensureProfileForSupabaseUser(user);
+        if (profile) return profile;
+      }
+    } catch (e) {
+      console.warn('[viewer] Supabase auth lookup failed, falling back:', (e as Error)?.message);
+    }
+  }
+
+  // ── Legacy / offline mode (unchanged behavior) ──────────────────────────
   try {
     await ensureSeeded();
   } catch (e) {

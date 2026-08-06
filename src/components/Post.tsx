@@ -37,7 +37,7 @@ export default function Post({ post, currentUser }: { post: any, currentUser: an
             <Link href={`/profile/${post.user.id}`} className="font-semibold hover:underline">
               {post.user.name}
             </Link>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-500" suppressHydrationWarning>
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function Post({ post, currentUser }: { post: any, currentUser: an
         </button>
       </div>
 
-      <div className="px-4 pb-2 text-gray-800 whitespace-pre-wrap">{post.content}</div>
+      <div className="px-4 pb-2 text-gray-800 whitespace-pre-wrap break-words">{post.content}</div>
       {post.imageUrl && (
         <img src={post.imageUrl} alt="Post image" className="w-full object-contain max-h-[500px] border-y border-gray-100" />
       )}
@@ -104,14 +104,14 @@ export default function Post({ post, currentUser }: { post: any, currentUser: an
                     </div>
                   )}
                 </Link>
-                <div>
+                <div className="min-w-0">
                   <div className="bg-gray-100 rounded-2xl px-3 py-2">
                     <Link href={`/profile/${comment.user.id}`} className="font-semibold text-sm hover:underline">
                       {comment.user.name}
                     </Link>
-                    <div className="text-sm">{comment.content}</div>
+                    <div className="text-sm break-words">{comment.content}</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1 ml-2">
+                  <div className="text-xs text-gray-500 mt-1 ml-2" suppressHydrationWarning>
                     {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                   </div>
                 </div>

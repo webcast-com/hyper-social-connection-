@@ -1,19 +1,33 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@fontsource-variable/inter';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/poppins/800.css';
 import Navbar from '@/components/Navbar';
 import { db, hasDatabase } from '@/db';
 import { notifications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getViewer } from '@/lib/viewer';
 
-// System font stack (no build-time fetch to Google Fonts, so builds work
-// in offline/restricted environments). Tailwind's `font-sans` resolves to
-// a modern system-ui stack.
-const inter = { className: 'font-sans' };
+// Google Fonts (Inter + Poppins), self-hosted from the @fontsource packages
+// — no build-time fetch and no runtime requests, so builds work in
+// offline/restricted environments. Fonts are registered in globals.css via
+// the Tailwind theme (`--font-sans` / `--font-display`) and fall back to
+// the system stack if they are ever missing.
 
 export const metadata: Metadata = {
   title: 'Hyper',
   description: 'A public social network demo',
+};
+
+// `viewport-fit=cover` lets the CSS `env(safe-area-inset-*)` variables work
+// on notched phones, which the mobile bottom nav uses for its padding.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 // The app renders the signed-in viewer per request, so skip static
@@ -36,9 +50,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-100 min-h-screen`}>
+      <head>
+        {/* Apply the saved/system theme before hydration to avoid a flash of
+            the wrong theme. Only touches <html>'s class (not managed by
+            React), so it can never cause a hydration mismatch. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="font-sans bg-gray-100 min-h-screen">
         <Navbar user={user} unreadCount={unread.length} />
-        <main className="pt-16 max-w-7xl mx-auto">{children}</main>
+        {/* pb-20 on mobile leaves room for the bottom tab bar */}
+        <main className="pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
       </body>
     </html>
   );
