@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import { db } from '@/db';
@@ -7,12 +6,19 @@ import { notifications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getViewer } from '@/lib/viewer';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' });
+// System font stack (no build-time fetch to Google Fonts, so builds work
+// in offline/restricted environments). Tailwind's `font-sans` resolves to
+// a modern system-ui stack.
+const inter = { className: 'font-sans' };
 
 export const metadata: Metadata = {
   title: 'Hyper',
   description: 'A public social network demo',
 };
+
+// The app renders the signed-in viewer per request, so skip static
+// prerendering (also keeps builds from needing live DB credentials).
+export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();

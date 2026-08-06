@@ -9,6 +9,7 @@ next-env.d.ts
 
 # environment variables
 .env*
+!.env.example
 
 # user-uploaded media (runtime-generated)
 public/uploads/*
