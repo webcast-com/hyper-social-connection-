@@ -1,36 +1,61 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { searchUsers, searchPosts } from '@/app/actions';
 import { Search } from 'lucide-react';
 
+type SearchResult = {
+  users: any[];
+  posts: any[];
+};
+
+async function executeSearch(value: string): Promise<SearchResult> {
+  const searchQuery = value.trim();
+  if (!searchQuery) return { users: [], posts: [] };
+
+  const [users, posts] = await Promise.all([
+    searchUsers(searchQuery),
+    searchPosts(searchQuery),
+  ]);
+  return { users, posts };
+}
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
-  
   const [query, setQuery] = useState(urlQuery);
   const [userResults, setUserResults] = useState<any[]>([]);
   const [postResults, setPostResults] = useState<any[]>([]);
+  const requestId = useRef(0);
 
+  // Direct links such as /search?q=travel should load their results too. The
+  // async boundary prevents stale responses from overwriting newer searches.
   useEffect(() => {
-    setQuery(urlQuery);
-    handleSearch(urlQuery);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const id = ++requestId.current;
+    let cancelled = false;
+
+    (async () => {
+      const results = await executeSearch(urlQuery);
+      if (cancelled || id !== requestId.current) return;
+      setQuery(urlQuery);
+      setUserResults(results.users);
+      setPostResults(results.posts);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [urlQuery]);
 
-  const handleSearch = async (q?: string) => {
-    const searchQuery = q !== undefined ? q : query;
-    if (!searchQuery.trim()) {
-      setUserResults([]);
-      setPostResults([]);
-      return;
-    }
-    const users = await searchUsers(searchQuery);
-    const posts = await searchPosts(searchQuery);
-    setUserResults(users);
-    setPostResults(posts);
+  const handleSearch = async (value: string) => {
+    setQuery(value);
+    const id = ++requestId.current;
+    const results = await executeSearch(value);
+    if (id !== requestId.current) return;
+    setUserResults(results.users);
+    setPostResults(results.posts);
   };
 
   return (
@@ -42,10 +67,7 @@ export default function SearchPage() {
           <input
             type="text"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              handleSearch(e.target.value);
-            }}
+            onChange={(e) => { void handleSearch(e.target.value); }}
             placeholder="Search people or posts..."
             className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
           />
@@ -98,7 +120,9 @@ export default function SearchPage() {
           )}
 
           {query.trim() && userResults.length === 0 && postResults.length === 0 && (
-            <div className="text-center text-gray-500 py-6">No results found for "{query}"</div>
+            <div className="text-center text-gray-500 py-6">
+              No results found for &quot;{query}&quot;
+            </div>
           )}
         </div>
       </div>

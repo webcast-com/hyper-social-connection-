@@ -12,7 +12,10 @@ import { getSiteUrl } from '@/lib/site-url';
 const SITE_ORIGIN = getSiteUrl();
 
 export async function POST(req: Request) {
-  const { name, email, password } = await req.json();
+  const body = await req.json();
+  const name = String(body.name || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  const password = String(body.password || '');
 
   // ── Full Supabase Auth ───────────────────────────────────────────────────
   if (isSupabaseConfigured) {
@@ -37,7 +40,13 @@ export async function POST(req: Request) {
         console.warn('[signup] Supabase Auth unreachable, using legacy flow:', error.message);
       } else {
         if (data.user) {
-          await ensureProfileForSupabaseUser(data.user);
+          const profile = await ensureProfileForSupabaseUser(data.user);
+          if (!profile) {
+            return NextResponse.json(
+              { error: 'Account creation succeeded, but the profile database is unavailable. Please try again.' },
+              { status: 503 },
+            );
+          }
         }
 
         // When email confirmation is enabled Supabase returns no session yet —

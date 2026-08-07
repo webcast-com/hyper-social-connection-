@@ -11,7 +11,10 @@ import { createClient } from '@/lib/supabase/server';
 import { ensureProfileForSupabaseUser } from '@/lib/supabase/profile';
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const body = await req.json();
+  const email = String(body.email || '').trim().toLowerCase();
+  const password = String(body.password || '');
+  const isLegacyDemo = email.endsWith('@demo.com');
 
   // ── Full Supabase Auth ───────────────────────────────────────────────────
   // When the project is configured, authenticate through Supabase Auth. The
@@ -22,15 +25,24 @@ export async function POST(req: Request) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
-        if (error instanceof AuthApiError) {
-          // Wrong credentials / unconfirmed email — a genuine auth failure.
+        if (error instanceof AuthApiError && !isLegacyDemo) {
+          // Real Supabase accounts should not silently fall back to the demo
+          // JWT path. Legacy demo accounts are the intentional exception: they
+          // live in public.users, not auth.users, even in full mode.
           return NextResponse.json({ error: error.message }, { status: 401 });
         }
-        // Unreachable project / offline network — fall through to the
-        // legacy flow so demo accounts and the offline preview keep working.
-        console.warn('[login] Supabase Auth unreachable, using legacy flow:', error.message);
+        // A demo account (or an unreachable project) continues to the legacy
+        // flow below. This keeps the documented demo login working when
+        // Supabase Auth is enabled.
+        console.warn('[login] Supabase Auth did not authenticate, using legacy flow:', error.message);
       } else if (data.user) {
-        await ensureProfileForSupabaseUser(data.user);
+        const profile = await ensureProfileForSupabaseUser(data.user);
+        if (!profile) {
+          return NextResponse.json(
+            { error: 'Your account was authenticated, but the profile database is unavailable.' },
+            { status: 503 },
+          );
+        }
         return NextResponse.json({ success: true, provider: 'supabase' });
       }
     } catch (err) {
@@ -44,21 +56,19 @@ export async function POST(req: Request) {
   try {
     // Offline fallback: allow demo login without a live DB so preview still works
     if (!hasDatabase) {
-      const demoPasswordOk = password === 'demo1234' && email.endsWith('@demo.com');
+      const demoIds: Record<string, number> = {
+        'alex@demo.com': 1,
+        'maya@demo.com': 2,
+        'jordan@demo.com': 3,
+        'sophie@demo.com': 4,
+        'marcus@demo.com': 5,
+        'emma@demo.com': 6,
+        'liam@demo.com': 7,
+        'zara@demo.com': 8,
+      };
+      const demoPasswordOk = password === 'demo1234' && email in demoIds;
       if (demoPasswordOk) {
-        // Map demo emails to ids 1..8 so the viewer can resolve correctly
-        const demoIds: Record<string, number> = {
-          'alex@demo.com': 1,
-          'maya@demo.com': 2,
-          'jordan@demo.com': 3,
-          'sophie@demo.com': 4,
-          'marcus@demo.com': 5,
-          'emma@demo.com': 6,
-          'liam@demo.com': 7,
-          'zara@demo.com': 8,
-        };
-        const userId = demoIds[email] ?? 1;
-        await loginUser(userId);
+        await loginUser(demoIds[email]);
         return NextResponse.json({ success: true, offline: true });
       }
       return NextResponse.json({ error: 'Database not configured — only demo accounts (password: demo1234) can sign in offline.' }, { status: 503 });

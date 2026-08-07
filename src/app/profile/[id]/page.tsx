@@ -22,28 +22,32 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   let isFollowing = false;
   let followersRes: any[] = [];
   let followingRes: any[] = [];
+  let profileNotFound = false;
 
   if (hasDatabase) {
     try {
       const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
-      if (profileUserRes.length === 0) return <div className="p-8 text-center text-gray-500">User not found.</div>;
-      profileUser = profileUserRes[0];
+      if (profileUserRes.length === 0) {
+        profileNotFound = true;
+      } else {
+        profileUser = profileUserRes[0];
 
-      allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
-      allUsers = await db.select().from(users);
-      allLikes = await db.select().from(likes);
-      allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+        allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
+        allUsers = await db.select().from(users);
+        allLikes = await db.select().from(likes);
+        allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
 
-      const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
-      isFollowing = isFollowingRes.length > 0;
+        const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
+        isFollowing = isFollowingRes.length > 0;
 
-      followersRes = await db.select({ user: users }).from(follows)
-        .leftJoin(users, eq(follows.followerId, users.id))
-        .where(eq(follows.followingId, profileId));
-      followingRes = await db.select({ user: users }).from(follows)
-        .leftJoin(users, eq(follows.followingId, users.id))
-        .where(eq(follows.followerId, profileId));
-      if (allUsers.length === 0) allUsers = [currentUser, profileUser];
+        followersRes = await db.select({ user: users }).from(follows)
+          .leftJoin(users, eq(follows.followerId, users.id))
+          .where(eq(follows.followingId, profileId));
+        followingRes = await db.select({ user: users }).from(follows)
+          .leftJoin(users, eq(follows.followingId, users.id))
+          .where(eq(follows.followerId, profileId));
+        if (allUsers.length === 0) allUsers = [currentUser, profileUser];
+      }
     } catch (err) {
       console.warn('[profile] DB query failed:', (err as Error)?.message);
       profileUser = currentUser;
@@ -52,6 +56,10 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   } else {
     profileUser = currentUser;
     allUsers = [currentUser];
+  }
+
+  if (profileNotFound) {
+    return <div className="p-8 text-center text-gray-500">User not found.</div>;
   }
 
   const enrichedPosts = allPosts.map(post => ({
