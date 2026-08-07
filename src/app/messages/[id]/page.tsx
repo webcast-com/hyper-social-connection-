@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users, messages } from '@/db/schema';
@@ -7,6 +8,12 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import MessageInput from '@/components/MessageInput';
 import ChatStream, { type ChatMessage, type ChatUser } from '@/components/Chat/ChatStream';
+
+export const metadata: Metadata = {
+  title: 'Conversation',
+  description: 'Private conversation on Hyper.',
+  robots: { index: false, follow: false },
+};
 
 export default async function MessageDetail({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await getViewer();

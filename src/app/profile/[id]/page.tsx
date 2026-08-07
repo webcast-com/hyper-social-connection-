@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users, posts, follows, likes, comments } from '@/db/schema';
@@ -8,6 +9,55 @@ import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const profileId = Number.parseInt(id, 10);
+  let profile: { name: string; bio: string | null; avatar: string | null } | null = null;
+
+  if (hasDatabase && Number.isInteger(profileId)) {
+    try {
+      const result = await db
+        .select({
+          name: users.name,
+          bio: users.bio,
+          avatar: users.avatar,
+        })
+        .from(users)
+        .where(eq(users.id, profileId));
+      profile = result[0] || null;
+    } catch (err) {
+      console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
+    }
+  }
+
+  const title = profile?.name ? `${profile.name} on Hyper` : 'Profile on Hyper';
+  const description = profile?.bio || 'View this Hyper profile and connect with the community.';
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/profile/${id}` },
+    robots: profile ? { index: true, follow: true } : { index: false, follow: true },
+    openGraph: {
+      type: 'profile',
+      title: `${title} | Hyper`,
+      description,
+      url: `/profile/${id}`,
+      ...(profile?.avatar ? { images: [profile.avatar] } : {}),
+    },
+    twitter: {
+      card: profile?.avatar ? 'summary_large_image' : 'summary',
+      title: `${title} | Hyper`,
+      description,
+      ...(profile?.avatar ? { images: [profile.avatar] } : {}),
+    },
+  };
+}
 
 export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
   const currentUser = await getViewer();

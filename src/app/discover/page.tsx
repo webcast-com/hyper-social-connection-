@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users, follows, posts } from '@/db/schema';
@@ -5,6 +6,17 @@ import { eq, desc, ne, and } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Sparkles } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Discover People and Communities',
+  description: 'Find interesting people, communities, and conversations to follow on Hyper.',
+  alternates: { canonical: '/discover' },
+  openGraph: {
+    title: 'Discover People and Communities | Hyper',
+    description: 'Find interesting people, communities, and conversations to follow on Hyper.',
+    url: '/discover',
+  },
+};
 
 export default async function Discover() {
   const currentUser = await getViewer();

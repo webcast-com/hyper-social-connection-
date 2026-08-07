@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { db, hasDatabase } from '@/db';
 import { groups, users, groupMembers } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -5,6 +6,17 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createGroup } from '@/app/actions';
 import { Users, Plus } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Communities and Groups',
+  description: 'Explore Hyper communities and find a group for the things you care about.',
+  alternates: { canonical: '/groups' },
+  openGraph: {
+    title: 'Communities and Groups | Hyper',
+    description: 'Explore Hyper communities and find a group for the things you care about.',
+    url: '/groups',
+  },
+};
 
 export default async function GroupsPage() {
   let allGroups: any[] = [];

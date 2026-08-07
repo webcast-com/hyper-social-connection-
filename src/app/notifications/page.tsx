@@ -1,7 +1,15 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { getNotifications } from '@/app/actions';
 import NotificationItem from '@/components/NotificationItem';
 import { Bell } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Notifications',
+  description: 'Your Hyper notifications and activity updates.',
+  alternates: { canonical: '/notifications' },
+  robots: { index: false, follow: false },
+};
 
 export default async function NotificationsPage() {
   await getViewer();

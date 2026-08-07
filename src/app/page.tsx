@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { posts, users, likes, comments } from '@/db/schema';
@@ -8,6 +9,17 @@ import Post from '@/components/Post';
 import Stories from '@/components/Stories';
 import Link from 'next/link';
 import { Compass, Users } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Hyper — Connect with the world',
+  description: 'See what your Hyper community is sharing and join the conversation.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: 'Hyper — Connect with the world',
+    description: 'See what your Hyper community is sharing and join the conversation.',
+    url: '/',
+  },
+};
 
 export default async function Home() {
   const currentUser = await getViewer();
