@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db } from '@/db';
 import { users } from '@/db/schema';
@@ -6,6 +7,13 @@ import { redirect } from 'next/navigation';
 import { updateProfile } from '@/app/actions';
 import AvatarField from '@/components/AvatarField';
 import CoverPhotoField from '@/components/CoverPhotoField';
+
+export const metadata: Metadata = {
+  title: 'Settings and Privacy',
+  description: 'Manage your Hyper profile and privacy settings.',
+  alternates: { canonical: '/settings' },
+  robots: { index: false, follow: false },
+};
 
 export default async function Settings() {
   const currentUser = await getViewer();

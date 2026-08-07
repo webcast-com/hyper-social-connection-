@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { db, hasDatabase } from '@/db';
 import { groups, users, groupMembers } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -5,6 +6,18 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createGroup } from '@/app/actions';
 import { Users, Plus } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Communities and Groups',
+  description: 'Explore Hyper communities and find a group for the things you care about.',
+  alternates: { canonical: '/groups' },
+  openGraph: {
+    title: 'Communities and Groups | Hyper',
+    description: 'Explore Hyper communities and find a group for the things you care about.',
+    url: '/groups',
+    images: ['/og-image.png'],
+  },
+};
 
 export default async function GroupsPage() {
   let allGroups: any[] = [];
@@ -40,7 +53,7 @@ export default async function GroupsPage() {
         {allGroups.map(group => (
           <div key={group.id} className="bg-white rounded-xl shadow overflow-hidden group border border-gray-100">
             <div className="h-32 bg-gradient-to-r from-blue-400 to-indigo-500 relative">
-              {group.coverPhoto && <img src={group.coverPhoto} className="w-full h-full object-cover" />}
+              {group.coverPhoto && <img src={group.coverPhoto} alt={`${group.name} cover`} className="w-full h-full object-cover" />}
             </div>
             <div className="p-4">
               <h3 className="font-bold text-xl mb-1">{group.name}</h3>

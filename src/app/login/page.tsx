@@ -58,7 +58,7 @@ export default function Login() {
       headers: { 'Content-Type': 'application/json' },
     });
     if (res.ok) {
-      window.location.href = '/';
+      window.location.assign('/');
     } else {
       setError('Invalid email or password.');
       setLoading(false);

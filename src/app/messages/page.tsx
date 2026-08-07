@@ -1,8 +1,16 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users } from '@/db/schema';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Messages',
+  description: 'Private conversations on Hyper.',
+  alternates: { canonical: '/messages' },
+  robots: { index: false, follow: false },
+};
 
 export default async function Messages() {
   const viewer = await getViewer();

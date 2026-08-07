@@ -21,14 +21,17 @@ const DEFAULT_SUPABASE_URL = "https://pjzhjzqzmajbastavmkd.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqemhqenF6bWFqYmFzdGF2bWtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTc0OTEsImV4cCI6MjEwMDU3MzQ5MX0.iTGgXDcJZqlNRCv5hh9lyFWs5Q5SHZRg-v78ttI7frQ";
 
+// Prefer NEXT_PUBLIC_* in shared modules. Next.js can safely inline these
+// public values into client bundles; the server-side names remain supported
+// for existing deployments and are mirrored by next.config.ts.
 export const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
   DEFAULT_SUPABASE_URL;
 
 export const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
   DEFAULT_SUPABASE_ANON_KEY;
 
 /** Optional service-role key — used server-side for storage bucket setup. */
@@ -43,4 +46,5 @@ export const SUPABASE_STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "u
  * stays fully offline until real credentials are provided.
  */
 export const isSupabaseConfigured =
-  !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
+  (!!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY) ||
+  (!!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);

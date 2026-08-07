@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users, groups, groupMembers } from '@/db/schema';
@@ -6,6 +7,55 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { joinGroup } from '@/app/actions';
 import { Users, Crown, ArrowLeft } from 'lucide-react';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const groupId = Number.parseInt(id, 10);
+  let group: { name: string; description: string | null; coverPhoto: string | null } | null = null;
+
+  if (hasDatabase && Number.isInteger(groupId)) {
+    try {
+      const result = await db
+        .select({
+          name: groups.name,
+          description: groups.description,
+          coverPhoto: groups.coverPhoto,
+        })
+        .from(groups)
+        .where(eq(groups.id, groupId));
+      group = result[0] || null;
+    } catch (err) {
+      console.warn('[group metadata] DB query failed:', (err as Error)?.message);
+    }
+  }
+
+  const title = group?.name ? `${group.name} Community` : 'Community Group';
+  const description = group?.description || 'Join a Hyper community and connect with people who share your interests.';
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/groups/${id}` },
+    robots: group ? { index: true, follow: true } : { index: false, follow: true },
+    openGraph: {
+      type: 'website',
+      title: `${title} | Hyper`,
+      description,
+      url: `/groups/${id}`,
+      images: [group?.coverPhoto || '/og-image.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | Hyper`,
+      description,
+      images: [group?.coverPhoto || '/og-image.png'],
+    },
+  };
+}
 
 export default async function GroupDetail({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await getViewer();

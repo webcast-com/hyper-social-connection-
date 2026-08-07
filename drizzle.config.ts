@@ -1,9 +1,11 @@
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Load credentials from .env.local (Next.js style) so the same values
-// power both the app and drizzle-kit push/generate.
+// Load local overrides first, then the repository's .env fallback. Next.js
+// loads both automatically, so drizzle-kit must do the same or `db:push`
+// silently receives an empty DATABASE_URL when only .env is present.
 config({ path: ".env.local" });
+config({ path: ".env" });
 
 export default defineConfig({
   dialect: "postgresql",

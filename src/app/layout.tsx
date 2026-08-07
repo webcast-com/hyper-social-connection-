@@ -10,6 +10,10 @@ import { db, hasDatabase } from '@/db';
 import { notifications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getViewer } from '@/lib/viewer';
+import { getSiteUrl } from '@/lib/site-url';
+import { getSiteMetadata } from '@/components/SEO/SEOMeta';
+
+const siteUrl = getSiteUrl();
 
 // Google Fonts (Inter + Poppins), self-hosted from the @fontsource packages
 // — no build-time fetch and no runtime requests, so builds work in
@@ -17,10 +21,7 @@ import { getViewer } from '@/lib/viewer';
 // the Tailwind theme (`--font-sans` / `--font-display`) and fall back to
 // the system stack if they are ever missing.
 
-export const metadata: Metadata = {
-  title: 'Hyper',
-  description: 'A public social network demo',
-};
+export const metadata: Metadata = getSiteMetadata(siteUrl);
 
 // `viewport-fit=cover` lets the CSS `env(safe-area-inset-*)` variables work
 // on notched phones, which the mobile bottom nav uses for its padding.
