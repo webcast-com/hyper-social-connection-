@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     title: 'Communities and Groups | Hyper',
     description: 'Explore Hyper communities and find a group for the things you care about.',
     url: '/groups',
+    images: ['/og-image.png'],
   },
 };
 

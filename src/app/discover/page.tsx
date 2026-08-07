@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     title: 'Discover People and Communities | Hyper',
     description: 'Find interesting people, communities, and conversations to follow on Hyper.',
     url: '/discover',
+    images: ['/og-image.png'],
   },
 };
 

@@ -46,13 +46,13 @@ export async function generateMetadata({
       title: `${title} | Hyper`,
       description,
       url: `/groups/${id}`,
-      ...(group?.coverPhoto ? { images: [group.coverPhoto] } : {}),
+      images: [group?.coverPhoto || '/og-image.png'],
     },
     twitter: {
-      card: group?.coverPhoto ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title: `${title} | Hyper`,
       description,
-      ...(group?.coverPhoto ? { images: [group.coverPhoto] } : {}),
+      images: [group?.coverPhoto || '/og-image.png'],
     },
   };
 }

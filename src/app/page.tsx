@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     title: 'Hyper — Connect with the world',
     description: 'See what your Hyper community is sharing and join the conversation.',
     url: '/',
+    images: ['/og-image.png'],
   },
 };
 

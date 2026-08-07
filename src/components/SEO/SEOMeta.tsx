@@ -38,11 +38,20 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       siteName: SITE_NAME,
       title: 'Hyper — Connect with the world',
       description: SITE_DESCRIPTION,
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'Hyper — Connect with the world',
+        },
+      ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: 'Hyper — Connect with the world',
       description: SITE_DESCRIPTION,
+      images: ['/og-image.png'],
     },
     robots: {
       index: true,

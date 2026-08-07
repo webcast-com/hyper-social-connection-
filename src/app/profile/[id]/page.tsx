@@ -48,13 +48,13 @@ export async function generateMetadata({
       title: `${title} | Hyper`,
       description,
       url: `/profile/${id}`,
-      ...(profile?.avatar ? { images: [profile.avatar] } : {}),
+      images: [profile?.avatar || '/og-image.png'],
     },
     twitter: {
-      card: profile?.avatar ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title: `${title} | Hyper`,
       description,
-      ...(profile?.avatar ? { images: [profile.avatar] } : {}),
+      images: [profile?.avatar || '/og-image.png'],
     },
   };
 }
