@@ -3,7 +3,6 @@ import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users, follows, posts } from '@/db/schema';
 import { eq, desc, ne, and } from 'drizzle-orm';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Sparkles } from 'lucide-react';
 
@@ -20,17 +19,17 @@ export const metadata: Metadata = {
 };
 
 export default async function Discover() {
-  const currentUser = await getViewer();
+  const currentUser = await getViewer() || { id: 0 } as any;
 
   let followingIds: { id: number }[] = [];
   let discoverUsers: any[] = [];
   let trendingPosts: any[] = [];
   if (hasDatabase) {
     try {
-      followingIds = await db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, currentUser.id));
+      followingIds = currentUser.id ? await db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, currentUser.id)) : [];
       discoverUsers = await db.select().from(users).where(
         and(
-          ne(users.id, currentUser.id),
+          ne(users.id, currentUser.id || 0),
         )
       ).limit(20);
       trendingPosts = await db.select({ post: posts, user: users }).from(posts)
@@ -43,6 +42,8 @@ export default async function Discover() {
   }
   const followingIdsSet = new Set(followingIds.map(f => f.id));
   const filteredUsers = discoverUsers.filter(u => !followingIdsSet.has(u.id));
+
+  const isGuest = !currentUser || currentUser.id === 0;
 
   return (
     <div className="max-w-5xl mx-auto p-4 mt-6">

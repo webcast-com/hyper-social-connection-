@@ -16,17 +16,6 @@ function subscribeNoop() {
   return () => {};
 }
 
-const DEMO_USERS = [
-  { name: 'Alex Johnson', email: 'alex@demo.com', emoji: '📸', role: 'Photographer & Traveler' },
-  { name: 'Maya Patel',   email: 'maya@demo.com', emoji: '🎨', role: 'Digital Artist' },
-  { name: 'Jordan Rivera',email: 'jordan@demo.com',emoji: '💪', role: 'Fitness Coach' },
-  { name: 'Sophie Chen',  email: 'sophie@demo.com',emoji: '💻', role: 'Full-Stack Dev' },
-  { name: 'Marcus Williams',email:'marcus@demo.com',emoji:'🎸', role: 'Musician & Filmmaker' },
-  { name: 'Emma Davis',   email: 'emma@demo.com', emoji: '📚', role: 'Book Lover' },
-  { name: 'Liam Nguyen',  email: 'liam@demo.com', emoji: '🍳', role: 'Chef in Training' },
-  { name: 'Zara Thompson',email: 'zara@demo.com', emoji: '🌸', role: 'Fashion Blogger' },
-];
-
 export default function Login() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -68,12 +57,6 @@ export default function Login() {
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     await doLogin(email, password);
-  };
-
-  const loginAsDemo = async (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('demo1234');
-    await doLogin(demoEmail, 'demo1234');
   };
 
   return (
@@ -162,35 +145,6 @@ export default function Login() {
           >
             Create new account
           </Link>
-        </div>
-
-        {/* Demo Profiles Panel */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl">🚀</span>
-            <h2 className="font-bold text-lg text-gray-800">Try a Demo Profile</h2>
-          </div>
-          <p className="text-gray-500 text-xs mb-4">One-click login — password is <code className="bg-gray-100 px-1 rounded">demo1234</code></p>
-
-          <div className="grid grid-cols-1 gap-2 max-h-[360px] overflow-y-auto pr-1">
-            {DEMO_USERS.map(u => (
-              <button
-                key={u.email}
-                onClick={() => loginAsDemo(u.email)}
-                disabled={loading}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-200 transition-all text-left group disabled:opacity-60"
-              >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center text-xl shadow-sm shrink-0">
-                  {u.emoji}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm text-gray-800 group-hover:text-blue-700 truncate">{u.name}</div>
-                  <div className="text-xs text-gray-400 truncate">{u.role}</div>
-                </div>
-                <span className="ml-auto text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium shrink-0">Login →</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>

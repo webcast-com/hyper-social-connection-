@@ -23,7 +23,12 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const currentUser = await getViewer();
+  const currentUser = await getViewer() || {
+    id: 0,
+    name: 'Guest',
+    avatar: null,
+    email: '',
+  } as any;
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -41,10 +46,10 @@ export default async function Home() {
         .orderBy(desc(storiesTable.createdAt));
     } catch (err) {
       console.warn('[home] DB query failed, rendering empty feed:', (err as Error)?.message);
-      allUsers = [currentUser];
+      allUsers = currentUser.id ? [currentUser] : [];
     }
   } else {
-    allUsers = [currentUser];
+    allUsers = currentUser.id ? [currentUser] : [];
   }
 
   const enrichedStories = activeStories.map(s => ({

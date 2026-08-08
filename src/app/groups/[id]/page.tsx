@@ -58,7 +58,7 @@ export async function generateMetadata({
 }
 
 export default async function GroupDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await getViewer();
+  const viewer = await getViewer() || { id: 0 } as any;
   const { id } = await params;
 
   const groupId = parseInt(id);
@@ -87,7 +87,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
     }
   } else {
     group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: viewer.id };
-    members = [{ user: viewer }];
+    members = [{ user: { ...viewer, name: viewer.name || 'Guest', avatar: viewer.avatar || null } }];
   }
 
   const isMember = members.some((m: any) => m.user?.id === viewer.id);
@@ -146,15 +146,15 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               {members.map(({ user: u }) => u && (
                 <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center space-x-3 hover:bg-gray-50 rounded-lg p-1 transition-colors">
                   {u.avatar ? (
-                    <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                    <img src={u.avatar} alt={u.name || 'User'} className="w-10 h-10 rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shrink-0">
-                      {u.name.charAt(0)}
+                      {(u.name || 'G').charAt(0)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{u.name}</div>
-                    {u.id === group.adminId && (
+                    <div className="font-semibold text-sm truncate">{u.name || 'User'}</div>
+                    {u.id === group?.adminId && (
                       <div className="flex items-center gap-1 text-xs text-yellow-600">
                         <Crown className="w-3 h-3 shrink-0" /> Admin
                       </div>

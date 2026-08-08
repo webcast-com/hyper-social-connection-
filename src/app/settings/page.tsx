@@ -16,7 +16,14 @@ export const metadata: Metadata = {
 };
 
 export default async function Settings() {
-  const currentUser = await getViewer();
+  const currentUser = await getViewer() || {
+    id: 0,
+    name: 'Guest',
+    avatar: null,
+    email: '',
+    bio: '',
+    coverPhoto: null,
+  } as any;
 
   return (
     <div className="max-w-2xl mx-auto p-4 mt-6 bg-white rounded-lg shadow">

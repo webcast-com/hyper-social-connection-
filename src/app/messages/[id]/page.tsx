@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function MessageDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await getViewer();
+  const viewer = await getViewer() || { id: 0 } as any;
   const { id } = await params;
 
   const receiverId = parseInt(id);

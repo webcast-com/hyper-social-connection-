@@ -37,6 +37,27 @@ export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();
+
+  // No authenticated user: render without the main app shell.
+  // This prevents Navbar crashes and allows /login and /signup to render cleanly.
+  // Protected pages should redirect to /login themselves (or use middleware).
+  if (!user) {
+    return (
+      <html lang="en">
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
+            }}
+          />
+        </head>
+        <body className="font-sans bg-gray-100 min-h-screen">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   let unread: { id: number }[] = [];
   if (hasDatabase) {
     try {

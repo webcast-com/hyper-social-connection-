@@ -15,9 +15,29 @@ const MOBILE_TABS = [
   { href: '/notifications', label: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true },
 ];
 
-export default function Navbar({ user, unreadCount }: { user: any, unreadCount?: number }) {
+export default function Navbar({ user, unreadCount }: { user?: any, unreadCount?: number }) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Gracefully handle unauthenticated state (prevents crashes after removing demo fallbacks)
+  if (!user) {
+    return (
+      <>
+        <nav className="fixed top-0 w-full bg-white border-b border-gray-200 z-50 px-4 h-14 flex items-center justify-between shadow-sm">
+          <div className="flex items-center space-x-2 min-w-0">
+            <Link href="/" className="text-blue-600 font-bold text-2xl tracking-tighter hover:scale-105 transition-transform font-display shrink-0">
+              hyper
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/login" className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-50">Log in</Link>
+            <Link href="/signup" className="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Sign up</Link>
+          </div>
+        </nav>
+        {/* No mobile tabs when unauthenticated */}
+      </>
+    );
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
