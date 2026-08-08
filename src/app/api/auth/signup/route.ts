@@ -63,10 +63,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── Legacy / offline fallback (unchanged behavior) ──────────────────────
+  // ── Real database signup only ──────────────────────────────────────────
   try {
     if (!hasDatabase) {
-      return NextResponse.json({ error: 'Database not configured — sign-ups are disabled offline. Use a demo account (password: demo1234) or add DATABASE_URL to .env.local and restart.' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Sign up requires a configured database. Please set DATABASE_URL.' },
+        { status: 503 }
+      );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

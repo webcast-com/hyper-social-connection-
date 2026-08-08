@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users } from '@/db/schema';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Messages() {
-  const viewer = await getViewer();
+  const viewer = await getViewer() || { id: 0 } as any;
 
   let allUsers: any[] = [];
   if (hasDatabase) {
@@ -21,10 +20,7 @@ export default async function Messages() {
       allUsers = await db.select().from(users);
     } catch (err) {
       console.warn('[messages] DB query failed:', (err as Error)?.message);
-      allUsers = [viewer];
     }
-  } else {
-    allUsers = [viewer];
   }
   
   return (
@@ -32,7 +28,7 @@ export default async function Messages() {
       <div className="w-full md:w-1/3 border-r border-gray-200 overflow-y-auto">
         <div className="p-4 border-b border-gray-200 font-bold text-xl">Chats</div>
         <div className="p-2 space-y-1">
-          {allUsers.filter(u => u.id !== viewer.id).map(u => (
+          {allUsers.filter(u => u.id !== (viewer?.id || 0)).map(u => (
             <Link key={u.id} href={`/messages/${u.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
               {u.avatar ? (
                 <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover shrink-0" />

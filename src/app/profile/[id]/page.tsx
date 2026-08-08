@@ -60,7 +60,7 @@ export async function generateMetadata({
 }
 
 export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
-  const currentUser = await getViewer();
+  const currentUser = await getViewer() || { id: 0 } as any;
   const { id } = await params;
 
   const profileId = parseInt(id);
@@ -87,7 +87,7 @@ export default async function Profile({ params }: { params: Promise<{ id: string
         allLikes = await db.select().from(likes);
         allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
 
-        const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id), eq(follows.followingId, profileId)));
+        const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id || 0), eq(follows.followingId, profileId)));
         isFollowing = isFollowingRes.length > 0;
 
         followersRes = await db.select({ user: users }).from(follows)
@@ -100,16 +100,28 @@ export default async function Profile({ params }: { params: Promise<{ id: string
       }
     } catch (err) {
       console.warn('[profile] DB query failed:', (err as Error)?.message);
-      profileUser = currentUser;
+      profileUser = { ...currentUser, name: currentUser.name || 'Guest', avatar: currentUser.avatar || null, bio: currentUser.bio || null, createdAt: new Date() } as any;
       allUsers = [currentUser];
     }
   } else {
-    profileUser = currentUser;
+    profileUser = { ...currentUser, name: currentUser.name || 'Guest', avatar: currentUser.avatar || null, bio: currentUser.bio || null, createdAt: new Date() } as any;
     allUsers = [currentUser];
   }
 
   if (profileNotFound) {
     return <div className="p-8 text-center text-gray-500">User not found.</div>;
+  }
+
+  // Ensure safe profileUser for unauth + guest + offline (avoids .name / .id crashes)
+  if (!profileUser || typeof profileUser.name === 'undefined') {
+    profileUser = {
+      id: profileId,
+      name: currentUser?.name || 'Guest',
+      avatar: currentUser?.avatar || null,
+      bio: currentUser?.bio || null,
+      createdAt: currentUser?.createdAt || new Date(),
+      coverPhoto: currentUser?.coverPhoto || null,
+    } as any;
   }
 
   const enrichedPosts = allPosts.map(post => ({
@@ -132,7 +144,7 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           {/* Cover Photo — uploaded from the device (editable on your own profile) */}
           <CoverPhotoUpload
             user={profileUser}
-            editable={currentUser.id === profileUser.id}
+            editable={!!currentUser?.id && currentUser.id === profileUser.id}
           />
 
           {/* Avatar + Name Row */}
@@ -140,7 +152,7 @@ export default async function Profile({ params }: { params: Promise<{ id: string
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               <ProfilePictureUpload
                 user={profileUser}
-                editable={currentUser.id === profileUser.id}
+                editable={!!currentUser?.id && currentUser.id === profileUser.id}
               />
               <div className="mb-2">
                 <h1 className="text-3xl font-extrabold text-gray-900">{profileUser.name}</h1>
