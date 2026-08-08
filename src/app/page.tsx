@@ -22,13 +22,62 @@ export const metadata: Metadata = {
   },
 };
 
+const DEMO_USERS = [
+  { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.', createdAt: new Date() },
+  { id: 2, name: 'Maya Patel', email: 'maya@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya', bio: '🎨 Digital artist and UI designer.', createdAt: new Date() },
+  { id: 3, name: 'Jordan Kim', email: 'jordan@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan', bio: '🏋️ Fitness coach and wellness advocate.', createdAt: new Date() },
+  { id: 4, name: 'Sophie Chen', email: 'sophie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie', bio: '👩‍💻 Full-stack engineer & open-source builder.', createdAt: new Date() },
+  { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', bio: '🎸 Musician and content creator.', createdAt: new Date() },
+];
+
+const DEMO_POSTS_RAW = [
+  {
+    id: 1,
+    userId: 1,
+    content: '🌄 Just got back from an incredible trip to the Swiss Alps! The morning fog clearing over the peaks was breathtaking.',
+    imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+    createdAt: new Date(Date.now() - 3600000),
+  },
+  {
+    id: 2,
+    userId: 2,
+    content: '🎨 Just finished my latest digital concept painting — took 40+ hours in Procreate!',
+    imageUrl: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&q=80',
+    createdAt: new Date(Date.now() - 7200000),
+  },
+  {
+    id: 3,
+    userId: 3,
+    content: '💪 New PR today! Deadlifted 200kg for 3 clean reps. Consistency is everything!',
+    imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80',
+    createdAt: new Date(Date.now() - 14400000),
+  },
+  {
+    id: 4,
+    userId: 4,
+    content: '🚀 Shipped our major social feature sprint today! The feed is running silky smooth with tabs and real-time interaction.',
+    createdAt: new Date(Date.now() - 28800000),
+  },
+  {
+    id: 5,
+    userId: 5,
+    content: '🎸 Dropped a new original acoustic track today! Recorded with vintage tube mics.',
+    imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80',
+    createdAt: new Date(Date.now() - 43200000),
+  },
+];
+
+const DEMO_STORIES = [
+  { id: 1, userId: 1, imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80' },
+  { id: 2, userId: 2, imageUrl: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=400&q=80' },
+  { id: 3, userId: 3, imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80' },
+  { id: 4, userId: 4, imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80' },
+  { id: 5, userId: 5, imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80' },
+];
+
 export default async function Home() {
-  const currentUser = (await getViewer()) || {
-    id: 0,
-    name: 'Guest',
-    avatar: null,
-    email: '',
-  } as any;
+  const viewer = await getViewer();
+  const currentUser = viewer || DEMO_USERS[0];
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -53,11 +102,35 @@ export default async function Home() {
         userBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, currentUser.id));
       }
     } catch (err) {
-      console.warn('[home] DB query failed, rendering empty feed:', (err as Error)?.message);
-      allUsers = currentUser.id ? [currentUser] : [];
+      console.warn('[home] DB query failed, falling back to demo feed:', (err as Error)?.message);
     }
-  } else {
-    allUsers = currentUser.id ? [currentUser] : [];
+  }
+
+  // If database returned no posts (e.g. fresh environment or offline), populate demo content
+  if (allUsers.length === 0) allUsers = DEMO_USERS;
+  if (allPosts.length === 0) allPosts = DEMO_POSTS_RAW;
+  if (activeStories.length === 0) activeStories = DEMO_STORIES;
+  if (allLikes.length === 0) {
+    allLikes = [
+      { postId: 1, userId: 2 }, { postId: 1, userId: 3 }, { postId: 1, userId: 4 },
+      { postId: 2, userId: 1 }, { postId: 2, userId: 4 },
+      { postId: 3, userId: 1 }, { postId: 3, userId: 2 },
+      { postId: 4, userId: 1 }, { postId: 5, userId: 1 },
+    ];
+  }
+  if (allComments.length === 0) {
+    allComments = [
+      { id: 1, postId: 1, userId: 2, content: 'Oh my gosh, this is STUNNING! 😍', createdAt: new Date(Date.now() - 1800000) },
+      { id: 2, postId: 1, userId: 3, content: 'I hiked that same trail last summer! Great shot.', createdAt: new Date(Date.now() - 900000) },
+      { id: 3, postId: 2, userId: 1, content: 'This is INCREDIBLE, Maya! The lighting is magical.', createdAt: new Date(Date.now() - 3600000) },
+    ];
+  }
+  if (userFollows.length === 0 && currentUser.id === 1) {
+    userFollows = [
+      { followerId: 1, followingId: 2 },
+      { followerId: 1, followingId: 3 },
+      { followerId: 1, followingId: 4 },
+    ];
   }
 
   const usersById = new Map(allUsers.map((u) => [u.id, u]));
