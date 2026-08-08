@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
-import { posts, users, likes, comments, follows, bookmarks } from '@/db/schema';
+import { posts, users, likes, comments, follows, bookmarks, polls, pollOptions, pollVotes } from '@/db/schema';
 import { stories as storiesTable } from '@/db/schema';
 import { eq, desc, gte } from 'drizzle-orm';
 import CreatePost from '@/components/CreatePost';
@@ -30,7 +30,25 @@ const DEMO_USERS = [
   { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', bio: '🎸 Musician and content creator.', createdAt: new Date() },
 ];
 
-const DEMO_POSTS_RAW = [
+const DEMO_POSTS_RAW: any[] = [
+  {
+    id: 6,
+    userId: 4,
+    content: '📊 Community Poll: Which modern web stack are you building your side projects with this year?',
+    createdAt: new Date(Date.now() - 1800000),
+    poll: {
+      id: 1,
+      question: 'Which modern web stack are you building with?',
+      expiresAt: new Date(Date.now() + 86400000),
+      options: [
+        { id: 1, text: 'Next.js + TypeScript + Tailwind CSS ⚡', votesCount: 34 },
+        { id: 2, text: 'SvelteKit + Supabase 🚀', votesCount: 18 },
+        { id: 3, text: 'Go / Rust + HTMX 🦀', votesCount: 11 },
+        { id: 4, text: 'Astro / Remix / Vite 🌐', votesCount: 7 },
+      ],
+      userVotedOptionId: null,
+    },
+  },
   {
     id: 1,
     userId: 1,
@@ -86,6 +104,9 @@ export default async function Home() {
   let activeStories: any[] = [];
   let userFollows: any[] = [];
   let userBookmarks: any[] = [];
+  let allPolls: any[] = [];
+  let allPollOptions: any[] = [];
+  let allPollVotes: any[] = [];
 
   if (hasDatabase) {
     try {
@@ -96,6 +117,10 @@ export default async function Home() {
       activeStories = await db.select().from(storiesTable)
         .where(gte(storiesTable.expiresAt, new Date()))
         .orderBy(desc(storiesTable.createdAt));
+
+      allPolls = await db.select().from(polls);
+      allPollOptions = await db.select().from(pollOptions);
+      allPollVotes = await db.select().from(pollVotes);
 
       if (currentUser.id) {
         userFollows = await db.select().from(follows).where(eq(follows.followerId, currentUser.id));
@@ -112,6 +137,7 @@ export default async function Home() {
   if (activeStories.length === 0) activeStories = DEMO_STORIES;
   if (allLikes.length === 0) {
     allLikes = [
+      { postId: 6, userId: 1 }, { postId: 6, userId: 2 }, { postId: 6, userId: 3 },
       { postId: 1, userId: 2 }, { postId: 1, userId: 3 }, { postId: 1, userId: 4 },
       { postId: 2, userId: 1 }, { postId: 2, userId: 4 },
       { postId: 3, userId: 1 }, { postId: 3, userId: 2 },
@@ -123,6 +149,7 @@ export default async function Home() {
       { id: 1, postId: 1, userId: 2, content: 'Oh my gosh, this is STUNNING! 😍', createdAt: new Date(Date.now() - 1800000) },
       { id: 2, postId: 1, userId: 3, content: 'I hiked that same trail last summer! Great shot.', createdAt: new Date(Date.now() - 900000) },
       { id: 3, postId: 2, userId: 1, content: 'This is INCREDIBLE, Maya! The lighting is magical.', createdAt: new Date(Date.now() - 3600000) },
+      { id: 4, postId: 6, userId: 1, content: 'Next.js + Tailwind is the sweet spot for shipping fast!', createdAt: new Date(Date.now() - 1200000) },
     ];
   }
   if (userFollows.length === 0 && currentUser.id === 1) {
@@ -142,8 +169,33 @@ export default async function Home() {
 
   const enrichedPostsMap = new Map();
   allPosts.forEach((post) => {
+    // Map attached poll
+    let postPoll = post.poll || null;
+    if (!postPoll && allPolls.length > 0) {
+      const p = allPolls.find((pl) => pl.postId === post.id);
+      if (p) {
+        const opts = allPollOptions
+          .filter((opt) => opt.pollId === p.id)
+          .sort((a, b) => a.position - b.position)
+          .map((opt) => ({
+            id: opt.id,
+            text: opt.text,
+            votesCount: allPollVotes.filter((v) => v.optionId === opt.id).length,
+          }));
+        const userVote = allPollVotes.find((v) => v.pollId === p.id && v.userId === currentUser.id);
+        postPoll = {
+          id: p.id,
+          question: p.question,
+          expiresAt: p.expiresAt,
+          options: opts,
+          userVotedOptionId: userVote?.optionId || null,
+        };
+      }
+    }
+
     enrichedPostsMap.set(post.id, {
       ...post,
+      poll: postPoll,
       user: usersById.get(post.userId),
       likes: allLikes.filter((l) => l.postId === post.id),
       comments: allComments

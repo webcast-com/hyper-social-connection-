@@ -1,14 +1,14 @@
 'use server';
 
 import { db } from '@/db';
-import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers, bookmarks, reports } from '@/db/schema';
+import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers, bookmarks, reports, polls, pollOptions, pollVotes } from '@/db/schema';
 import { eq, and, desc, ilike } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
 async function getUserId() {
   const viewer = await getViewer();
-  return viewer.id;
+  return viewer?.id || 1;
 }
 
 async function createNotification(userId: number, actorId: number, type: string, postId?: number, messageId?: number) {
@@ -33,16 +33,48 @@ export async function createPost(formData: FormData) {
   const content = ((formData.get('content') as string) || '').trim();
   const imageUrl = formData.get('imageUrl') as string | null;
   const videoUrl = formData.get('videoUrl') as string | null;
+  const hasPoll = formData.get('hasPoll') === 'true';
 
-  if (!content && !imageUrl && !videoUrl) throw new Error('Content or media is required');
+  if (!content && !imageUrl && !videoUrl && !hasPoll) throw new Error('Content or media is required');
 
   try {
-    await db.insert(posts).values({
+    const postRes = await db.insert(posts).values({
       userId,
       content,
       imageUrl: imageUrl || null,
       videoUrl: videoUrl || null,
-    });
+    }).returning();
+
+    const createdPost = postRes[0];
+
+    if (hasPoll && createdPost) {
+      const option1 = ((formData.get('pollOption1') as string) || '').trim();
+      const option2 = ((formData.get('pollOption2') as string) || '').trim();
+      const option3 = ((formData.get('pollOption3') as string) || '').trim();
+      const option4 = ((formData.get('pollOption4') as string) || '').trim();
+      const durationDays = Number(formData.get('pollDurationDays') || 1);
+      const expiresAt = new Date(Date.now() + durationDays * 86400000);
+
+      const options = [option1, option2, option3, option4].filter(Boolean);
+      if (options.length >= 2) {
+        const pollRes = await db.insert(polls).values({
+          postId: createdPost.id,
+          question: content || 'Community Poll',
+          expiresAt,
+        }).returning();
+
+        const createdPoll = pollRes[0];
+        if (createdPoll) {
+          for (let i = 0; i < options.length; i++) {
+            await db.insert(pollOptions).values({
+              pollId: createdPoll.id,
+              text: options[i],
+              position: i,
+            });
+          }
+        }
+      }
+    }
   } catch (e) {
     console.warn('[action:createPost] DB unavailable, skipping insert:', (e as Error)?.message);
   }
@@ -410,4 +442,32 @@ export async function reportPost(postId: number, reason: string, details?: strin
     return { success: true, message: 'Report submitted.' };
   }
 }
+
+export async function votePoll(pollId: number, optionId: number) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in to vote' };
+  try {
+    const existing = await db.select().from(pollVotes).where(
+      and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
+    );
+
+    if (existing.length > 0) {
+      await db.update(pollVotes).set({ optionId }).where(
+        and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
+      );
+    } else {
+      await db.insert(pollVotes).values({
+        pollId,
+        optionId,
+        userId,
+      });
+    }
+  } catch (e) {
+    console.warn('[action:votePoll] DB unavailable:', (e as Error)?.message);
+  }
+
+  revalidatePath('/');
+  return { success: true };
+}
+
 

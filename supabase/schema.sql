@@ -177,7 +177,45 @@ CREATE TABLE IF NOT EXISTS "reports" (
 );
 
 -- ---------------------------------------------------------------------------
--- Verify: should list all 12 tables
+-- polls
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "polls" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "post_id" integer NOT NULL,
+  "question" text,
+  "expires_at" timestamp,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT "polls_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- ---------------------------------------------------------------------------
+-- poll_options
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "poll_options" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "poll_id" integer NOT NULL,
+  "text" text NOT NULL,
+  "position" integer DEFAULT 0 NOT NULL,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT "poll_options_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- ---------------------------------------------------------------------------
+-- poll_votes
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "poll_votes" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "poll_id" integer NOT NULL,
+  "option_id" integer NOT NULL,
+  "user_id" integer NOT NULL,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT "poll_votes_poll_id_polls_id_fk" FOREIGN KEY ("poll_id") REFERENCES "public"."polls"("id") ON DELETE cascade ON UPDATE no action,
+  CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action,
+  CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- ---------------------------------------------------------------------------
+-- Verify: should list all 15 tables
 -- ---------------------------------------------------------------------------
 SELECT tablename
 FROM pg_tables

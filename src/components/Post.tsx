@@ -21,6 +21,7 @@ import EmojiPicker from './EmojiPicker';
 import ReportModal from './ReportModal';
 import RepostModal from './RepostModal';
 import ImageLightbox from './ImageLightbox';
+import PostPoll from './PostPoll';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
@@ -205,6 +206,13 @@ export default function Post({
       <div className="px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
         {post.content}
       </div>
+
+      {/* Interactive Poll (if present) */}
+      {post.poll && (
+        <div className="px-4">
+          <PostPoll poll={post.poll} currentUser={currentUser} />
+        </div>
+      )}
 
       {/* Post Attached Media */}
       {post.imageUrl && (
