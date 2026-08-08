@@ -131,6 +131,28 @@ export async function ensureMigrated() {
     )`,
     // Video upload support for posts (new nullable column, existing rows untouched)
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url text`,
+    // Repost / Share support for posts (foreign key to original post)
+    `ALTER TABLE posts ADD COLUMN IF NOT EXISTS repost_of_id integer REFERENCES posts(id) ON DELETE SET NULL`,
+    // bookmarks
+    `CREATE TABLE IF NOT EXISTS "bookmarks" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "user_id" integer NOT NULL,
+      "post_id" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "bookmarks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "bookmarks_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    // reports (content moderation)
+    `CREATE TABLE IF NOT EXISTS "reports" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "reporter_id" integer NOT NULL,
+      "post_id" integer,
+      "reason" text NOT NULL,
+      "details" text,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "reports_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action
+    )`,
     // Supabase Auth integration: link profiles to auth.users via auth_id (uuid).
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_id uuid`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_id_unique" ON "users" ("auth_id")`,

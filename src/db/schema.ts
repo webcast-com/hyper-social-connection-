@@ -21,6 +21,7 @@ export const posts = pgTable("posts", {
   imageUrl: text("image_url"),
   videoUrl: text("video_url"),
   privacy: text("privacy").default('public').notNull(), // 'public', 'friends'
+  repostOfId: integer("repost_of_id").references((): any => posts.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -88,9 +89,26 @@ export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
   actorId: integer("actor_id").references(() => users.id).notNull(),
-  type: text("type").notNull(), // 'like', 'comment', 'follow', 'message'
+  type: text("type").notNull(), // 'like', 'comment', 'follow', 'message', 'repost'
   postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }),
   messageId: integer("message_id").references(() => messages.id, { onDelete: "cascade" }),
   isRead: integer("is_read").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const bookmarks = pgTable("bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const reports = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  reporterId: integer("reporter_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(), // 'spam', 'harassment', 'misinformation', 'inappropriate', 'other'
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+

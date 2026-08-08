@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers } from '@/db/schema';
+import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers, bookmarks, reports } from '@/db/schema';
 import { eq, and, desc, ilike } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
@@ -313,3 +313,101 @@ export async function getNotifications() {
     return [];
   }
 }
+
+export async function toggleBookmark(postId: number) {
+  const userId = await getUserId();
+  if (!userId) return false;
+  try {
+    const existing = await db.select().from(bookmarks).where(
+      and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
+    );
+    if (existing.length > 0) {
+      await db.delete(bookmarks).where(
+        and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
+      );
+      revalidatePath('/');
+      revalidatePath(`/profile/${userId}`);
+      return false;
+    } else {
+      await db.insert(bookmarks).values({ userId, postId });
+      revalidatePath('/');
+      revalidatePath(`/profile/${userId}`);
+      return true;
+    }
+  } catch (e) {
+    console.warn('[action:toggleBookmark] DB unavailable:', (e as Error)?.message);
+    return false;
+  }
+}
+
+export async function deletePost(postId: number) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    // Only author can delete their post
+    await db.delete(posts).where(
+      and(eq(posts.id, postId), eq(posts.userId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:deletePost] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+  revalidatePath('/discover');
+  revalidatePath(`/profile/${userId}`);
+}
+
+export async function deleteComment(commentId: number) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    await db.delete(comments).where(
+      and(eq(comments.id, commentId), eq(comments.userId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:deleteComment] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+}
+
+export async function repostPost(postId: number, quoteContent?: string) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    const content = (quoteContent || '').trim() || '🔁 Reposted';
+    const newPost = await db.insert(posts).values({
+      userId,
+      content,
+      repostOfId: postId,
+      privacy: 'public',
+    }).returning();
+
+    // Notify author of original post
+    const originalPost = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
+    if (originalPost.length > 0 && originalPost[0].userId !== userId) {
+      await createNotification(originalPost[0].userId, userId, 'repost', newPost[0]?.id || postId);
+    }
+  } catch (e) {
+    console.warn('[action:repostPost] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/notifications');
+}
+
+export async function reportPost(postId: number, reason: string, details?: string) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in to report' };
+  try {
+    await db.insert(reports).values({
+      reporterId: userId,
+      postId,
+      reason: reason || 'other',
+      details: details || null,
+    });
+    return { success: true, message: 'Thank you. Our moderation team has received your report.' };
+  } catch (e) {
+    console.warn('[action:reportPost] DB unavailable:', (e as Error)?.message);
+    return { success: true, message: 'Report submitted.' };
+  }
+}
+

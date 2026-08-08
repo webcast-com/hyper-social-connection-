@@ -151,7 +151,33 @@ CREATE TABLE IF NOT EXISTS "notifications" (
 );
 
 -- ---------------------------------------------------------------------------
--- Verify: should list all 10 tables
+-- bookmarks
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "bookmarks" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "user_id" integer NOT NULL,
+  "post_id" integer NOT NULL,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT "bookmarks_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  CONSTRAINT "bookmarks_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- ---------------------------------------------------------------------------
+-- reports
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "reports" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "reporter_id" integer NOT NULL,
+  "post_id" integer,
+  "reason" text NOT NULL,
+  "details" text,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT "reports_reporter_id_users_id_fk" FOREIGN KEY ("reporter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  CONSTRAINT "reports_post_id_posts_id_fk" FOREIGN KEY ("post_id") REFERENCES "public"."posts"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- ---------------------------------------------------------------------------
+-- Verify: should list all 12 tables
 -- ---------------------------------------------------------------------------
 SELECT tablename
 FROM pg_tables

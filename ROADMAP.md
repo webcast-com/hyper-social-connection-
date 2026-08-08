@@ -1,17 +1,16 @@
 # Roadmap Map
 
-- Phase 1: Database (Supabase) ✅
-- Phase 2: Dark Mode ✅
-- Phase 3: Preview / Build Fix ✅ (build passes; add SUPABASE_ANON_KEY + DATABASE_URL to .env.local)
-- Phase 4: Feature Expansion ✅
-  - Full Supabase integration: Supabase Auth (email/password + Google/GitHub OAuth),
-    session refresh via proxy, `auth_id` profile linking, RLS policies + Realtime
-    publication, storage-backed uploads with local fallback, and live chat via
-    Realtime (`postgres_changes` on `messages`). UI unchanged.
-  - See `SUPABASE_SETUP.md` for the one-time Supabase setup steps.
+- Phase 1: Database (Supabase + Drizzle ORM) ✅
+- Phase 2: Dark Mode & Theming ✅
+- Phase 3: Preview / Build Fix & Storage ✅
+- Phase 4: Feature Expansion & Next-Level Capabilities ✅
+  - Feed Tabs: "For You" (global engagement feed), "Following" (personalized creators feed), and "Saved" (bookmarks).
+  - Bookmarks & Saved Posts collection (`bookmarks` table + instant bookmark toggle).
+  - Repost & Quote Post system (`RepostModal.tsx` + `repost_of_id` foreign key with embedded original post preview).
+  - Interactive Full-Screen Image Lightbox with zoom in/out, download, and Escape key controls (`ImageLightbox.tsx`).
+  - Content Moderation & Reporting modal (`reports` table + `ReportModal.tsx`).
+  - Chat Enhancements: Live active status indicator, quick emoji reaction badges (❤️, 👍, 😂, 🔥, 👏).
+  - Post and Comment deletion for content authors.
+  - Progressive Web App (PWA) manifest (`manifest.webmanifest`) with standalone mobile installation support.
+  - Full Supabase integration: Supabase Auth, session refresh via proxy, `auth_id` profile linking, RLS policies + Realtime live chat (`postgres_changes` on `messages`).
 
-Upgrade Ideas (next):
-- Image/video CDN optimization (Supabase Storage transforms / resize on upload)
-- Notification push (Supabase Edge Functions + web push)
-- Mobile responsive PWA
-- Moderation / admin tools
