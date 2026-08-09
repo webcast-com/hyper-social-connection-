@@ -41,9 +41,38 @@ CREATE TABLE IF NOT EXISTS "posts" (
   "image_url" text,
   "video_url" text,
   "privacy" text DEFAULT 'public' NOT NULL,
+  "repost_of_id" integer,
+  "group_id" integer,
+  "updated_at" timestamp,
   "created_at" timestamp DEFAULT now() NOT NULL,
-  CONSTRAINT "posts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
+  CONSTRAINT "posts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action,
+  CONSTRAINT "posts_repost_of_id_posts_id_fk" FOREIGN KEY ("repost_of_id") REFERENCES "public"."posts"("id") ON DELETE set null ON UPDATE no action
 );
+
+-- Repost/share support. IMPORTANT for databases created before this column
+-- existed: CREATE TABLE IF NOT EXISTS above never alters an existing table,
+-- so without this statement the feed query (which selects repost_of_id)
+-- fails with `column posts.repost_of_id does not exist` and the app falls
+-- back to demo content even though real posts exist in the database.
+ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "repost_of_id" integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'posts_repost_of_id_posts_id_fk'
+  ) THEN
+    ALTER TABLE "posts"
+      ADD CONSTRAINT "posts_repost_of_id_posts_id_fk"
+      FOREIGN KEY ("repost_of_id") REFERENCES "public"."posts"("id")
+      ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "posts_repost_of_id_idx" ON "posts" ("repost_of_id");
+
+-- Edit-post support: NULL until the author edits; the UI shows an "Edited"
+-- marker. Same idempotent pattern as the repost column above.
+ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "updated_at" timestamp;
 
 -- ---------------------------------------------------------------------------
 -- stories
@@ -69,6 +98,25 @@ CREATE TABLE IF NOT EXISTS "groups" (
   "created_at" timestamp DEFAULT now() NOT NULL,
   CONSTRAINT "groups_admin_id_users_id_fk" FOREIGN KEY ("admin_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
 );
+
+-- Group posts: nullable posts.group_id (NULL = regular feed post; ON DELETE
+-- SET NULL keeps posts when their group is deleted). The FK lives here —
+-- after the groups table exists — so fresh provisioning works.
+ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "group_id" integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'posts_group_id_groups_id_fk'
+  ) THEN
+    ALTER TABLE "posts"
+      ADD CONSTRAINT "posts_group_id_groups_id_fk"
+      FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id")
+      ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "posts_group_id_idx" ON "posts" ("group_id");
 
 -- ---------------------------------------------------------------------------
 -- group_members (composite PK)

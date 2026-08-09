@@ -1,15 +1,15 @@
 import type { MetadataRoute } from "next";
 import { db, hasDatabase } from "@/db";
-import { users, groups } from "@/db/schema";
+import { users, groups, posts } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { getSiteUrl } from "@/lib/site-url";
 
 /**
  * Sitemap generator — served at /sitemap.xml.
  *
- * Static routes are always included. When a database is configured, profile
- * and group pages are added too. Regenerated on every request so new users
- * and groups show up immediately.
+ * Static routes are always included. When a database is configured, recent
+ * post permalinks plus profile and group pages are added too. Regenerated on
+ * every request so new users, groups and posts show up immediately.
  */
 export const dynamic = "force-dynamic";
 
@@ -45,10 +45,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let profileRows: { id: number; createdAt: Date }[] = [];
   let groupRows: { id: number; createdAt: Date }[] = [];
+  let postRows: { id: number; createdAt: Date }[] = [];
   if (hasDatabase) {
     try {
       profileRows = await db.select().from(users).orderBy(desc(users.createdAt));
       groupRows = await db.select().from(groups).orderBy(desc(groups.createdAt));
+      // Recent public posts get permalinks in the sitemap (capped).
+      postRows = await db
+        .select({ id: posts.id, createdAt: posts.createdAt })
+        .from(posts)
+        .orderBy(desc(posts.createdAt))
+        .limit(200);
     } catch (err) {
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);
@@ -69,5 +76,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...profileRoutes, ...groupRoutes];
+  const postRoutes: MetadataRoute.Sitemap = postRows.map((p) => ({
+    url: `${baseUrl}/post/${p.id}`,
+    lastModified: p.createdAt,
+    changeFrequency: "daily",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...profileRoutes, ...groupRoutes, ...postRoutes];
 }

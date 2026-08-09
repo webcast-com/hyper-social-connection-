@@ -133,6 +133,10 @@ export async function ensureMigrated() {
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url text`,
     // Repost / Share support for posts (foreign key to original post)
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS repost_of_id integer REFERENCES posts(id) ON DELETE SET NULL`,
+    // Edit-post support (nullable; NULL until first edit drives the "Edited" marker)
+    `ALTER TABLE posts ADD COLUMN IF NOT EXISTS updated_at timestamp`,
+    // Group posts (nullable; NULL = regular feed post, set null if group deleted)
+    `ALTER TABLE posts ADD COLUMN IF NOT EXISTS group_id integer REFERENCES groups(id) ON DELETE SET NULL`,
     // bookmarks
     `CREATE TABLE IF NOT EXISTS "bookmarks" (
       "id" serial PRIMARY KEY NOT NULL,
@@ -187,11 +191,21 @@ export async function ensureMigrated() {
     `CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_id_unique" ON "users" ("auth_id")`,
   ];
 
+  let anyFailed = false;
   for (const statement of statements) {
     try {
       await pool.query(statement);
     } catch (error) {
+      anyFailed = true;
       console.warn('Migration skipped:', statement.slice(0, 80), (error as Error)?.message);
     }
+  }
+
+  // When every statement failed (e.g. a cold-start connection blip), allow the
+  // next request to retry instead of marking this process as done forever —
+  // otherwise pages keep querying a schema that was never patched (missing
+  // columns such as posts.repost_of_id) and silently fall back to demo data.
+  if (anyFailed) {
+    migrated = false;
   }
 }

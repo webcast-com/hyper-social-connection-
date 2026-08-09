@@ -2,7 +2,11 @@ import { db, hasDatabase } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { supabase } from "@/db/supabase";
-import type { User } from "@supabase/supabase-js";
+import {
+  SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_URL,
+} from "@/lib/supabase/config";
+import { createClient as createSupabaseClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 /**
  * Maps a Supabase Auth user to a row in the public `users` table.
@@ -13,10 +17,37 @@ import type { User } from "@supabase/supabase-js";
  * rest of the app can keep using `users.id` everywhere.
  *
  * DB writes go through drizzle when DATABASE_URL is set, otherwise they fall
- * back to the Supabase REST client (requires the RLS policies from
+ * back to the Supabase REST API (requires the RLS policies from
  * `supabase/policies.sql`). Every failure is swallowed — the app falls back
  * to the demo viewer rather than 500-ing.
  */
+
+/**
+ * REST client for the profile fallback. Writes MUST run as the service role:
+ * the anonymous client carries no user session here, so `auth.uid()` is NULL
+ * and the `users_insert_own` / `users_update_own` RLS policies reject every
+ * profile insert/update. That silently leaves sign-ups with a row in
+ * `auth.users` but none in `public.users` — invisible across the app.
+ */
+let adminClient: SupabaseClient | null = null;
+function restClient(): SupabaseClient {
+  if (SUPABASE_SERVICE_ROLE_KEY) {
+    if (!adminClient) {
+      adminClient = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+    return adminClient;
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn(
+      "[profile] SUPABASE_SERVICE_ROLE_KEY is not set: profile sync without " +
+        "DATABASE_URL will be blocked by RLS. Set it (or DATABASE_URL) so " +
+        "sign-ups and logins get a public.users row.",
+    );
+  }
+  return supabase;
+}
 
 async function findProfileByAuthId(authId: string): Promise<any | null> {
   try {
@@ -25,7 +56,7 @@ async function findProfileByAuthId(authId: string): Promise<any | null> {
       if (res[0]) return res[0];
       return null;
     }
-    const { data } = await supabase.from("users").select("*").eq("auth_id", authId).maybeSingle();
+    const { data } = await restClient().from("users").select("*").eq("auth_id", authId).maybeSingle();
     return data || null;
   } catch (e) {
     console.warn("[profile] auth_id lookup failed:", (e as Error)?.message);
@@ -40,7 +71,7 @@ async function findProfileByEmail(email?: string): Promise<any | null> {
       const res = await db.select().from(users).where(eq(users.email, email)).limit(1);
       return res[0] || null;
     }
-    const { data } = await supabase.from("users").select("*").eq("email", email).maybeSingle();
+    const { data } = await restClient().from("users").select("*").eq("email", email).maybeSingle();
     return data || null;
   } catch (e) {
     console.warn("[profile] email lookup failed:", (e as Error)?.message);
@@ -54,7 +85,7 @@ async function linkAuthId(userId: number, authId: string) {
       await db.update(users).set({ authId }).where(eq(users.id, userId));
       return;
     }
-    await supabase.from("users").update({ auth_id: authId }).eq("id", userId);
+    await restClient().from("users").update({ auth_id: authId }).eq("id", userId);
   } catch (e) {
     console.warn("[profile] auth link failed:", (e as Error)?.message);
   }
@@ -83,7 +114,7 @@ async function createProfile(authUser: User): Promise<any | null> {
         .returning();
       return res[0] || null;
     }
-    const { data, error } = await supabase
+    const { data, error } = await restClient()
       .from("users")
       .insert({ name, email, password: "", avatar, auth_id: authUser.id })
       .select()

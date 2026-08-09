@@ -22,6 +22,11 @@ export const posts = pgTable("posts", {
   videoUrl: text("video_url"),
   privacy: text("privacy").default('public').notNull(), // 'public', 'friends'
   repostOfId: integer("repost_of_id").references((): any => posts.id, { onDelete: "set null" }),
+  // Posts can belong to a group/community. NULL = regular feed post.
+  // Set-null on group delete keeps the posts as normal feed posts.
+  groupId: integer("group_id").references((): any => groups.id, { onDelete: "set null" }),
+  // NULL until the author edits the post; drives the "Edited" marker in the UI.
+  updatedAt: timestamp("updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

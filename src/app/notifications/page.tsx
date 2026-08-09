@@ -36,7 +36,7 @@ export default async function NotificationsPage() {
               const href =
                 notification.type === 'message' ? `/messages/${notification.actorId}` :
                 notification.type === 'follow' ? `/profile/${notification.actorId}` :
-                notification.postId ? '/' : `/profile/${notification.actorId}`;
+                notification.postId ? `/post/${notification.postId}` : `/profile/${notification.actorId}`;
 
               return (
                 <NotificationItem

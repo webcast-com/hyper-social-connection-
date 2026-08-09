@@ -45,9 +45,9 @@ export default function RepostModal({
 
   const handleCopyLink = async () => {
     const postUrl = typeof window !== 'undefined'
-      ? `${window.location.origin}/profile/${post.user?.id || post.userId}#post-${post.id}`
-      : `/profile/${post.user?.id || post.userId}#post-${post.id}`;
-    
+      ? `${window.location.origin}/post/${post.id}`
+      : `/post/${post.id}`;
+
     try {
       await navigator.clipboard.writeText(postUrl);
       setCopied(true);
