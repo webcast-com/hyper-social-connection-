@@ -59,11 +59,20 @@ export async function generateMetadata({
   };
 }
 
+const DEMO_USERS_MAP: Record<number, any> = {
+  1: { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', coverPhoto: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.', createdAt: new Date(Date.now() - 31536000000) },
+  2: { id: 2, name: 'Maya Patel', email: 'maya@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya', coverPhoto: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&q=80', bio: '🎨 Digital artist and UI designer.', createdAt: new Date(Date.now() - 25920000000) },
+  3: { id: 3, name: 'Jordan Kim', email: 'jordan@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan', coverPhoto: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&q=80', bio: '🏋️ Fitness coach and wellness advocate.', createdAt: new Date(Date.now() - 20000000000) },
+  4: { id: 4, name: 'Sophie Chen', email: 'sophie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie', coverPhoto: 'https://images.unsplash.com/photo-1490750967868-88df5691cc11?w=1200&q=80', bio: '👩‍💻 Full-stack engineer & open-source builder.', createdAt: new Date(Date.now() - 15000000000) },
+  5: { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', coverPhoto: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80', bio: '🎸 Musician and content creator.', createdAt: new Date(Date.now() - 10000000000) },
+};
+
 export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
-  const currentUser = await getViewer() || { id: 0 } as any;
+  const viewer = await getViewer();
+  const currentUser = viewer || DEMO_USERS_MAP[1];
   const { id } = await params;
 
-  const profileId = parseInt(id);
+  const profileId = parseInt(id) || 1;
   let profileUser: any = null;
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -78,7 +87,11 @@ export default async function Profile({ params }: { params: Promise<{ id: string
     try {
       const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
       if (profileUserRes.length === 0) {
-        profileNotFound = true;
+        if (DEMO_USERS_MAP[profileId]) {
+          profileUser = DEMO_USERS_MAP[profileId];
+        } else {
+          profileNotFound = true;
+        }
       } else {
         profileUser = profileUserRes[0];
 
@@ -99,13 +112,13 @@ export default async function Profile({ params }: { params: Promise<{ id: string
         if (allUsers.length === 0) allUsers = [currentUser, profileUser];
       }
     } catch (err) {
-      console.warn('[profile] DB query failed:', (err as Error)?.message);
-      profileUser = { ...currentUser, name: currentUser.name || 'Guest', avatar: currentUser.avatar || null, bio: currentUser.bio || null, createdAt: new Date() } as any;
-      allUsers = [currentUser];
+      console.warn('[profile] DB query failed, falling back to demo user:', (err as Error)?.message);
+      profileUser = DEMO_USERS_MAP[profileId] || DEMO_USERS_MAP[1];
+      allUsers = Object.values(DEMO_USERS_MAP);
     }
   } else {
-    profileUser = { ...currentUser, name: currentUser.name || 'Guest', avatar: currentUser.avatar || null, bio: currentUser.bio || null, createdAt: new Date() } as any;
-    allUsers = [currentUser];
+    profileUser = DEMO_USERS_MAP[profileId] || DEMO_USERS_MAP[1];
+    allUsers = Object.values(DEMO_USERS_MAP);
   }
 
   if (profileNotFound) {

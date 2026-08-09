@@ -43,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Protected pages should redirect to /login themselves (or use middleware).
   if (!user) {
     return (
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <head>
           <script
             dangerouslySetInnerHTML={{
@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             }}
           />
         </head>
-        <body className="font-sans bg-gray-100 min-h-screen">
+        <body className="font-sans bg-gray-100 min-h-screen" suppressHydrationWarning>
           {children}
         </body>
       </html>
@@ -71,7 +71,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Apply the saved/system theme before hydration to avoid a flash of
             the wrong theme. Only touches <html>'s class (not managed by
@@ -82,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className="font-sans bg-gray-100 min-h-screen">
+      <body className="font-sans bg-gray-100 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} />
         {/* pb-20 on mobile leaves room for the bottom tab bar */}
         <main className="pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>

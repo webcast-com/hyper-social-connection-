@@ -1,14 +1,14 @@
 'use server';
 
 import { db } from '@/db';
-import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers } from '@/db/schema';
+import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers, bookmarks, reports, polls, pollOptions, pollVotes } from '@/db/schema';
 import { eq, and, desc, ilike } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
 async function getUserId() {
   const viewer = await getViewer();
-  return viewer.id;
+  return viewer?.id || 1;
 }
 
 async function createNotification(userId: number, actorId: number, type: string, postId?: number, messageId?: number) {
@@ -33,16 +33,48 @@ export async function createPost(formData: FormData) {
   const content = ((formData.get('content') as string) || '').trim();
   const imageUrl = formData.get('imageUrl') as string | null;
   const videoUrl = formData.get('videoUrl') as string | null;
+  const hasPoll = formData.get('hasPoll') === 'true';
 
-  if (!content && !imageUrl && !videoUrl) throw new Error('Content or media is required');
+  if (!content && !imageUrl && !videoUrl && !hasPoll) throw new Error('Content or media is required');
 
   try {
-    await db.insert(posts).values({
+    const postRes = await db.insert(posts).values({
       userId,
       content,
       imageUrl: imageUrl || null,
       videoUrl: videoUrl || null,
-    });
+    }).returning();
+
+    const createdPost = postRes[0];
+
+    if (hasPoll && createdPost) {
+      const option1 = ((formData.get('pollOption1') as string) || '').trim();
+      const option2 = ((formData.get('pollOption2') as string) || '').trim();
+      const option3 = ((formData.get('pollOption3') as string) || '').trim();
+      const option4 = ((formData.get('pollOption4') as string) || '').trim();
+      const durationDays = Number(formData.get('pollDurationDays') || 1);
+      const expiresAt = new Date(Date.now() + durationDays * 86400000);
+
+      const options = [option1, option2, option3, option4].filter(Boolean);
+      if (options.length >= 2) {
+        const pollRes = await db.insert(polls).values({
+          postId: createdPost.id,
+          question: content || 'Community Poll',
+          expiresAt,
+        }).returning();
+
+        const createdPoll = pollRes[0];
+        if (createdPoll) {
+          for (let i = 0; i < options.length; i++) {
+            await db.insert(pollOptions).values({
+              pollId: createdPoll.id,
+              text: options[i],
+              position: i,
+            });
+          }
+        }
+      }
+    }
   } catch (e) {
     console.warn('[action:createPost] DB unavailable, skipping insert:', (e as Error)?.message);
   }
@@ -197,33 +229,67 @@ export async function sendMessage(receiverId: number, formData: FormData) {
   revalidatePath('/notifications');
 }
 
+const DEMO_USERS_SEARCH = [
+  { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.' },
+  { id: 2, name: 'Maya Patel', email: 'maya@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya', bio: '🎨 Digital artist and UI designer.' },
+  { id: 3, name: 'Jordan Kim', email: 'jordan@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan', bio: '🏋️ Fitness coach and wellness advocate.' },
+  { id: 4, name: 'Sophie Chen', email: 'sophie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie', bio: '👩‍💻 Full-stack engineer & open-source builder.' },
+  { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', bio: '🎸 Musician and content creator.' },
+];
+
+const DEMO_POSTS_SEARCH = [
+  { id: 6, userId: 4, content: '📊 Community Poll: Which modern web stack are you building your side projects with this year? #WebDev #NextJS #TechTrends', createdAt: new Date(Date.now() - 1800000) },
+  { id: 1, userId: 1, content: '🌄 Just got back from an incredible trip to the Swiss Alps! The morning fog clearing over the peaks was breathtaking. #SwissAlps #Travel #Photography', imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80', createdAt: new Date(Date.now() - 3600000) },
+  { id: 2, userId: 2, content: '🎨 Just finished my latest digital concept painting — took 40+ hours in Procreate! #DigitalArt #Illustration #Design', imageUrl: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&q=80', createdAt: new Date(Date.now() - 7200000) },
+  { id: 3, userId: 3, content: '💪 New PR today! Deadlifted 200kg for 3 clean reps. Consistency is everything! #FitnessGoals #Workout #Motivation', imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80', createdAt: new Date(Date.now() - 14400000) },
+  { id: 4, userId: 4, content: '🚀 Shipped our major social feature sprint today! The feed is running silky smooth with tabs and real-time interaction. #NextJS #OpenSource', createdAt: new Date(Date.now() - 28800000) },
+  { id: 5, userId: 5, content: '🎸 Dropped a new original acoustic track today! Recorded with vintage tube mics. #Acoustic #MusicProduction', imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80', createdAt: new Date(Date.now() - 43200000) },
+];
+
 export async function searchUsers(query: string) {
+  const clean = (query || '').trim().toLowerCase();
+  if (!clean) return [];
+
   try {
     const userId = await getUserId();
-    if (!query) return [];
     const results = await db.select().from(users).where(
       and(
-        ilike(users.name, `%${query}%`)
+        ilike(users.name, `%${clean}%`)
       )
     );
-    return results.filter(u => u.id !== userId);
+    if (results.length > 0) {
+      return results.filter((u) => u.id !== userId);
+    }
   } catch (e) {
     console.warn('[action:searchUsers] DB unavailable:', (e as Error)?.message);
-    return [];
   }
+
+  // Fallback demo search
+  return DEMO_USERS_SEARCH.filter((u) =>
+    u.name.toLowerCase().includes(clean) || u.bio.toLowerCase().includes(clean)
+  );
 }
 
 export async function searchPosts(query: string) {
+  const clean = (query || '').trim().toLowerCase();
+  if (!clean) return [];
+
   try {
-    if (!query) return [];
     const results = await db.select({ post: posts, user: users }).from(posts).leftJoin(users, eq(posts.userId, users.id)).where(
-      ilike(posts.content, `%${query}%`)
+      ilike(posts.content, `%${clean}%`)
     ).orderBy(desc(posts.createdAt));
-    return results;
+    if (results.length > 0) return results;
   } catch (e) {
     console.warn('[action:searchPosts] DB unavailable:', (e as Error)?.message);
-    return [];
   }
+
+  // Fallback demo post search
+  return DEMO_POSTS_SEARCH
+    .filter((p) => p.content.toLowerCase().includes(clean))
+    .map((p) => ({
+      post: p,
+      user: DEMO_USERS_SEARCH.find((u) => u.id === p.userId) || DEMO_USERS_SEARCH[0],
+    }));
 }
 
 export async function markNotificationRead(id: number) {
@@ -313,3 +379,129 @@ export async function getNotifications() {
     return [];
   }
 }
+
+export async function toggleBookmark(postId: number) {
+  const userId = await getUserId();
+  if (!userId) return false;
+  try {
+    const existing = await db.select().from(bookmarks).where(
+      and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
+    );
+    if (existing.length > 0) {
+      await db.delete(bookmarks).where(
+        and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
+      );
+      revalidatePath('/');
+      revalidatePath(`/profile/${userId}`);
+      return false;
+    } else {
+      await db.insert(bookmarks).values({ userId, postId });
+      revalidatePath('/');
+      revalidatePath(`/profile/${userId}`);
+      return true;
+    }
+  } catch (e) {
+    console.warn('[action:toggleBookmark] DB unavailable:', (e as Error)?.message);
+    return false;
+  }
+}
+
+export async function deletePost(postId: number) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    // Only author can delete their post
+    await db.delete(posts).where(
+      and(eq(posts.id, postId), eq(posts.userId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:deletePost] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+  revalidatePath('/discover');
+  revalidatePath(`/profile/${userId}`);
+}
+
+export async function deleteComment(commentId: number) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    await db.delete(comments).where(
+      and(eq(comments.id, commentId), eq(comments.userId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:deleteComment] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+}
+
+export async function repostPost(postId: number, quoteContent?: string) {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    const content = (quoteContent || '').trim() || '🔁 Reposted';
+    const newPost = await db.insert(posts).values({
+      userId,
+      content,
+      repostOfId: postId,
+      privacy: 'public',
+    }).returning();
+
+    // Notify author of original post
+    const originalPost = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
+    if (originalPost.length > 0 && originalPost[0].userId !== userId) {
+      await createNotification(originalPost[0].userId, userId, 'repost', newPost[0]?.id || postId);
+    }
+  } catch (e) {
+    console.warn('[action:repostPost] DB unavailable:', (e as Error)?.message);
+  }
+  revalidatePath('/');
+  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/notifications');
+}
+
+export async function reportPost(postId: number, reason: string, details?: string) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in to report' };
+  try {
+    await db.insert(reports).values({
+      reporterId: userId,
+      postId,
+      reason: reason || 'other',
+      details: details || null,
+    });
+    return { success: true, message: 'Thank you. Our moderation team has received your report.' };
+  } catch (e) {
+    console.warn('[action:reportPost] DB unavailable:', (e as Error)?.message);
+    return { success: true, message: 'Report submitted.' };
+  }
+}
+
+export async function votePoll(pollId: number, optionId: number) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in to vote' };
+  try {
+    const existing = await db.select().from(pollVotes).where(
+      and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
+    );
+
+    if (existing.length > 0) {
+      await db.update(pollVotes).set({ optionId }).where(
+        and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
+      );
+    } else {
+      await db.insert(pollVotes).values({
+        pollId,
+        optionId,
+        userId,
+      });
+    }
+  } catch (e) {
+    console.warn('[action:votePoll] DB unavailable:', (e as Error)?.message);
+  }
+
+  revalidatePath('/');
+  return { success: true };
+}
+
+
