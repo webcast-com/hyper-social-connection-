@@ -22,6 +22,7 @@ import ReportModal from './ReportModal';
 import RepostModal from './RepostModal';
 import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
+import FormattedContent from './FormattedContent';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
@@ -204,7 +205,7 @@ export default function Post({
 
       {/* Post Text Content */}
       <div className="px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-        {post.content}
+        <FormattedContent content={post.content} />
       </div>
 
       {/* Interactive Poll (if present) */}
@@ -255,7 +256,9 @@ export default function Post({
             )}
             <span className="font-bold text-xs text-gray-900 dark:text-white">{post.repostOf.user?.name}</span>
           </div>
-          <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">{post.repostOf.content}</p>
+          <div className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3">
+            <FormattedContent content={post.repostOf.content} />
+          </div>
           {post.repostOf.imageUrl && (
             <img src={post.repostOf.imageUrl} alt="attached" className="mt-2 rounded-lg max-h-40 w-full object-cover" />
           )}
@@ -361,7 +364,9 @@ export default function Post({
                           </button>
                         )}
                       </div>
-                      <div className="text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5">{comment.content}</div>
+                      <div className="text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5">
+                        <FormattedContent content={comment.content} />
+                      </div>
                     </div>
                     <div className="text-[11px] text-gray-400 mt-1 ml-2" suppressHydrationWarning>
                       {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : ''}

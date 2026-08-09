@@ -229,33 +229,67 @@ export async function sendMessage(receiverId: number, formData: FormData) {
   revalidatePath('/notifications');
 }
 
+const DEMO_USERS_SEARCH = [
+  { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.' },
+  { id: 2, name: 'Maya Patel', email: 'maya@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maya', bio: '🎨 Digital artist and UI designer.' },
+  { id: 3, name: 'Jordan Kim', email: 'jordan@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan', bio: '🏋️ Fitness coach and wellness advocate.' },
+  { id: 4, name: 'Sophie Chen', email: 'sophie@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie', bio: '👩‍💻 Full-stack engineer & open-source builder.' },
+  { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', bio: '🎸 Musician and content creator.' },
+];
+
+const DEMO_POSTS_SEARCH = [
+  { id: 6, userId: 4, content: '📊 Community Poll: Which modern web stack are you building your side projects with this year? #WebDev #NextJS #TechTrends', createdAt: new Date(Date.now() - 1800000) },
+  { id: 1, userId: 1, content: '🌄 Just got back from an incredible trip to the Swiss Alps! The morning fog clearing over the peaks was breathtaking. #SwissAlps #Travel #Photography', imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80', createdAt: new Date(Date.now() - 3600000) },
+  { id: 2, userId: 2, content: '🎨 Just finished my latest digital concept painting — took 40+ hours in Procreate! #DigitalArt #Illustration #Design', imageUrl: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&q=80', createdAt: new Date(Date.now() - 7200000) },
+  { id: 3, userId: 3, content: '💪 New PR today! Deadlifted 200kg for 3 clean reps. Consistency is everything! #FitnessGoals #Workout #Motivation', imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80', createdAt: new Date(Date.now() - 14400000) },
+  { id: 4, userId: 4, content: '🚀 Shipped our major social feature sprint today! The feed is running silky smooth with tabs and real-time interaction. #NextJS #OpenSource', createdAt: new Date(Date.now() - 28800000) },
+  { id: 5, userId: 5, content: '🎸 Dropped a new original acoustic track today! Recorded with vintage tube mics. #Acoustic #MusicProduction', imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80', createdAt: new Date(Date.now() - 43200000) },
+];
+
 export async function searchUsers(query: string) {
+  const clean = (query || '').trim().toLowerCase();
+  if (!clean) return [];
+
   try {
     const userId = await getUserId();
-    if (!query) return [];
     const results = await db.select().from(users).where(
       and(
-        ilike(users.name, `%${query}%`)
+        ilike(users.name, `%${clean}%`)
       )
     );
-    return results.filter(u => u.id !== userId);
+    if (results.length > 0) {
+      return results.filter((u) => u.id !== userId);
+    }
   } catch (e) {
     console.warn('[action:searchUsers] DB unavailable:', (e as Error)?.message);
-    return [];
   }
+
+  // Fallback demo search
+  return DEMO_USERS_SEARCH.filter((u) =>
+    u.name.toLowerCase().includes(clean) || u.bio.toLowerCase().includes(clean)
+  );
 }
 
 export async function searchPosts(query: string) {
+  const clean = (query || '').trim().toLowerCase();
+  if (!clean) return [];
+
   try {
-    if (!query) return [];
     const results = await db.select({ post: posts, user: users }).from(posts).leftJoin(users, eq(posts.userId, users.id)).where(
-      ilike(posts.content, `%${query}%`)
+      ilike(posts.content, `%${clean}%`)
     ).orderBy(desc(posts.createdAt));
-    return results;
+    if (results.length > 0) return results;
   } catch (e) {
     console.warn('[action:searchPosts] DB unavailable:', (e as Error)?.message);
-    return [];
   }
+
+  // Fallback demo post search
+  return DEMO_POSTS_SEARCH
+    .filter((p) => p.content.toLowerCase().includes(clean))
+    .map((p) => ({
+      post: p,
+      user: DEMO_USERS_SEARCH.find((u) => u.id === p.userId) || DEMO_USERS_SEARCH[0],
+    }));
 }
 
 export async function markNotificationRead(id: number) {

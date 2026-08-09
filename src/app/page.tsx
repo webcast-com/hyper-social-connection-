@@ -7,6 +7,7 @@ import { eq, desc, gte } from 'drizzle-orm';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
 import FeedTabs from '@/components/FeedTabs';
+import TrendingTopics from '@/components/TrendingTopics';
 import Link from 'next/link';
 import { Compass, Users, Bookmark, Sparkles, Plus } from 'lucide-react';
 
@@ -34,7 +35,7 @@ const DEMO_POSTS_RAW: any[] = [
   {
     id: 6,
     userId: 4,
-    content: '📊 Community Poll: Which modern web stack are you building your side projects with this year?',
+    content: '📊 Community Poll: Which modern web stack are you building your side projects with this year? #WebDev #NextJS #TechTrends',
     createdAt: new Date(Date.now() - 1800000),
     poll: {
       id: 1,
@@ -52,34 +53,34 @@ const DEMO_POSTS_RAW: any[] = [
   {
     id: 1,
     userId: 1,
-    content: '🌄 Just got back from an incredible trip to the Swiss Alps! The morning fog clearing over the peaks was breathtaking.',
+    content: '🌄 Just got back from an incredible trip to the Swiss Alps! The morning fog clearing over the peaks was breathtaking. #SwissAlps #Travel #Photography',
     imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
     createdAt: new Date(Date.now() - 3600000),
   },
   {
     id: 2,
     userId: 2,
-    content: '🎨 Just finished my latest digital concept painting — took 40+ hours in Procreate!',
+    content: '🎨 Just finished my latest digital concept painting — took 40+ hours in Procreate! #DigitalArt #Illustration #Design',
     imageUrl: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&q=80',
     createdAt: new Date(Date.now() - 7200000),
   },
   {
     id: 3,
     userId: 3,
-    content: '💪 New PR today! Deadlifted 200kg for 3 clean reps. Consistency is everything!',
+    content: '💪 New PR today! Deadlifted 200kg for 3 clean reps. Consistency is everything! #FitnessGoals #Workout #Motivation',
     imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80',
     createdAt: new Date(Date.now() - 14400000),
   },
   {
     id: 4,
     userId: 4,
-    content: '🚀 Shipped our major social feature sprint today! The feed is running silky smooth with tabs and real-time interaction.',
+    content: '🚀 Shipped our major social feature sprint today! The feed is running silky smooth with tabs and real-time interaction. #NextJS #OpenSource',
     createdAt: new Date(Date.now() - 28800000),
   },
   {
     id: 5,
     userId: 5,
-    content: '🎸 Dropped a new original acoustic track today! Recorded with vintage tube mics.',
+    content: '🎸 Dropped a new original acoustic track today! Recorded with vintage tube mics. #Acoustic #MusicProduction',
     imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80',
     createdAt: new Date(Date.now() - 43200000),
   },
@@ -149,7 +150,7 @@ export default async function Home() {
       { id: 1, postId: 1, userId: 2, content: 'Oh my gosh, this is STUNNING! 😍', createdAt: new Date(Date.now() - 1800000) },
       { id: 2, postId: 1, userId: 3, content: 'I hiked that same trail last summer! Great shot.', createdAt: new Date(Date.now() - 900000) },
       { id: 3, postId: 2, userId: 1, content: 'This is INCREDIBLE, Maya! The lighting is magical.', createdAt: new Date(Date.now() - 3600000) },
-      { id: 4, postId: 6, userId: 1, content: 'Next.js + Tailwind is the sweet spot for shipping fast!', createdAt: new Date(Date.now() - 1200000) },
+      { id: 4, postId: 6, userId: 1, content: 'Next.js + Tailwind is the sweet spot for shipping fast! #WebDev', createdAt: new Date(Date.now() - 1200000) },
     ];
   }
   if (userFollows.length === 0 && currentUser.id === 1) {
@@ -287,12 +288,16 @@ export default async function Home() {
 
       {/* Right Sidebar */}
       <div className="hidden lg:flex flex-col space-y-4 pt-2">
+        {/* Trending Topics Widget */}
+        <TrendingTopics />
+
+        {/* Suggested People */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">
           <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> People you may know
           </h3>
           <div className="space-y-3">
-            {otherUsers.slice(0, 5).map((u) => (
+            {otherUsers.slice(0, 4).map((u) => (
               <div key={u.id} className="flex items-center justify-between">
                 <Link href={`/profile/${u.id}`} className="flex items-center space-x-2.5 min-w-0">
                   {u.avatar ? (
@@ -315,10 +320,11 @@ export default async function Home() {
           </div>
         </div>
 
+        {/* Contacts */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">
           <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide mb-3">Contacts</h3>
           <div className="space-y-1">
-            {otherUsers.slice(0, 8).map((u) => (
+            {otherUsers.slice(0, 6).map((u) => (
               <Link key={u.id} href={`/messages/${u.id}`} className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-colors">
                 <div className="relative">
                   {u.avatar ? (
