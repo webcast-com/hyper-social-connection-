@@ -16,7 +16,9 @@ import {
   X,
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+import LinkPreviewCard from './LinkPreviewCard';
 import { uploadMediaFile } from '@/lib/upload';
+import { extractUrls } from '@/lib/link-preview';
 
 type Media = { kind: 'image' | 'video'; url: string } | null;
 
@@ -25,6 +27,7 @@ export default function CreatePost({ user }: { user: any }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [media, setMedia] = useState<Media>(null);
   const [postValue, setPostValue] = useState('');
+  const [dismissedUrl, setDismissedUrl] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -220,6 +223,16 @@ export default function CreatePost({ user }: { user: any }) {
               >
                 ✕
               </button>
+            </div>
+          )}
+
+          {/* Live Link Preview Unfurler */}
+          {!media && !uploading && extractUrls(postValue).length > 0 && extractUrls(postValue)[0] !== dismissedUrl && (
+            <div className="mt-2">
+              <LinkPreviewCard
+                url={extractUrls(postValue)[0]}
+                onRemove={() => setDismissedUrl(extractUrls(postValue)[0])}
+              />
             </div>
           )}
 

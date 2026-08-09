@@ -23,6 +23,8 @@ import RepostModal from './RepostModal';
 import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
 import FormattedContent from './FormattedContent';
+import LinkPreviewCard from './LinkPreviewCard';
+import { extractUrls } from '@/lib/link-preview';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
@@ -48,6 +50,8 @@ export default function Post({
 
   const isAuthor = currentUser?.id && post.user?.id === currentUser.id;
   const isLiked = (post.likes || []).some((l: any) => l.userId === currentUser.id);
+  const detectedUrls = extractUrls(post.content || '');
+  const hasAttachedMedia = !!post.imageUrl || !!post.videoUrl;
 
   const handleEmojiSelect = (emoji: string) => {
     setCommentValue((prev) => prev + emoji);
@@ -212,6 +216,13 @@ export default function Post({
       {post.poll && (
         <div className="px-4">
           <PostPoll poll={post.poll} currentUser={currentUser} />
+        </div>
+      )}
+
+      {/* Rich Link Preview Card (if URL detected and no media attached) */}
+      {!hasAttachedMedia && detectedUrls.length > 0 && (
+        <div className="px-4">
+          <LinkPreviewCard url={detectedUrls[0]} previewData={post.linkPreview} />
         </div>
       )}
 

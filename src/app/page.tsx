@@ -33,6 +33,20 @@ const DEMO_USERS = [
 
 const DEMO_POSTS_RAW: any[] = [
   {
+    id: 7,
+    userId: 4,
+    content: '⚡ Check out the latest React 19 & Next.js full-stack capabilities on https://nextjs.org — Turbopack compiles in milliseconds! #NextJS #WebDev #TypeScript',
+    createdAt: new Date(Date.now() - 900000),
+    linkPreview: {
+      url: 'https://nextjs.org',
+      domain: 'nextjs.org',
+      title: 'Next.js by Vercel — The React Framework for the Web',
+      description: 'Used by some of the world’s largest companies, Next.js enables you to create high-quality full-stack web applications with speed and scale.',
+      image: 'https://nextjs.org/og.png',
+      favicon: 'https://www.google.com/s2/favicons?domain=nextjs.org&sz=64',
+    },
+  },
+  {
     id: 6,
     userId: 4,
     content: '📊 Community Poll: Which modern web stack are you building your side projects with this year? #WebDev #NextJS #TechTrends',
