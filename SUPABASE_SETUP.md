@@ -13,23 +13,47 @@ integration adds Supabase underneath without changing the app's behavior.
 
 ---
 
-## 1. Create the database tables
+## 1. Recommended: run the combined setup file
 
-Run **`supabase/schema.sql`** in the Supabase SQL Editor
+Run **`supabase/setup.sql`** in the Supabase SQL Editor
 (Dashboard → SQL Editor → New query → paste → Run).
 
-It creates all 10 tables plus the new `users.auth_id` column that links
-profiles to Supabase Auth. It is additive and safe to re-run.
+It combines the full setup in one script:
+- schema creation for all 15 app tables
+- older-database repairs
+- `public.users` backfill from `auth.users`
+- auth trigger for future sign-ups
+- RLS policies
+- Realtime publication setup
+- storage bucket + storage policies
+
+If you run `supabase/setup.sql`, you can skip steps 2 and 3 below.
+
+Prefer a lighter one-step install without uploads/storage? Run
+**`supabase/setup-minimal.sql`** instead. It includes schema + RLS + Realtime,
+but leaves out the storage bucket and storage policies.
 
 > Alternative: run `npx drizzle-kit push` with `DATABASE_URL` set — drizzle
-> will apply `src/db/schema.ts` (including `auth_id`). Then run
-> `supabase/schema.sql`'s unique index statement, or `drizzle/0001_supabase_auth.sql`.
+> will create the app tables/columns from `src/db/schema.ts`. Then still run
+> `supabase/schema.sql` once to add the Supabase-specific repairs, duplicate
+> cleanup, indexes, auth backfill, and auth trigger.
 
-## 2. Enable Row Level Security + Realtime
+## 2. Manual split files: schema
 
-Run **`supabase/policies.sql`** in the SQL Editor.
+Run **`supabase/schema.sql`** in the Supabase SQL Editor if you prefer the
+setup in smaller pieces.
 
-* Enables RLS on all tables with sensible policies:
+It creates all 15 app tables, repairs older databases, adds the
+`users.auth_id` link to Supabase Auth when needed, backfills missing
+`public.users` rows from `auth.users`, and installs an auth trigger so future
+Supabase sign-ups stay linked automatically. It is safe to re-run.
+
+## 3. Manual split files: RLS + Realtime
+
+Run **`supabase/policies.sql`** in the SQL Editor if you did not run the
+combined setup file.
+
+* Enables RLS on all 15 public tables with sensible policies:
   * Profiles, posts, comments, likes, follows, groups: public reads,
     owner-only writes (ownership via `users.auth_id = auth.uid()`).
   * Messages: only the two participants can read/write.
@@ -40,13 +64,18 @@ Run **`supabase/policies.sql`** in the SQL Editor.
 The server-side query layer (`DATABASE_URL` / drizzle) connects as the
 `postgres` role and bypasses RLS, so existing pages are unaffected.
 
-## 3. Create the storage bucket
+The latest `supabase/schema.sql` also installs a database trigger that keeps
+`public.users` synced with `auth.users`, which makes sign-up/profile creation
+much more reliable in full Supabase mode.
 
-Run **`supabase/storage.sql`** in the SQL Editor (creates the public
-`uploads` bucket + policies), **or** set `SUPABASE_SERVICE_ROLE_KEY` in
-`.env.local` and the server will create the bucket on first upload.
+## 4. Create the storage bucket
 
-## 4. Configure the app
+Run **`supabase/storage.sql`** in the SQL Editor if you did not run the
+combined setup file. It creates the public `uploads` bucket + storage
+policies. Alternatively, set `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` and
+the server will create the bucket on first upload.
+
+## 5. Configure the app
 
 ```bash
 cp .env.example .env.local
@@ -70,7 +99,7 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com    # OAuth email redirects
 
 Restart the dev server after changing env vars.
 
-## 5. Enable OAuth providers (optional)
+## 6. Enable OAuth providers (optional)
 
 Supabase Dashboard → Authentication → Providers → enable **Google** and/or
 **GitHub**, and add your app's origin:
@@ -81,21 +110,21 @@ Supabase Dashboard → Authentication → Providers → enable **Google** and/or
 
 The login page shows "Continue with Google / GitHub" buttons automatically.
 
-## 6. Email confirmation (optional)
+## 7. Email confirmation (optional)
 
 By default Supabase asks new sign-ups to confirm their email
 (Authentication → Sign In / Up → Email → "Confirm email"). The signup page
 shows a "check your email" message in that case. Disable it to sign in
 instantly after sign-up.
 
-## 7. Demo accounts
+## 8. Demo accounts
 
 Demo users (`alex@demo.com` … `zara@demo.com`, password `demo1234`) live in
 the `users` table. In full mode they still sign in through the legacy bcrypt
 fallback (they are not Supabase Auth accounts). Real sign-ups use Supabase
 Auth and get a linked `users` row automatically.
 
-## 8. Troubleshooting: "data is in Supabase but the app shows demo content"
+## 9. Troubleshooting: "data is in Supabase but the app shows demo content"
 
 Symptom: sign-ups and posts exist in the Supabase dashboard, but the frontend
 shows the hardcoded demo feed (Alex Rivera & co.) and none of the real users.
@@ -116,10 +145,12 @@ Three known causes, in order:
    `https://<your-app>/api/health` reports `"mode": "supabase"`. On Vercel,
    set the env vars in Project → Settings → Environment Variables.
 3. **Signed-up users in `auth.users` but no row in `public.users`.**
-   Without `DATABASE_URL`, profile creation uses the REST API, where the
-   `users_insert_own` RLS policy needs a user session. Server code now uses
-   the service-role key for this sync — make sure `SUPABASE_SERVICE_ROLE_KEY`
-   is set (Dashboard → Project Settings → API → service_role).
+   Re-run the latest `supabase/schema.sql` first — it now backfills existing
+   auth users and installs an `auth.users` → `public.users` trigger so new
+   sign-ups stay linked automatically. If you are relying on the REST fallback
+   instead of `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` is still the most
+   reliable option for profile sync (Dashboard → Project Settings → API →
+   service_role).
 
 ## How it's wired
 
