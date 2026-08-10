@@ -12,7 +12,9 @@ let migrated = false;
  * statement is a no-op when the object already exists, and errors are
  * caught so this can never break the app.
  *
- * The DDL mirrors src/db/schema.ts / supabase/schema.sql exactly.
+ * The DDL mirrors the app's core table/column shape. Supabase-only extras
+ * such as RLS, auth triggers/backfills, duplicate cleanup, and performance
+ * indexes still live in `supabase/*.sql`.
  */
 export async function ensureMigrated() {
   if (migrated) return;
