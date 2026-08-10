@@ -4,15 +4,19 @@ import { useRef, useState } from 'react';
 import { Plus, LoaderCircle } from 'lucide-react';
 import { createStory } from '@/app/actions';
 import { uploadMediaFile } from '@/lib/upload';
+import StoryViewer from '@/components/StoryViewer';
 
 /**
  * Stories row — the "Create story" card uploads an image from the device
  * (no URL entry) and posts it as a 24h story via the existing action.
+ * Clicking any story card opens the full-screen preview (StoryViewer).
  */
 export default function Stories({ user, stories = [] }: { user: any; stories?: any[] }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  // Index of the story being previewed, or null when the viewer is closed.
+  const [activeStory, setActiveStory] = useState<number | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,10 +80,15 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
           </div>
         </div>
 
-        {/* Actual Stories */}
-        {stories.map((story) => (
+        {/* Actual Stories — click opens the full-screen preview */}
+        {stories.map((story, idx) => (
           <div
             key={story.id}
+            onClick={() => setActiveStory(idx)}
+            role="button"
+            tabIndex={0}
+            aria-label={`View story by ${story.user?.name || 'user'}`}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveStory(idx); } }}
             className="relative h-48 w-28 min-w-[7rem] rounded-xl shadow cursor-pointer overflow-hidden group snap-start"
           >
             <img
@@ -98,6 +107,15 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
       </div>
       {error && (
         <p className="text-sm text-red-600 mb-2 -mt-1">{error}</p>
+      )}
+
+      {/* Full-screen story preview */}
+      {activeStory !== null && stories.length > 0 && (
+        <StoryViewer
+          stories={stories}
+          initialIndex={activeStory}
+          onClose={() => setActiveStory(null)}
+        />
       )}
     </div>
   );

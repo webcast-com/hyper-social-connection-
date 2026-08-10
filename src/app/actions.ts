@@ -34,15 +34,32 @@ export async function createPost(formData: FormData) {
   const imageUrl = formData.get('imageUrl') as string | null;
   const videoUrl = formData.get('videoUrl') as string | null;
   const hasPoll = formData.get('hasPoll') === 'true';
+  const requestedGroupId = Number(formData.get('groupId') || 0);
 
   if (!content && !imageUrl && !videoUrl && !hasPoll) throw new Error('Content or media is required');
 
   try {
+    // Group posts are members-only — verified server-side, not just in the UI.
+    let groupId: number | null = null;
+    if (requestedGroupId > 0) {
+      const membership = await db
+        .select({ userId: groupMembers.userId })
+        .from(groupMembers)
+        .where(and(eq(groupMembers.groupId, requestedGroupId), eq(groupMembers.userId, userId)))
+        .limit(1);
+      if (membership.length === 0) {
+        console.warn('[action:createPost] non-member tried to post in group', requestedGroupId);
+        return; // silently refuse — the composer is only rendered for members anyway
+      }
+      groupId = requestedGroupId;
+    }
+
     const postRes = await db.insert(posts).values({
       userId,
       content,
       imageUrl: imageUrl || null,
       videoUrl: videoUrl || null,
+      groupId,
     }).returning();
 
     const createdPost = postRes[0];
@@ -81,6 +98,7 @@ export async function createPost(formData: FormData) {
 
   revalidatePath('/');
   revalidatePath('/discover');
+  if (requestedGroupId > 0) revalidatePath(`/groups/${requestedGroupId}`);
 }
 
 export async function toggleLike(postId: number) {
@@ -319,22 +337,27 @@ export async function createStory(imageUrl: string) {
 
 export async function createGroup(formData: FormData) {
   const userId = await getUserId();
-  const name = formData.get('name') as string;
-  const description = formData.get('description') as string;
-  
+  const name = (formData.get('name') as string || '').trim();
+  const description = (formData.get('description') as string || '').trim();
+  const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+
+  if (!name) return null;
+
   try {
     const res = await db.insert(groups).values({
       name,
       description,
+      coverPhoto: coverPhoto || null,
       adminId: userId,
     }).returning();
-    
+
     await db.insert(groupMembers).values({
       groupId: res[0].id,
       userId,
     });
-    
+
     revalidatePath('/groups');
+    revalidatePath(`/groups/${res[0].id}`);
     return res[0];
   } catch (e) {
     console.warn('[action:createGroup] DB unavailable:', (e as Error)?.message);
@@ -354,6 +377,69 @@ export async function joinGroup(groupId: number) {
     console.warn('[action:joinGroup] DB unavailable:', (e as Error)?.message);
   }
   revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups');
+}
+
+export async function leaveGroup(groupId: number) {
+  const userId = await getUserId();
+  try {
+    // The admin cannot leave their own group — they must keep or delete it.
+    const g = await db
+      .select({ adminId: groups.adminId })
+      .from(groups)
+      .where(eq(groups.id, groupId))
+      .limit(1);
+    if (g[0]?.adminId === userId) {
+      return { success: false, message: 'The group admin cannot leave their own group' };
+    }
+    await db.delete(groupMembers).where(
+      and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:leaveGroup] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups');
+  return { success: true };
+}
+
+export async function updateGroup(groupId: number, formData: FormData) {
+  const userId = await getUserId();
+  const name = (formData.get('name') as string || '').trim();
+  const description = (formData.get('description') as string || '').trim();
+  const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+
+  if (!name) return { success: false, message: 'Group name is required' };
+
+  try {
+    // Admin-only — enforced in the WHERE clause.
+    await db.update(groups)
+      .set({ name, description: description || null, coverPhoto: coverPhoto || null })
+      .where(and(eq(groups.id, groupId), eq(groups.adminId, userId)));
+  } catch (e) {
+    console.warn('[action:updateGroup] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath('/groups');
+  revalidatePath(`/groups/${groupId}`);
+  return { success: true };
+}
+
+export async function deleteGroup(groupId: number) {
+  const userId = await getUserId();
+  try {
+    // Admin-only. group_members rows cascade; member posts survive with
+    // group_id set to NULL (become regular feed posts).
+    await db.delete(groups).where(
+      and(eq(groups.id, groupId), eq(groups.adminId, userId))
+    );
+  } catch (e) {
+    console.warn('[action:deleteGroup] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath('/groups');
+  return { success: true };
 }
 
 export async function getNotifications() {
@@ -505,3 +591,27 @@ export async function votePoll(pollId: number, optionId: number) {
 }
 
 
+
+export async function editPost(postId: number, content: string) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in to edit' };
+
+  const trimmed = String(content || '').trim();
+  if (!trimmed) return { success: false, message: 'Post content cannot be empty' };
+  if (trimmed.length > 2000) return { success: false, message: 'Post is too long (max 2000 characters)' };
+
+  try {
+    // Only the author may edit — enforced in the WHERE clause, mirroring deletePost.
+    await db.update(posts)
+      .set({ content: trimmed, updatedAt: new Date() })
+      .where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+  } catch (e) {
+    console.warn('[action:editPost] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable — edit not saved' };
+  }
+
+  revalidatePath('/');
+  revalidatePath(`/post/${postId}`);
+  revalidatePath(`/profile/${userId}`);
+  return { success: true };
+}

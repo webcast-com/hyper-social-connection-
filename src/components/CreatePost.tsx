@@ -22,7 +22,7 @@ import { extractUrls } from '@/lib/link-preview';
 
 type Media = { kind: 'image' | 'video'; url: string } | null;
 
-export default function CreatePost({ user }: { user: any }) {
+export default function CreatePost({ user, groupId }: { user: any; groupId?: number }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [media, setMedia] = useState<Media>(null);
@@ -136,6 +136,8 @@ export default function CreatePost({ user }: { user: any }) {
             formData.set('content', content);
             if (media?.kind === 'image') formData.set('imageUrl', media.url);
             if (media?.kind === 'video') formData.set('videoUrl', media.url);
+            // Posting inside a group scopes the post to it (server re-checks membership).
+            if (groupId) formData.set('groupId', String(groupId));
 
             if (showPoll) {
               const validOptions = pollOptions.filter((o) => o.trim().length > 0);
@@ -332,7 +334,7 @@ export default function CreatePost({ user }: { user: any }) {
             aria-expanded={showAttachMenu}
           >
             <ImageIcon className="text-green-500 w-4 h-4 shrink-0" />
-            <span className="truncate">Photo/video</span>
+            <span className="truncate hidden min-[420px]:inline">Photo/video</span>
           </button>
 
           {showAttachMenu && (
@@ -384,7 +386,7 @@ export default function CreatePost({ user }: { user: any }) {
             }`}
           >
             <BarChart2 className="text-blue-500 w-4 h-4 shrink-0" />
-            <span className="truncate">Poll</span>
+            <span className="truncate hidden min-[420px]:inline">Poll</span>
           </button>
         </div>
 
@@ -409,7 +411,7 @@ export default function CreatePost({ user }: { user: any }) {
             ) : (
               <Camera className="text-purple-500 w-4 h-4 shrink-0" />
             )}
-            <span className="truncate">{storyUploading ? 'Adding…' : 'Story'}</span>
+            <span className="truncate hidden min-[420px]:inline">{storyUploading ? 'Adding…' : 'Story'}</span>
           </button>
         </div>
 
@@ -420,7 +422,7 @@ export default function CreatePost({ user }: { user: any }) {
           className="flex-1 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
         >
           <Smile className="text-yellow-500 w-4 h-4 shrink-0" />
-          <span className="truncate">Feeling</span>
+          <span className="truncate hidden min-[420px]:inline">Feeling</span>
         </button>
       </div>
 

@@ -95,6 +95,32 @@ the `users` table. In full mode they still sign in through the legacy bcrypt
 fallback (they are not Supabase Auth accounts). Real sign-ups use Supabase
 Auth and get a linked `users` row automatically.
 
+## 8. Troubleshooting: "data is in Supabase but the app shows demo content"
+
+Symptom: sign-ups and posts exist in the Supabase dashboard, but the frontend
+shows the hardcoded demo feed (Alex Rivera & co.) and none of the real users.
+
+Three known causes, in order:
+
+1. **Schema drift — missing `posts.repost_of_id`.**
+   `CREATE TABLE IF NOT EXISTS` never alters an existing table, so databases
+   created before the repost feature lack this column. The feed's
+   `SELECT … repost_of_id … FROM posts` then fails with
+   `column posts.repost_of_id does not exist`, the page catches the error and
+   silently swaps in demo data for the whole feed (posts *and* users).
+   **Fix:** re-run the current `supabase/schema.sql` — it now contains an
+   idempotent `ALTER TABLE posts ADD COLUMN IF NOT EXISTS repost_of_id` —
+   or apply `drizzle/0002_posts_repost_of_id.sql`, or `npx drizzle-kit push`.
+2. **`DATABASE_URL` missing or unreachable in the deployment.**
+   Pages read through drizzle/Postgres, not the browser REST client. Verify
+   `https://<your-app>/api/health` reports `"mode": "supabase"`. On Vercel,
+   set the env vars in Project → Settings → Environment Variables.
+3. **Signed-up users in `auth.users` but no row in `public.users`.**
+   Without `DATABASE_URL`, profile creation uses the REST API, where the
+   `users_insert_own` RLS policy needs a user session. Server code now uses
+   the service-role key for this sync — make sure `SUPABASE_SERVICE_ROLE_KEY`
+   is set (Dashboard → Project Settings → API → service_role).
+
 ## How it's wired
 
 ```

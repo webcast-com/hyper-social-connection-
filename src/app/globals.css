@@ -24,6 +24,13 @@ h3 {
   }
 }
 
+/* Story viewer: segmented progress bar fill. Driven via inline `animation`
+   styles in StoryViewer so it can be paused/resumed and re-keyed per story. */
+@keyframes story-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
 /* Dark mode is class-based: the toggle in the navbar puts `.dark` on <html>.
    This makes Tailwind's `dark:` utilities respond to that class. */
 @custom-variant dark (&:where(.dark, .dark *));

@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
-import { posts, users, likes, comments, follows, bookmarks, polls, pollOptions, pollVotes } from '@/db/schema';
+import { posts, users, likes, comments, follows, bookmarks, polls, pollOptions, pollVotes, groups, groupMembers } from '@/db/schema';
 import { stories as storiesTable } from '@/db/schema';
 import { eq, desc, gte } from 'drizzle-orm';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
 import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
+import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
 import { Compass, Users, Bookmark, Sparkles, Plus } from 'lucide-react';
 
@@ -122,6 +123,14 @@ export default async function Home() {
   let allPolls: any[] = [];
   let allPollOptions: any[] = [];
   let allPollVotes: any[] = [];
+  let allGroups: any[] = [];
+  let viewerGroupIds: number[] = [];
+
+  // Set when the database is configured but the feed query failed — almost
+  // always a schema drift (the DB is missing a column the app selects, e.g.
+  // posts.repost_of_id) or an unreachable DATABASE_URL. Without this flag the
+  // fallback below silently shows demo content while real data sits in the DB.
+  let dbFeedError: string | null = null;
 
   if (hasDatabase) {
     try {
@@ -136,13 +145,26 @@ export default async function Home() {
       allPolls = await db.select().from(polls);
       allPollOptions = await db.select().from(pollOptions);
       allPollVotes = await db.select().from(pollVotes);
+      allGroups = await db.select().from(groups);
 
       if (currentUser.id) {
         userFollows = await db.select().from(follows).where(eq(follows.followerId, currentUser.id));
         userBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, currentUser.id));
+        const memberships = await db.select({ groupId: groupMembers.groupId })
+          .from(groupMembers).where(eq(groupMembers.userId, currentUser.id));
+        viewerGroupIds = memberships.map((m) => m.groupId);
       }
     } catch (err) {
-      console.warn('[home] DB query failed, falling back to demo feed:', (err as Error)?.message);
+      dbFeedError = (err as Error)?.message || 'unknown database error';
+      console.error(
+        '[home] DATABASE FEED QUERY FAILED — showing demo fallback instead of real data.\n' +
+        '       Most common cause: the database schema is behind src/db/schema.ts (a column\n' +
+        '       the app selects is missing, e.g. `column posts.repost_of_id does not exist`).\n' +
+        '       Fix: run the updated supabase/schema.sql in the Supabase SQL Editor (it is\n' +
+        '       idempotent and patches existing databases), or `npx drizzle-kit push` with\n' +
+        '       DATABASE_URL set. Check connectivity at /api/health.\n' +
+        '       Error: ' + dbFeedError,
+      );
     }
   }
 
@@ -176,6 +198,10 @@ export default async function Home() {
   }
 
   const usersById = new Map(allUsers.map((u) => [u.id, u]));
+  const groupsById = new Map(allGroups.map((g) => [g.id, g]));
+  const viewerGroups = viewerGroupIds
+    .map((gid) => groupsById.get(gid))
+    .filter(Boolean) as any[];
 
   const enrichedStories = activeStories.map((s) => ({
     ...s,
@@ -212,7 +238,10 @@ export default async function Home() {
       ...post,
       poll: postPoll,
       user: usersById.get(post.userId),
-      likes: allLikes.filter((l) => l.postId === post.id),
+      group: post.groupId ? groupsById.get(post.groupId) || null : null,
+      likes: allLikes
+        .filter((l) => l.postId === post.id)
+        .map((l) => ({ ...l, user: usersById.get(l.userId) })),
       comments: allComments
         .filter((c) => c.postId === post.id)
         .map((c) => ({ ...c, user: usersById.get(c.userId) }))
@@ -240,6 +269,10 @@ export default async function Home() {
   const savedPosts = enrichedPosts.filter((p) => bookmarkedSet.has(p.id));
 
   const otherUsers = allUsers.filter((u) => u.id !== currentUser.id);
+
+  // Live trending hashtags — computed from whatever posts we ended up with
+  // (real DB rows, or the demo feed offline). Empty → widget's own defaults.
+  const trendingTopics = computeTrendingTopics(allPosts);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 max-w-7xl mx-auto">
@@ -275,19 +308,41 @@ export default async function Home() {
 
         <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
           <p className="text-xs text-gray-400 font-semibold px-2 uppercase tracking-wide mb-2">Shortcuts</p>
-          {['Travel & Adventure ✈️', 'Fitness & Health 💪', 'Dev & Tech Talk 💻'].map((g) => (
-            <Link key={g} href="/groups" className="flex items-center space-x-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors">
-              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs">
-                {g.slice(-2)}
-              </div>
-              <span className="font-semibold text-xs text-gray-700 dark:text-gray-300 truncate">{g.slice(0, -3)}</span>
-            </Link>
-          ))}
+          {viewerGroups.slice(0, 4).map((g, i) => {
+            const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500', 'bg-amber-500'];
+            return (
+              <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center space-x-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors">
+                <div className={`w-8 h-8 ${colors[i % colors.length]} rounded-lg flex items-center justify-center text-xs text-white font-bold`}>
+                  {g.name?.charAt(0) || 'G'}
+                </div>
+                <span className="font-semibold text-xs text-gray-700 dark:text-gray-300 truncate">{g.name}</span>
+              </Link>
+            );
+          })}
+          <Link href="/groups" className="flex items-center space-x-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors">
+            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs">
+              <Users className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+            </div>
+            <span className="font-semibold text-xs text-gray-700 dark:text-gray-300 truncate">
+              {viewerGroups.length === 0 ? 'Find groups to join' : 'See all groups'}
+            </span>
+          </Link>
         </div>
       </div>
 
       {/* Main Feed */}
       <div className="lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+        {dbFeedError && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-2xl px-4 py-3">
+            <p className="font-bold mb-0.5">Showing demo content — live data unavailable</p>
+            <p className="opacity-80">
+              The app is configured for a database, but the feed query failed
+              ({dbFeedError.slice(0, 120)}). This is usually a schema drift — run the updated
+              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">supabase/schema.sql</code>
+              in your Supabase SQL Editor, then check <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">/api/health</code>.
+            </p>
+          </div>
+        )}
         <Stories user={currentUser} stories={enrichedStories} />
         <CreatePost user={currentUser} />
 
@@ -302,8 +357,8 @@ export default async function Home() {
 
       {/* Right Sidebar */}
       <div className="hidden lg:flex flex-col space-y-4 pt-2">
-        {/* Trending Topics Widget */}
-        <TrendingTopics />
+        {/* Trending Topics Widget — live hashtags computed from the posts above */}
+        <TrendingTopics topics={trendingTopics} />
 
         {/* Suggested People */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">
