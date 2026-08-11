@@ -1,4 +1,4 @@
-import { db, hasDatabase } from '@/db';
+import { db, hasDatabase, ensureDbConnection } from '@/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
@@ -26,18 +26,22 @@ export const DEMO_VIEWER = {
 /**
  * Resolves the currently signed-in user from the JWT session cookie.
  * Returns null when nobody is signed in, except in demo/offline mode
- * (no DATABASE_URL) where the demo viewer is returned instead.
+ * (no DATABASE_URL, or the database is unreachable) where the demo
+ * viewer is returned instead.
  */
 export async function getViewer() {
+  // Probe the connection first (one-shot per process). When DATABASE_URL is
+  // missing OR the database is unreachable, hasDatabase is downgraded and we
+  // serve the demo experience — deterministic regardless of request order.
+  const dbUp = await ensureDbConnection();
+  if (!dbUp) {
+    return DEMO_VIEWER as any;
+  }
+
   try {
     await ensureSeeded();
   } catch (e) {
     console.warn('[viewer] ensureSeeded failed:', (e as Error)?.message);
-  }
-
-  if (!hasDatabase) {
-    // No database — run the app shell on demo data as the demo user.
-    return DEMO_VIEWER as any;
   }
 
   try {
