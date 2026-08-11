@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, primaryKey, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, primaryKey } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -8,9 +8,6 @@ export const users = pgTable("users", {
   avatar: text("avatar"),
   coverPhoto: text("cover_photo"),
   bio: text("bio"),
-  // Links this profile to Supabase Auth (auth.users.id). Purely additive:
-  // legacy rows keep a NULL auth_id and still work through the JWT path.
-  authId: uuid("auth_id").unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

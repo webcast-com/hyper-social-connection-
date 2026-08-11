@@ -58,7 +58,7 @@ const DEMO_POSTS_RAW: any[] = [
       expiresAt: new Date(Date.now() + 86400000),
       options: [
         { id: 1, text: 'Next.js + TypeScript + Tailwind CSS ⚡', votesCount: 34 },
-        { id: 2, text: 'SvelteKit + Supabase 🚀', votesCount: 18 },
+        { id: 2, text: 'SvelteKit + Postgres 🚀', votesCount: 18 },
         { id: 3, text: 'Go / Rust + HTMX 🦀', votesCount: 11 },
         { id: 4, text: 'Astro / Remix / Vite 🌐', votesCount: 7 },
       ],
@@ -160,9 +160,8 @@ export default async function Home() {
         '[home] DATABASE FEED QUERY FAILED — showing demo fallback instead of real data.\n' +
         '       Most common cause: the database schema is behind src/db/schema.ts (a column\n' +
         '       the app selects is missing, e.g. `column posts.repost_of_id does not exist`).\n' +
-        '       Fix: run the updated supabase/schema.sql in the Supabase SQL Editor (it is\n' +
-        '       idempotent and patches existing databases), or `npx drizzle-kit push` with\n' +
-        '       DATABASE_URL set. Check connectivity at /api/health.\n' +
+        '       Fix: run `npm run db:push` with DATABASE_URL set in .env.local — it syncs\n' +
+        '       your Postgres database with the schema. Check connectivity at /api/health.\n' +
         '       Error: ' + dbFeedError,
       );
     }
@@ -337,9 +336,9 @@ export default async function Home() {
             <p className="font-bold mb-0.5">Showing demo content — live data unavailable</p>
             <p className="opacity-80">
               The app is configured for a database, but the feed query failed
-              ({dbFeedError.slice(0, 120)}). This is usually a schema drift — run the updated
-              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">supabase/schema.sql</code>
-              in your Supabase SQL Editor, then check <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">/api/health</code>.
+              ({dbFeedError.slice(0, 120)}). This is usually a schema drift — run
+              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">npm run db:push</code>
+              with DATABASE_URL set, then check <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">/api/health</code>.
             </p>
           </div>
         )}

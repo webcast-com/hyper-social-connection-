@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function Signup() {
@@ -10,6 +10,16 @@ export default function Signup() {
   const [notice, setNotice]     = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  // Detect demo/offline mode (no database connected) so we can explain why
+  // account creation is unavailable instead of surfacing a technical error.
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => res.json())
+      .then((data) => setDemoMode(data?.db === false))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +34,7 @@ export default function Signup() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        if (data.requiresEmailConfirmation) {
-          setNotice('Account created! Check your email to confirm your address, then log in.');
-        } else {
-          window.location.href = '/';
-        }
+        window.location.href = '/';
       } else {
         setError(data.error || 'Signup failed. Please try again.');
       }
@@ -52,6 +58,14 @@ export default function Signup() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 w-full max-w-sm">
+        {demoMode && (
+          <div className="mb-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-xl px-3 py-2.5">
+            <span className="font-bold">Demo mode.</span> No database is connected, so
+            account creation is disabled. Set <code className="font-mono">DATABASE_URL</code> in{' '}
+            <code className="font-mono">.env.local</code> to enable sign-up (see{' '}
+            <code className="font-mono">DATABASE.md</code>).
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="w-full flex flex-col space-y-4">
           <input
             type="text"
@@ -92,10 +106,10 @@ export default function Signup() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || demoMode}
             className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors mt-2 shadow-sm text-sm disabled:opacity-60"
           >
-            {loading ? 'Creating Account…' : 'Sign Up'}
+            {loading ? 'Creating Account…' : demoMode ? 'Sign-up disabled (demo)' : 'Sign Up'}
           </button>
         </form>
 

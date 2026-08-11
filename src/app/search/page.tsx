@@ -180,7 +180,9 @@ export default function SearchPage() {
                       <span className="font-bold text-xs text-gray-900 dark:text-white">{res.user?.name}</span>
                     </div>
                     <p className="text-sm text-gray-800 dark:text-gray-200">
-                      <FormattedContent content={res.post.content} />
+                      {/* interactive=false: the whole card is already a <Link>,
+                          nested anchors are invalid HTML */}
+                      <FormattedContent content={res.post.content} interactive={false} />
                     </p>
                     {res.post.imageUrl && (
                       <img src={res.post.imageUrl} alt="post" className="mt-2.5 rounded-xl max-h-48 w-full object-cover" />

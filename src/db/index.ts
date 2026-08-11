@@ -6,11 +6,10 @@ import * as schema from "./schema";
 const FORCE_OFFLINE = process.env.FORCE_OFFLINE_MODE === "true" || 
                       process.env.DB_MODE === "offline";
 
-// Postgres connection used by drizzle and raw SQL. Set DATABASE_URL in
-// .env.local to your Supabase connection string (see .env.example).
+// Postgres connection used by drizzle and raw SQL. Works with ANY PostgreSQL
+// database — Neon, AWS RDS, Railway, DigitalOcean, a local install, etc.
+// Set DATABASE_URL in .env.local (see .env.example).
 const rawHasDatabase = !!process.env.DATABASE_URL && !FORCE_OFFLINE;
-
-export { supabase } from "./supabase";
 
 // We expose a mutable hasDatabase so connection failures can downgrade gracefully
 export let hasDatabase = rawHasDatabase;
@@ -20,14 +19,20 @@ if (FORCE_OFFLINE) {
 } else if (!rawHasDatabase) {
   console.log("[db] No DATABASE_URL — running in demo/offline mode");
 } else {
-  console.log("[db] DATABASE_URL detected — will attempt Supabase connection (may fall back)");
+  console.log("[db] DATABASE_URL detected — will attempt Postgres connection (may fall back)");
 }
+
+// Managed providers (Neon, RDS, Railway, …) require TLS; a local or
+// self-hosted Postgres often has none. Default to TLS with relaxed cert
+// validation, and allow `DATABASE_SSL=false` in .env.local for plain-TCP
+// local databases.
+const sslOption =
+  process.env.DATABASE_SSL === "false" ? undefined : { rejectUnauthorized: false };
 
 export const pool: Pool = hasDatabase
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      // More resilient defaults for restricted environments
-      ssl: { rejectUnauthorized: false },
+      ssl: sslOption,
       max: 3,
       connectionTimeoutMillis: 4000,
       idleTimeoutMillis: 10000,
@@ -60,10 +65,10 @@ export async function ensureDbConnection(): Promise<boolean> {
     const client = await pool.connect();
     await client.query("SELECT 1");
     client.release();
-    console.log("[db] Supabase Postgres connection verified");
+    console.log("[db] Postgres connection verified");
     return true;
   } catch (err: any) {
-    console.warn("[db] Supabase Postgres connection failed — switching to demo/offline mode:", err?.message || err);
+    console.warn("[db] Postgres connection failed — switching to demo/offline mode:", err?.message || err);
     hasDatabase = false;
     return false;
   }

@@ -24,7 +24,7 @@ const MOBILE_TABS = [
   { href: '/notifications', label: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true },
 ];
 
-export default function Navbar({ user, unreadCount }: { user?: any; unreadCount?: number }) {
+export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unreadCount?: number; isDemo?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const [navSearch, setNavSearch] = useState('');
@@ -227,15 +227,24 @@ export default function Navbar({ user, unreadCount }: { user?: any; unreadCount?
             <Settings className="w-4 h-4" />
           </Link>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
-            aria-label="Log out"
-            title="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {isDemo ? (
+            <span
+              className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wide border border-amber-200 dark:border-amber-800"
+              title="Demo mode — no database connected. Set DATABASE_URL in .env.local to enable accounts and persistence."
+            >
+              Demo
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
+              aria-label="Log out"
+              title="Log out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
 
           <Link
             href={`/profile/${user.id}`}

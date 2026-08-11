@@ -12,9 +12,8 @@ let migrated = false;
  * statement is a no-op when the object already exists, and errors are
  * caught so this can never break the app.
  *
- * The DDL mirrors the app's core table/column shape. Supabase-only extras
- * such as RLS, auth triggers/backfills, duplicate cleanup, and performance
- * indexes still live in `supabase/*.sql`.
+ * The DDL mirrors the app's core table/column shape. The canonical schema
+ * lives in `src/db/schema.ts` and can be pushed with `npm run db:push`.
  */
 export async function ensureMigrated() {
   if (migrated) return;
@@ -188,9 +187,6 @@ export async function ensureMigrated() {
       CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action,
       CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
     )`,
-    // Supabase Auth integration: link profiles to auth.users via auth_id (uuid).
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_id uuid`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS "users_auth_id_unique" ON "users" ("auth_id")`,
   ];
 
   let anyFailed = false;
