@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { supabase } from '@/db/supabase';
-import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { Check, CheckCheck, Smile, Heart, ThumbsUp, Flame } from 'lucide-react';
 
 export type ChatUser = { id: number; name: string; avatar: string | null };
@@ -34,6 +32,7 @@ export default function ChatStream({
   const [activeReactionMsgId, setActiveReactionMsgId] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const seenIds = useRef<Set<number>>(new Set(initialMessages.map((m) => m.id)));
+  const lastIdRef = useRef<number>(initialMessages.reduce((max, m) => Math.max(max, m.id), 0));
 
   // Keep in sync with server re-renders
   useEffect(() => {
@@ -41,7 +40,10 @@ export default function ChatStream({
       const known = new Set(prev.map((m) => m.id));
       const fresh = initialMessages.filter((m) => !known.has(m.id));
       if (fresh.length === 0) return prev;
-      known.forEach((id) => seenIds.current.add(id));
+      fresh.forEach((m) => {
+        seenIds.current.add(m.id);
+        lastIdRef.current = Math.max(lastIdRef.current, m.id);
+      });
       return [...prev, ...fresh].sort((a, b) => a.id - b.id);
     });
   }, [initialMessages]);
@@ -50,47 +52,53 @@ export default function ChatStream({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length]);
 
+  // Poll the messages endpoint for new chat messages every few seconds.
+  // (Replaces the previous Supabase Realtime subscription — works with any
+  // Postgres database.)
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    let inFlight = false;
 
-    const append = (row: any) => {
-      if (!row) return;
-      const senderId = Number(row.sender_id);
-      const receiverId = Number(row.receiver_id);
-      const isConversation =
-        (senderId === viewerId && receiverId === otherId) ||
-        (senderId === otherId && receiverId === viewerId);
-      if (!isConversation) return;
-      if (seenIds.current.has(Number(row.id))) return;
-      seenIds.current.add(Number(row.id));
+    const poll = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const res = await fetch(`/api/messages?with=${otherId}&after=${lastIdRef.current}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data?.messages) || data.messages.length === 0) return;
 
-      const message: ChatMessage = {
-        id: Number(row.id),
-        senderId,
-        receiverId,
-        content: String(row.content ?? ''),
-        createdAt: row.created_at,
-        user: usersById[senderId],
-      };
-      setMessages((prev) => [...prev, message]);
+        const fresh: ChatMessage[] = [];
+        for (const row of data.messages) {
+          const id = Number(row.id);
+          if (seenIds.current.has(id)) continue;
+          seenIds.current.add(id);
+          lastIdRef.current = Math.max(lastIdRef.current, id);
+          fresh.push({
+            id,
+            senderId: Number(row.senderId),
+            receiverId: Number(row.receiverId),
+            content: String(row.content ?? ''),
+            createdAt: row.createdAt,
+            user: usersById[Number(row.senderId)],
+          });
+        }
+        if (fresh.length > 0) {
+          setMessages((prev) => [...prev, ...fresh]);
+        }
+      } catch {
+        // Network blip — the next tick will retry automatically.
+      } finally {
+        inFlight = false;
+      }
     };
 
-    const channel = supabase
-      .channel(`dm-${Math.min(viewerId, otherId)}-${Math.max(viewerId, otherId)}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${viewerId}` },
-        (payload) => append(payload.new),
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${viewerId}` },
-        (payload) => append(payload.new),
-      )
-      .subscribe();
-
+    const timer = setInterval(poll, 3000);
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(timer);
     };
   }, [viewerId, otherId, usersById]);
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Post from '@/components/Post';
 import { Sparkles, Users, Bookmark, Compass } from 'lucide-react';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
 
 type Tab = 'for-you' | 'following' | 'saved';
 
@@ -75,14 +76,11 @@ export default function FeedTabs({
       {/* Feed Content */}
       <div className="space-y-4">
         {postsToRender.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-10 text-center border border-gray-100 dark:border-gray-700">
-            {activeTab === 'following' ? (
-              <div className="space-y-3">
-                <div className="text-4xl">👥</div>
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">No posts from people you follow</h3>
-                <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                  Follow creators, friends, and accounts from the Discover tab to build your custom feed.
-                </p>
+          activeTab === 'following' ? (
+            <EmptyState
+              variant="people"
+              title="No posts from people you follow"
+              action={
                 <Link
                   href="/discover"
                   className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
@@ -90,23 +88,19 @@ export default function FeedTabs({
                   <Compass className="w-4 h-4" />
                   <span>Discover People</span>
                 </Link>
-              </div>
-            ) : activeTab === 'saved' ? (
-              <div className="space-y-2">
-                <div className="text-4xl">🔖</div>
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">No saved posts yet</h3>
-                <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                  Click the bookmark icon on any post to save it for later reading.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-4xl">👋</div>
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white">No posts yet!</h3>
-                <p className="text-sm text-gray-500">Create the first post above to kick off the conversation.</p>
-              </div>
-            )}
-          </div>
+              }
+            >
+              Follow creators, friends, and accounts from the Discover tab to build your custom feed.
+            </EmptyState>
+          ) : activeTab === 'saved' ? (
+            <EmptyState variant="bookmark" title="No saved posts yet">
+              Click the bookmark icon on any post to save it for later reading.
+            </EmptyState>
+          ) : (
+            <EmptyState variant="feed" title="No posts yet!">
+              Create the first post above to kick off the conversation.
+            </EmptyState>
+          )
         ) : (
           postsToRender.map((post) => (
             <Post

@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
+import EmptyState from '@/components/EmptyState';
 import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -150,9 +151,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   const photoPosts = enrichedPosts.filter(p => p.imageUrl);
 
   return (
-    <div className="bg-gray-100 min-h-screen pb-12">
+    <div className="bg-gray-100 dark:bg-gray-900 min-h-screen pb-12">
       {/* Cover + Avatar */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto">
           {/* Cover Photo — uploaded from the device (editable on your own profile) */}
           <CoverPhotoUpload
@@ -214,20 +215,20 @@ export default async function Profile({ params }: { params: Promise<{ id: string
         {/* Left: About + Photos + Friends */}
         <div className="space-y-4">
           {/* About Card */}
-          <div className="bg-white rounded-2xl shadow p-5">
-            <h3 className="font-bold text-lg mb-3">About</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">{profileUser.bio || 'No bio yet.'}</p>
-            <div className="mt-3 space-y-2 text-sm text-gray-500">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-5">
+            <h3 className="font-bold text-lg mb-3 text-gray-900 dark:text-white">About</h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{profileUser.bio || 'No bio yet.'}</p>
+            <div className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-red-400" /> Joined {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
             </div>
           </div>
 
           {/* Photos */}
           {photoPosts.length > 0 && (
-            <div className="bg-white rounded-2xl shadow p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-5">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-lg">Photos</h3>
-                <span className="text-blue-600 text-sm font-semibold cursor-pointer">See all</span>
+                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Photos</h3>
+                <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold cursor-pointer">See all</span>
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {photoPosts.slice(0, 9).map(p => (
@@ -240,12 +241,12 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           )}
 
           {/* Friends */}
-          <div className="bg-white rounded-2xl shadow p-5">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-5">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-lg flex items-center gap-2">
+              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
                 <UsersIcon className="w-5 h-5 text-blue-500" /> Followers
               </h3>
-              <span className="text-blue-600 text-sm font-semibold">{followersRes.length}</span>
+              <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold">{followersRes.length}</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {followersRes.slice(0, 6).map(({ user: u }) => u && (
@@ -257,7 +258,7 @@ export default async function Profile({ params }: { params: Promise<{ id: string
                       {u.name.charAt(0)}
                     </div>
                   )}
-                  <span className="text-xs text-gray-600 text-center truncate w-full">{u.name.split(' ')[0]}</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 text-center truncate w-full">{u.name.split(' ')[0]}</span>
                 </Link>
               ))}
             </div>
@@ -266,12 +267,11 @@ export default async function Profile({ params }: { params: Promise<{ id: string
 
         {/* Right: Posts */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-bold text-gray-800 ml-1">Posts</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white ml-1">Posts</h2>
           {enrichedPosts.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow p-10 text-center text-gray-400">
-              <div className="text-5xl mb-3">📝</div>
-              <div className="font-semibold">No posts yet</div>
-            </div>
+            <EmptyState variant="feed" title="No posts yet">
+              When this user shares something, it will appear here.
+            </EmptyState>
           ) : (
             enrichedPosts.map(post => (
               <Post key={post.id} post={post} currentUser={currentUser} />

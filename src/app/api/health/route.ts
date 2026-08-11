@@ -22,13 +22,13 @@ export async function GET() {
     if (connected) {
       // Extra lightweight query to confirm
       await db.execute(sql`select 1`);
-      return Response.json({ ok: true, db: true, mode: "supabase" });
+      return Response.json({ ok: true, db: true, mode: "postgres" });
     } else {
       return Response.json({ 
         ok: true, 
         db: false, 
         mode: "offline",
-        warning: "Supabase Postgres connection probe failed — now in demo mode" 
+        warning: "Postgres connection probe failed — now in demo mode" 
       });
     }
   } catch (err: any) {

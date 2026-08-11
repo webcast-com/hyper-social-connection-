@@ -16,15 +16,27 @@ export default function LinkPreviewCard({
   const [data, setData] = useState<LinkPreviewData | null>(previewData || null);
   const [loading, setLoading] = useState(!previewData);
 
+  // Sync state when the previewData prop changes (React's sanctioned
+  // "adjusting state during render" pattern — no effect needed).
+  const [prevPreviewData, setPrevPreviewData] = useState(previewData);
+  const [prevUrl, setPrevUrl] = useState(url);
+  if (previewData !== prevPreviewData) {
+    setPrevPreviewData(previewData);
+    setData(previewData || null);
+    setLoading(!previewData);
+  } else if (url !== prevUrl) {
+    // New URL to fetch a preview for — restart in loading state.
+    setPrevUrl(url);
+    setData(null);
+    setLoading(true);
+  }
+
   useEffect(() => {
     if (previewData) {
-      setData(previewData);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
 
     fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
       .then((res) => (res.ok ? res.json() : null))

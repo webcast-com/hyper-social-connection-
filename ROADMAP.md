@@ -1,6 +1,6 @@
 # Roadmap Map
 
-- Phase 1: Database (Supabase + Drizzle ORM) ✅
+- Phase 1: Database (PostgreSQL + Drizzle ORM) ✅
 - Phase 2: Dark Mode & Theming ✅
 - Phase 3: Preview / Build Fix & Storage ✅
 - Phase 4: Feature Expansion & Next-Level Capabilities ✅
@@ -12,7 +12,7 @@
   - Chat Enhancements: Live active status indicator, quick emoji reaction badges (❤️, 👍, 😂, 🔥, 👏).
   - Post and Comment deletion for content authors.
   - Progressive Web App (PWA) manifest (`manifest.webmanifest`) with standalone mobile installation support.
-  - Full Supabase integration: Supabase Auth, session refresh via proxy, `auth_id` profile linking, RLS policies + Realtime live chat (`postgres_changes` on `messages`).
+  - (Historical) Full Supabase integration: Supabase Auth, session refresh via proxy, `auth_id` profile linking, RLS policies + Realtime live chat — replaced in Phase 7.
 - Phase 5: Social Depth Pack ✅
   - Full-screen Story Viewer: click any story card to preview — segmented auto-advance progress bars, press-and-hold to pause, tap zones / arrow keys / chevrons to navigate, author + relative time header (`StoryViewer.tsx`).
   - Live Trending Topics: real #hashtag usage computed server-side from recent posts (incl. demo feed) with category inference and real post counts (`src/lib/trending.ts`), replacing the static widget.
@@ -26,4 +26,18 @@
   - Group admin controls: edit name/description/cover and delete group with confirm step (`GroupAdminControls`); member rows cascade, posts survive as regular feed posts.
   - Upgraded groups directory: "Your groups"/"Discover groups" sections, member counts, joined badges, member avatar stacks, dark-mode styling, create-group modal (`CreateGroupButton`).
   - Home sidebar Shortcuts now list the viewer's real joined groups.
+- Phase 7: Supabase decoupling ✅
+  - The app now runs on **any PostgreSQL database** (Neon, AWS RDS, Railway, DigitalOcean, local Postgres, …) via `DATABASE_URL` — no Supabase project required.
+  - Auth: email/password with bcrypt-hashed credentials and JWT session cookies (no Supabase Auth / OAuth dependency).
+  - Media uploads: stored on local disk under `public/uploads` (no Supabase Storage). Swap in S3/R2 later if needed.
+  - Live chat: HTTP polling against `/api/messages` (replaces Supabase Realtime `postgres_changes`).
+  - Removed: `@supabase/ssr`, `@supabase/supabase-js`, `supabase/*.sql`, session-refresh proxy, `auth_id` profile linking. See `DATABASE.md` for setup.
 
+- Phase 8: UI polish & code health ✅
+  - Redesigned login/signup: split brand-panel + form card, icon inputs, show/hide password, loading spinners, demo-mode banners, seeded-account hint.
+  - Illustrated empty states: new `EmptyState` component with six hand-drawn, theme-aware SVG illustrations applied to feed tabs, groups, notifications, messages, search and profiles.
+  - Mobile spacing tightened; fixed doubled gap between feed posts (`space-y-4` wrapper + per-post `mb-4`).
+  - Dark-mode coverage completed for profile, discover, messages, notifications and global page background.
+  - Fixed nested-anchor hydration error in search results (new `FormattedContent.interactive` prop).
+  - Lint cleaned to 0 errors (pure renders, no sync setState-in-effect, escaped entities).
+  - Added README.

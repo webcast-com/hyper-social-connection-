@@ -3,9 +3,6 @@ import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { getViewer } from '@/lib/viewer';
-import { isSupabaseConfigured } from '@/lib/supabase/config';
-import { createClient } from '@/lib/supabase/server';
-import { defaultStorageBucket, uploadToStorage } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -31,6 +28,11 @@ function sanitizeExt(ext: string) {
   return ext.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
 }
 
+/**
+ * Media uploads are stored on local disk under public/uploads and served as
+ * static files. No external storage service is required. (Swap this handler
+ * for S3/R2 later if you need CDN-backed storage.)
+ */
 export async function POST(req: NextRequest) {
   try {
     // Same trust level as the other server actions (session user or demo viewer).
@@ -60,31 +62,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `File too large. Max ${mb} MB for ${kind}s.` }, { status: 413 });
     }
 
-    // ── Supabase Storage (full integration mode) ──────────────────────────
-    if (isSupabaseConfigured) {
-      const supabase = await createClient();
-      const bucket = defaultStorageBucket();
-      const knownExt = kind === 'image' ? IMAGE_TYPES[file.type] : VIDEO_TYPES[file.type];
-      const originalExt = file.name.includes('.') ? sanitizeExt(file.name.split('.').pop() || '') : '';
-      const ext = knownExt || originalExt || 'bin';
-      const storagePath = `${kind}s/${randomUUID()}.${ext}`;
-
-      const url = await uploadToStorage(bucket, storagePath, file, supabase);
-      if (url) {
-        return NextResponse.json({
-          url,
-          kind,
-          type: file.type,
-          size: file.size,
-          name: file.name,
-        });
-      }
-      // Upload failed (bucket missing, RLS, unreachable project, …) — fall
-      // through to the local-disk path so the app keeps working.
-      console.warn('[upload] Supabase Storage failed, using local disk fallback');
-    }
-
-    // ── Local disk fallback (unchanged behavior) ──────────────────────────
     const knownExt = kind === 'image' ? IMAGE_TYPES[file.type] : VIDEO_TYPES[file.type];
     const originalExt = file.name.includes('.') ? sanitizeExt(file.name.split('.').pop() || '') : '';
     const ext = knownExt || originalExt || 'bin';

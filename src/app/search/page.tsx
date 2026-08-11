@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { searchUsers, searchPosts } from '@/app/actions';
 import { Search, Hash, Users, Sparkles } from 'lucide-react';
 import FormattedContent from '@/components/FormattedContent';
+import EmptyState from '@/components/EmptyState';
 
 type SearchResult = {
   users: any[];
@@ -47,13 +48,22 @@ export default function SearchPage() {
     let cancelled = false;
 
     if (!urlQuery) {
-      setQuery('');
-      setUserResults([]);
-      setPostResults([]);
+      // Defer the reset so no state updates run synchronously in the
+      // effect body (avoids cascading renders).
+      Promise.resolve().then(() => {
+        if (id !== requestId.current) return;
+        setQuery('');
+        setUserResults([]);
+        setPostResults([]);
+      });
       return;
     }
 
-    setLoading(true);
+    // Defer so no state update runs synchronously in the effect body.
+    Promise.resolve().then(() => {
+      if (id !== requestId.current) return;
+      setLoading(true);
+    });
     (async () => {
       const results = await executeSearch(urlQuery);
       if (cancelled || id !== requestId.current) return;
@@ -80,7 +90,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 mt-6">
+    <div className="max-w-3xl mx-auto p-3 sm:p-4 mt-4 sm:mt-6">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
           <Search className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -180,7 +190,9 @@ export default function SearchPage() {
                       <span className="font-bold text-xs text-gray-900 dark:text-white">{res.user?.name}</span>
                     </div>
                     <p className="text-sm text-gray-800 dark:text-gray-200">
-                      <FormattedContent content={res.post.content} />
+                      {/* interactive=false: the whole card is already a <Link>,
+                          nested anchors are invalid HTML */}
+                      <FormattedContent content={res.post.content} interactive={false} />
                     </p>
                     {res.post.imageUrl && (
                       <img src={res.post.imageUrl} alt="post" className="mt-2.5 rounded-xl max-h-48 w-full object-cover" />
@@ -192,11 +204,9 @@ export default function SearchPage() {
           )}
 
           {query.trim() && !loading && userResults.length === 0 && postResults.length === 0 && (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-10 space-y-2">
-              <div className="text-4xl">🔍</div>
-              <div className="font-semibold text-gray-700 dark:text-gray-300">No results found for &quot;{query}&quot;</div>
-              <p className="text-xs">Try searching for #NextJS, #Travel, #SwissAlps, or a friend&apos;s name.</p>
-            </div>
+            <EmptyState variant="search" title={`No results found for "${query}"`}>
+              Try searching for #NextJS, #Travel, #SwissAlps, or a friend&apos;s name.
+            </EmptyState>
           )}
         </div>
       </div>
