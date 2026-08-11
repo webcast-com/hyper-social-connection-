@@ -1,10 +1,14 @@
-import { pgTable, serial, text, timestamp, integer, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  // Public @handle, ported from the Supabase schema's `profiles.username`.
+  // Nullable: existing rows and the signup route do not supply one; it is
+  // backfilled from the email local-part by SOCIAL_DDL.
+  username: text("username"),
   avatar: text("avatar"),
   coverPhoto: text("cover_photo"),
   bio: text("bio"),
@@ -22,6 +26,11 @@ export const posts = pgTable("posts", {
   // Posts can belong to a group/community. NULL = regular feed post.
   // Set-null on group delete keeps the posts as normal feed posts.
   groupId: integer("group_id").references((): any => groups.id, { onDelete: "set null" }),
+  // Cached engagement counters, maintained by database triggers (see
+  // src/db/social-ddl.ts). Reads stay correct even if a write path is added
+  // later, and they are reconciled against the source tables on boot.
+  likesCount: integer("likes_count").default(0).notNull(),
+  commentsCount: integer("comments_count").default(0).notNull(),
   // NULL until the author edits the post; drives the "Edited" marker in the UI.
   updatedAt: timestamp("updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -67,6 +76,13 @@ export const likes = pgTable("likes", {
   postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    // One like per user per post (ported from the source schema's
+    // UNIQUE(user_id, post_id)). Guards toggleLike's select-then-insert
+    // against double-submits and races.
+    postUserUnique: uniqueIndex("likes_post_id_user_id_key").on(table.postId, table.userId),
+  };
 });
 
 export const follows = pgTable("follows", {

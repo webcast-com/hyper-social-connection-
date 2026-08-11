@@ -1,4 +1,5 @@
 import { pool, hasDatabase } from '@/db';
+import { SOCIAL_DDL } from '@/db/social-ddl';
 
 let migrated = false;
 
@@ -187,6 +188,11 @@ export async function ensureMigrated() {
       CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action,
       CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
     )`,
+    // Social-graph patches ported from sql/001_social_connection_schema.sql:
+    // likes uniqueness, users.username, and the cached posts.likes_count /
+    // posts.comments_count counters with their triggers and backfill.
+    // Kept last so they apply after every table above exists.
+    ...SOCIAL_DDL,
   ];
 
   let anyFailed = false;

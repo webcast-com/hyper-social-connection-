@@ -109,11 +109,23 @@ export async function toggleLike(postId: number) {
     if (existingLike.length > 0) {
       await db.delete(likes).where(and(eq(likes.postId, postId), eq(likes.userId, userId)));
     } else {
-      await db.insert(likes).values({ postId, userId });
-      // Notify post owner
-      const postRes = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
-      if (postRes.length > 0) {
-        await createNotification(postRes[0].userId, userId, 'like', postId);
+      // The database now enforces UNIQUE(post_id, user_id), so a double
+      // submit or a concurrent request that slips between the select above
+      // and this insert is rejected rather than stored twice. Swallow that
+      // conflict: the like already exists, which is the desired end state.
+      const inserted = await db
+        .insert(likes)
+        .values({ postId, userId })
+        .onConflictDoNothing({ target: [likes.postId, likes.userId] })
+        .returning({ id: likes.id });
+
+      // Only notify when this request actually created the like, so a
+      // duplicate click cannot spam the post owner.
+      if (inserted.length > 0) {
+        const postRes = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
+        if (postRes.length > 0) {
+          await createNotification(postRes[0].userId, userId, 'like', postId);
+        }
       }
     }
   } catch (e) {
