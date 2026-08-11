@@ -74,11 +74,11 @@ export default function NotificationItem({
       href={href}
       onClick={handleClick}
       aria-busy={pending}
-      className={`flex items-start space-x-4 p-4 hover:bg-blue-50 transition-colors ${
-        notification.isRead ? 'bg-white' : 'bg-blue-50'
+      className={`flex items-start space-x-4 p-4 hover:bg-blue-50 dark:hover:bg-gray-700/40 transition-colors ${
+        notification.isRead ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-blue-900/20'
       } ${pending ? 'opacity-70' : ''}`}
     >
-      <div className="p-2 bg-gray-50 rounded-full shrink-0">
+      <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded-full shrink-0">
         {iconMap[notification.type] || <Bell className="text-gray-500 w-5 h-5" />}
       </div>
       <div className="flex-1 min-w-0">
@@ -94,10 +94,10 @@ export default function NotificationItem({
               {actor?.name?.charAt(0) || '?'}
             </div>
           )}
-          <span className="font-semibold truncate">{actor?.name || 'Someone'}</span>
+          <span className="font-semibold truncate text-gray-900 dark:text-white">{actor?.name || 'Someone'}</span>
         </div>
-        <p className="text-sm text-gray-700 mt-1">{notificationText(notification.type)}</p>
-        <p className="text-xs text-gray-400 mt-2" suppressHydrationWarning>
+        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{notificationText(notification.type)}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-2" suppressHydrationWarning>
           {new Date(notification.createdAt).toLocaleString()}
         </p>
       </div>

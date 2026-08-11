@@ -47,7 +47,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
         {/* Create Story — uploads an image from the device */}
         <div
           onClick={() => fileRef.current?.click()}
-          className="relative h-48 w-28 min-w-[7rem] bg-white rounded-xl shadow cursor-pointer overflow-hidden group snap-start"
+          className="relative h-48 w-28 min-w-[7rem] bg-white dark:bg-gray-800 rounded-xl shadow cursor-pointer overflow-hidden group snap-start"
           role="button"
           tabIndex={0}
           aria-label="Create story"
@@ -68,7 +68,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
               alt="My Avatar"
             />
           </div>
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 p-1 rounded-full border-4 border-white">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 p-1 rounded-full border-4 border-white dark:border-gray-800">
             {uploading ? (
               <LoaderCircle className="text-white w-5 h-5 animate-spin" />
             ) : (

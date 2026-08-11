@@ -24,12 +24,12 @@ export default async function Messages() {
   }
   
   return (
-    <div className="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100vh-3.5rem)] bg-white max-w-6xl mx-auto md:mt-4 rounded-lg shadow overflow-hidden">
-      <div className="w-full md:w-1/3 border-r border-gray-200 overflow-y-auto">
-        <div className="p-4 border-b border-gray-200 font-bold text-xl">Chats</div>
+    <div className="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100vh-3.5rem)] bg-white dark:bg-gray-800 max-w-6xl mx-auto md:mt-4 rounded-lg shadow overflow-hidden">
+      <div className="w-full md:w-1/3 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 font-bold text-xl text-gray-900 dark:text-white">Chats</div>
         <div className="p-2 space-y-1">
           {allUsers.filter(u => u.id !== (viewer?.id || 0)).map(u => (
-            <Link key={u.id} href={`/messages/${u.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+            <Link key={u.id} href={`/messages/${u.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700/40 rounded-lg transition-colors cursor-pointer">
               {u.avatar ? (
                 <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
               ) : (

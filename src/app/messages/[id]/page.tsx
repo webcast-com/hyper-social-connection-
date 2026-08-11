@@ -64,7 +64,7 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
         <div className="p-4 border-b border-gray-200 font-bold text-xl">Chats</div>
         <div className="p-2 space-y-1">
           {allUsers.filter(u => u.id !== viewer.id).map(u => (
-            <Link key={u.id} href={`/messages/${u.id}`} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer ${u.id === receiverId ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+            <Link key={u.id} href={`/messages/${u.id}`} className={`flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer ${u.id === receiverId ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}>
               {u.avatar ? (
                 <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
               ) : (

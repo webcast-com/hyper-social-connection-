@@ -299,7 +299,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
                   <select
                     value={pollDuration}
                     onChange={(e) => setPollDuration(e.target.value)}
-                    className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs focus:outline-none"
+                    className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="1">24 Hours</option>
                     <option value="3">3 Days</option>

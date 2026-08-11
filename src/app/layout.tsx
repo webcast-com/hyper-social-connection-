@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             }}
           />
         </head>
-        <body className="font-sans bg-gray-100 min-h-screen" suppressHydrationWarning>
+        <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
           {children}
         </body>
       </html>
@@ -82,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className="font-sans bg-gray-100 min-h-screen" suppressHydrationWarning>
+      <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
         {/* pb-20 on mobile leaves room for the bottom tab bar */}
         <main className="pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
