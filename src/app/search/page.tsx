@@ -48,13 +48,22 @@ export default function SearchPage() {
     let cancelled = false;
 
     if (!urlQuery) {
-      setQuery('');
-      setUserResults([]);
-      setPostResults([]);
+      // Defer the reset so no state updates run synchronously in the
+      // effect body (avoids cascading renders).
+      Promise.resolve().then(() => {
+        if (id !== requestId.current) return;
+        setQuery('');
+        setUserResults([]);
+        setPostResults([]);
+      });
       return;
     }
 
-    setLoading(true);
+    // Defer so no state update runs synchronously in the effect body.
+    Promise.resolve().then(() => {
+      if (id !== requestId.current) return;
+      setLoading(true);
+    });
     (async () => {
       const results = await executeSearch(urlQuery);
       if (cancelled || id !== requestId.current) return;

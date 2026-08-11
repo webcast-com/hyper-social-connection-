@@ -33,3 +33,11 @@
   - Live chat: HTTP polling against `/api/messages` (replaces Supabase Realtime `postgres_changes`).
   - Removed: `@supabase/ssr`, `@supabase/supabase-js`, `supabase/*.sql`, session-refresh proxy, `auth_id` profile linking. See `DATABASE.md` for setup.
 
+- Phase 8: UI polish & code health ✅
+  - Redesigned login/signup: split brand-panel + form card, icon inputs, show/hide password, loading spinners, demo-mode banners, seeded-account hint.
+  - Illustrated empty states: new `EmptyState` component with six hand-drawn, theme-aware SVG illustrations applied to feed tabs, groups, notifications, messages, search and profiles.
+  - Mobile spacing tightened; fixed doubled gap between feed posts (`space-y-4` wrapper + per-post `mb-4`).
+  - Dark-mode coverage completed for profile, discover, messages, notifications and global page background.
+  - Fixed nested-anchor hydration error in search results (new `FormattedContent.interactive` prop).
+  - Lint cleaned to 0 errors (pure renders, no sync setState-in-effect, escaped entities).
+  - Added README.

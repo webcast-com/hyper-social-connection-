@@ -97,7 +97,7 @@ export default function RepostModal({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900 dark:text-white">Repost now</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Instantly share this post to your followers' feeds.</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Instantly share this post to your followers&apos; feeds.</div>
               </div>
             </button>
 

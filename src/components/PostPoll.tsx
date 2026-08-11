@@ -36,7 +36,9 @@ export default function PostPoll({
   const [isVoting, setIsVoting] = useState(false);
   const [hasVoted, setHasVoted] = useState(!!poll.userVotedOptionId);
 
-  const isExpired = poll.expiresAt ? new Date(poll.expiresAt).getTime() < Date.now() : false;
+  // Capture the mount time once so render stays pure (lint: react-hooks/purity).
+  const [mountedAt] = useState(() => Date.now());
+  const isExpired = poll.expiresAt ? new Date(poll.expiresAt).getTime() < mountedAt : false;
   const showResults = hasVoted || isExpired;
 
   const totalVotes = options.reduce((sum, opt) => sum + (opt.votesCount || 0), 0);
