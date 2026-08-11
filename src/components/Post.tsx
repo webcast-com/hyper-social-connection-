@@ -101,7 +101,7 @@ export default function Post({
   }
 
   return (
-    <article id={`post-${post.id}`} className="bg-white dark:bg-gray-800 rounded-xl shadow mb-4 border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
+    <article id={`post-${post.id}`} className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
       {/* If this is a repost, show repost banner */}
       {post.repostOf && (
         <div className="bg-blue-50/70 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800/40 flex items-center space-x-2 text-xs font-semibold text-blue-700 dark:text-blue-300">

@@ -3,6 +3,7 @@ import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/db';
 import { users } from '@/db/schema';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
 
 export const metadata: Metadata = {
   title: 'Messages',
@@ -44,8 +45,12 @@ export default async function Messages() {
           ))}
         </div>
       </div>
-      <div className="hidden md:flex flex-1 flex-col items-center justify-center text-gray-500">
-        Select a user to start chatting
+      <div className="hidden md:flex flex-1 flex-col items-center justify-center p-8">
+        <div className="w-full max-w-sm">
+          <EmptyState variant="chat" title="Your messages">
+            Select a conversation on the left — or pick any member — to start chatting.
+          </EmptyState>
+        </div>
       </div>
     </div>
   );

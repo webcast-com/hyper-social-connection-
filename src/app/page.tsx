@@ -274,7 +274,7 @@ export default async function Home() {
   const trendingTopics = computeTrendingTopics(allPosts);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 max-w-7xl mx-auto">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto">
       {/* Left Sidebar */}
       <div className="hidden lg:flex flex-col space-y-2 pt-2">
         <Link href={`/profile/${currentUser.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">

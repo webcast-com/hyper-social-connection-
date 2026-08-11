@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Crown, ArrowLeft, CalendarDays, Lock } from 'lucide-react';
 import CreatePost from '@/components/CreatePost';
+import EmptyState from '@/components/EmptyState';
 import Post from '@/components/Post';
 import GroupMembershipButton from '@/components/GroupMembershipButton';
 import GroupAdminControls from '@/components/GroupAdminControls';
@@ -204,25 +205,21 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Discussion feed */}
-        <div className="md:col-span-2 space-y-0">
+        <div className="md:col-span-2 space-y-4">
           {isMember ? (
             <CreatePost user={viewer} groupId={groupId} />
           ) : (
-            <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 mb-4 text-sm text-blue-800 dark:text-blue-200">
+            <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 text-sm text-blue-800 dark:text-blue-200">
               <b>Join {group.name}</b> to post in this community and share with its members.
             </div>
           )}
 
           {groupPosts.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-10 text-center">
-              <div className="text-4xl mb-3">💬</div>
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">No posts yet</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                {isMember
-                  ? 'Be the first to start the discussion in this community.'
-                  : 'Join the group to kick off the first discussion.'}
-              </p>
-            </div>
+            <EmptyState variant="chat" title="No posts yet">
+              {isMember
+                ? 'Be the first to start the discussion in this community.'
+                : 'Join the group to kick off the first discussion.'}
+            </EmptyState>
           ) : (
             groupPosts.map((post: any) => (
               <Post

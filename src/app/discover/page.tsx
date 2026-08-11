@@ -46,7 +46,7 @@ export default async function Discover() {
   const isGuest = !currentUser || currentUser.id === 0;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 mt-6">
+    <div className="max-w-5xl mx-auto p-3 sm:p-4 mt-4 sm:mt-6">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-2 text-gray-900 dark:text-white">
         <Sparkles className="text-yellow-500" /> Discover
       </h1>

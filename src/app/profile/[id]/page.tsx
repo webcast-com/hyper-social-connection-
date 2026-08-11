@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
+import EmptyState from '@/components/EmptyState';
 import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -268,10 +269,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white ml-1">Posts</h2>
           {enrichedPosts.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-10 text-center text-gray-400 dark:text-gray-500">
-              <div className="text-5xl mb-3">📝</div>
-              <div className="font-semibold">No posts yet</div>
-            </div>
+            <EmptyState variant="feed" title="No posts yet">
+              When this user shares something, it will appear here.
+            </EmptyState>
           ) : (
             enrichedPosts.map(post => (
               <Post key={post.id} post={post} currentUser={currentUser} />
