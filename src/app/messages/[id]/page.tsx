@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { users, messages } from '@/db/schema';
-import { eq, or, and, asc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -25,17 +23,19 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
   let chatMessages: any[] = [];
   if (hasDatabase) {
     try {
-      allUsers = await db.select().from(users);
-      const receiverRes = await db.select().from(users).where(eq(users.id, receiverId));
-      if (receiverRes.length === 0) redirect('/messages');
-      receiver = receiverRes[0];
+      allUsers = await prisma.user.findMany();
+      receiver = await prisma.user.findUnique({ where: { id: receiverId } });
+      if (!receiver) redirect('/messages');
 
-      chatMessages = await db.select().from(messages).where(
-        or(
-          and(eq(messages.senderId, viewer.id), eq(messages.receiverId, receiverId)),
-          and(eq(messages.senderId, receiverId), eq(messages.receiverId, viewer.id))
-        )
-      ).orderBy(asc(messages.createdAt));
+      chatMessages = await prisma.message.findMany({
+        where: {
+          OR: [
+            { senderId: viewer.id, receiverId },
+            { senderId: receiverId, receiverId: viewer.id },
+          ],
+        },
+        orderBy: { createdAt: 'asc' },
+      });
     } catch (err) {
       console.warn('[messages:id] DB query failed:', (err as Error)?.message);
       allUsers = [viewer];

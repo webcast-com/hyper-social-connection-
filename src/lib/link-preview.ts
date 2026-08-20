@@ -19,10 +19,10 @@ const KNOWN_DOMAINS: Record<string, Partial<LinkPreviewData>> = {
     description: 'Used by some of the world’s largest companies, Next.js enables you to create high-quality full-stack web applications.',
     image: 'https://nextjs.org/og.png',
   },
-  'supabase.com': {
-    title: 'Supabase | The Open Source Firebase Alternative',
-    description: 'Build in a weekend, scale to millions. Postgres database, Authentication, instant APIs, Realtime, and Storage.',
-    image: 'https://supabase.com/images/og/og-image-v2.jpg',
+  'prisma.io': {
+    title: 'Prisma — Next-generation Node.js and TypeScript ORM',
+    description: 'Type-safe database access with intuitive data modeling, migrations and auto-completion.',
+    image: 'https://prisma.io/img/og-image.png',
   },
   'tailwindcss.com': {
     title: 'Tailwind CSS - Rapidly build modern websites without leaving your HTML',

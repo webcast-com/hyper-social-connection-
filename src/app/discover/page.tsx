@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { users, follows, posts } from '@/db/schema';
-import { eq, desc, ne, and } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
 import { Users, Sparkles } from 'lucide-react';
 
@@ -26,16 +24,21 @@ export default async function Discover() {
   let trendingPosts: any[] = [];
   if (hasDatabase) {
     try {
-      followingIds = currentUser.id ? await db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, currentUser.id)) : [];
-      discoverUsers = await db.select().from(users).where(
-        and(
-          ne(users.id, currentUser.id || 0),
-        )
-      ).limit(20);
-      trendingPosts = await db.select({ post: posts, user: users }).from(posts)
-        .leftJoin(users, eq(posts.userId, users.id))
-        .orderBy(desc(posts.createdAt))
-        .limit(5);
+      followingIds = currentUser.id
+        ? (await prisma.follow.findMany({
+            where: { followerId: currentUser.id },
+            select: { followingId: true },
+          })).map((f) => ({ id: f.followingId }))
+        : [];
+      discoverUsers = await prisma.user.findMany({
+        where: { id: { not: currentUser.id || 0 } },
+        take: 20,
+      });
+      trendingPosts = (await prisma.post.findMany({
+        include: { user: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      })).map((post) => ({ post, user: post.user }));
     } catch (err) {
       console.warn('[discover] DB query failed:', (err as Error)?.message);
     }

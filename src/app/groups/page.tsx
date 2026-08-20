@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { groups, users, groupMembers } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
 import CreateGroupButton from '@/components/CreateGroupButton';
 import { Users, Check, Compass } from 'lucide-react';
@@ -26,11 +24,9 @@ export default async function GroupsPage() {
   let memberships: { groupId: number; user: any }[] = [];
   if (hasDatabase) {
     try {
-      allGroups = await db.select().from(groups).orderBy(desc(groups.createdAt));
-      memberships = await db
-        .select({ groupId: groupMembers.groupId, user: users })
-        .from(groupMembers)
-        .leftJoin(users, eq(groupMembers.userId, users.id));
+      allGroups = await prisma.group.findMany({ orderBy: { createdAt: 'desc' } });
+      const rows = await prisma.groupMember.findMany({ include: { user: true } });
+      memberships = rows.map((m) => ({ groupId: m.groupId, user: m.user }));
     } catch (err) {
       console.warn('[groups] DB query failed:', (err as Error)?.message);
     }

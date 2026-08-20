@@ -1,6 +1,4 @@
-import { db, hasDatabase, ensureDbConnection } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { prisma, hasDatabase, ensureDbConnection } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { ensureSeeded } from '@/lib/seed';
 
@@ -17,6 +15,7 @@ export const DEMO_VIEWER = {
   name: 'Alex Rivera',
   email: 'alex@example.com',
   password: '',
+  username: 'alex',
   avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
   coverPhoto: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80',
   bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.',
@@ -47,8 +46,10 @@ export async function getViewer() {
   try {
     const session = await getSession();
     if (session?.userId) {
-      const signedIn = await db.select().from(users).where(eq(users.id, Number(session.userId))).limit(1);
-      if (signedIn[0]) return signedIn[0];
+      const signedIn = await prisma.user.findUnique({
+        where: { id: Number(session.userId) },
+      });
+      if (signedIn) return signedIn;
     }
 
     // No logged-in user — return null (pages should handle unauthenticated state)

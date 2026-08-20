@@ -1,5 +1,5 @@
-import { pool, hasDatabase } from '@/db';
-import { SOCIAL_DDL } from '@/db/social-ddl';
+import { prisma, hasDatabase } from '@/lib/prisma';
+import { SOCIAL_DDL } from '@/lib/social-ddl';
 
 let migrated = false;
 
@@ -13,20 +13,21 @@ let migrated = false;
  * statement is a no-op when the object already exists, and errors are
  * caught so this can never break the app.
  *
- * The DDL mirrors the app's core table/column shape. The canonical schema
- * lives in `src/db/schema.ts` and can be pushed with `npm run db:push`.
+ * This DDL matches prisma/schema.prisma column-for-column (the canonical
+ * schema). Triggers/functions that Prisma cannot express live in
+ * src/lib/social-ddl.ts.
  */
 export async function ensureMigrated() {
   if (migrated) return;
   migrated = true;
 
-  if (!hasDatabase || !pool) {
+  if (!hasDatabase) {
     console.warn('[migrate] DATABASE_URL not set — skipping schema bootstrap (pages will use fallback/mock data)');
     return;
   }
 
   // Tables first, in dependency order (FK targets before dependents).
-  const statements = [
+  const statements: string[] = [
     // users
     `CREATE TABLE IF NOT EXISTS "users" (
       "id" serial PRIMARY KEY NOT NULL,
@@ -188,17 +189,56 @@ export async function ensureMigrated() {
       CONSTRAINT "poll_votes_option_id_poll_options_id_fk" FOREIGN KEY ("option_id") REFERENCES "public"."poll_options"("id") ON DELETE cascade ON UPDATE no action,
       CONSTRAINT "poll_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
     )`,
-    // Social-graph patches ported from sql/001_social_connection_schema.sql:
-    // likes uniqueness, users.username, and the cached posts.likes_count /
-    // posts.comments_count counters with their triggers and backfill.
-    // Kept last so they apply after every table above exists.
+    // ── Authentication tables (mirror prisma/schema.prisma) ────────────────
+    `CREATE TABLE IF NOT EXISTS "sessions" (
+      "id" SERIAL PRIMARY KEY,
+      "session_token" TEXT NOT NULL,
+      "user_id" INTEGER NOT NULL,
+      "expires" TIMESTAMP(6) NOT NULL,
+      "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sessions_session_token_key" ON "sessions"("session_token")`,
+    `DO $$ BEGIN
+        ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_fkey"
+          FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+    `CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions"("user_id")`,
+    `CREATE TABLE IF NOT EXISTS "accounts" (
+      "id" SERIAL PRIMARY KEY,
+      "user_id" INTEGER NOT NULL,
+      "type" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "provider_account_id" TEXT NOT NULL,
+      "refresh_token" TEXT,
+      "access_token" TEXT,
+      "expires_at" INTEGER,
+      "token_type" TEXT,
+      "scope" TEXT,
+      "id_token" TEXT
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "accounts_provider_provider_account_id_key"
+       ON "accounts"("provider", "provider_account_id")`,
+    `DO $$ BEGIN
+        ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey"
+          FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
+    `CREATE INDEX IF NOT EXISTS "accounts_user_id_idx" ON "accounts"("user_id")`,
+    `CREATE TABLE IF NOT EXISTS "verification_tokens" (
+      "identifier" TEXT NOT NULL,
+      "token" TEXT NOT NULL,
+      "expires" TIMESTAMP(6) NOT NULL,
+      CONSTRAINT "verification_tokens_pkey" PRIMARY KEY ("identifier", "token")
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_token_key" ON "verification_tokens"("token")`,
+    // Social-graph patches (likes uniqueness, usernames, cached counters and
+    // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,
   ];
 
   let anyFailed = false;
   for (const statement of statements) {
     try {
-      await pool.query(statement);
+      await prisma.$executeRawUnsafe(statement);
     } catch (error) {
       anyFailed = true;
       console.warn('Migration skipped:', statement.slice(0, 80), (error as Error)?.message);
@@ -206,9 +246,7 @@ export async function ensureMigrated() {
   }
 
   // When every statement failed (e.g. a cold-start connection blip), allow the
-  // next request to retry instead of marking this process as done forever —
-  // otherwise pages keep querying a schema that was never patched (missing
-  // columns such as posts.repost_of_id) and silently fall back to demo data.
+  // next request to retry instead of marking this process as done forever.
   if (anyFailed) {
     migrated = false;
   }

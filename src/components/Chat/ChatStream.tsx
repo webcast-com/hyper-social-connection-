@@ -53,7 +53,7 @@ export default function ChatStream({
   }, [messages.length]);
 
   // Poll the messages endpoint for new chat messages every few seconds.
-  // (Replaces the previous Supabase Realtime subscription — works with any
+  // (Polling transport — works with any
   // Postgres database.)
   useEffect(() => {
     let cancelled = false;

@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { users, posts, follows, likes, comments } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
@@ -22,15 +20,10 @@ export async function generateMetadata({
 
   if (hasDatabase && Number.isInteger(profileId)) {
     try {
-      const result = await db
-        .select({
-          name: users.name,
-          bio: users.bio,
-          avatar: users.avatar,
-        })
-        .from(users)
-        .where(eq(users.id, profileId));
-      profile = result[0] || null;
+      profile = await prisma.user.findUnique({
+        where: { id: profileId },
+        select: { name: true, bio: true, avatar: true },
+      });
     } catch (err) {
       console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
     }
@@ -86,30 +79,36 @@ export default async function Profile({ params }: { params: Promise<{ id: string
 
   if (hasDatabase) {
     try {
-      const profileUserRes = await db.select().from(users).where(eq(users.id, profileId));
-      if (profileUserRes.length === 0) {
+      const profileRow = await prisma.user.findUnique({ where: { id: profileId } });
+      if (!profileRow) {
         if (DEMO_USERS_MAP[profileId]) {
           profileUser = DEMO_USERS_MAP[profileId];
         } else {
           profileNotFound = true;
         }
       } else {
-        profileUser = profileUserRes[0];
+        profileUser = profileRow;
 
-        allPosts = await db.select().from(posts).where(eq(posts.userId, profileId)).orderBy(desc(posts.createdAt));
-        allUsers = await db.select().from(users);
-        allLikes = await db.select().from(likes);
-        allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
+        allPosts = await prisma.post.findMany({ where: { userId: profileId }, orderBy: { createdAt: 'desc' } });
+        allUsers = await prisma.user.findMany();
+        allLikes = await prisma.like.findMany();
+        allComments = await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
 
-        const isFollowingRes = await db.select().from(follows).where(and(eq(follows.followerId, currentUser.id || 0), eq(follows.followingId, profileId)));
-        isFollowing = isFollowingRes.length > 0;
+        const isFollowingRow = await prisma.follow.findFirst({
+          where: { followerId: currentUser.id || 0, followingId: profileId },
+        });
+        isFollowing = !!isFollowingRow;
 
-        followersRes = await db.select({ user: users }).from(follows)
-          .leftJoin(users, eq(follows.followerId, users.id))
-          .where(eq(follows.followingId, profileId));
-        followingRes = await db.select({ user: users }).from(follows)
-          .leftJoin(users, eq(follows.followingId, users.id))
-          .where(eq(follows.followerId, profileId));
+        const followerRows = await prisma.follow.findMany({
+          where: { followingId: profileId },
+          include: { follower: true },
+        });
+        followersRes = followerRows.map((f) => ({ user: f.follower }));
+        const followingRows = await prisma.follow.findMany({
+          where: { followerId: profileId },
+          include: { following: true },
+        });
+        followingRes = followingRows.map((f) => ({ user: f.following }));
         if (allUsers.length === 0) allUsers = [currentUser, profileUser];
       }
     } catch (err) {

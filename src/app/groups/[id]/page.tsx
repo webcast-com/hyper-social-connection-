@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { users, groups, groupMembers, posts, likes, comments, bookmarks, polls, pollOptions, pollVotes } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Crown, ArrowLeft, CalendarDays, Lock } from 'lucide-react';
@@ -23,15 +21,10 @@ export async function generateMetadata({
 
   if (hasDatabase && Number.isInteger(groupId)) {
     try {
-      const result = await db
-        .select({
-          name: groups.name,
-          description: groups.description,
-          coverPhoto: groups.coverPhoto,
-        })
-        .from(groups)
-        .where(eq(groups.id, groupId));
-      group = result[0] || null;
+      group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { name: true, description: true, coverPhoto: true },
+      });
     } catch (err) {
       console.warn('[group metadata] DB query failed:', (err as Error)?.message);
     }
@@ -73,35 +66,35 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
   if (hasDatabase) {
     try {
-      const groupRes = await db.select().from(groups).where(eq(groups.id, groupId));
-      if (groupRes.length === 0) redirect('/groups');
-      group = groupRes[0];
+      group = await prisma.group.findUnique({ where: { id: groupId } });
+      if (!group) redirect('/groups');
 
-      members = await db.select({ user: users }).from(groupMembers)
-        .leftJoin(users, eq(groupMembers.userId, users.id))
-        .where(eq(groupMembers.groupId, groupId));
+      const memberRows = await prisma.groupMember.findMany({
+        where: { groupId },
+        include: { user: true },
+      });
+      members = memberRows.map((m) => ({ user: m.user }));
 
       // ── Group discussion feed (same enrichment pipeline as the home feed) ──
-      const rows = await db.select().from(posts)
-        .where(eq(posts.groupId, groupId))
-        .orderBy(desc(posts.createdAt));
+      const rows = await prisma.post.findMany({
+        where: { groupId },
+        orderBy: { createdAt: 'desc' },
+      });
 
-      const allUsers = await db.select().from(users);
+      const allUsers = await prisma.user.findMany();
       const usersById = new Map(allUsers.map((u) => [u.id, u]));
 
       const postIds = rows.map((p) => p.id);
-      const allLikes = postIds.length
-        ? await db.select().from(likes)
-        : [];
+      const allLikes = postIds.length ? await prisma.like.findMany() : [];
       const allComments = postIds.length
-        ? await db.select().from(comments).orderBy(desc(comments.createdAt))
+        ? await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } })
         : [];
-      const allPolls = postIds.length ? await db.select().from(polls) : [];
-      const allPollOptions = postIds.length ? await db.select().from(pollOptions) : [];
-      const allPollVotes = postIds.length ? await db.select().from(pollVotes) : [];
+      const allPolls = postIds.length ? await prisma.poll.findMany() : [];
+      const allPollOptions = postIds.length ? await prisma.pollOption.findMany() : [];
+      const allPollVotes = postIds.length ? await prisma.pollVote.findMany() : [];
 
       if (viewer?.id) {
-        const bks = await db.select().from(bookmarks).where(eq(bookmarks.userId, viewer.id));
+        const bks = await prisma.bookmark.findMany({ where: { userId: viewer.id } });
         bookmarkedIds = new Set(bks.map((b) => b.postId));
       }
 

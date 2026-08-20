@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { posts, users, likes, comments, follows, bookmarks, polls, pollOptions, pollVotes, groups, groupMembers } from '@/db/schema';
-import { stories as storiesTable } from '@/db/schema';
-import { eq, desc, gte } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
 import FeedTabs from '@/components/FeedTabs';
@@ -141,34 +138,36 @@ export default async function Home() {
 
   if (hasDatabase) {
     try {
-      allPosts = await db.select().from(posts).orderBy(desc(posts.createdAt));
-      allUsers = await db.select().from(users);
-      allLikes = await db.select().from(likes);
-      allComments = await db.select().from(comments).orderBy(desc(comments.createdAt));
-      activeStories = await db.select().from(storiesTable)
-        .where(gte(storiesTable.expiresAt, new Date()))
-        .orderBy(desc(storiesTable.createdAt));
+      allPosts = await prisma.post.findMany({ orderBy: { createdAt: 'desc' } });
+      allUsers = await prisma.user.findMany();
+      allLikes = await prisma.like.findMany();
+      allComments = await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
+      activeStories = await prisma.story.findMany({
+        where: { expiresAt: { gte: new Date() } },
+        orderBy: { createdAt: 'desc' },
+      });
 
-      allPolls = await db.select().from(polls);
-      allPollOptions = await db.select().from(pollOptions);
-      allPollVotes = await db.select().from(pollVotes);
-      allGroups = await db.select().from(groups);
+      allPolls = await prisma.poll.findMany();
+      allPollOptions = await prisma.pollOption.findMany();
+      allPollVotes = await prisma.pollVote.findMany();
+      allGroups = await prisma.group.findMany();
 
       if (currentUser.id) {
-        userFollows = await db.select().from(follows).where(eq(follows.followerId, currentUser.id));
-        userBookmarks = await db.select().from(bookmarks).where(eq(bookmarks.userId, currentUser.id));
-        const memberships = await db.select({ groupId: groupMembers.groupId })
-          .from(groupMembers).where(eq(groupMembers.userId, currentUser.id));
+        userFollows = await prisma.follow.findMany({ where: { followerId: currentUser.id } });
+        userBookmarks = await prisma.bookmark.findMany({ where: { userId: currentUser.id } });
+        const memberships = await prisma.groupMember.findMany({
+          where: { userId: currentUser.id },
+          select: { groupId: true },
+        });
         viewerGroupIds = memberships.map((m) => m.groupId);
       }
     } catch (err) {
       dbFeedError = (err as Error)?.message || 'unknown database error';
       console.error(
         '[home] DATABASE FEED QUERY FAILED — showing demo fallback instead of real data.\n' +
-        '       Most common cause: the database schema is behind src/db/schema.ts (a column\n' +
-        '       the app selects is missing, e.g. `column posts.repost_of_id does not exist`).\n' +
-        '       Fix: run `npm run db:push` with DATABASE_URL set in .env.local — it syncs\n' +
-        '       your Postgres database with the schema. Check connectivity at /api/health.\n' +
+        '       Most common cause: schema drift or an unreachable DATABASE_URL.\n' +
+        '       Fix: run `npx prisma db push` with DATABASE_URL set — it syncs\n' +
+        '       your Postgres database with prisma/schema.prisma. Check connectivity at /api/health.\n' +
         '       Error: ' + dbFeedError,
       );
     }
@@ -339,7 +338,7 @@ export default async function Home() {
             <p className="opacity-80">
               The app is configured for a database, but the feed query failed
               ({dbFeedError.slice(0, 120)}). This is usually a schema drift — run
-              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">npm run db:push</code>
+              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">npx prisma db push</code>
               with DATABASE_URL set, then check <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">/api/health</code>.
             </p>
           </div>
