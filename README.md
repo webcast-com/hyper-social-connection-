@@ -27,7 +27,7 @@ npm install
 
 # Optional: connect a database (see DATABASE.md for provider guides)
 cp .env.example .env.local
-# → set DATABASE_URL and JWT_SECRET in .env.local
+# → set DATABASE_URL in .env.local (sessions are stored in Prisma)
 
 npm run dev        # http://localhost:3000
 ```
@@ -40,7 +40,7 @@ npm run db:push
 
 Tables are also auto-created on first boot (`CREATE … IF NOT EXISTS`), and an empty database is auto-seeded with demo users and posts.
 
-**No database?** The app still boots in demo mode — browse the feed as the demo user; sign-up/sign-in are disabled until a database is connected.
+**No database?** The app still boots in demo mode with anonymous, read-only content; sign-up/sign-in and mutations are disabled until a database is connected.
 
 ## 📜 Scripts
 
@@ -75,12 +75,12 @@ src/
 ├── db/
 │   ├── schema.ts         # Drizzle schema (single source of truth)
 │   └── index.ts          # Pool + graceful offline downgrade
-└── lib/                  # auth (JWT cookies), seeding, migrations, viewer
+└── lib/                  # auth (Prisma sessions), seeding, migrations, viewer
 ```
 
 ## 🔐 Auth & uploads
 
-- **Auth:** email + password (bcrypt) with stateless JWT session cookies (`src/lib/auth.ts`). Sessions are HttpOnly and expire after 7 days.
+- **Auth:** email + password (bcrypt) with opaque, revocable Prisma database sessions (`src/lib/auth.ts`). The session cookie is HttpOnly and expires after 7 days; demo/offline mode is anonymous and read-only.
 - **Uploads:** images/videos are stored on local disk under `public/uploads` and served statically. Swap in S3/R2 by replacing `src/app/api/upload/route.ts` if you need CDN-backed storage.
 - **Chat delivery:** the client polls `/api/messages` every 3 seconds. Swap in WebSockets/SSE later if you want push delivery.
 
@@ -89,7 +89,7 @@ src/
 Works anywhere Next.js runs. On **Vercel**:
 
 1. Import the repo.
-2. Add environment variable `DATABASE_URL` (and optionally `JWT_SECRET`, `NEXT_PUBLIC_SITE_URL`).
+2. Add environment variable `DATABASE_URL` (and optionally `NEXT_PUBLIC_SITE_URL`). Authentication sessions are stored in Prisma's `sessions` table.
 3. Deploy — tables self-create on first request.
 
 Note: Vercel's serverless filesystem is ephemeral, so local-disk uploads won't persist across deployments. Use an S3-compatible store for production media.

@@ -28,7 +28,7 @@
   - Home sidebar Shortcuts now list the viewer's real joined groups.
 - Phase 7: Supabase decoupling ✅
   - The app now runs on **any PostgreSQL database** (Neon, AWS RDS, Railway, DigitalOcean, local Postgres, …) via `DATABASE_URL` — no Supabase project required.
-  - Auth: email/password with bcrypt-hashed credentials and JWT session cookies (no Supabase Auth / OAuth dependency).
+  - Auth: email/password with bcrypt-hashed credentials and revocable Prisma database sessions (no Supabase Auth / OAuth dependency).
   - Media uploads: stored on local disk under `public/uploads` (no Supabase Storage). Swap in S3/R2 later if needed.
   - Live chat: HTTP polling against `/api/messages` (replaces Supabase Realtime `postgres_changes`).
   - Removed: `@supabase/ssr`, `@supabase/supabase-js`, `supabase/*.sql`, session-refresh proxy, `auth_id` profile linking. See `DATABASE.md` for setup.

@@ -65,8 +65,8 @@ DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DATABASE
 # Only for local/self-hosted Postgres WITHOUT TLS:
 # DATABASE_SSL=false
 
-# Sign session cookies — generate with: openssl rand -base64 48
-JWT_SECRET=<long random string>
+# Authentication uses opaque, revocable sessions stored in Prisma's `sessions`
+# table. No JWT signing secret is required.
 ```
 
 Notes:
@@ -74,8 +74,8 @@ Notes:
 - `DATABASE_SSL` defaults to TLS with relaxed certificate validation, which
   all managed providers support. Set it to `false` only for a local database
   that has TLS disabled.
-- Without `DATABASE_URL` the app still boots and serves demo/offline content,
-  but sign-in and data persistence require a database.
+- Without `DATABASE_URL` the app still boots and serves anonymous demo/offline
+  content, but sign-in, uploads, mutations, and data persistence require a database-backed session.
 
 ### Using Prisma Postgres
 
@@ -149,10 +149,10 @@ Start the app (`npm run dev`) and open `/api/health`:
 
 | Before (Supabase) | Now |
 | --- | --- |
-| Supabase Auth (email + OAuth) | Email/password with bcrypt + JWT session cookies (`src/lib/auth.ts`, `/api/auth/*`) |
+| Supabase Auth (email + OAuth) | Email/password with bcrypt + Prisma-backed opaque sessions (`src/lib/auth.ts`, `/api/auth/*`) |
 | Supabase Storage | Local disk uploads served from `public/uploads` (`/api/upload`). Swap in S3/R2 if you need CDN storage. |
 | Supabase Realtime chat | HTTP polling every 3s against `/api/messages` (`ChatStream.tsx`) |
-| Session-refresh proxy | Not needed — session cookies are stateless JWTs |
+| Session-refresh proxy | Not needed — sessions are read and revoked directly through Prisma |
 
 If you later want OAuth (Google/GitHub) or push-based chat, those can be
 added provider-independently (e.g. Auth.js / NextAuth for OAuth, WebSockets

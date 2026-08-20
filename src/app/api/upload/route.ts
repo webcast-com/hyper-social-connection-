@@ -35,8 +35,10 @@ function sanitizeExt(ext: string) {
  */
 export async function POST(req: NextRequest) {
   try {
-    // Same trust level as the other server actions (session user or demo viewer).
-    await getViewer();
+    const viewer = await getViewer();
+    if (!viewer) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const formData = await req.formData();
     const file = formData.get('file');

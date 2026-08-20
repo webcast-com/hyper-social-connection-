@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default async function Messages() {
-  const viewer = await getViewer() || { id: 0 } as any;
+  const viewer = await getViewer();
+  if (!viewer) redirect('/login');
 
   let allUsers: any[] = [];
   if (hasDatabase) {

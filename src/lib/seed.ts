@@ -2,8 +2,23 @@ import { prisma, hasDatabase } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { ensureMigrated } from '@/lib/migrate';
 
+let seedPromise: Promise<void> | null = null;
+
 export async function ensureSeeded() {
   if (!hasDatabase) return;
+  // Share the first seed operation across concurrent cold-start requests.
+  if (seedPromise) return seedPromise;
+
+  seedPromise = runSeed();
+
+  try {
+    await seedPromise;
+  } finally {
+    seedPromise = null;
+  }
+}
+
+async function runSeed() {
   try {
     await ensureMigrated();
     const existing = await prisma.user.findFirst({ select: { id: true } });

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
+import { redirect } from 'next/navigation';
 import { getNotifications } from '@/app/actions';
 import NotificationItem from '@/components/NotificationItem';
 import EmptyState from '@/components/EmptyState';
@@ -13,7 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default async function NotificationsPage() {
-  await getViewer();
+  const viewer = await getViewer();
+  if (!viewer) redirect('/login');
+
   let notificationsData: any[] = [];
   try {
     notificationsData = await getNotifications();

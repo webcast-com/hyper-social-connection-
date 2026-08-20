@@ -55,7 +55,9 @@ export async function generateMetadata({
 }
 
 export default async function GroupDetail({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await getViewer() || { id: 0 } as any;
+  const viewer = await getViewer();
+  const guest = { id: 0, name: 'Guest', avatar: null } as any;
+  const currentUser = viewer || guest;
   const { id } = await params;
 
   const groupId = parseInt(id);
@@ -142,17 +144,17 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
     } catch (err) {
       console.warn('[group detail] DB query failed:', (err as Error)?.message);
       if (!group) {
-        group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: viewer.id };
-        members = [{ user: viewer }];
+        group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: 0 };
+        members = [];
       }
     }
   } else {
-    group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: viewer.id };
-    members = [{ user: { ...viewer, name: viewer.name || 'Guest', avatar: viewer.avatar || null } }];
+    group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: 0 };
+    members = [];
   }
 
-  const isMember = members.some((m: any) => m.user?.id === viewer.id);
-  const isAdmin = group?.adminId === viewer?.id;
+  const isMember = !!viewer && members.some((m: any) => m.user?.id === viewer.id);
+  const isAdmin = !!viewer && group?.adminId === viewer.id;
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:mt-6">
@@ -189,8 +191,19 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <GroupMembershipButton groupId={groupId} isMember={isMember} isAdmin={isAdmin} />
-              {isAdmin && <GroupAdminControls group={group} />}
+              {viewer ? (
+                <>
+                  <GroupMembershipButton groupId={groupId} isMember={isMember} isAdmin={isAdmin} />
+                  {isAdmin && <GroupAdminControls group={group} />}
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline"
+                >
+                  Sign in to join
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -218,7 +231,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               <Post
                 key={post.id}
                 post={post}
-                currentUser={viewer}
+                currentUser={currentUser}
                 isBookmarked={bookmarkedIds.has(post.id)}
               />
             ))

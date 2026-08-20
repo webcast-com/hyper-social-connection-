@@ -4,9 +4,9 @@ import { prisma, hasDatabase } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
-async function getUserId() {
+async function getUserId(): Promise<number | null> {
   const viewer = await getViewer();
-  return viewer?.id || 1;
+  return viewer?.id || null;
 }
 
 async function createNotification(userId: number, actorId: number, type: string, postId?: number, messageId?: number) {
@@ -30,6 +30,7 @@ async function createNotification(userId: number, actorId: number, type: string,
 
 export async function createPost(formData: FormData) {
   const userId = await getUserId();
+  if (!userId) return;
   const content = ((formData.get('content') as string) || '').trim();
   const imageUrl = formData.get('imageUrl') as string | null;
   const videoUrl = formData.get('videoUrl') as string | null;
@@ -105,6 +106,7 @@ export async function createPost(formData: FormData) {
 
 export async function toggleLike(postId: number) {
   const userId = await getUserId();
+  if (!userId) return;
   try {
     const existingLike = await prisma.like.findFirst({
       where: { postId, userId },
@@ -143,6 +145,7 @@ export async function toggleLike(postId: number) {
 
 export async function createComment(postId: number, formData: FormData) {
   const userId = await getUserId();
+  if (!userId) return;
   const content = formData.get('content') as string;
 
   if (!content) return;
@@ -174,6 +177,7 @@ export async function createComment(postId: number, formData: FormData) {
 
 export async function toggleFollow(followingId: number) {
   const followerId = await getUserId();
+  if (!followerId) return;
   if (followerId === followingId) return;
 
   try {
@@ -198,6 +202,7 @@ export async function toggleFollow(followingId: number) {
 
 export async function updateProfile(formData: FormData) {
   const userId = await getUserId();
+  if (!userId) return;
   const name = formData.get('name') as string;
   const bio = formData.get('bio') as string;
   const avatar = formData.get('avatar') as string;
@@ -223,6 +228,7 @@ export async function updateProfile(formData: FormData) {
 
 export async function updateAvatar(avatarUrl: string) {
   const userId = await getUserId();
+  if (!userId) return;
   if (!avatarUrl) return;
 
   try {
@@ -238,6 +244,7 @@ export async function updateAvatar(avatarUrl: string) {
 
 export async function updateCoverPhoto(coverUrl: string) {
   const userId = await getUserId();
+  if (!userId) return;
   // Empty string clears the cover photo (falls back to the gradient).
   const coverPhoto = coverUrl?.trim() || null;
 
@@ -253,6 +260,7 @@ export async function updateCoverPhoto(coverUrl: string) {
 
 export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
+  if (!senderId) return;
   const content = formData.get('content') as string;
 
   if (!content) return;
@@ -346,8 +354,9 @@ export async function searchPosts(query: string) {
 }
 
 export async function markNotificationRead(id: number) {
+  const userId = await getUserId();
+  if (!userId) return;
   try {
-    const userId = await getUserId();
     await prisma.notification.updateMany({
       where: { id, userId },
       data: { isRead: 1 },
@@ -360,6 +369,7 @@ export async function markNotificationRead(id: number) {
 
 export async function createStory(imageUrl: string) {
   const userId = await getUserId();
+  if (!userId) return;
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   try {
     await prisma.story.create({
@@ -377,6 +387,7 @@ export async function createStory(imageUrl: string) {
 
 export async function createGroup(formData: FormData) {
   const userId = await getUserId();
+  if (!userId) return null;
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
   const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
@@ -412,6 +423,7 @@ export async function createGroup(formData: FormData) {
 
 export async function joinGroup(groupId: number) {
   const userId = await getUserId();
+  if (!userId) return;
   try {
     await prisma.groupMember.upsert({
       where: { groupId_userId: { groupId, userId } },
@@ -427,6 +439,7 @@ export async function joinGroup(groupId: number) {
 
 export async function leaveGroup(groupId: number) {
   const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
   try {
     // The admin cannot leave their own group — they must keep or delete it.
     const g = await prisma.group.findFirst({
@@ -450,6 +463,7 @@ export async function leaveGroup(groupId: number) {
 
 export async function updateGroup(groupId: number, formData: FormData) {
   const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
   const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
@@ -473,6 +487,7 @@ export async function updateGroup(groupId: number, formData: FormData) {
 
 export async function deleteGroup(groupId: number) {
   const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
   try {
     // Admin-only. group_members rows cascade; member posts survive with
     // group_id set to NULL (become regular feed posts).
@@ -488,9 +503,9 @@ export async function deleteGroup(groupId: number) {
 }
 
 export async function getNotifications() {
+  const userId = await getUserId();
+  if (!userId || !hasDatabase) return [];
   try {
-    const userId = await getUserId();
-    if (!hasDatabase) return [];
     const result = await prisma.notification.findMany({
       where: { userId },
       include: { actor: true, post: true, message: true },
