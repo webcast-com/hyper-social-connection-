@@ -37,6 +37,11 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "generated",
+    "lib/prisma.ts",
+    "prisma/seed.ts",
+    "scripts/verify-prisma.ts",
+    "prisma.config.ts"
   ]
 }
