@@ -14,3 +14,4 @@ next-env.d.ts
 # user-uploaded media (runtime-generated)
 public/uploads/*
 !public/uploads/.gitkeep
+.env
