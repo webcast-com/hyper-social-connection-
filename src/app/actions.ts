@@ -1,8 +1,6 @@
 'use server';
 
-import { db } from '@/db';
-import { posts, comments, likes, follows, messages, users, notifications, stories, groups, groupMembers, bookmarks, reports, polls, pollOptions, pollVotes } from '@/db/schema';
-import { eq, and, desc, ilike } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
@@ -15,14 +13,16 @@ async function createNotification(userId: number, actorId: number, type: string,
   // Don't notify yourself
   if (userId === actorId) return;
   try {
-    await db.insert(notifications).values({
-      userId,
-      actorId,
-      type,
-      postId: postId || null,
-      messageId: messageId || null,
-      isRead: 0,
-    }).onConflictDoNothing();
+    await prisma.notification.create({
+      data: {
+        userId,
+        actorId,
+        type,
+        postId: postId || null,
+        messageId: messageId || null,
+        isRead: 0,
+      },
+    });
   } catch (e) {
     console.warn('[action:createNotification] DB unavailable:', (e as Error)?.message);
   }
@@ -42,27 +42,26 @@ export async function createPost(formData: FormData) {
     // Group posts are members-only — verified server-side, not just in the UI.
     let groupId: number | null = null;
     if (requestedGroupId > 0) {
-      const membership = await db
-        .select({ userId: groupMembers.userId })
-        .from(groupMembers)
-        .where(and(eq(groupMembers.groupId, requestedGroupId), eq(groupMembers.userId, userId)))
-        .limit(1);
-      if (membership.length === 0) {
+      const membership = await prisma.groupMember.findFirst({
+        where: { groupId: requestedGroupId, userId },
+        select: { userId: true },
+      });
+      if (!membership) {
         console.warn('[action:createPost] non-member tried to post in group', requestedGroupId);
         return; // silently refuse — the composer is only rendered for members anyway
       }
       groupId = requestedGroupId;
     }
 
-    const postRes = await db.insert(posts).values({
-      userId,
-      content,
-      imageUrl: imageUrl || null,
-      videoUrl: videoUrl || null,
-      groupId,
-    }).returning();
-
-    const createdPost = postRes[0];
+    const createdPost = await prisma.post.create({
+      data: {
+        userId,
+        content,
+        imageUrl: imageUrl || null,
+        videoUrl: videoUrl || null,
+        groupId,
+      },
+    });
 
     if (hasPoll && createdPost) {
       const option1 = ((formData.get('pollOption1') as string) || '').trim();
@@ -74,19 +73,22 @@ export async function createPost(formData: FormData) {
 
       const options = [option1, option2, option3, option4].filter(Boolean);
       if (options.length >= 2) {
-        const pollRes = await db.insert(polls).values({
-          postId: createdPost.id,
-          question: content || 'Community Poll',
-          expiresAt,
-        }).returning();
+        const createdPoll = await prisma.poll.create({
+          data: {
+            postId: createdPost.id,
+            question: content || 'Community Poll',
+            expiresAt,
+          },
+        });
 
-        const createdPoll = pollRes[0];
         if (createdPoll) {
           for (let i = 0; i < options.length; i++) {
-            await db.insert(pollOptions).values({
-              pollId: createdPoll.id,
-              text: options[i],
-              position: i,
+            await prisma.pollOption.create({
+              data: {
+                pollId: createdPoll.id,
+                text: options[i],
+                position: i,
+              },
             });
           }
         }
@@ -104,34 +106,37 @@ export async function createPost(formData: FormData) {
 export async function toggleLike(postId: number) {
   const userId = await getUserId();
   try {
-    const existingLike = await db.select().from(likes).where(and(eq(likes.postId, postId), eq(likes.userId, userId)));
-    
-    if (existingLike.length > 0) {
-      await db.delete(likes).where(and(eq(likes.postId, postId), eq(likes.userId, userId)));
-    } else {
-      // The database now enforces UNIQUE(post_id, user_id), so a double
-      // submit or a concurrent request that slips between the select above
-      // and this insert is rejected rather than stored twice. Swallow that
-      // conflict: the like already exists, which is the desired end state.
-      const inserted = await db
-        .insert(likes)
-        .values({ postId, userId })
-        .onConflictDoNothing({ target: [likes.postId, likes.userId] })
-        .returning({ id: likes.id });
+    const existingLike = await prisma.like.findFirst({
+      where: { postId, userId },
+    });
 
-      // Only notify when this request actually created the like, so a
-      // duplicate click cannot spam the post owner.
-      if (inserted.length > 0) {
-        const postRes = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
-        if (postRes.length > 0) {
-          await createNotification(postRes[0].userId, userId, 'like', postId);
+    if (existingLike) {
+      await prisma.like.deleteMany({ where: { postId, userId } });
+    } else {
+      // The database enforces UNIQUE(post_id, user_id), so a double submit or
+      // a concurrent request that slips between the check above and this
+      // insert is rejected (skipDuplicates) rather than stored twice. Only
+      // notify when this request actually created the like, so a duplicate
+      // click cannot spam the post owner.
+      const inserted = await prisma.like.createMany({
+        data: { postId, userId },
+        skipDuplicates: true,
+      });
+
+      if (inserted.count > 0) {
+        const post = await prisma.post.findFirst({
+          where: { id: postId },
+          select: { userId: true },
+        });
+        if (post) {
+          await createNotification(post.userId, userId, 'like', postId);
         }
       }
     }
   } catch (e) {
     console.warn('[action:toggleLike] DB unavailable:', (e as Error)?.message);
   }
-  
+
   revalidatePath('/');
   revalidatePath('/notifications');
 }
@@ -139,25 +144,30 @@ export async function toggleLike(postId: number) {
 export async function createComment(postId: number, formData: FormData) {
   const userId = await getUserId();
   const content = formData.get('content') as string;
-  
+
   if (!content) return;
-  
+
   try {
-    await db.insert(comments).values({
-      postId,
-      userId,
-      content,
+    await prisma.comment.create({
+      data: {
+        postId,
+        userId,
+        content,
+      },
     });
-    
+
     // Notify post owner
-    const postRes = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
-    if (postRes.length > 0) {
-      await createNotification(postRes[0].userId, userId, 'comment', postId);
+    const post = await prisma.post.findFirst({
+      where: { id: postId },
+      select: { userId: true },
+    });
+    if (post) {
+      await createNotification(post.userId, userId, 'comment', postId);
     }
   } catch (e) {
     console.warn('[action:createComment] DB unavailable:', (e as Error)?.message);
   }
-  
+
   revalidatePath('/');
   revalidatePath('/notifications');
 }
@@ -167,18 +177,20 @@ export async function toggleFollow(followingId: number) {
   if (followerId === followingId) return;
 
   try {
-    const existingFollow = await db.select().from(follows).where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
-    
-    if (existingFollow.length > 0) {
-      await db.delete(follows).where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+    const existingFollow = await prisma.follow.findFirst({
+      where: { followerId, followingId },
+    });
+
+    if (existingFollow) {
+      await prisma.follow.deleteMany({ where: { followerId, followingId } });
     } else {
-      await db.insert(follows).values({ followerId, followingId });
+      await prisma.follow.create({ data: { followerId, followingId } });
       await createNotification(followingId, followerId, 'follow');
     }
   } catch (e) {
     console.warn('[action:toggleFollow] DB unavailable:', (e as Error)?.message);
   }
-  
+
   revalidatePath(`/profile/${followingId}`);
   revalidatePath('/discover');
   revalidatePath('/notifications');
@@ -192,12 +204,15 @@ export async function updateProfile(formData: FormData) {
   const coverPhoto = formData.get('coverPhoto') as string;
 
   try {
-    await db.update(users).set({
-      name,
-      bio,
-      avatar,
-      coverPhoto,
-    }).where(eq(users.id, userId));
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        bio,
+        avatar,
+        coverPhoto,
+      },
+    });
   } catch (e) {
     console.warn('[action:updateProfile] DB unavailable:', (e as Error)?.message);
   }
@@ -211,7 +226,7 @@ export async function updateAvatar(avatarUrl: string) {
   if (!avatarUrl) return;
 
   try {
-    await db.update(users).set({ avatar: avatarUrl }).where(eq(users.id, userId));
+    await prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } });
   } catch (e) {
     console.warn('[action:updateAvatar] DB unavailable:', (e as Error)?.message);
   }
@@ -227,7 +242,7 @@ export async function updateCoverPhoto(coverUrl: string) {
   const coverPhoto = coverUrl?.trim() || null;
 
   try {
-    await db.update(users).set({ coverPhoto }).where(eq(users.id, userId));
+    await prisma.user.update({ where: { id: userId }, data: { coverPhoto } });
   } catch (e) {
     console.warn('[action:updateCoverPhoto] DB unavailable:', (e as Error)?.message);
   }
@@ -239,21 +254,23 @@ export async function updateCoverPhoto(coverUrl: string) {
 export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   const content = formData.get('content') as string;
-  
+
   if (!content) return;
-  
+
   try {
-    const result = await db.insert(messages).values({
-      senderId,
-      receiverId,
-      content,
-    }).returning();
-    
-    await createNotification(receiverId, senderId, 'message', undefined, result[0].id);
+    const result = await prisma.message.create({
+      data: {
+        senderId,
+        receiverId,
+        content,
+      },
+    });
+
+    await createNotification(receiverId, senderId, 'message', undefined, result.id);
   } catch (e) {
     console.warn('[action:sendMessage] DB unavailable:', (e as Error)?.message);
   }
-  
+
   revalidatePath('/messages');
   revalidatePath(`/messages/${receiverId}`);
   revalidatePath('/notifications');
@@ -282,11 +299,11 @@ export async function searchUsers(query: string) {
 
   try {
     const userId = await getUserId();
-    const results = await db.select().from(users).where(
-      and(
-        ilike(users.name, `%${clean}%`)
-      )
-    );
+    const results = await prisma.user.findMany({
+      where: {
+        name: { contains: clean, mode: 'insensitive' },
+      },
+    });
     if (results.length > 0) {
       return results.filter((u) => u.id !== userId);
     }
@@ -305,10 +322,16 @@ export async function searchPosts(query: string) {
   if (!clean) return [];
 
   try {
-    const results = await db.select({ post: posts, user: users }).from(posts).leftJoin(users, eq(posts.userId, users.id)).where(
-      ilike(posts.content, `%${clean}%`)
-    ).orderBy(desc(posts.createdAt));
-    if (results.length > 0) return results;
+    const results = await prisma.post.findMany({
+      where: {
+        content: { contains: clean, mode: 'insensitive' },
+      },
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (results.length > 0) {
+      return results.map((post) => ({ post, user: post.user }));
+    }
   } catch (e) {
     console.warn('[action:searchPosts] DB unavailable:', (e as Error)?.message);
   }
@@ -325,7 +348,10 @@ export async function searchPosts(query: string) {
 export async function markNotificationRead(id: number) {
   try {
     const userId = await getUserId();
-    await db.update(notifications).set({ isRead: 1 }).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+    await prisma.notification.updateMany({
+      where: { id, userId },
+      data: { isRead: 1 },
+    });
   } catch (e) {
     console.warn('[action:markNotificationRead] DB unavailable:', (e as Error)?.message);
   }
@@ -336,10 +362,12 @@ export async function createStory(imageUrl: string) {
   const userId = await getUserId();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   try {
-    await db.insert(stories).values({
-      userId,
-      imageUrl,
-      expiresAt,
+    await prisma.story.create({
+      data: {
+        userId,
+        imageUrl,
+        expiresAt,
+      },
     });
   } catch (e) {
     console.warn('[action:createStory] DB unavailable:', (e as Error)?.message);
@@ -356,21 +384,25 @@ export async function createGroup(formData: FormData) {
   if (!name) return null;
 
   try {
-    const res = await db.insert(groups).values({
-      name,
-      description,
-      coverPhoto: coverPhoto || null,
-      adminId: userId,
-    }).returning();
+    const group = await prisma.group.create({
+      data: {
+        name,
+        description,
+        coverPhoto: coverPhoto || null,
+        adminId: userId,
+      },
+    });
 
-    await db.insert(groupMembers).values({
-      groupId: res[0].id,
-      userId,
+    await prisma.groupMember.create({
+      data: {
+        groupId: group.id,
+        userId,
+      },
     });
 
     revalidatePath('/groups');
-    revalidatePath(`/groups/${res[0].id}`);
-    return res[0];
+    revalidatePath(`/groups/${group.id}`);
+    return group;
   } catch (e) {
     console.warn('[action:createGroup] DB unavailable:', (e as Error)?.message);
     revalidatePath('/groups');
@@ -381,10 +413,11 @@ export async function createGroup(formData: FormData) {
 export async function joinGroup(groupId: number) {
   const userId = await getUserId();
   try {
-    await db.insert(groupMembers).values({
-      groupId,
-      userId,
-    }).onConflictDoNothing();
+    await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId, userId } },
+      update: {},
+      create: { groupId, userId },
+    });
   } catch (e) {
     console.warn('[action:joinGroup] DB unavailable:', (e as Error)?.message);
   }
@@ -396,17 +429,16 @@ export async function leaveGroup(groupId: number) {
   const userId = await getUserId();
   try {
     // The admin cannot leave their own group — they must keep or delete it.
-    const g = await db
-      .select({ adminId: groups.adminId })
-      .from(groups)
-      .where(eq(groups.id, groupId))
-      .limit(1);
-    if (g[0]?.adminId === userId) {
+    const g = await prisma.group.findFirst({
+      where: { id: groupId },
+      select: { adminId: true },
+    });
+    if (g?.adminId === userId) {
       return { success: false, message: 'The group admin cannot leave their own group' };
     }
-    await db.delete(groupMembers).where(
-      and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId))
-    );
+    await prisma.groupMember.deleteMany({
+      where: { groupId, userId },
+    });
   } catch (e) {
     console.warn('[action:leaveGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -426,9 +458,10 @@ export async function updateGroup(groupId: number, formData: FormData) {
 
   try {
     // Admin-only — enforced in the WHERE clause.
-    await db.update(groups)
-      .set({ name, description: description || null, coverPhoto: coverPhoto || null })
-      .where(and(eq(groups.id, groupId), eq(groups.adminId, userId)));
+    await prisma.group.updateMany({
+      where: { id: groupId, adminId: userId },
+      data: { name, description: description || null, coverPhoto: coverPhoto || null },
+    });
   } catch (e) {
     console.warn('[action:updateGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -443,9 +476,9 @@ export async function deleteGroup(groupId: number) {
   try {
     // Admin-only. group_members rows cascade; member posts survive with
     // group_id set to NULL (become regular feed posts).
-    await db.delete(groups).where(
-      and(eq(groups.id, groupId), eq(groups.adminId, userId))
-    );
+    await prisma.group.deleteMany({
+      where: { id: groupId, adminId: userId },
+    });
   } catch (e) {
     console.warn('[action:deleteGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -457,21 +490,19 @@ export async function deleteGroup(groupId: number) {
 export async function getNotifications() {
   try {
     const userId = await getUserId();
-    const { hasDatabase } = await import('@/db');
     if (!hasDatabase) return [];
-    const result = await db.select({
-      notification: notifications,
-      actor: users,
-      post: posts,
-      message: messages,
-    }).from(notifications)
-    .leftJoin(users, eq(notifications.actorId, users.id))
-    .leftJoin(posts, eq(notifications.postId, posts.id))
-    .leftJoin(messages, eq(notifications.messageId, messages.id))
-    .where(eq(notifications.userId, userId))
-    .orderBy(desc(notifications.createdAt));
-    
-    return result;
+    const result = await prisma.notification.findMany({
+      where: { userId },
+      include: { actor: true, post: true, message: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return result.map((notification) => ({
+      notification,
+      actor: notification.actor,
+      post: notification.post,
+      message: notification.message,
+    }));
   } catch (e) {
     console.warn('[action:getNotifications] DB unavailable:', (e as Error)?.message);
     return [];
@@ -482,18 +513,16 @@ export async function toggleBookmark(postId: number) {
   const userId = await getUserId();
   if (!userId) return false;
   try {
-    const existing = await db.select().from(bookmarks).where(
-      and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
-    );
-    if (existing.length > 0) {
-      await db.delete(bookmarks).where(
-        and(eq(bookmarks.userId, userId), eq(bookmarks.postId, postId))
-      );
+    const existing = await prisma.bookmark.findFirst({
+      where: { userId, postId },
+    });
+    if (existing) {
+      await prisma.bookmark.deleteMany({ where: { userId, postId } });
       revalidatePath('/');
       revalidatePath(`/profile/${userId}`);
       return false;
     } else {
-      await db.insert(bookmarks).values({ userId, postId });
+      await prisma.bookmark.create({ data: { userId, postId } });
       revalidatePath('/');
       revalidatePath(`/profile/${userId}`);
       return true;
@@ -509,9 +538,9 @@ export async function deletePost(postId: number) {
   if (!userId) return;
   try {
     // Only author can delete their post
-    await db.delete(posts).where(
-      and(eq(posts.id, postId), eq(posts.userId, userId))
-    );
+    await prisma.post.deleteMany({
+      where: { id: postId, userId },
+    });
   } catch (e) {
     console.warn('[action:deletePost] DB unavailable:', (e as Error)?.message);
   }
@@ -524,9 +553,9 @@ export async function deleteComment(commentId: number) {
   const userId = await getUserId();
   if (!userId) return;
   try {
-    await db.delete(comments).where(
-      and(eq(comments.id, commentId), eq(comments.userId, userId))
-    );
+    await prisma.comment.deleteMany({
+      where: { id: commentId, userId },
+    });
   } catch (e) {
     console.warn('[action:deleteComment] DB unavailable:', (e as Error)?.message);
   }
@@ -538,17 +567,22 @@ export async function repostPost(postId: number, quoteContent?: string) {
   if (!userId) return;
   try {
     const content = (quoteContent || '').trim() || '🔁 Reposted';
-    const newPost = await db.insert(posts).values({
-      userId,
-      content,
-      repostOfId: postId,
-      privacy: 'public',
-    }).returning();
+    const newPost = await prisma.post.create({
+      data: {
+        userId,
+        content,
+        repostOfId: postId,
+        privacy: 'public',
+      },
+    });
 
     // Notify author of original post
-    const originalPost = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
-    if (originalPost.length > 0 && originalPost[0].userId !== userId) {
-      await createNotification(originalPost[0].userId, userId, 'repost', newPost[0]?.id || postId);
+    const originalPost = await prisma.post.findFirst({
+      where: { id: postId },
+      select: { userId: true },
+    });
+    if (originalPost && originalPost.userId !== userId) {
+      await createNotification(originalPost.userId, userId, 'repost', newPost?.id || postId);
     }
   } catch (e) {
     console.warn('[action:repostPost] DB unavailable:', (e as Error)?.message);
@@ -562,11 +596,13 @@ export async function reportPost(postId: number, reason: string, details?: strin
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in to report' };
   try {
-    await db.insert(reports).values({
-      reporterId: userId,
-      postId,
-      reason: reason || 'other',
-      details: details || null,
+    await prisma.report.create({
+      data: {
+        reporterId: userId,
+        postId,
+        reason: reason || 'other',
+        details: details || null,
+      },
     });
     return { success: true, message: 'Thank you. Our moderation team has received your report.' };
   } catch (e) {
@@ -579,19 +615,22 @@ export async function votePoll(pollId: number, optionId: number) {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in to vote' };
   try {
-    const existing = await db.select().from(pollVotes).where(
-      and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
-    );
+    const existing = await prisma.pollVote.findFirst({
+      where: { pollId, userId },
+    });
 
-    if (existing.length > 0) {
-      await db.update(pollVotes).set({ optionId }).where(
-        and(eq(pollVotes.pollId, pollId), eq(pollVotes.userId, userId))
-      );
+    if (existing) {
+      await prisma.pollVote.updateMany({
+        where: { pollId, userId },
+        data: { optionId },
+      });
     } else {
-      await db.insert(pollVotes).values({
-        pollId,
-        optionId,
-        userId,
+      await prisma.pollVote.create({
+        data: {
+          pollId,
+          optionId,
+          userId,
+        },
       });
     }
   } catch (e) {
@@ -614,9 +653,10 @@ export async function editPost(postId: number, content: string) {
 
   try {
     // Only the author may edit — enforced in the WHERE clause, mirroring deletePost.
-    await db.update(posts)
-      .set({ content: trimmed, updatedAt: new Date() })
-      .where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+    await prisma.post.updateMany({
+      where: { id: postId, userId },
+      data: { content: trimmed, updatedAt: new Date() },
+    });
   } catch (e) {
     console.warn('[action:editPost] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable — edit not saved' };

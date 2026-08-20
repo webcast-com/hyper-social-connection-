@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, hasDatabase } from '@/db';
-import { messages } from '@/db/schema';
-import { and, or, eq, gt, asc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 
 export const dynamic = 'force-dynamic';
@@ -10,8 +8,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/messages?with=<userId>&after=<messageId>
  *
  * Returns the signed-in user's conversation with `with`, optionally only
- * messages with id > `after`. Used by the chat UI to poll for new messages
- * (replaces the previous realtime subscription).
+ * messages with id > `after`. Used by the chat UI to poll for new messages.
  */
 export async function GET(req: NextRequest) {
   const viewer = await getViewer();
@@ -32,20 +29,17 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const rows = await db
-      .select()
-      .from(messages)
-      .where(
-        and(
-          gt(messages.id, Number.isFinite(after) ? after : 0),
-          or(
-            and(eq(messages.senderId, viewer.id), eq(messages.receiverId, withId)),
-            and(eq(messages.senderId, withId), eq(messages.receiverId, viewer.id)),
-          ),
-        ),
-      )
-      .orderBy(asc(messages.id))
-      .limit(200);
+    const rows = await prisma.message.findMany({
+      where: {
+        id: { gt: Number.isFinite(after) ? after : 0 },
+        OR: [
+          { senderId: viewer.id, receiverId: withId },
+          { senderId: withId, receiverId: viewer.id },
+        ],
+      },
+      orderBy: { id: 'asc' },
+      take: 200,
+    });
 
     return NextResponse.json({
       messages: rows.map((r) => ({

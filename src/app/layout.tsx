@@ -6,9 +6,7 @@ import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
 import '@fontsource/poppins/800.css';
 import Navbar from '@/components/Navbar';
-import { db, hasDatabase } from '@/db';
-import { notifications } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
 import { getSiteMetadata } from '@/components/SEO/SEOMeta';
@@ -61,9 +59,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let unread: { id: number }[] = [];
   if (hasDatabase) {
     try {
-      unread = await db.select({ id: notifications.id }).from(notifications).where(
-        and(eq(notifications.userId, user.id), eq(notifications.isRead, 0)),
-      );
+      unread = await prisma.notification.findMany({
+        where: { userId: user.id, isRead: 0 },
+        select: { id: true },
+      });
     } catch (err) {
       console.warn('[layout] notifications query failed:', (err as Error)?.message);
       unread = [];

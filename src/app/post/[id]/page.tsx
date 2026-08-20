@@ -2,9 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
-import { db, hasDatabase } from '@/db';
-import { posts, users, likes, comments, bookmarks, polls, pollOptions, pollVotes, groups } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import Post from '@/components/Post';
 
 /**
@@ -27,8 +25,7 @@ function parsePostId(raw: string): number | null {
 async function loadPost(postId: number) {
   if (!hasDatabase) return null;
   try {
-    const rows = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-    return rows[0] || null;
+    return await prisma.post.findUnique({ where: { id: postId } });
   } catch (err) {
     console.warn('[post] DB query failed:', (err as Error)?.message);
     return null;
@@ -59,23 +56,22 @@ export default async function PostPage({ params }: Params) {
 
   if (postId && hasDatabase) {
     try {
-      const [row] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const row = await prisma.post.findUnique({ where: { id: postId } });
       if (row) {
-        const allUsers = await db.select().from(users);
+        const allUsers = await prisma.user.findMany();
         const usersById = new Map(allUsers.map((u) => [u.id, u]));
 
-        const postLikes = await db.select().from(likes).where(eq(likes.postId, row.id));
-        const postComments = await db
-          .select()
-          .from(comments)
-          .where(eq(comments.postId, row.id))
-          .orderBy(desc(comments.createdAt));
+        const postLikes = await prisma.like.findMany({ where: { postId: row.id } });
+        const postComments = await prisma.comment.findMany({
+          where: { postId: row.id },
+          orderBy: { createdAt: 'desc' },
+        });
 
         let postPoll: any = null;
-        const [pollRow] = await db.select().from(polls).where(eq(polls.postId, row.id)).limit(1);
+        const pollRow = await prisma.poll.findFirst({ where: { postId: row.id } });
         if (pollRow) {
-          const opts = await db.select().from(pollOptions).where(eq(pollOptions.pollId, pollRow.id));
-          const votes = await db.select().from(pollVotes).where(eq(pollVotes.pollId, pollRow.id));
+          const opts = await prisma.pollOption.findMany({ where: { pollId: pollRow.id } });
+          const votes = await prisma.pollVote.findMany({ where: { pollId: pollRow.id } });
           const userVote = votes.find((v) => v.userId === currentUser?.id);
           postPoll = {
             id: pollRow.id,
@@ -95,14 +91,14 @@ export default async function PostPage({ params }: Params) {
         // Embedded original for reposts.
         let repostOf: any = null;
         if (row.repostOfId) {
-          const [orig] = await db.select().from(posts).where(eq(posts.id, row.repostOfId)).limit(1);
+          const orig = await prisma.post.findUnique({ where: { id: row.repostOfId } });
           if (orig) repostOf = { ...orig, user: usersById.get(orig.userId) };
         }
 
         // Group badge (posts can belong to a community).
         let postGroup: any = null;
         if (row.groupId) {
-          const [g] = await db.select().from(groups).where(eq(groups.id, row.groupId)).limit(1);
+          const g = await prisma.group.findUnique({ where: { id: row.groupId } });
           if (g) postGroup = { id: g.id, name: g.name };
         }
 
@@ -127,10 +123,10 @@ export default async function PostPage({ params }: Params) {
   let bookmarked = false;
   if (post && currentUser?.id) {
     try {
-      const b = await db
-        .select()
-        .from(bookmarks)
-        .where(eq(bookmarks.userId, currentUser.id));
+      const b = await prisma.bookmark.findMany({
+        where: { userId: currentUser.id },
+        select: { postId: true },
+      });
       bookmarked = b.some((bk) => bk.postId === post.id);
     } catch {
       bookmarked = false;

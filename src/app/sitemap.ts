@@ -1,7 +1,5 @@
 import type { MetadataRoute } from "next";
-import { db, hasDatabase } from "@/db";
-import { users, groups, posts } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { prisma, hasDatabase } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
 
 /**
@@ -48,14 +46,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let postRows: { id: number; createdAt: Date }[] = [];
   if (hasDatabase) {
     try {
-      profileRows = await db.select().from(users).orderBy(desc(users.createdAt));
-      groupRows = await db.select().from(groups).orderBy(desc(groups.createdAt));
+      profileRows = await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, createdAt: true },
+      });
+      groupRows = await prisma.group.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, createdAt: true },
+      });
       // Recent public posts get permalinks in the sitemap (capped).
-      postRows = await db
-        .select({ id: posts.id, createdAt: posts.createdAt })
-        .from(posts)
-        .orderBy(desc(posts.createdAt))
-        .limit(200);
+      postRows = await prisma.post.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, createdAt: true },
+        take: 200,
+      });
     } catch (err) {
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);

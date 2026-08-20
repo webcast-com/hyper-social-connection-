@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, hasDatabase } from '@/db';
-import { users } from '@/db/schema';
+import { prisma, hasDatabase } from '@/lib/prisma';
 import { loginUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
@@ -26,18 +25,19 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await db.insert(users).values({
-      name,
-      email,
-      password: hashedPassword,
-    }).returning();
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      },
+    });
 
-    const user = result[0];
     await loginUser(user.id);
     return NextResponse.json({ success: true, user });
   } catch (err: any) {
     // Duplicate email (unique constraint) → friendly message
-    if (err?.code === '23505' || /unique|duplicate/i.test(err?.message || '')) {
+    if (err?.code === '23505' || err?.code === 'P2002' || /unique|duplicate/i.test(err?.message || '')) {
       return NextResponse.json(
         { error: 'An account with this email already exists.' },
         { status: 409 }

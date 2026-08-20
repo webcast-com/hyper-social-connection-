@@ -14,7 +14,7 @@ export type TrendingTopic = {
 
 /** Keyword → display category. First match wins; fallback is generic. */
 const CATEGORY_RULES: { keywords: RegExp; category: string }[] = [
-  { keywords: /(nextjs|react|webdev|typescript|javascript|coding|programming|opensource|ai|tech|dev|software|tailwind|supabase|node|css)/i, category: 'Technology · Trending' },
+  { keywords: /(nextjs|react|webdev|typescript|javascript|coding|programming|opensource|ai|tech|dev|software|tailwind|prisma|node|css)/i, category: 'Technology · Trending' },
   { keywords: /(travel|photography|photo|nature|alps|hiking|adventure|beach|vacation)/i, category: 'Travel & Photography' },
   { keywords: /(art|digitalart|design|illustration|drawing|painting|creative)/i, category: 'Art & Design' },
   { keywords: /(fitness|gym|workout|health|wellness|running|yoga|motivation)/i, category: 'Health & Fitness' },

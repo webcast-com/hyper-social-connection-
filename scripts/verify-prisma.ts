@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { prisma } from "../lib/prisma";
+import { prisma } from "../src/lib/prisma";
 
 /**
  * Connectivity check: performs one real read against the database.
@@ -7,23 +7,20 @@ import { prisma } from "../lib/prisma";
  */
 async function main() {
   if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is not set. Run `prisma postgres link --database <id>` " +
-        "to write it to .env, or add it manually.",
-    );
+    throw new Error("DATABASE_URL is not set. Add it to .env (see DATABASE.md).");
   }
 
   // One read. findMany rather than a raw query so it exercises the generated
   // client, the pg driver adapter, and the migrated schema together.
   const users = await prisma.user.findMany({
-    include: { posts: { select: { title: true, published: true } } },
+    include: { posts: { select: { id: true, likesCount: true } } },
     orderBy: { id: "asc" },
   });
 
   console.log("✅ Connected");
   console.log(`   ${users.length} user(s) found:`);
   for (const u of users) {
-    console.log(`   • ${u.name ?? "(no name)"} <${u.email}> — ${u.posts.length} post(s)`);
+    console.log(`   • ${u.name} <${u.email}> — ${u.posts.length} post(s)`);
   }
 }
 

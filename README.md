@@ -1,6 +1,6 @@
 # hyper — Hyper Social Connection
 
-A full-featured social media platform built with **Next.js 16**, **React 19**, **TypeScript**, **Tailwind CSS 4** and **PostgreSQL** (via Drizzle ORM).
+A full-featured social media platform built with **Next.js 16**, **React 19**, **TypeScript**, **Tailwind CSS 4** and **PostgreSQL** (via Prisma ORM).
 
 Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Supabase (as a plain Postgres host), or a local install. No proprietary services required.
 
@@ -55,11 +55,11 @@ Tables are also auto-created on first boot (`CREATE … IF NOT EXISTS`), and an 
 
 ## 🗄️ Database
 
-Everything is plain PostgreSQL accessed through Drizzle ORM + `node-postgres`. See **[DATABASE.md](DATABASE.md)** for:
+Everything is plain PostgreSQL accessed through **Prisma ORM** (`prisma/schema.prisma`, driver adapter `@prisma/adapter-pg`). See **[DATABASE.md](DATABASE.md)** for:
 
 - provider connection-string guides (Neon, RDS, Railway, local, …)
 - TLS options (`DATABASE_SSL=false` for local databases without TLS)
-- what replaced the previous Supabase integration (auth, storage, realtime)
+- the zero-Docker local database (`npm run db:local`) and the auth tables
 
 ## 🧱 Project structure
 

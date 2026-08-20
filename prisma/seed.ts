@@ -1,67 +1,69 @@
 import "dotenv/config";
-import { prisma } from "../lib/prisma";
+import bcrypt from "bcryptjs";
+import { prisma } from "../src/lib/prisma";
 
 /**
- * Seed script. Wired via `migrations.seed` in prisma.config.ts, so it runs
- * with: npx prisma db seed
+ * Seed script for the authentication schema. Wired via `migrations.seed` in
+ * prisma.config.ts, so it runs with: npx prisma db seed
  *
- * Uses upsert on the unique `email` so re-running is idempotent rather than
- * creating duplicate users on every invocation.
+ * Upserts by unique `email` so re-running is idempotent. The users match the
+ * app's own Drizzle seed (src/lib/seed.ts) — same demo logins either way.
  */
+const DEMO_PASSWORD = "changeme123";
+
 const users = [
   {
-    email: "alice@example.com",
-    name: "Alice",
-    posts: [
-      { title: "Hello world", content: "First post from the seed script.", published: true },
-      { title: "Draft thoughts", content: "Still working on this one.", published: false },
-    ],
+    email: "alex@example.com",
+    name: "Alex Rivera",
+    username: "alex",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
+    bio: "📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.",
   },
   {
-    email: "bob@example.com",
-    name: "Bob",
-    posts: [{ title: "Prisma Postgres is live", content: "Connected via the pg driver adapter.", published: true }],
+    email: "maya@example.com",
+    name: "Maya Patel",
+    username: "maya",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maya",
+    bio: "🎨 Digital artist and designer.",
   },
   {
-    email: "carol@example.com",
-    name: "Carol",
-    posts: [],
+    email: "jordan@example.com",
+    name: "Jordan Kim",
+    username: "jordan",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan",
+    bio: "🏋️ Fitness coach and wellness advocate.",
+  },
+  {
+    email: "sophie@example.com",
+    name: "Sophie Chen",
+    username: "sophie",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie",
+    bio: "👩‍💻 Full-stack engineer.",
+  },
+  {
+    email: "marcus@example.com",
+    name: "Marcus Lee",
+    username: "marcus",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus",
+    bio: "🎸 Musician and content creator.",
   },
 ];
 
 async function main() {
-  for (const { email, name, posts } of users) {
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: { name },
-      create: { email, name },
+  const password = await bcrypt.hash(DEMO_PASSWORD, 10);
+  for (const user of users) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: { ...user },
+      create: { ...user, password },
     });
-
-    for (const post of posts) {
-      // No unique constraint on title, so guard against duplicates by hand.
-      const existing = await prisma.post.findFirst({
-        where: { title: post.title, authorId: user.id },
-        select: { id: true },
-      });
-      if (existing) {
-        await prisma.post.update({ where: { id: existing.id }, data: post });
-      } else {
-        await prisma.post.create({ data: { ...post, authorId: user.id } });
-      }
-    }
   }
-
-  const [userCount, postCount] = await Promise.all([prisma.user.count(), prisma.post.count()]);
-  console.log(`🌱 Seed complete — ${userCount} users, ${postCount} posts.`);
+  console.log(`🌱 Seeded ${users.length} users — login with any email above / ${DEMO_PASSWORD}`);
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error("Seed failed:");
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

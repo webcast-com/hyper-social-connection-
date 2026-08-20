@@ -1,8 +1,8 @@
 # Database setup
 
-This app runs on **any PostgreSQL database** — Supabase is no longer used or
-required. The data layer is Drizzle ORM + `node-postgres`, driven entirely by
-the `DATABASE_URL` environment variable.
+This app runs on **any PostgreSQL database**, accessed through **Prisma ORM**
+(`prisma/schema.prisma` → generated client via the `@prisma/adapter-pg` driver
+adapter), driven entirely by the `DATABASE_URL` environment variable.
 
 Works out of the box with:
 
@@ -13,6 +13,27 @@ Works out of the box with:
 - **Local / self-hosted Postgres** (Docker, Homebrew, apt, …)
 
 ## 1. Get a connection string
+
+### Zero-setup local database (no Docker)
+
+```bash
+npm run db:local
+```
+
+Runs `scripts/dev-db.sh`, which installs real PostgreSQL binaries via npm
+(`@embedded-postgres/linux-x64`), initializes a throwaway cluster at
+`/tmp/pgdata`, and starts it on `127.0.0.1:55432` — no Docker or root needed.
+Point `.env` at it:
+
+```env
+DATABASE_URL=postgres://postgres@127.0.0.1:55432/postgres
+DATABASE_SSL=false
+```
+
+Then start the app; the boot migration creates the schema and seeds demo
+users/posts automatically. Also available: `npm run db:local:status`,
+`db:local:stop`, and `db:local:reset` (wipe + fresh demo data on next app
+boot). Override `PG_ROOT`, `PGDATA_DIR`, or `PGPORT` env vars to relocate it.
 
 Any Postgres provider gives you a connection string in this shape:
 
@@ -59,7 +80,7 @@ Notes:
 ### Using Prisma Postgres
 
 You do **not** need Prisma ORM to use a Prisma Postgres database. It speaks
-standard PostgreSQL over TCP, so this app's Drizzle + `node-postgres` layer
+standard PostgreSQL over TCP, so this app's Prisma layer
 connects to it like any other provider. Prisma gives you two strings:
 
 ```env
@@ -97,14 +118,21 @@ which this app does not use.
 ## 3. Create the tables
 
 ```bash
-npm run db:push
+npx prisma generate   # generate the client into generated/prisma (required once per clone)
+npm run db:push       # prisma db push — sync the database with prisma/schema.prisma
 ```
 
-This syncs your database with `src/db/schema.ts` via Drizzle Kit. It is safe
-to re-run at any time — it applies only the missing pieces. (The server also
-self-heals schema drift on boot with idempotent `CREATE … IF NOT EXISTS` DDL
-in `src/lib/migrate.ts`, and auto-seeds demo users/posts when the database is
-empty.)
+`db push` is safe to re-run at any time — it applies only the missing pieces.
+(The server also self-heals schema drift on boot with idempotent
+`CREATE … IF NOT EXISTS` DDL in `src/lib/migrate.ts` — including the
+Postgres triggers Prisma cannot express — and auto-seeds demo users/posts
+when the database is empty.)
+
+> **Restricted networks:** if `binaries.prisma.sh` is unreachable (some
+> sandboxes), prefix commands with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true` —
+> `prisma generate` works fine without the schema engine binary. `db push`
+> genuinely needs it, so run that from an unrestricted network (or let the
+> app's boot DDL create the schema instead).
 
 ## 4. Verify
 
