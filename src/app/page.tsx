@@ -277,9 +277,9 @@ export default async function Home() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto">
-      {/* Left Sidebar */}
-      <div className="hidden lg:flex flex-col space-y-2 pt-2">
-        <Link href={`/profile/${currentUser.id}`} className="flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
+      {/* Left Sidebar — below the feed on mobile (order-2), left column on desktop */}
+      <aside className="order-2 lg:order-none flex flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+        <Link href={`/profile/${currentUser.id}`} className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
           {currentUser.avatar ? (
             <img src={currentUser.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/30" />
           ) : (
@@ -293,21 +293,21 @@ export default async function Home() {
           </div>
         </Link>
 
-        <Link href="/discover" className="flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
+        <Link href="/discover" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
           <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
             <Compass className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Discover People</span>
         </Link>
 
-        <Link href="/groups" className="flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
+        <Link href="/groups" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
           <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
             <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
           <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Communities & Groups</span>
         </Link>
 
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+        <div className="lg:pt-3 lg:border-t border-gray-200 dark:border-gray-800">
           <p className="text-xs text-gray-400 font-semibold px-2 uppercase tracking-wide mb-2">Shortcuts</p>
           {viewerGroups.slice(0, 4).map((g, i) => {
             const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500', 'bg-amber-500'];
@@ -329,10 +329,10 @@ export default async function Home() {
             </span>
           </Link>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Feed */}
-      <div className="lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+      {/* Main Feed — first on mobile */}
+      <div className="order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
         {dbFeedError && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-2xl px-4 py-3">
             <p className="font-bold mb-0.5">Showing demo content — live data unavailable</p>
@@ -356,8 +356,8 @@ export default async function Home() {
         />
       </div>
 
-      {/* Right Sidebar */}
-      <div className="hidden lg:flex flex-col space-y-4 pt-2">
+      {/* Right Sidebar — below the feed on mobile (order-3), right column on desktop */}
+      <aside className="order-3 lg:order-none flex flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
 
@@ -411,7 +411,7 @@ export default async function Home() {
             ))}
           </div>
         </div>
-      </div>
+      </aside>
     </div>
   );
 }

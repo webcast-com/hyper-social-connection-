@@ -29,6 +29,57 @@ if (FORCE_OFFLINE) {
 const sslOption =
   process.env.DATABASE_SSL === "false" ? undefined : { rejectUnauthorized: false };
 
+/**
+ * Warn about connection strings that are syntactically valid but will fail or
+ * misbehave in ways whose native error message is unhelpful. Logging only —
+ * the URL is never rewritten, so this cannot change which database you reach.
+ */
+function warnAboutConnectionString(raw: string) {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return; // pg will surface its own parse error
+  }
+
+  const host = url.hostname;
+  // pathname is "" or "/" when no database name was supplied. node-postgres
+  // then uses the *connection username* as the database name, producing a
+  // confusing 'database "<user>" does not exist'. Prisma's console hands out
+  // exactly this shape: postgres://…@db.prisma.io:5432/?sslmode=require
+  const dbName = url.pathname.replace(/^\//, "");
+  if (!dbName) {
+    console.warn(
+      `[db] DATABASE_URL has no database name (host ${host}). node-postgres will ` +
+        `use the connection username as the database name, which usually does not ` +
+        `exist. Append one, e.g. .../postgres?sslmode=require`,
+    );
+  }
+
+  // Prisma Postgres pooled endpoint is PgBouncer in transaction mode: it drops
+  // session state between transactions, which breaks the trigger/function DDL
+  // in src/lib/migrate.ts. Prisma documents the direct host for admin work.
+  if (host.startsWith("pooled.")) {
+    console.warn(
+      `[db] DATABASE_URL points at a pooled endpoint (${host}). This app runs schema ` +
+        `migrations on boot, which need a direct connection. Use the direct host ` +
+        `(e.g. db.prisma.io) instead — see DATABASE.md.`,
+    );
+  }
+
+  // TLS is mandatory on hosted providers; DATABASE_SSL=false disables it.
+  if (process.env.DATABASE_SSL === "false" && /sslmode=(require|verify)/.test(url.search)) {
+    console.warn(
+      `[db] DATABASE_SSL=false disables TLS, but DATABASE_URL requests ${url.searchParams.get("sslmode")}. ` +
+        `The server will likely reject the connection. Unset DATABASE_SSL for hosted providers.`,
+    );
+  }
+}
+
+if (rawHasDatabase) {
+  warnAboutConnectionString(process.env.DATABASE_URL as string);
+}
+
 export const pool: Pool = hasDatabase
   ? new Pool({
       connectionString: process.env.DATABASE_URL,

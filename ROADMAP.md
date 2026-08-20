@@ -33,6 +33,12 @@
   - Live chat: HTTP polling against `/api/messages` (replaces Supabase Realtime `postgres_changes`).
   - Removed: `@supabase/ssr`, `@supabase/supabase-js`, `supabase/*.sql`, session-refresh proxy, `auth_id` profile linking. See `DATABASE.md` for setup.
 
+- Phase 9: Social schema port ✅
+  - Added `sql/001_social_connection_schema.sql`: the uuid-based Supabase "Social Connection Platform" schema (profiles/posts/connections/likes/comments + RLS + counter triggers), as an **opt-in** migration for a Supabase project. Preflight guards abort it against this app's database, so it cannot corrupt the live schema.
+  - Ported the compatible parts into the app itself (`src/db/social-ddl.ts`, applied by `src/lib/migrate.ts`): unique `(post_id, user_id)` on `likes` (with de-duplication of existing rows), nullable+unique `users.username` backfilled from the email local-part, and cached `posts.likes_count` / `posts.comments_count` with triggers and a self-healing reconciliation pass.
+  - `toggleLike` now uses `onConflictDoNothing` and only notifies when a like is genuinely created — fixing double-like rows and duplicate like notifications.
+  - Both layers covered by executable specs under `sql/__tests__/` (88 + 40 checks) that run the real DDL against an in-process Postgres.
+
 - Phase 8: UI polish & code health ✅
   - Redesigned login/signup: split brand-panel + form card, icon inputs, show/hide password, loading spinners, demo-mode banners, seeded-account hint.
   - Illustrated empty states: new `EmptyState` component with six hand-drawn, theme-aware SVG illustrations applied to feed tabs, groups, notifications, messages, search and profiles.

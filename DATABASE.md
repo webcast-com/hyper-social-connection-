@@ -7,6 +7,7 @@ the `DATABASE_URL` environment variable.
 Works out of the box with:
 
 - **Neon** (serverless Postgres, generous free tier)
+- **Prisma Postgres** (via its direct TCP connection string — see below)
 - **AWS RDS / Aurora**
 - **Railway**, **Render**, **DigitalOcean Managed Databases**, **Aiven**, **Fly Postgres**
 - **Local / self-hosted Postgres** (Docker, Homebrew, apt, …)
@@ -24,6 +25,7 @@ Examples:
 | Provider | Where to find it |
 | --- | --- |
 | Neon | Console → your project → "Connect" |
+| Prisma Postgres | Console → your database → "Connect to your database" → use the **direct** string (`db.prisma.io`) |
 | AWS RDS | Cluster/instance endpoint + credentials you created |
 | Railway | Service → Connect tab |
 | Local | `postgres://postgres:postgres@localhost:5432/postgres` |
@@ -53,6 +55,44 @@ Notes:
   that has TLS disabled.
 - Without `DATABASE_URL` the app still boots and serves demo/offline content,
   but sign-in and data persistence require a database.
+
+### Using Prisma Postgres
+
+You do **not** need Prisma ORM to use a Prisma Postgres database. It speaks
+standard PostgreSQL over TCP, so this app's Drizzle + `node-postgres` layer
+connects to it like any other provider. Prisma gives you two strings:
+
+```env
+# Direct — use THIS one for this app.
+DATABASE_URL=postgres://USER:PASSWORD@db.prisma.io:5432/postgres?sslmode=require
+
+# Pooled — do NOT use for this app.
+# postgres://USER:PASSWORD@pooled.db.prisma.io:5432/postgres?sslmode=require
+```
+
+Two things to get right:
+
+1. **Use the direct (`db.prisma.io`) string, not the pooled one.** The pooled
+   endpoint is a PgBouncer in transaction mode, which drops session state
+   between transactions. This app's boot migration (`src/lib/migrate.ts`)
+   creates triggers and functions and runs `CREATE INDEX` / `ALTER TABLE`,
+   which is exactly the admin workload Prisma documents as needing the direct
+   connection. The direct connection limit is low (10 on the free plan), but
+   this app's pool caps out at 3.
+2. **Add an explicit database name.** Prisma's console hands you a URL whose
+   path is just `/`, e.g. `…@db.prisma.io:5432/?sslmode=require`. That parses
+   to a *null* database name, and `node-postgres` then uses the **connection
+   username** as the database name — so you get a confusing
+   `database "<your-user>" does not exist`. Append `postgres` (or your database
+   name) so the path reads `/postgres?sslmode=require`.
+
+Leave `DATABASE_SSL` unset — Prisma Postgres requires TLS, and the app's
+default (TLS with relaxed certificate validation) satisfies `sslmode=require`.
+Setting `DATABASE_SSL=false` disables TLS and the connection will be rejected.
+
+If your network blocks outbound port 5432, Prisma's direct TCP endpoint will
+not be reachable; that setup needs Prisma's HTTP-based serverless driver,
+which this app does not use.
 
 ## 3. Create the tables
 
