@@ -115,7 +115,17 @@ const DEMO_STORIES = [
 
 export default async function Home() {
   const viewer = await getViewer();
-  const currentUser = viewer || DEMO_USERS[0];
+  // Demo content is readable without a session, but the fallback identity is
+  // deliberately a guest so it can never be mistaken for Alex or used for a
+  // mutation by server actions.
+  const currentUser = viewer || {
+    id: 0,
+    name: 'Guest',
+    email: '',
+    avatar: null,
+    bio: null,
+    createdAt: new Date(),
+  };
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -343,8 +353,20 @@ export default async function Home() {
             </p>
           </div>
         )}
-        <Stories user={currentUser} stories={enrichedStories} />
-        <CreatePost user={currentUser} />
+        {viewer ? (
+          <>
+            <Stories user={viewer} stories={enrichedStories} />
+            <CreatePost user={viewer} />
+          </>
+        ) : (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-sm rounded-2xl px-4 py-3">
+            <span className="font-semibold">
+              {hasDatabase ? 'You are viewing the feed as a guest.' : "You're viewing a read-only demo."}
+            </span>{' '}
+            <Link href="/login" className="font-bold underline hover:no-underline">Sign in</Link>{' '}
+            to post, react, message, or create stories.
+          </div>
+        )}
 
         <FeedTabs
           forYouPosts={forYouPosts}

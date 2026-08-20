@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
+import { redirect } from 'next/navigation';
 import { updateProfile } from '@/app/actions';
 import AvatarField from '@/components/AvatarField';
 import CoverPhotoField from '@/components/CoverPhotoField';
@@ -12,18 +13,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const DEMO_USER_SETTINGS = {
-  id: 1,
-  name: 'Alex Rivera',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-  coverPhoto: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80',
-  email: 'alex@example.com',
-  bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.',
-};
-
 export default async function Settings() {
   const viewer = await getViewer();
-  const currentUser = viewer || DEMO_USER_SETTINGS;
+  if (!viewer) redirect('/login');
+  const currentUser = viewer;
 
   return (
     <div className="max-w-2xl mx-auto p-6 mt-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">

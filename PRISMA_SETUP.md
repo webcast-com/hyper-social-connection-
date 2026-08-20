@@ -51,4 +51,4 @@ Prisma Postgres (`db.prisma.io:5432`) is also TCP-blocked here — use
 one ORM now). `Session` / `Account` / `VerificationToken` follow the standard
 Auth.js-compatible shape for server-side sessions, OAuth linking, and
 email-verification tokens — ready for Auth.js/NextAuth if you want to adopt it.
-The app's current login (bcrypt + JWT cookie) reads the same `users` table.
+The app's current login (bcrypt + Prisma-backed opaque session cookie) reads the same `users` table and stores revocable sessions in `sessions`.

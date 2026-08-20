@@ -17,8 +17,24 @@ let migrated = false;
  * schema). Triggers/functions that Prisma cannot express live in
  * src/lib/social-ddl.ts.
  */
+let migrationPromise: Promise<void> | null = null;
+
 export async function ensureMigrated() {
   if (migrated) return;
+  // Multiple server components can probe the database at once during a
+  // cold start. Share one migration promise so queries never race the DDL.
+  if (migrationPromise) return migrationPromise;
+
+  migrationPromise = runMigration();
+
+  try {
+    await migrationPromise;
+  } finally {
+    migrationPromise = null;
+  }
+}
+
+async function runMigration() {
   migrated = true;
 
   if (!hasDatabase) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { prisma, hasDatabase, ensureDbConnection } from '@/lib/prisma';
 import { loginUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { ensureSeeded } from '@/lib/seed';
@@ -10,9 +10,12 @@ export async function POST(req: Request) {
   const password = String(body.password || '');
 
   try {
-    if (!hasDatabase) {
+    // Probe Prisma before attempting authentication. A configured but
+    // unreachable database must not fall through to demo behavior.
+    const dbUp = await ensureDbConnection();
+    if (!dbUp || !hasDatabase) {
       return NextResponse.json(
-        { error: 'Authentication requires a configured database. Please set DATABASE_URL in .env.local.' },
+        { error: 'Authentication requires a connected database. Please check DATABASE_URL.' },
         { status: 503 }
       );
     }

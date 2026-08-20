@@ -106,7 +106,16 @@ export default async function GroupsPage() {
         <h1 className="text-3xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
           <Users className="text-blue-600 shrink-0" /> Groups
         </h1>
-        <CreateGroupButton />
+        {viewer ? (
+          <CreateGroupButton />
+        ) : (
+          <Link
+            href="/login"
+            className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline"
+          >
+            Sign in to create a group
+          </Link>
+        )}
       </div>
 
       {allGroups.length === 0 ? (

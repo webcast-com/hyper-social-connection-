@@ -3,59 +3,36 @@ import { getSession } from '@/lib/auth';
 import { ensureSeeded } from '@/lib/seed';
 
 /**
- * Demo-mode viewer. When no database is configured the whole app runs on
- * demo data as "Alex Rivera" (id 1) — the same fallback the feed and the
- * server actions use (`getUserId()` defaults to 1). Returning the demo
- * viewer here keeps the app shell (header, notifications, profile links)
- * consistent with the demo content instead of collapsing to an anonymous
- * layout.
- */
-export const DEMO_VIEWER = {
-  id: 1,
-  name: 'Alex Rivera',
-  email: 'alex@example.com',
-  password: '',
-  username: 'alex',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-  coverPhoto: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80',
-  bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.',
-  createdAt: new Date(),
-};
-
-/**
- * Resolves the currently signed-in user from the JWT session cookie.
- * Returns null when nobody is signed in, except in demo/offline mode
- * (no DATABASE_URL, or the database is unreachable) where the demo
- * viewer is returned instead.
+ * Resolve the currently authenticated user from the Prisma-backed session.
+ *
+ * Demo/offline mode is intentionally anonymous. The app may still render
+ * read-only fallback content, but it must never treat that content's demo
+ * author as an authenticated user or allow actions to run as user 1.
  */
 export async function getViewer() {
-  // Probe the connection first (one-shot per process). When DATABASE_URL is
-  // missing OR the database is unreachable, hasDatabase is downgraded and we
-  // serve the demo experience — deterministic regardless of request order.
+  // A database is required for both authentication and the session lookup.
+  // If it is missing or unreachable, return anonymous rather than a demo
+  // identity. This keeps demo mode from bypassing authentication.
   const dbUp = await ensureDbConnection();
-  if (!dbUp) {
-    return DEMO_VIEWER as any;
-  }
+  if (!dbUp || !hasDatabase) return null;
 
   try {
     await ensureSeeded();
-  } catch (e) {
-    console.warn('[viewer] ensureSeeded failed:', (e as Error)?.message);
+  } catch (error) {
+    console.warn('[viewer] ensureSeeded failed:', (error as Error)?.message);
+    return null;
   }
 
   try {
     const session = await getSession();
-    if (session?.userId) {
-      const signedIn = await prisma.user.findUnique({
-        where: { id: Number(session.userId) },
-      });
-      if (signedIn) return signedIn;
-    }
+    if (!session?.userId) return null;
 
-    // No logged-in user — return null (pages should handle unauthenticated state)
-    return null as any;
-  } catch (err) {
-    console.warn('[viewer] DB query failed:', (err as Error)?.message);
-    return null as any;
+    const signedIn = await prisma.user.findUnique({
+      where: { id: session.userId },
+    });
+    return signedIn || null;
+  } catch (error) {
+    console.warn('[viewer] DB query failed:', (error as Error)?.message);
+    return null;
   }
 }

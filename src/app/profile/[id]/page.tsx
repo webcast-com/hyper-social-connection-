@@ -63,7 +63,14 @@ const DEMO_USERS_MAP: Record<number, any> = {
 
 export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
   const viewer = await getViewer();
-  const currentUser = viewer || DEMO_USERS_MAP[1];
+  const currentUser = viewer || {
+    id: 0,
+    name: 'Guest',
+    avatar: null,
+    bio: null,
+    createdAt: new Date(),
+    coverPhoto: null,
+  };
   const { id } = await params;
 
   const profileId = parseInt(id) || 1;
