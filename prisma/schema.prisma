@@ -25,12 +25,24 @@ model User {
   avatar     String?
   coverPhoto String?   @map("cover_photo")
   bio        String?
+  location   String?
+  website    String?
+  pronouns   String?
+  workplace  String?
+  education  String?
+  profileVisibility String @default("public") @map("profile_visibility")
+  messagePrivacy    String @default("everyone") @map("message_privacy")
+  notifyLikes       Int    @default(1) @map("notify_likes")
+  notifyComments    Int    @default(1) @map("notify_comments")
+  notifyFollows     Int    @default(1) @map("notify_follows")
+  notifyMessages    Int    @default(1) @map("notify_messages")
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
 
   posts               Post[]         @relation("PostAuthor")
   stories             Story[]
   adminGroups         Group[]        @relation("GroupAdmin")
   groupMemberships    GroupMember[]
+  groupJoinRequests   GroupJoinRequest[]
   comments            Comment[]
   likes               Like[]
   followsGiven        Follow[]       @relation("FollowFollower")
@@ -89,16 +101,23 @@ model Story {
 }
 
 model Group {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  coverPhoto  String?  @map("cover_photo")
-  adminId     Int      @map("admin_id")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  id               Int      @id @default(autoincrement())
+  name             String
+  description      String?
+  coverPhoto       String?  @map("cover_photo")
+  adminId          Int      @map("admin_id")
+  privacy          String   @default("public")
+  category         String?
+  rules            String?
+  location         String?
+  website          String?
+  requireApproval  Int      @default(0) @map("require_approval")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  admin        User          @relation("GroupAdmin", fields: [adminId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  posts        Post[]        @relation("PostGroup")
+  admin        User              @relation("GroupAdmin", fields: [adminId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  posts        Post[]            @relation("PostGroup")
   groupMembers GroupMember[]
+  joinRequests GroupJoinRequest[]
 
   @@map("groups")
 }
@@ -106,6 +125,7 @@ model Group {
 model GroupMember {
   groupId   Int      @map("group_id")
   userId    Int      @map("user_id")
+  role      String   @default("member")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -113,6 +133,20 @@ model GroupMember {
 
   @@id([groupId, userId])
   @@map("group_members")
+}
+
+model GroupJoinRequest {
+  id        Int      @id @default(autoincrement())
+  groupId   Int      @map("group_id")
+  userId    Int      @map("user_id")
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([groupId, userId])
+  @@map("group_join_requests")
 }
 
 model Comment {

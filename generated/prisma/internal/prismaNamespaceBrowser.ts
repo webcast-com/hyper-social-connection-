@@ -56,6 +56,7 @@ export const ModelName = {
   Story: 'Story',
   Group: 'Group',
   GroupMember: 'GroupMember',
+  GroupJoinRequest: 'GroupJoinRequest',
   Comment: 'Comment',
   Like: 'Like',
   Follow: 'Follow',
@@ -96,6 +97,17 @@ export const UserScalarFieldEnum = {
   avatar: 'avatar',
   coverPhoto: 'coverPhoto',
   bio: 'bio',
+  location: 'location',
+  website: 'website',
+  pronouns: 'pronouns',
+  workplace: 'workplace',
+  education: 'education',
+  profileVisibility: 'profileVisibility',
+  messagePrivacy: 'messagePrivacy',
+  notifyLikes: 'notifyLikes',
+  notifyComments: 'notifyComments',
+  notifyFollows: 'notifyFollows',
+  notifyMessages: 'notifyMessages',
   createdAt: 'createdAt'
 } as const
 
@@ -137,6 +149,12 @@ export const GroupScalarFieldEnum = {
   description: 'description',
   coverPhoto: 'coverPhoto',
   adminId: 'adminId',
+  privacy: 'privacy',
+  category: 'category',
+  rules: 'rules',
+  location: 'location',
+  website: 'website',
+  requireApproval: 'requireApproval',
   createdAt: 'createdAt'
 } as const
 
@@ -146,10 +164,22 @@ export type GroupScalarFieldEnum = (typeof GroupScalarFieldEnum)[keyof typeof Gr
 export const GroupMemberScalarFieldEnum = {
   groupId: 'groupId',
   userId: 'userId',
+  role: 'role',
   createdAt: 'createdAt'
 } as const
 
 export type GroupMemberScalarFieldEnum = (typeof GroupMemberScalarFieldEnum)[keyof typeof GroupMemberScalarFieldEnum]
+
+
+export const GroupJoinRequestScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  userId: 'userId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupJoinRequestScalarFieldEnum = (typeof GroupJoinRequestScalarFieldEnum)[keyof typeof GroupJoinRequestScalarFieldEnum]
 
 
 export const CommentScalarFieldEnum = {

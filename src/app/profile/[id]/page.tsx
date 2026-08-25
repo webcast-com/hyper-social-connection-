@@ -6,8 +6,9 @@ import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import EmptyState from '@/components/EmptyState';
-import { Camera, Heart, Users as UsersIcon, MessageCircle } from 'lucide-react';
+import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+import { canMessageUser, canViewProfileDetails } from '@/lib/profile';
 
 export async function generateMetadata({
   params,
@@ -155,6 +156,19 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   }));
 
   const photoPosts = enrichedPosts.filter(p => p.imageUrl);
+  const isSelf = !!currentUser?.id && currentUser.id === profileUser.id;
+  const followsYou = followingRes.some(({ user: u }) => u?.id === currentUser?.id);
+  const showDetails = canViewProfileDetails({
+    isSelf,
+    isFollower: isFollowing,
+    visibility: profileUser.profileVisibility,
+  });
+  const showMessage = !!currentUser?.id && canMessageUser({
+    isSelf,
+    isFollower: isFollowing,
+    followsYou,
+    privacy: profileUser.messagePrivacy,
+  });
 
   return (
     <div className="bg-gray-100 dark:bg-gray-900 min-h-screen pb-12">
@@ -175,13 +189,19 @@ export default async function Profile({ params }: { params: Promise<{ id: string
                 editable={!!currentUser?.id && currentUser.id === profileUser.id}
               />
               <div className="mb-2">
-                <h1 className="text-3xl font-extrabold text-gray-900">{profileUser.name}</h1>
+                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">{profileUser.name}</h1>
+                {profileUser.username && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">@{profileUser.username}</p>
+                )}
                 <p className="text-gray-500 text-sm font-medium">
-                  <span className="font-bold text-gray-700">{followersRes.length}</span> followers &nbsp;·&nbsp;
-                  <span className="font-bold text-gray-700">{followingRes.length}</span> following
+                  <span className="font-bold text-gray-700 dark:text-gray-200">{followersRes.length}</span> followers &nbsp;·&nbsp;
+                  <span className="font-bold text-gray-700 dark:text-gray-200">{followingRes.length}</span> following
                 </p>
-                {profileUser.bio && (
-                  <p className="text-gray-600 text-sm mt-1 max-w-md">{profileUser.bio}</p>
+                {showDetails && profileUser.bio && (
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 max-w-md">{profileUser.bio}</p>
+                )}
+                {showDetails && profileUser.pronouns && (
+                  <p className="text-xs text-gray-400 mt-1">{profileUser.pronouns}</p>
                 )}
               </div>
             </div>
@@ -199,12 +219,14 @@ export default async function Profile({ params }: { params: Promise<{ id: string
                       {isFollowing ? '✓ Following' : '+ Follow'}
                     </button>
                   </form>
-                  <Link
-                    href={`/messages/${profileId}`}
-                    className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4 shrink-0" /> Message
-                  </Link>
+                  {showMessage && (
+                    <Link
+                      href={`/messages/${profileId}`}
+                      className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4 shrink-0" /> Message
+                    </Link>
+                  )}
                 </>
               ) : (
                 <Link href="/settings" className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
@@ -223,14 +245,34 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           {/* About Card */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-5">
             <h3 className="font-bold text-lg mb-3 text-gray-900 dark:text-white">About</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{profileUser.bio || 'No bio yet.'}</p>
-            <div className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-red-400" /> Joined {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
-            </div>
+            {showDetails ? (
+              <>
+                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">{profileUser.bio || 'No bio yet.'}</p>
+                <div className="mt-3 space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                  {profileUser.location && (
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-400 shrink-0" /> {profileUser.location}</div>
+                  )}
+                  {profileUser.workplace && (
+                    <div className="flex items-center gap-2"><Briefcase className="w-4 h-4 text-blue-400 shrink-0" /> {profileUser.workplace}</div>
+                  )}
+                  {profileUser.education && (
+                    <div className="flex items-center gap-2"><GraduationCap className="w-4 h-4 text-blue-400 shrink-0" /> {profileUser.education}</div>
+                  )}
+                  {profileUser.website && (
+                    <a href={profileUser.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline">
+                      <LinkIcon className="w-4 h-4 shrink-0" /> {profileUser.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </a>
+                  )}
+                  <div className="flex items-center gap-2"><Heart className="w-4 h-4 text-red-400 shrink-0" /> Joined {new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">This profile is private.</p>
+            )}
           </div>
 
           {/* Photos */}
-          {photoPosts.length > 0 && (
+          {showDetails && photoPosts.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-5">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">Photos</h3>

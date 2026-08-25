@@ -251,6 +251,42 @@ async function runMigration() {
       CONSTRAINT "verification_tokens_pkey" PRIMARY KEY ("identifier", "token")
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_token_key" ON "verification_tokens"("token")`,
+    // ── Profile / settings extras (nullable or defaulted — existing rows stay valid)
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS location text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS website text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS pronouns text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS workplace text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS education text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility text DEFAULT 'public'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS message_privacy text DEFAULT 'everyone'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_likes integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_comments integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_follows integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_messages integer DEFAULT 1`,
+    // ── Group community extras
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS privacy text DEFAULT 'public'`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS category text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS rules text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS location text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS website text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS require_approval integer DEFAULT 0`,
+    `ALTER TABLE group_members ADD COLUMN IF NOT EXISTS role text DEFAULT 'member'`,
+    `UPDATE group_members gm
+        SET role = 'admin'
+       FROM groups g
+      WHERE gm.group_id = g.id
+        AND gm.user_id = g.admin_id
+        AND (gm.role IS NULL OR gm.role = 'member')`,
+    `CREATE TABLE IF NOT EXISTS "group_join_requests" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_join_requests_group_id_user_id_key" UNIQUE ("group_id", "user_id"),
+      CONSTRAINT "group_join_requests_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_join_requests_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

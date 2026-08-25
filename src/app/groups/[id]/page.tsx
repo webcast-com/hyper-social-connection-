@@ -75,7 +75,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         where: { groupId },
         include: { user: true },
       });
-      members = memberRows.map((m) => ({ user: m.user }));
+      members = memberRows.map((m) => ({ user: m.user, role: m.role || 'member' }));
 
       // ── Group discussion feed (same enrichment pipeline as the home feed) ──
       const rows = await prisma.post.findMany({
@@ -155,6 +155,31 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
   const isMember = !!viewer && members.some((m: any) => m.user?.id === viewer.id);
   const isAdmin = !!viewer && group?.adminId === viewer.id;
+  const isPrivate = (group?.privacy || 'public') === 'private';
+  const requiresApproval = isPrivate || group?.requireApproval === 1;
+  const canSeeFeed = !isPrivate || isMember || isAdmin;
+
+  let joinRequests: { user: any; status?: string }[] = [];
+  let joinPending = false;
+  if (hasDatabase && viewer) {
+    try {
+      if (isAdmin) {
+        const rows = await prisma.groupJoinRequest.findMany({
+          where: { groupId, status: 'pending' },
+          include: { user: true },
+        });
+        joinRequests = rows.map((r) => ({ user: r.user, status: r.status }));
+      } else if (!isMember) {
+        const mine = await prisma.groupJoinRequest.findFirst({
+          where: { groupId, userId: viewer.id, status: 'pending' },
+          select: { id: true },
+        });
+        joinPending = !!mine;
+      }
+    } catch (err) {
+      console.warn('[group detail] join requests query failed:', (err as Error)?.message);
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:mt-6">
@@ -181,8 +206,13 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                   <Users className="w-3.5 h-3.5" /> {members.length} member{members.length !== 1 ? 's' : ''}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> Public group
+                  <Lock className="w-3.5 h-3.5" /> {isPrivate ? 'Private group' : 'Public group'}
                 </span>
+                {group.category && (
+                  <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
+                    {group.category}
+                  </span>
+                )}
                 {group.createdAt && (
                   <span className="flex items-center gap-1">
                     <CalendarDays className="w-3.5 h-3.5" /> Created {new Date(group.createdAt).toLocaleDateString()}
@@ -193,8 +223,20 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-2 shrink-0">
               {viewer ? (
                 <>
-                  <GroupMembershipButton groupId={groupId} isMember={isMember} isAdmin={isAdmin} />
-                  {isAdmin && <GroupAdminControls group={group} />}
+                  <GroupMembershipButton
+                    groupId={groupId}
+                    isMember={isMember}
+                    isAdmin={isAdmin}
+                    joinPending={joinPending}
+                    requiresApproval={requiresApproval}
+                  />
+                  {isAdmin && (
+                    <GroupAdminControls
+                      group={group}
+                      members={members}
+                      joinRequests={joinRequests}
+                    />
+                  )}
                 </>
               ) : (
                 <Link
@@ -212,7 +254,11 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Discussion feed */}
         <div className="md:col-span-2 space-y-4">
-          {isMember ? (
+          {!canSeeFeed ? (
+            <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 text-sm text-blue-800 dark:text-blue-200">
+              <b>This is a private group.</b> Request to join to see posts and take part in the discussion.
+            </div>
+          ) : isMember ? (
             <CreatePost user={viewer} groupId={groupId} />
           ) : (
             <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 text-sm text-blue-800 dark:text-blue-200">
@@ -220,7 +266,11 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {groupPosts.length === 0 ? (
+          {!canSeeFeed ? (
+            <EmptyState variant="chat" title="Members only">
+              Posts in this community are hidden until you are approved.
+            </EmptyState>
+          ) : groupPosts.length === 0 ? (
             <EmptyState variant="chat" title="No posts yet">
               {isMember
                 ? 'Be the first to start the discussion in this community.'
@@ -245,6 +295,23 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
               {group.description || 'A community for shared interests and discussions.'}
             </p>
+            {(group.location || group.website || group.category) && (
+              <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                {group.category && <div>Category · {group.category}</div>}
+                {group.location && <div>Based in {group.location}</div>}
+                {group.website && (
+                  <a href={group.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all">
+                    {String(group.website).replace(/^https?:\/\//, '')}
+                  </a>
+                )}
+              </div>
+            )}
+            {group.rules && (
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1.5">Rules</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{group.rules}</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-5">
@@ -252,7 +319,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               <Users className="text-blue-500 w-5 h-5" /> Members · {members.length}
             </h3>
             <div className="space-y-1.5 max-h-96 overflow-y-auto">
-              {members.map(({ user: u }) => u && (
+              {members.map(({ user: u, role }) => u && (
                 <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded-lg p-1.5 transition-colors">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name || 'User'} className="w-9 h-9 rounded-full object-cover shrink-0" />
@@ -263,11 +330,15 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                   )}
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate text-gray-900 dark:text-white">{u.name || 'User'}</div>
-                    {u.id === group?.adminId && (
+                    {u.id === group?.adminId ? (
                       <div className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
                         <Crown className="w-3 h-3 shrink-0" /> Admin
                       </div>
-                    )}
+                    ) : role === 'moderator' ? (
+                      <div className="text-xs text-blue-600 dark:text-blue-400">Moderator</div>
+                    ) : role === 'admin' ? (
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400">Admin</div>
+                    ) : null}
                   </div>
                 </Link>
               ))}

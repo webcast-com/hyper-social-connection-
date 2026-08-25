@@ -28,10 +28,18 @@ export type AggregateUser = {
 
 export type UserAvgAggregateOutputType = {
   id: number | null
+  notifyLikes: number | null
+  notifyComments: number | null
+  notifyFollows: number | null
+  notifyMessages: number | null
 }
 
 export type UserSumAggregateOutputType = {
   id: number | null
+  notifyLikes: number | null
+  notifyComments: number | null
+  notifyFollows: number | null
+  notifyMessages: number | null
 }
 
 export type UserMinAggregateOutputType = {
@@ -43,6 +51,17 @@ export type UserMinAggregateOutputType = {
   avatar: string | null
   coverPhoto: string | null
   bio: string | null
+  location: string | null
+  website: string | null
+  pronouns: string | null
+  workplace: string | null
+  education: string | null
+  profileVisibility: string | null
+  messagePrivacy: string | null
+  notifyLikes: number | null
+  notifyComments: number | null
+  notifyFollows: number | null
+  notifyMessages: number | null
   createdAt: Date | null
 }
 
@@ -55,6 +74,17 @@ export type UserMaxAggregateOutputType = {
   avatar: string | null
   coverPhoto: string | null
   bio: string | null
+  location: string | null
+  website: string | null
+  pronouns: string | null
+  workplace: string | null
+  education: string | null
+  profileVisibility: string | null
+  messagePrivacy: string | null
+  notifyLikes: number | null
+  notifyComments: number | null
+  notifyFollows: number | null
+  notifyMessages: number | null
   createdAt: Date | null
 }
 
@@ -67,6 +97,17 @@ export type UserCountAggregateOutputType = {
   avatar: number
   coverPhoto: number
   bio: number
+  location: number
+  website: number
+  pronouns: number
+  workplace: number
+  education: number
+  profileVisibility: number
+  messagePrivacy: number
+  notifyLikes: number
+  notifyComments: number
+  notifyFollows: number
+  notifyMessages: number
   createdAt: number
   _all: number
 }
@@ -74,10 +115,18 @@ export type UserCountAggregateOutputType = {
 
 export type UserAvgAggregateInputType = {
   id?: true
+  notifyLikes?: true
+  notifyComments?: true
+  notifyFollows?: true
+  notifyMessages?: true
 }
 
 export type UserSumAggregateInputType = {
   id?: true
+  notifyLikes?: true
+  notifyComments?: true
+  notifyFollows?: true
+  notifyMessages?: true
 }
 
 export type UserMinAggregateInputType = {
@@ -89,6 +138,17 @@ export type UserMinAggregateInputType = {
   avatar?: true
   coverPhoto?: true
   bio?: true
+  location?: true
+  website?: true
+  pronouns?: true
+  workplace?: true
+  education?: true
+  profileVisibility?: true
+  messagePrivacy?: true
+  notifyLikes?: true
+  notifyComments?: true
+  notifyFollows?: true
+  notifyMessages?: true
   createdAt?: true
 }
 
@@ -101,6 +161,17 @@ export type UserMaxAggregateInputType = {
   avatar?: true
   coverPhoto?: true
   bio?: true
+  location?: true
+  website?: true
+  pronouns?: true
+  workplace?: true
+  education?: true
+  profileVisibility?: true
+  messagePrivacy?: true
+  notifyLikes?: true
+  notifyComments?: true
+  notifyFollows?: true
+  notifyMessages?: true
   createdAt?: true
 }
 
@@ -113,6 +184,17 @@ export type UserCountAggregateInputType = {
   avatar?: true
   coverPhoto?: true
   bio?: true
+  location?: true
+  website?: true
+  pronouns?: true
+  workplace?: true
+  education?: true
+  profileVisibility?: true
+  messagePrivacy?: true
+  notifyLikes?: true
+  notifyComments?: true
+  notifyFollows?: true
+  notifyMessages?: true
   createdAt?: true
   _all?: true
 }
@@ -212,6 +294,17 @@ export type UserGroupByOutputType = {
   avatar: string | null
   coverPhoto: string | null
   bio: string | null
+  location: string | null
+  website: string | null
+  pronouns: string | null
+  workplace: string | null
+  education: string | null
+  profileVisibility: string
+  messagePrivacy: string
+  notifyLikes: number
+  notifyComments: number
+  notifyFollows: number
+  notifyMessages: number
   createdAt: Date
   _count: UserCountAggregateOutputType | null
   _avg: UserAvgAggregateOutputType | null
@@ -247,11 +340,23 @@ export type UserWhereInput = {
   avatar?: Prisma.StringNullableFilter<"User"> | string | null
   coverPhoto?: Prisma.StringNullableFilter<"User"> | string | null
   bio?: Prisma.StringNullableFilter<"User"> | string | null
+  location?: Prisma.StringNullableFilter<"User"> | string | null
+  website?: Prisma.StringNullableFilter<"User"> | string | null
+  pronouns?: Prisma.StringNullableFilter<"User"> | string | null
+  workplace?: Prisma.StringNullableFilter<"User"> | string | null
+  education?: Prisma.StringNullableFilter<"User"> | string | null
+  profileVisibility?: Prisma.StringFilter<"User"> | string
+  messagePrivacy?: Prisma.StringFilter<"User"> | string
+  notifyLikes?: Prisma.IntFilter<"User"> | number
+  notifyComments?: Prisma.IntFilter<"User"> | number
+  notifyFollows?: Prisma.IntFilter<"User"> | number
+  notifyMessages?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   posts?: Prisma.PostListRelationFilter
   stories?: Prisma.StoryListRelationFilter
   adminGroups?: Prisma.GroupListRelationFilter
   groupMemberships?: Prisma.GroupMemberListRelationFilter
+  groupJoinRequests?: Prisma.GroupJoinRequestListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   likes?: Prisma.LikeListRelationFilter
   followsGiven?: Prisma.FollowListRelationFilter
@@ -276,11 +381,23 @@ export type UserOrderByWithRelationInput = {
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
   coverPhoto?: Prisma.SortOrderInput | Prisma.SortOrder
   bio?: Prisma.SortOrderInput | Prisma.SortOrder
+  location?: Prisma.SortOrderInput | Prisma.SortOrder
+  website?: Prisma.SortOrderInput | Prisma.SortOrder
+  pronouns?: Prisma.SortOrderInput | Prisma.SortOrder
+  workplace?: Prisma.SortOrderInput | Prisma.SortOrder
+  education?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileVisibility?: Prisma.SortOrder
+  messagePrivacy?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   posts?: Prisma.PostOrderByRelationAggregateInput
   stories?: Prisma.StoryOrderByRelationAggregateInput
   adminGroups?: Prisma.GroupOrderByRelationAggregateInput
   groupMemberships?: Prisma.GroupMemberOrderByRelationAggregateInput
+  groupJoinRequests?: Prisma.GroupJoinRequestOrderByRelationAggregateInput
   comments?: Prisma.CommentOrderByRelationAggregateInput
   likes?: Prisma.LikeOrderByRelationAggregateInput
   followsGiven?: Prisma.FollowOrderByRelationAggregateInput
@@ -308,11 +425,23 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   avatar?: Prisma.StringNullableFilter<"User"> | string | null
   coverPhoto?: Prisma.StringNullableFilter<"User"> | string | null
   bio?: Prisma.StringNullableFilter<"User"> | string | null
+  location?: Prisma.StringNullableFilter<"User"> | string | null
+  website?: Prisma.StringNullableFilter<"User"> | string | null
+  pronouns?: Prisma.StringNullableFilter<"User"> | string | null
+  workplace?: Prisma.StringNullableFilter<"User"> | string | null
+  education?: Prisma.StringNullableFilter<"User"> | string | null
+  profileVisibility?: Prisma.StringFilter<"User"> | string
+  messagePrivacy?: Prisma.StringFilter<"User"> | string
+  notifyLikes?: Prisma.IntFilter<"User"> | number
+  notifyComments?: Prisma.IntFilter<"User"> | number
+  notifyFollows?: Prisma.IntFilter<"User"> | number
+  notifyMessages?: Prisma.IntFilter<"User"> | number
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   posts?: Prisma.PostListRelationFilter
   stories?: Prisma.StoryListRelationFilter
   adminGroups?: Prisma.GroupListRelationFilter
   groupMemberships?: Prisma.GroupMemberListRelationFilter
+  groupJoinRequests?: Prisma.GroupJoinRequestListRelationFilter
   comments?: Prisma.CommentListRelationFilter
   likes?: Prisma.LikeListRelationFilter
   followsGiven?: Prisma.FollowListRelationFilter
@@ -337,6 +466,17 @@ export type UserOrderByWithAggregationInput = {
   avatar?: Prisma.SortOrderInput | Prisma.SortOrder
   coverPhoto?: Prisma.SortOrderInput | Prisma.SortOrder
   bio?: Prisma.SortOrderInput | Prisma.SortOrder
+  location?: Prisma.SortOrderInput | Prisma.SortOrder
+  website?: Prisma.SortOrderInput | Prisma.SortOrder
+  pronouns?: Prisma.SortOrderInput | Prisma.SortOrder
+  workplace?: Prisma.SortOrderInput | Prisma.SortOrder
+  education?: Prisma.SortOrderInput | Prisma.SortOrder
+  profileVisibility?: Prisma.SortOrder
+  messagePrivacy?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
   _avg?: Prisma.UserAvgOrderByAggregateInput
@@ -357,6 +497,17 @@ export type UserScalarWhereWithAggregatesInput = {
   avatar?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   coverPhoto?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   bio?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  location?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  website?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  pronouns?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  workplace?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  education?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  profileVisibility?: Prisma.StringWithAggregatesFilter<"User"> | string
+  messagePrivacy?: Prisma.StringWithAggregatesFilter<"User"> | string
+  notifyLikes?: Prisma.IntWithAggregatesFilter<"User"> | number
+  notifyComments?: Prisma.IntWithAggregatesFilter<"User"> | number
+  notifyFollows?: Prisma.IntWithAggregatesFilter<"User"> | number
+  notifyMessages?: Prisma.IntWithAggregatesFilter<"User"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
 
@@ -368,11 +519,23 @@ export type UserCreateInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -397,11 +560,23 @@ export type UserUncheckedCreateInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -425,11 +600,23 @@ export type UserUpdateInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -454,11 +641,23 @@ export type UserUncheckedUpdateInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -483,6 +682,17 @@ export type UserCreateManyInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
 }
 
@@ -494,6 +704,17 @@ export type UserUpdateManyMutationInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -506,6 +727,17 @@ export type UserUncheckedUpdateManyInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -518,11 +750,26 @@ export type UserCountOrderByAggregateInput = {
   avatar?: Prisma.SortOrder
   coverPhoto?: Prisma.SortOrder
   bio?: Prisma.SortOrder
+  location?: Prisma.SortOrder
+  website?: Prisma.SortOrder
+  pronouns?: Prisma.SortOrder
+  workplace?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  profileVisibility?: Prisma.SortOrder
+  messagePrivacy?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type UserAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
 }
 
 export type UserMaxOrderByAggregateInput = {
@@ -534,6 +781,17 @@ export type UserMaxOrderByAggregateInput = {
   avatar?: Prisma.SortOrder
   coverPhoto?: Prisma.SortOrder
   bio?: Prisma.SortOrder
+  location?: Prisma.SortOrder
+  website?: Prisma.SortOrder
+  pronouns?: Prisma.SortOrder
+  workplace?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  profileVisibility?: Prisma.SortOrder
+  messagePrivacy?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -546,11 +804,26 @@ export type UserMinOrderByAggregateInput = {
   avatar?: Prisma.SortOrder
   coverPhoto?: Prisma.SortOrder
   bio?: Prisma.SortOrder
+  location?: Prisma.SortOrder
+  website?: Prisma.SortOrder
+  pronouns?: Prisma.SortOrder
+  workplace?: Prisma.SortOrder
+  education?: Prisma.SortOrder
+  profileVisibility?: Prisma.SortOrder
+  messagePrivacy?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type UserSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  notifyLikes?: Prisma.SortOrder
+  notifyComments?: Prisma.SortOrder
+  notifyFollows?: Prisma.SortOrder
+  notifyMessages?: Prisma.SortOrder
 }
 
 export type UserScalarRelationFilter = {
@@ -566,16 +839,16 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type IntFieldUpdateOperationsInput = {
   set?: number
   increment?: number
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
 }
 
 export type UserCreateNestedOneWithoutPostsInput = {
@@ -632,6 +905,20 @@ export type UserUpdateOneRequiredWithoutGroupMembershipsNestedInput = {
   upsert?: Prisma.UserUpsertWithoutGroupMembershipsInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGroupMembershipsInput, Prisma.UserUpdateWithoutGroupMembershipsInput>, Prisma.UserUncheckedUpdateWithoutGroupMembershipsInput>
+}
+
+export type UserCreateNestedOneWithoutGroupJoinRequestsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedCreateWithoutGroupJoinRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupJoinRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutGroupJoinRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedCreateWithoutGroupJoinRequestsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupJoinRequestsInput
+  upsert?: Prisma.UserUpsertWithoutGroupJoinRequestsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGroupJoinRequestsInput, Prisma.UserUpdateWithoutGroupJoinRequestsInput>, Prisma.UserUncheckedUpdateWithoutGroupJoinRequestsInput>
 }
 
 export type UserCreateNestedOneWithoutCommentsInput = {
@@ -824,10 +1111,22 @@ export type UserCreateWithoutPostsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -852,10 +1151,22 @@ export type UserUncheckedCreateWithoutPostsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -895,10 +1206,22 @@ export type UserUpdateWithoutPostsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -923,10 +1246,22 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -950,10 +1285,22 @@ export type UserCreateWithoutStoriesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -978,10 +1325,22 @@ export type UserUncheckedCreateWithoutStoriesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1021,10 +1380,22 @@ export type UserUpdateWithoutStoriesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -1049,10 +1420,22 @@ export type UserUncheckedUpdateWithoutStoriesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -1076,10 +1459,22 @@ export type UserCreateWithoutAdminGroupsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -1104,10 +1499,22 @@ export type UserUncheckedCreateWithoutAdminGroupsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1147,10 +1554,22 @@ export type UserUpdateWithoutAdminGroupsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -1175,10 +1594,22 @@ export type UserUncheckedUpdateWithoutAdminGroupsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -1202,10 +1633,22 @@ export type UserCreateWithoutGroupMembershipsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -1230,10 +1673,22 @@ export type UserUncheckedCreateWithoutGroupMembershipsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1273,10 +1728,22 @@ export type UserUpdateWithoutGroupMembershipsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -1301,10 +1768,196 @@ export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutGroupJoinRequestsInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutGroupJoinRequestsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedCreateWithoutGroupJoinRequestsInput>
+}
+
+export type UserUpsertWithoutGroupJoinRequestsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedUpdateWithoutGroupJoinRequestsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedCreateWithoutGroupJoinRequestsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutGroupJoinRequestsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutGroupJoinRequestsInput, Prisma.UserUncheckedUpdateWithoutGroupJoinRequestsInput>
+}
+
+export type UserUpdateWithoutGroupJoinRequestsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -1328,11 +1981,23 @@ export type UserCreateWithoutCommentsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
   followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
@@ -1356,11 +2021,23 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
   followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -1399,11 +2076,23 @@ export type UserUpdateWithoutCommentsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
   followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
@@ -1427,11 +2116,23 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
   followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -1454,11 +2155,23 @@ export type UserCreateWithoutLikesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
   followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
@@ -1482,11 +2195,23 @@ export type UserUncheckedCreateWithoutLikesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
   followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -1525,11 +2250,23 @@ export type UserUpdateWithoutLikesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
   followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
@@ -1553,11 +2290,23 @@ export type UserUncheckedUpdateWithoutLikesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
   followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -1580,11 +2329,23 @@ export type UserCreateWithoutFollowsGivenInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
@@ -1608,11 +2369,23 @@ export type UserUncheckedCreateWithoutFollowsGivenInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
@@ -1640,11 +2413,23 @@ export type UserCreateWithoutFollowsReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -1668,11 +2453,23 @@ export type UserUncheckedCreateWithoutFollowsReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1711,11 +2508,23 @@ export type UserUpdateWithoutFollowsGivenInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
@@ -1739,11 +2548,23 @@ export type UserUncheckedUpdateWithoutFollowsGivenInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
@@ -1777,11 +2598,23 @@ export type UserUpdateWithoutFollowsReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -1805,11 +2638,23 @@ export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -1832,11 +2677,23 @@ export type UserCreateWithoutMessagesSentInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -1860,11 +2717,23 @@ export type UserUncheckedCreateWithoutMessagesSentInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1892,11 +2761,23 @@ export type UserCreateWithoutMessagesReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -1920,11 +2801,23 @@ export type UserUncheckedCreateWithoutMessagesReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -1963,11 +2856,23 @@ export type UserUpdateWithoutMessagesSentInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -1991,11 +2896,23 @@ export type UserUncheckedUpdateWithoutMessagesSentInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2029,11 +2946,23 @@ export type UserUpdateWithoutMessagesReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2057,11 +2986,23 @@ export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2084,11 +3025,23 @@ export type UserCreateWithoutNotificationsReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2112,11 +3065,23 @@ export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2144,11 +3109,23 @@ export type UserCreateWithoutNotificationsActedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2172,11 +3149,23 @@ export type UserUncheckedCreateWithoutNotificationsActedInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2215,11 +3204,23 @@ export type UserUpdateWithoutNotificationsReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2243,11 +3244,23 @@ export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2281,11 +3294,23 @@ export type UserUpdateWithoutNotificationsActedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2309,11 +3334,23 @@ export type UserUncheckedUpdateWithoutNotificationsActedInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2336,11 +3373,23 @@ export type UserCreateWithoutBookmarksInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2364,11 +3413,23 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2407,11 +3468,23 @@ export type UserUpdateWithoutBookmarksInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2435,11 +3508,23 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2462,11 +3547,23 @@ export type UserCreateWithoutReportsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2490,11 +3587,23 @@ export type UserUncheckedCreateWithoutReportsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2533,11 +3642,23 @@ export type UserUpdateWithoutReportsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2561,11 +3682,23 @@ export type UserUncheckedUpdateWithoutReportsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2588,11 +3721,23 @@ export type UserCreateWithoutPollVotesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2616,11 +3761,23 @@ export type UserUncheckedCreateWithoutPollVotesInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2659,11 +3816,23 @@ export type UserUpdateWithoutPollVotesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2687,11 +3856,23 @@ export type UserUncheckedUpdateWithoutPollVotesInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2714,11 +3895,23 @@ export type UserCreateWithoutSessionsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2742,11 +3935,23 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2785,11 +3990,23 @@ export type UserUpdateWithoutSessionsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2813,11 +4030,23 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2840,11 +4069,23 @@ export type UserCreateWithoutAccountsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
@@ -2868,11 +4109,23 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   avatar?: string | null
   coverPhoto?: string | null
   bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
   stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
   adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
   groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
   comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
   likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
   followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
@@ -2911,11 +4164,23 @@ export type UserUpdateWithoutAccountsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
@@ -2939,11 +4204,23 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
   stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
   adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
   groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
   comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
   likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
   followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
@@ -2968,6 +4245,7 @@ export type UserCountOutputType = {
   stories: number
   adminGroups: number
   groupMemberships: number
+  groupJoinRequests: number
   comments: number
   likes: number
   followsGiven: number
@@ -2988,6 +4266,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   stories?: boolean | UserCountOutputTypeCountStoriesArgs
   adminGroups?: boolean | UserCountOutputTypeCountAdminGroupsArgs
   groupMemberships?: boolean | UserCountOutputTypeCountGroupMembershipsArgs
+  groupJoinRequests?: boolean | UserCountOutputTypeCountGroupJoinRequestsArgs
   comments?: boolean | UserCountOutputTypeCountCommentsArgs
   likes?: boolean | UserCountOutputTypeCountLikesArgs
   followsGiven?: boolean | UserCountOutputTypeCountFollowsGivenArgs
@@ -3039,6 +4318,13 @@ export type UserCountOutputTypeCountAdminGroupsArgs<ExtArgs extends runtime.Type
  */
 export type UserCountOutputTypeCountGroupMembershipsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.GroupMemberWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountGroupJoinRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupJoinRequestWhereInput
 }
 
 /**
@@ -3142,11 +4428,23 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   avatar?: boolean
   coverPhoto?: boolean
   bio?: boolean
+  location?: boolean
+  website?: boolean
+  pronouns?: boolean
+  workplace?: boolean
+  education?: boolean
+  profileVisibility?: boolean
+  messagePrivacy?: boolean
+  notifyLikes?: boolean
+  notifyComments?: boolean
+  notifyFollows?: boolean
+  notifyMessages?: boolean
   createdAt?: boolean
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   stories?: boolean | Prisma.User$storiesArgs<ExtArgs>
   adminGroups?: boolean | Prisma.User$adminGroupsArgs<ExtArgs>
   groupMemberships?: boolean | Prisma.User$groupMembershipsArgs<ExtArgs>
+  groupJoinRequests?: boolean | Prisma.User$groupJoinRequestsArgs<ExtArgs>
   comments?: boolean | Prisma.User$commentsArgs<ExtArgs>
   likes?: boolean | Prisma.User$likesArgs<ExtArgs>
   followsGiven?: boolean | Prisma.User$followsGivenArgs<ExtArgs>
@@ -3172,6 +4470,17 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatar?: boolean
   coverPhoto?: boolean
   bio?: boolean
+  location?: boolean
+  website?: boolean
+  pronouns?: boolean
+  workplace?: boolean
+  education?: boolean
+  profileVisibility?: boolean
+  messagePrivacy?: boolean
+  notifyLikes?: boolean
+  notifyComments?: boolean
+  notifyFollows?: boolean
+  notifyMessages?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["user"]>
 
@@ -3184,6 +4493,17 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   avatar?: boolean
   coverPhoto?: boolean
   bio?: boolean
+  location?: boolean
+  website?: boolean
+  pronouns?: boolean
+  workplace?: boolean
+  education?: boolean
+  profileVisibility?: boolean
+  messagePrivacy?: boolean
+  notifyLikes?: boolean
+  notifyComments?: boolean
+  notifyFollows?: boolean
+  notifyMessages?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["user"]>
 
@@ -3196,15 +4516,27 @@ export type UserSelectScalar = {
   avatar?: boolean
   coverPhoto?: boolean
   bio?: boolean
+  location?: boolean
+  website?: boolean
+  pronouns?: boolean
+  workplace?: boolean
+  education?: boolean
+  profileVisibility?: boolean
+  messagePrivacy?: boolean
+  notifyLikes?: boolean
+  notifyComments?: boolean
+  notifyFollows?: boolean
+  notifyMessages?: boolean
   createdAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "createdAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "location" | "website" | "pronouns" | "workplace" | "education" | "profileVisibility" | "messagePrivacy" | "notifyLikes" | "notifyComments" | "notifyFollows" | "notifyMessages" | "createdAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   stories?: boolean | Prisma.User$storiesArgs<ExtArgs>
   adminGroups?: boolean | Prisma.User$adminGroupsArgs<ExtArgs>
   groupMemberships?: boolean | Prisma.User$groupMembershipsArgs<ExtArgs>
+  groupJoinRequests?: boolean | Prisma.User$groupJoinRequestsArgs<ExtArgs>
   comments?: boolean | Prisma.User$commentsArgs<ExtArgs>
   likes?: boolean | Prisma.User$likesArgs<ExtArgs>
   followsGiven?: boolean | Prisma.User$followsGivenArgs<ExtArgs>
@@ -3230,6 +4562,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     stories: Prisma.$StoryPayload<ExtArgs>[]
     adminGroups: Prisma.$GroupPayload<ExtArgs>[]
     groupMemberships: Prisma.$GroupMemberPayload<ExtArgs>[]
+    groupJoinRequests: Prisma.$GroupJoinRequestPayload<ExtArgs>[]
     comments: Prisma.$CommentPayload<ExtArgs>[]
     likes: Prisma.$LikePayload<ExtArgs>[]
     followsGiven: Prisma.$FollowPayload<ExtArgs>[]
@@ -3253,6 +4586,17 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     avatar: string | null
     coverPhoto: string | null
     bio: string | null
+    location: string | null
+    website: string | null
+    pronouns: string | null
+    workplace: string | null
+    education: string | null
+    profileVisibility: string
+    messagePrivacy: string
+    notifyLikes: number
+    notifyComments: number
+    notifyFollows: number
+    notifyMessages: number
     createdAt: Date
   }, ExtArgs["result"]["user"]>
   composites: {}
@@ -3652,6 +4996,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   stories<T extends Prisma.User$storiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$storiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   adminGroups<T extends Prisma.User$adminGroupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$adminGroupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   groupMemberships<T extends Prisma.User$groupMembershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupMembershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  groupJoinRequests<T extends Prisma.User$groupJoinRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupJoinRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupJoinRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   comments<T extends Prisma.User$commentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$commentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   likes<T extends Prisma.User$likesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$likesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LikePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   followsGiven<T extends Prisma.User$followsGivenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$followsGivenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3702,6 +5047,17 @@ export interface UserFieldRefs {
   readonly avatar: Prisma.FieldRef<"User", 'String'>
   readonly coverPhoto: Prisma.FieldRef<"User", 'String'>
   readonly bio: Prisma.FieldRef<"User", 'String'>
+  readonly location: Prisma.FieldRef<"User", 'String'>
+  readonly website: Prisma.FieldRef<"User", 'String'>
+  readonly pronouns: Prisma.FieldRef<"User", 'String'>
+  readonly workplace: Prisma.FieldRef<"User", 'String'>
+  readonly education: Prisma.FieldRef<"User", 'String'>
+  readonly profileVisibility: Prisma.FieldRef<"User", 'String'>
+  readonly messagePrivacy: Prisma.FieldRef<"User", 'String'>
+  readonly notifyLikes: Prisma.FieldRef<"User", 'Int'>
+  readonly notifyComments: Prisma.FieldRef<"User", 'Int'>
+  readonly notifyFollows: Prisma.FieldRef<"User", 'Int'>
+  readonly notifyMessages: Prisma.FieldRef<"User", 'Int'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
 }
     
@@ -4189,6 +5545,30 @@ export type User$groupMembershipsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.GroupMemberScalarFieldEnum | Prisma.GroupMemberScalarFieldEnum[]
+}
+
+/**
+ * User.groupJoinRequests
+ */
+export type User$groupJoinRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupJoinRequest
+   */
+  select?: Prisma.GroupJoinRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupJoinRequest
+   */
+  omit?: Prisma.GroupJoinRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupJoinRequestInclude<ExtArgs> | null
+  where?: Prisma.GroupJoinRequestWhereInput
+  orderBy?: Prisma.GroupJoinRequestOrderByWithRelationInput | Prisma.GroupJoinRequestOrderByWithRelationInput[]
+  cursor?: Prisma.GroupJoinRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupJoinRequestScalarFieldEnum | Prisma.GroupJoinRequestScalarFieldEnum[]
 }
 
 /**

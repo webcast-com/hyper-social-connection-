@@ -60,6 +60,11 @@ export default async function GroupsPage() {
         </Link>
         <div className="p-4 flex flex-col flex-1">
           <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white truncate">{group.name}</h3>
+          {group.category && (
+            <span className="inline-block mb-1.5 text-[10px] font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+              {group.category}
+            </span>
+          )}
           <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 line-clamp-2 flex-1">
             {group.description || 'A community for shared interests.'}
           </p>

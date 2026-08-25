@@ -47,3 +47,31 @@
   - Fixed nested-anchor hydration error in search results (new `FormattedContent.interactive` prop).
   - Lint cleaned to 0 errors (pure renders, no sync setState-in-effect, escaped entities).
   - Added README.
+
+- Phase 10: Profile, settings & group admin — real social features ✅
+  Constraint: **keep the current page formation and existing functionality**. New controls extend the same cards, headers, and modals — they do not replace the feed, composer, follow/message buttons, cover/avatar uploads, or group join/leave.
+
+  ### User profile & settings
+  - Settings stays the existing `/settings` card. Sections (Profile / Privacy / Notifications / Account) sit inside it.
+  - Profile: keep name, bio, avatar, cover. Add `@username`, location, website, pronouns, workplace, education.
+  - Privacy: who can see the profile (`public` / `followers` / `private`) and who can message (`everyone` / `followers` / `nobody`).
+  - Notifications: per-type toggles (likes, comments, follows, messages) honored when creating notifications.
+  - Account: email is visible; password can be changed with the current password.
+  - Profile page keeps cover → avatar → follow/message → About / Photos / Followers → Posts. New identity fields render in the existing About card; private profiles hide posts from outsiders.
+
+  ### Groups (members + admin)
+  - Create Group and Group Settings keep name, description, cover, delete.
+  - Admin adds: public/private, category, rules, location, website, join-approval.
+  - Members get roles (`admin` / `moderator` / `member`). Admins can invite, remove, and change roles without leaving the settings modal.
+  - Private or approval-required groups create a join request instead of instant join; admin reviews pending requests.
+  - Private groups hide the discussion feed from non-members. Existing public groups keep working unchanged.
+
+  ### Data
+  - Prisma + PostgreSQL only. New columns are nullable or defaulted (`ALTER … IF NOT EXISTS`) so current rows stay valid.
+  - New table: `group_join_requests`. `group_members.role` backfilled (`admin` for `groups.admin_id`).
+
+- Phase 11: Next (not in this pass)
+  - Block / mute list and report-user.
+  - Follow-request inbox for locked accounts.
+  - Transfer group ownership; scheduled posts; group events.
+  - OAuth (Google / GitHub) and CDN-backed media.

@@ -43,6 +43,11 @@ export type Group = Prisma.GroupModel
  */
 export type GroupMember = Prisma.GroupMemberModel
 /**
+ * Model GroupJoinRequest
+ * 
+ */
+export type GroupJoinRequest = Prisma.GroupJoinRequestModel
+/**
  * Model Comment
  * 
  */
