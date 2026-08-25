@@ -11,13 +11,15 @@ import {
   LoaderCircle,
   Camera,
   BarChart2,
+  CalendarClock,
   Plus,
   Trash2,
   X,
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import LinkPreviewCard from './LinkPreviewCard';
-import { uploadMediaFile } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
 import { extractUrls } from '@/lib/link-preview';
 
 type Media = { kind: 'image' | 'video'; url: string } | null;
@@ -31,16 +33,21 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressInfo | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [error, setError] = useState('');
 
   // Poll state
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollDuration, setPollDuration] = useState('1');
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
 
   // Story creation from the composer
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [storyUploading, setStoryUploading] = useState(false);
+  const [storyProgress, setStoryProgress] = useState<UploadProgressInfo | null>(null);
   const [storyError, setStoryError] = useState('');
 
   const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,14 +61,16 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
 
     setStoryError('');
     setStoryUploading(true);
+    setStoryProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const mediaRes = await uploadMediaFile(file);
+      const mediaRes = await uploadMediaFile(file, { onProgress: setStoryProgress });
       if (mediaRes.kind !== 'image') throw new Error('Story must be an image.');
       await createStory(mediaRes.url);
     } catch (err: any) {
       setStoryError(err?.message || 'Upload failed');
     } finally {
       setStoryUploading(false);
+      setStoryProgress(null);
     }
   };
 
@@ -77,13 +86,17 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
 
     setError('');
     setUploading(true);
+    setUploadingVideo(file.type.startsWith('video/'));
+    setUploadProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const mediaRes = await uploadMediaFile(file);
+      const mediaRes = await uploadMediaFile(file, { onProgress: setUploadProgress });
       setMedia({ kind: mediaRes.kind, url: mediaRes.url });
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadingVideo(false);
+      setUploadProgress(null);
     }
   };
 
@@ -138,6 +151,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             if (media?.kind === 'video') formData.set('videoUrl', media.url);
             // Posting inside a group scopes the post to it (server re-checks membership).
             if (groupId) formData.set('groupId', String(groupId));
+            if (scheduledAt) formData.set('scheduledAt', scheduledAt);
 
             if (showPoll) {
               const validOptions = pollOptions.filter((o) => o.trim().length > 0);
@@ -159,6 +173,8 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             setMedia(null);
             setShowPoll(false);
             setPollOptions(['', '']);
+            setShowSchedule(false);
+            setScheduledAt('');
             setError('');
           }}
           className="flex-1 flex flex-col"
@@ -203,11 +219,11 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             </div>
           )}
 
-          {uploading && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-xl px-3 py-2.5">
-              <LoaderCircle className="w-4 h-4 animate-spin text-blue-500" />
-              <span>Uploading media…</span>
-            </div>
+          {uploading && uploadProgress && (
+            <UploadProgress
+              info={uploadProgress}
+              label={uploadingVideo ? 'Uploading video…' : 'Uploading photo…'}
+            />
           )}
 
           {media && !uploading && (
@@ -310,13 +326,25 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             </div>
           )}
 
+          {showSchedule && (
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <CalendarClock className="w-4 h-4 text-blue-500" />
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs"
+              />
+            </div>
+          )}
+
           <div className="flex justify-end mt-2">
             <button
               type="submit"
               disabled={uploading || (!postValue.trim() && !media && !showPoll)}
               className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-5 rounded-full shadow-sm transition-colors disabled:opacity-40"
             >
-              Post
+              {scheduledAt ? 'Schedule' : 'Post'}
             </button>
           </div>
         </form>
@@ -376,7 +404,6 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           )}
         </div>
 
-        {/* Poll Button */}
         <div className="flex-1">
           <button
             type="button"
@@ -418,6 +445,17 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
         {/* Feelings / Activity Button */}
         <button
           type="button"
+          onClick={() => { setShowSchedule(!showSchedule); }}
+          className={`flex-1 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl font-semibold transition-colors ${
+            showSchedule ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
+          }`}
+        >
+          <CalendarClock className="text-blue-500 w-4 h-4 shrink-0" />
+          <span className="truncate hidden min-[420px]:inline">Later</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setShowEmoji(!showEmoji)}
           className="flex-1 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
         >
@@ -425,6 +463,10 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           <span className="truncate hidden min-[420px]:inline">Feeling</span>
         </button>
       </div>
+
+      {storyUploading && storyProgress && (
+        <UploadProgress info={storyProgress} label="Uploading story…" />
+      )}
 
       {storyError && (
         <p className="text-xs text-red-600 text-center mt-2">{storyError}</p>

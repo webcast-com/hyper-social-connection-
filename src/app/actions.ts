@@ -3,6 +3,18 @@
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
+import { isSafeMediaUrl } from '@/lib/media-url';
+import bcrypt from 'bcryptjs';
+import {
+  GROUP_CATEGORIES,
+  GROUP_PRIVACY,
+  GROUP_ROLES,
+  MESSAGE_PRIVACY,
+  PROFILE_VISIBILITY,
+  sanitizeUsername,
+  sanitizeWebsite,
+  trimField,
+} from '@/lib/profile';
 
 async function getUserId(): Promise<number | null> {
   const viewer = await getViewer();
@@ -13,6 +25,22 @@ async function createNotification(userId: number, actorId: number, type: string,
   // Don't notify yourself
   if (userId === actorId) return;
   try {
+    const prefs = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        notifyLikes: true,
+        notifyComments: true,
+        notifyFollows: true,
+        notifyMessages: true,
+      },
+    });
+    if (prefs) {
+      if (type === 'like' && prefs.notifyLikes === 0) return;
+      if (type === 'comment' && prefs.notifyComments === 0) return;
+      if (type === 'follow' && prefs.notifyFollows === 0) return;
+      if (type === 'message' && prefs.notifyMessages === 0) return;
+    }
+
     await prisma.notification.create({
       data: {
         userId,
@@ -32,10 +60,20 @@ export async function createPost(formData: FormData) {
   const userId = await getUserId();
   if (!userId) return;
   const content = ((formData.get('content') as string) || '').trim();
-  const imageUrl = formData.get('imageUrl') as string | null;
-  const videoUrl = formData.get('videoUrl') as string | null;
+  const imageUrlRaw = formData.get('imageUrl') as string | null;
+  const videoUrlRaw = formData.get('videoUrl') as string | null;
+  const imageUrl = isSafeMediaUrl(imageUrlRaw) ? imageUrlRaw.trim() : null;
+  const videoUrl = isSafeMediaUrl(videoUrlRaw) ? videoUrlRaw.trim() : null;
   const hasPoll = formData.get('hasPoll') === 'true';
   const requestedGroupId = Number(formData.get('groupId') || 0);
+  const scheduledRaw = String(formData.get('scheduledAt') || '').trim();
+  let scheduledAt: Date | null = null;
+  if (scheduledRaw) {
+    const parsed = new Date(scheduledRaw);
+    if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() + 30_000) {
+      scheduledAt = parsed;
+    }
+  }
 
   if (!content && !imageUrl && !videoUrl && !hasPoll) throw new Error('Content or media is required');
 
@@ -61,6 +99,7 @@ export async function createPost(formData: FormData) {
         imageUrl: imageUrl || null,
         videoUrl: videoUrl || null,
         groupId,
+        scheduledAt,
       },
     });
 
@@ -177,53 +216,176 @@ export async function createComment(postId: number, formData: FormData) {
 
 export async function toggleFollow(followingId: number) {
   const followerId = await getUserId();
-  if (!followerId) return;
-  if (followerId === followingId) return;
+  if (!followerId) return { status: 'error' as const };
+  if (followerId === followingId) return { status: 'error' as const };
 
   try {
+    const blocked = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: followerId, blockedId: followingId },
+          { blockerId: followingId, blockedId: followerId },
+        ],
+      },
+    });
+    if (blocked) return { status: 'blocked' as const };
+
     const existingFollow = await prisma.follow.findFirst({
       where: { followerId, followingId },
     });
 
     if (existingFollow) {
       await prisma.follow.deleteMany({ where: { followerId, followingId } });
-    } else {
-      await prisma.follow.create({ data: { followerId, followingId } });
-      await createNotification(followingId, followerId, 'follow');
+      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/discover');
+      revalidatePath('/notifications');
+      return { status: 'none' as const };
     }
+
+    const pending = await prisma.followRequest.findFirst({
+      where: { followerId, followingId, status: 'pending' },
+    });
+    if (pending) {
+      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      revalidatePath(`/profile/${followingId}`);
+      return { status: 'none' as const };
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: followingId },
+      select: { followPrivacy: true },
+    });
+    if ((target?.followPrivacy || 'everyone') === 'approval') {
+      await prisma.followRequest.upsert({
+        where: { followerId_followingId: { followerId, followingId } },
+        update: { status: 'pending' },
+        create: { followerId, followingId, status: 'pending' },
+      });
+      await createNotification(followingId, followerId, 'follow_request');
+      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/notifications');
+      revalidatePath('/settings');
+      return { status: 'requested' as const };
+    }
+
+    await prisma.follow.create({ data: { followerId, followingId } });
+    await createNotification(followingId, followerId, 'follow');
   } catch (e) {
     console.warn('[action:toggleFollow] DB unavailable:', (e as Error)?.message);
+    return { status: 'error' as const };
   }
 
   revalidatePath(`/profile/${followingId}`);
   revalidatePath('/discover');
   revalidatePath('/notifications');
+  return { status: 'following' as const };
 }
 
 export async function updateProfile(formData: FormData) {
   const userId = await getUserId();
-  if (!userId) return;
-  const name = formData.get('name') as string;
-  const bio = formData.get('bio') as string;
-  const avatar = formData.get('avatar') as string;
-  const coverPhoto = formData.get('coverPhoto') as string;
+  if (!userId) return { success: false, message: 'Must be logged in' };
+
+  const name = ((formData.get('name') as string) || '').trim();
+  if (!name) return { success: false, message: 'Name is required' };
+  if (name.length > 80) return { success: false, message: 'Name is too long' };
+
+  let username: string | null;
+  let website: string | null;
+  try {
+    username = sanitizeUsername(formData.get('username') as string);
+    website = sanitizeWebsite(formData.get('website') as string);
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
+
+  const profileVisibility = String(formData.get('profileVisibility') || 'public');
+  const messagePrivacy = String(formData.get('messagePrivacy') || 'everyone');
+  const followPrivacy = String(formData.get('followPrivacy') || 'everyone');
+  if (!PROFILE_VISIBILITY.includes(profileVisibility as (typeof PROFILE_VISIBILITY)[number])) {
+    return { success: false, message: 'Invalid profile visibility' };
+  }
+  if (!MESSAGE_PRIVACY.includes(messagePrivacy as (typeof MESSAGE_PRIVACY)[number])) {
+    return { success: false, message: 'Invalid message privacy' };
+  }
+  if (followPrivacy !== 'everyone' && followPrivacy !== 'approval') {
+    return { success: false, message: 'Invalid follow privacy' };
+  }
+
+  const data = {
+    name,
+    bio: trimField(formData.get('bio') as string, 280),
+    avatar: ((formData.get('avatar') as string) || '').trim() || null,
+    coverPhoto: ((formData.get('coverPhoto') as string) || '').trim() || null,
+    username,
+    location: trimField(formData.get('location') as string, 80),
+    website,
+    pronouns: trimField(formData.get('pronouns') as string, 40),
+    workplace: trimField(formData.get('workplace') as string, 80),
+    education: trimField(formData.get('education') as string, 80),
+    profileVisibility,
+    messagePrivacy,
+    followPrivacy,
+    notifyLikes: formData.get('notifyLikes') === '1' ? 1 : 0,
+    notifyComments: formData.get('notifyComments') === '1' ? 1 : 0,
+    notifyFollows: formData.get('notifyFollows') === '1' ? 1 : 0,
+    notifyMessages: formData.get('notifyMessages') === '1' ? 1 : 0,
+  };
 
   try {
+    if (username) {
+      const taken = await prisma.user.findFirst({
+        where: { username, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (taken) return { success: false, message: 'That username is already taken.' };
+    }
+
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        name,
-        bio,
-        avatar,
-        coverPhoto,
-      },
+      data,
     });
   } catch (e) {
     console.warn('[action:updateProfile] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Could not save profile' };
   }
 
   revalidatePath('/settings');
   revalidatePath(`/profile/${userId}`);
+  return { success: true, message: 'Profile saved' };
+}
+
+export async function changePassword(formData: FormData) {
+  const viewer = await getViewer();
+  if (!viewer) return { success: false, message: 'Must be logged in' };
+
+  const currentPassword = String(formData.get('currentPassword') || '');
+  const newPassword = String(formData.get('newPassword') || '');
+  const confirmPassword = String(formData.get('confirmPassword') || '');
+
+  if (newPassword.length < 8) {
+    return { success: false, message: 'New password must be at least 8 characters.' };
+  }
+  if (newPassword !== confirmPassword) {
+    return { success: false, message: 'New passwords do not match.' };
+  }
+
+  try {
+    const match = await bcrypt.compare(currentPassword, viewer.password);
+    if (!match) return { success: false, message: 'Current password is incorrect.' };
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: viewer.id },
+      data: { password: hashed },
+    });
+  } catch (e) {
+    console.warn('[action:changePassword] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Could not update password' };
+  }
+
+  revalidatePath('/settings');
+  return { success: true, message: 'Password updated' };
 }
 
 export async function updateAvatar(avatarUrl: string) {
@@ -261,9 +423,45 @@ export async function updateCoverPhoto(coverUrl: string) {
 export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   if (!senderId) return;
-  const content = formData.get('content') as string;
+  try {
+    const blocked = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: senderId, blockedId: receiverId },
+          { blockerId: receiverId, blockedId: senderId },
+        ],
+      },
+    });
+    if (blocked) return;
 
-  if (!content) return;
+    const target = await prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { messagePrivacy: true },
+    });
+    const privacy = target?.messagePrivacy || 'everyone';
+    if (privacy === 'nobody') return;
+    if (privacy === 'followers') {
+      const connected = await prisma.follow.findFirst({
+        where: {
+          OR: [
+            { followerId: senderId, followingId: receiverId },
+            { followerId: receiverId, followingId: senderId },
+          ],
+        },
+        select: { followerId: true },
+      });
+      if (!connected) return;
+    }
+  } catch (e) {
+    console.warn('[action:sendMessage] privacy check failed:', (e as Error)?.message);
+  }
+  const content = ((formData.get('content') as string) || '').trim();
+  const imageUrlRaw = (formData.get('imageUrl') as string) || '';
+  const videoUrlRaw = (formData.get('videoUrl') as string) || '';
+  const imageUrl = isSafeMediaUrl(imageUrlRaw) ? imageUrlRaw.trim() : null;
+  const videoUrl = isSafeMediaUrl(videoUrlRaw) ? videoUrlRaw.trim() : null;
+
+  if (!content && !imageUrl && !videoUrl) return;
 
   try {
     const result = await prisma.message.create({
@@ -271,6 +469,8 @@ export async function sendMessage(receiverId: number, formData: FormData) {
         senderId,
         receiverId,
         content,
+        imageUrl,
+        videoUrl,
       },
     });
 
@@ -309,7 +509,10 @@ export async function searchUsers(query: string) {
     const userId = await getUserId();
     const results = await prisma.user.findMany({
       where: {
-        name: { contains: clean, mode: 'insensitive' },
+        OR: [
+          { name: { contains: clean, mode: 'insensitive' } },
+          { username: { contains: clean, mode: 'insensitive' } },
+        ],
       },
     });
     if (results.length > 0) {
@@ -391,6 +594,10 @@ export async function createGroup(formData: FormData) {
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
   const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+  const privacyRaw = String(formData.get('privacy') || 'public');
+  const privacy = GROUP_PRIVACY.includes(privacyRaw as (typeof GROUP_PRIVACY)[number]) ? privacyRaw : 'public';
+  const categoryRaw = (formData.get('category') as string || '').trim();
+  const category = GROUP_CATEGORIES.includes(categoryRaw as (typeof GROUP_CATEGORIES)[number]) ? categoryRaw : null;
 
   if (!name) return null;
 
@@ -401,6 +608,9 @@ export async function createGroup(formData: FormData) {
         description,
         coverPhoto: coverPhoto || null,
         adminId: userId,
+        privacy,
+        category,
+        requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
       },
     });
 
@@ -408,6 +618,7 @@ export async function createGroup(formData: FormData) {
       data: {
         groupId: group.id,
         userId,
+        role: 'admin',
       },
     });
 
@@ -423,18 +634,40 @@ export async function createGroup(formData: FormData) {
 
 export async function joinGroup(groupId: number) {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) return { success: false, pending: false, message: 'Must be logged in' };
   try {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true, adminId: true, privacy: true, requireApproval: true },
+    });
+    if (!group) return { success: false, pending: false, message: 'Group not found' };
+
+    const needsApproval = group.privacy === 'private' || group.requireApproval === 1;
+    if (needsApproval) {
+      await prisma.groupJoinRequest.upsert({
+        where: { groupId_userId: { groupId, userId } },
+        update: { status: 'pending' },
+        create: { groupId, userId, status: 'pending' },
+      });
+      await createNotification(group.adminId, userId, 'follow');
+      revalidatePath(`/groups/${groupId}`);
+      revalidatePath('/groups');
+      return { success: true, pending: true, message: 'Request sent' };
+    }
+
     await prisma.groupMember.upsert({
       where: { groupId_userId: { groupId, userId } },
       update: {},
-      create: { groupId, userId },
+      create: { groupId, userId, role: 'member' },
     });
+    await prisma.groupJoinRequest.deleteMany({ where: { groupId, userId } });
   } catch (e) {
     console.warn('[action:joinGroup] DB unavailable:', (e as Error)?.message);
+    return { success: false, pending: false, message: 'Database unavailable' };
   }
   revalidatePath(`/groups/${groupId}`);
   revalidatePath('/groups');
+  return { success: true, pending: false };
 }
 
 export async function leaveGroup(groupId: number) {
@@ -467,6 +700,16 @@ export async function updateGroup(groupId: number, formData: FormData) {
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
   const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+  const privacyRaw = String(formData.get('privacy') || 'public');
+  const privacy = GROUP_PRIVACY.includes(privacyRaw as (typeof GROUP_PRIVACY)[number]) ? privacyRaw : 'public';
+  const categoryRaw = (formData.get('category') as string || '').trim();
+  const category = GROUP_CATEGORIES.includes(categoryRaw as (typeof GROUP_CATEGORIES)[number]) ? categoryRaw : null;
+  let website: string | null = null;
+  try {
+    website = sanitizeWebsite(formData.get('website') as string);
+  } catch (err) {
+    return { success: false, message: (err as Error).message };
+  }
 
   if (!name) return { success: false, message: 'Group name is required' };
 
@@ -474,13 +717,151 @@ export async function updateGroup(groupId: number, formData: FormData) {
     // Admin-only — enforced in the WHERE clause.
     await prisma.group.updateMany({
       where: { id: groupId, adminId: userId },
-      data: { name, description: description || null, coverPhoto: coverPhoto || null },
+      data: {
+        name,
+        description: description || null,
+        coverPhoto: coverPhoto || null,
+        privacy,
+        category,
+        rules: trimField(formData.get('rules') as string, 800),
+        location: trimField(formData.get('location') as string, 80),
+        website,
+        requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
+      },
     });
   } catch (e) {
     console.warn('[action:updateGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
   revalidatePath('/groups');
+  revalidatePath(`/groups/${groupId}`);
+  return { success: true };
+}
+
+async function requireGroupAdmin(groupId: number, userId: number) {
+  return prisma.group.findFirst({
+    where: { id: groupId, adminId: userId },
+    select: { id: true, adminId: true },
+  });
+}
+
+export async function inviteGroupMember(groupId: number, query: string) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
+  const needle = (query || '').trim().replace(/^@/, '').toLowerCase();
+  if (!needle) return { success: false, message: 'Enter a username or email' };
+
+  try {
+    const admin = await requireGroupAdmin(groupId, userId);
+    if (!admin) return { success: false, message: 'Only the group admin can invite people' };
+
+    const target = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: needle },
+          { username: needle },
+        ],
+      },
+      select: { id: true, name: true },
+    });
+    if (!target) return { success: false, message: 'No user found with that username or email' };
+    if (target.id === userId) return { success: false, message: 'You already admin this group' };
+
+    await prisma.groupMember.upsert({
+      where: { groupId_userId: { groupId, userId: target.id } },
+      update: {},
+      create: { groupId, userId: target.id, role: 'member' },
+    });
+    await prisma.groupJoinRequest.deleteMany({ where: { groupId, userId: target.id } });
+    await createNotification(target.id, userId, 'follow');
+  } catch (e) {
+    console.warn('[action:inviteGroupMember] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups');
+  return { success: true, message: 'Invite sent — they are now a member' };
+}
+
+export async function removeGroupMember(groupId: number, memberId: number) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
+
+  try {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { adminId: true },
+    });
+    if (!group) return { success: false, message: 'Group not found' };
+    if (memberId === group.adminId) {
+      return { success: false, message: 'The group owner cannot be removed' };
+    }
+
+    const actor = await prisma.groupMember.findFirst({
+      where: { groupId, userId },
+      select: { role: true },
+    });
+    const canModerate = group.adminId === userId || actor?.role === 'admin' || actor?.role === 'moderator';
+    if (!canModerate) return { success: false, message: 'You cannot remove members' };
+
+    await prisma.groupMember.deleteMany({ where: { groupId, userId: memberId } });
+  } catch (e) {
+    console.warn('[action:removeGroupMember] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath(`/groups/${groupId}`);
+  return { success: true };
+}
+
+export async function setGroupMemberRole(groupId: number, memberId: number, role: string) {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
+  if (!GROUP_ROLES.includes(role as (typeof GROUP_ROLES)[number])) {
+    return { success: false, message: 'Invalid role' };
+  }
+
+  try {
+    const admin = await requireGroupAdmin(groupId, userId);
+    if (!admin) return { success: false, message: 'Only the group admin can change roles' };
+    if (memberId === admin.adminId) {
+      return { success: false, message: 'The group owner stays an admin' };
+    }
+
+    await prisma.groupMember.updateMany({
+      where: { groupId, userId: memberId },
+      data: { role },
+    });
+  } catch (e) {
+    console.warn('[action:setGroupMemberRole] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
+  revalidatePath(`/groups/${groupId}`);
+  return { success: true };
+}
+
+export async function reviewJoinRequest(groupId: number, requestUserId: number, decision: 'approved' | 'declined') {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Must be logged in' };
+
+  try {
+    const admin = await requireGroupAdmin(groupId, userId);
+    if (!admin) return { success: false, message: 'Only the group admin can review requests' };
+
+    if (decision === 'approved') {
+      await prisma.groupMember.upsert({
+        where: { groupId_userId: { groupId, userId: requestUserId } },
+        update: {},
+        create: { groupId, userId: requestUserId, role: 'member' },
+      });
+    }
+    await prisma.groupJoinRequest.updateMany({
+      where: { groupId, userId: requestUserId },
+      data: { status: decision },
+    });
+  } catch (e) {
+    console.warn('[action:reviewJoinRequest] DB unavailable:', (e as Error)?.message);
+    return { success: false, message: 'Database unavailable' };
+  }
   revalidatePath(`/groups/${groupId}`);
   return { success: true };
 }

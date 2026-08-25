@@ -25,6 +25,7 @@ const iconMap: Record<string, React.ReactNode> = {
   like: <Heart className="text-red-500 w-5 h-5" />,
   comment: <MessageCircle className="text-blue-500 w-5 h-5" />,
   follow: <UserPlus className="text-green-500 w-5 h-5" />,
+  follow_request: <UserPlus className="text-blue-500 w-5 h-5" />,
   message: <Mail className="text-purple-500 w-5 h-5" />,
 };
 
@@ -36,6 +37,8 @@ function notificationText(type: string) {
       return 'commented on your post.';
     case 'follow':
       return 'started following you.';
+    case 'follow_request':
+      return 'requested to follow you.';
     case 'message':
       return 'sent you a message.';
     default:

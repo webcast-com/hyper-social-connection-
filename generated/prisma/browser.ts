@@ -43,6 +43,11 @@ export type Group = Prisma.GroupModel
  */
 export type GroupMember = Prisma.GroupMemberModel
 /**
+ * Model GroupJoinRequest
+ * 
+ */
+export type GroupJoinRequest = Prisma.GroupJoinRequestModel
+/**
  * Model Comment
  * 
  */
@@ -77,6 +82,31 @@ export type Bookmark = Prisma.BookmarkModel
  * 
  */
 export type Report = Prisma.ReportModel
+/**
+ * Model Block
+ * 
+ */
+export type Block = Prisma.BlockModel
+/**
+ * Model Mute
+ * 
+ */
+export type Mute = Prisma.MuteModel
+/**
+ * Model FollowRequest
+ * 
+ */
+export type FollowRequest = Prisma.FollowRequestModel
+/**
+ * Model GroupEvent
+ * 
+ */
+export type GroupEvent = Prisma.GroupEventModel
+/**
+ * Model GroupEventRsvp
+ * 
+ */
+export type GroupEventRsvp = Prisma.GroupEventRsvpModel
 /**
  * Model Poll
  * 

@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
         senderId: r.senderId,
         receiverId: r.receiverId,
         content: r.content,
+        imageUrl: r.imageUrl || null,
+        videoUrl: r.videoUrl || null,
         createdAt: r.createdAt,
       })),
     });

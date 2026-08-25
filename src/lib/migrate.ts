@@ -129,10 +129,15 @@ async function runMigration() {
       "sender_id" integer NOT NULL,
       "receiver_id" integer NOT NULL,
       "content" text NOT NULL,
+      "image_url" text,
+      "video_url" text,
       "created_at" timestamp DEFAULT now() NOT NULL,
       CONSTRAINT "messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action,
       CONSTRAINT "messages_receiver_id_users_id_fk" FOREIGN KEY ("receiver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
     )`,
+    // Chat attachments (nullable; existing conversations stay text-only)
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url text`,
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS video_url text`,
     // notifications
     `CREATE TABLE IF NOT EXISTS "notifications" (
       "id" serial PRIMARY KEY NOT NULL,
@@ -246,6 +251,92 @@ async function runMigration() {
       CONSTRAINT "verification_tokens_pkey" PRIMARY KEY ("identifier", "token")
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "verification_tokens_token_key" ON "verification_tokens"("token")`,
+    // ── Profile / settings extras (nullable or defaulted — existing rows stay valid)
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS location text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS website text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS pronouns text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS workplace text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS education text`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility text DEFAULT 'public'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS message_privacy text DEFAULT 'everyone'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_likes integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_comments integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_follows integer DEFAULT 1`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_messages integer DEFAULT 1`,
+    // ── Group community extras
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS privacy text DEFAULT 'public'`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS category text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS rules text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS location text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS website text`,
+    `ALTER TABLE groups ADD COLUMN IF NOT EXISTS require_approval integer DEFAULT 0`,
+    `ALTER TABLE group_members ADD COLUMN IF NOT EXISTS role text DEFAULT 'member'`,
+    `UPDATE group_members gm
+        SET role = 'admin'
+       FROM groups g
+      WHERE gm.group_id = g.id
+        AND gm.user_id = g.admin_id
+        AND (gm.role IS NULL OR gm.role = 'member')`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS follow_privacy text DEFAULT 'everyone'`,
+    `ALTER TABLE posts ADD COLUMN IF NOT EXISTS scheduled_at timestamp`,
+    `ALTER TABLE reports ADD COLUMN IF NOT EXISTS reported_user_id integer`,
+    `CREATE TABLE IF NOT EXISTS "blocks" (
+      "blocker_id" integer NOT NULL,
+      "blocked_id" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "blocks_pk" PRIMARY KEY ("blocker_id", "blocked_id"),
+      CONSTRAINT "blocks_blocker_fk" FOREIGN KEY ("blocker_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "blocks_blocked_fk" FOREIGN KEY ("blocked_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "mutes" (
+      "muter_id" integer NOT NULL,
+      "muted_id" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "mutes_pk" PRIMARY KEY ("muter_id", "muted_id"),
+      CONSTRAINT "mutes_muter_fk" FOREIGN KEY ("muter_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "mutes_muted_fk" FOREIGN KEY ("muted_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "follow_requests" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "follower_id" integer NOT NULL,
+      "following_id" integer NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "follow_requests_pair_key" UNIQUE ("follower_id", "following_id"),
+      CONSTRAINT "follow_requests_from_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "follow_requests_to_fk" FOREIGN KEY ("following_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "group_events" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "created_by_id" integer NOT NULL,
+      "title" text NOT NULL,
+      "description" text,
+      "location" text,
+      "starts_at" timestamp NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_events_group_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade,
+      CONSTRAINT "group_events_user_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE no action
+    )`,
+    `CREATE TABLE IF NOT EXISTS "group_event_rsvps" (
+      "event_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "status" text DEFAULT 'going' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_event_rsvps_pk" PRIMARY KEY ("event_id", "user_id"),
+      CONSTRAINT "group_event_rsvps_event_fk" FOREIGN KEY ("event_id") REFERENCES "public"."group_events"("id") ON DELETE cascade,
+      CONSTRAINT "group_event_rsvps_user_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "group_join_requests" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_join_requests_group_id_user_id_key" UNIQUE ("group_id", "user_id"),
+      CONSTRAINT "group_join_requests_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_join_requests_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

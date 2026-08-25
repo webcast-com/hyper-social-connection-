@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { Camera, LoaderCircle, X } from 'lucide-react';
 import { updateCoverPhoto } from '@/app/actions';
-import { uploadMediaFile } from '@/lib/upload';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
 
 /**
  * Profile cover photo — upload from the device (no URL entry).
@@ -22,6 +23,7 @@ export default function CoverPhotoUpload({
   const fileRef = useRef<HTMLInputElement>(null);
   const [cover, setCover] = useState<string>(user.coverPhoto || '');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgressInfo | null>(null);
   const [error, setError] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,8 +38,9 @@ export default function CoverPhotoUpload({
 
     setError('');
     setUploading(true);
+    setProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Cover photo must be an image.');
       setCover(media.url); // optimistic preview
       await updateCoverPhoto(media.url); // persist + revalidate
@@ -45,6 +48,7 @@ export default function CoverPhotoUpload({
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -99,6 +103,11 @@ export default function CoverPhotoUpload({
               )}
             </button>
           </div>
+          {uploading && progress && (
+            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-72 z-20">
+              <UploadProgress info={progress} label="Uploading cover…" />
+            </div>
+          )}
           {error && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-64 text-center text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 z-20">
               {error}

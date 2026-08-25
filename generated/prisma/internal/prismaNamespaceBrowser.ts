@@ -56,6 +56,7 @@ export const ModelName = {
   Story: 'Story',
   Group: 'Group',
   GroupMember: 'GroupMember',
+  GroupJoinRequest: 'GroupJoinRequest',
   Comment: 'Comment',
   Like: 'Like',
   Follow: 'Follow',
@@ -63,6 +64,11 @@ export const ModelName = {
   Notification: 'Notification',
   Bookmark: 'Bookmark',
   Report: 'Report',
+  Block: 'Block',
+  Mute: 'Mute',
+  FollowRequest: 'FollowRequest',
+  GroupEvent: 'GroupEvent',
+  GroupEventRsvp: 'GroupEventRsvp',
   Poll: 'Poll',
   PollOption: 'PollOption',
   PollVote: 'PollVote',
@@ -96,6 +102,18 @@ export const UserScalarFieldEnum = {
   avatar: 'avatar',
   coverPhoto: 'coverPhoto',
   bio: 'bio',
+  location: 'location',
+  website: 'website',
+  pronouns: 'pronouns',
+  workplace: 'workplace',
+  education: 'education',
+  profileVisibility: 'profileVisibility',
+  messagePrivacy: 'messagePrivacy',
+  followPrivacy: 'followPrivacy',
+  notifyLikes: 'notifyLikes',
+  notifyComments: 'notifyComments',
+  notifyFollows: 'notifyFollows',
+  notifyMessages: 'notifyMessages',
   createdAt: 'createdAt'
 } as const
 
@@ -113,6 +131,7 @@ export const PostScalarFieldEnum = {
   groupId: 'groupId',
   likesCount: 'likesCount',
   commentsCount: 'commentsCount',
+  scheduledAt: 'scheduledAt',
   updatedAt: 'updatedAt',
   createdAt: 'createdAt'
 } as const
@@ -137,6 +156,12 @@ export const GroupScalarFieldEnum = {
   description: 'description',
   coverPhoto: 'coverPhoto',
   adminId: 'adminId',
+  privacy: 'privacy',
+  category: 'category',
+  rules: 'rules',
+  location: 'location',
+  website: 'website',
+  requireApproval: 'requireApproval',
   createdAt: 'createdAt'
 } as const
 
@@ -146,10 +171,22 @@ export type GroupScalarFieldEnum = (typeof GroupScalarFieldEnum)[keyof typeof Gr
 export const GroupMemberScalarFieldEnum = {
   groupId: 'groupId',
   userId: 'userId',
+  role: 'role',
   createdAt: 'createdAt'
 } as const
 
 export type GroupMemberScalarFieldEnum = (typeof GroupMemberScalarFieldEnum)[keyof typeof GroupMemberScalarFieldEnum]
+
+
+export const GroupJoinRequestScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  userId: 'userId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupJoinRequestScalarFieldEnum = (typeof GroupJoinRequestScalarFieldEnum)[keyof typeof GroupJoinRequestScalarFieldEnum]
 
 
 export const CommentScalarFieldEnum = {
@@ -187,6 +224,8 @@ export const MessageScalarFieldEnum = {
   senderId: 'senderId',
   receiverId: 'receiverId',
   content: 'content',
+  imageUrl: 'imageUrl',
+  videoUrl: 'videoUrl',
   createdAt: 'createdAt'
 } as const
 
@@ -221,12 +260,66 @@ export const ReportScalarFieldEnum = {
   id: 'id',
   reporterId: 'reporterId',
   postId: 'postId',
+  reportedUserId: 'reportedUserId',
   reason: 'reason',
   details: 'details',
   createdAt: 'createdAt'
 } as const
 
 export type ReportScalarFieldEnum = (typeof ReportScalarFieldEnum)[keyof typeof ReportScalarFieldEnum]
+
+
+export const BlockScalarFieldEnum = {
+  blockerId: 'blockerId',
+  blockedId: 'blockedId',
+  createdAt: 'createdAt'
+} as const
+
+export type BlockScalarFieldEnum = (typeof BlockScalarFieldEnum)[keyof typeof BlockScalarFieldEnum]
+
+
+export const MuteScalarFieldEnum = {
+  muterId: 'muterId',
+  mutedId: 'mutedId',
+  createdAt: 'createdAt'
+} as const
+
+export type MuteScalarFieldEnum = (typeof MuteScalarFieldEnum)[keyof typeof MuteScalarFieldEnum]
+
+
+export const FollowRequestScalarFieldEnum = {
+  id: 'id',
+  followerId: 'followerId',
+  followingId: 'followingId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type FollowRequestScalarFieldEnum = (typeof FollowRequestScalarFieldEnum)[keyof typeof FollowRequestScalarFieldEnum]
+
+
+export const GroupEventScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  createdById: 'createdById',
+  title: 'title',
+  description: 'description',
+  location: 'location',
+  startsAt: 'startsAt',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupEventScalarFieldEnum = (typeof GroupEventScalarFieldEnum)[keyof typeof GroupEventScalarFieldEnum]
+
+
+export const GroupEventRsvpScalarFieldEnum = {
+  eventId: 'eventId',
+  userId: 'userId',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupEventRsvpScalarFieldEnum = (typeof GroupEventRsvpScalarFieldEnum)[keyof typeof GroupEventRsvpScalarFieldEnum]
 
 
 export const PollScalarFieldEnum = {

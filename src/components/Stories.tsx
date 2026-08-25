@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Plus, LoaderCircle } from 'lucide-react';
 import { createStory } from '@/app/actions';
-import { uploadMediaFile } from '@/lib/upload';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
 import StoryViewer from '@/components/StoryViewer';
 
 /**
@@ -14,6 +14,7 @@ import StoryViewer from '@/components/StoryViewer';
 export default function Stories({ user, stories = [] }: { user: any; stories?: any[] }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgressInfo | null>(null);
   const [error, setError] = useState('');
   // Index of the story being previewed, or null when the viewer is closed.
   const [activeStory, setActiveStory] = useState<number | null>(null);
@@ -30,14 +31,16 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
 
     setError('');
     setUploading(true);
+    setProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Story must be an image.');
       await createStory(media.url);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createGroup } from '@/app/actions';
 import { Plus, Users, X, LoaderCircle } from 'lucide-react';
+import GroupCoverField from '@/components/GroupCoverField';
+import { GROUP_CATEGORIES } from '@/lib/profile';
 
 /**
  * "Create Group" button + modal form. The server action creates the group,
@@ -16,6 +18,8 @@ export default function CreateGroupButton() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverPhoto, setCoverPhoto] = useState('');
+  const [privacy, setPrivacy] = useState('public');
+  const [category, setCategory] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -30,9 +34,11 @@ export default function CreateGroupButton() {
       fd.set('name', name.trim());
       fd.set('description', description.trim());
       fd.set('coverPhoto', coverPhoto.trim());
+      fd.set('privacy', privacy);
+      fd.set('category', category);
       const created = await createGroup(fd);
       setOpen(false);
-      setName(''); setDescription(''); setCoverPhoto('');
+      setName(''); setDescription(''); setCoverPhoto(''); setPrivacy('public'); setCategory('');
       if (created && typeof (created as any).id === 'number' && (created as any).id < 1e12) {
         router.push(`/groups/${(created as any).id}`);
       } else {
@@ -103,16 +109,37 @@ export default function CreateGroupButton() {
                   className="w-full bg-gray-50 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="cg-privacy" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Privacy</label>
+                  <select
+                    id="cg-privacy"
+                    value={privacy}
+                    onChange={(e) => setPrivacy(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="cg-cat" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Category</label>
+                  <select
+                    id="cg-cat"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Optional</option>
+                    {GROUP_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div>
-                <label htmlFor="cg-cover" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Cover image URL <span className="font-normal">(optional)</span></label>
-                <input
-                  id="cg-cover"
-                  value={coverPhoto}
-                  onChange={(e) => setCoverPhoto(e.target.value)}
-                  type="url"
-                  placeholder="https://…"
-                  className="w-full bg-gray-50 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Cover photo <span className="font-normal">(optional)</span></label>
+                <GroupCoverField value={coverPhoto} onChange={setCoverPhoto} />
               </div>
               {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
             </div>

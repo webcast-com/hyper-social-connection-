@@ -17,13 +17,18 @@ export default function GroupMembershipButton({
   groupId,
   isMember: initialIsMember,
   isAdmin,
+  joinPending: initialJoinPending = false,
+  requiresApproval = false,
 }: {
   groupId: number;
   isMember: boolean;
   isAdmin: boolean;
+  joinPending?: boolean;
+  requiresApproval?: boolean;
 }) {
   const router = useRouter();
   const [joined, setJoined] = useState(initialIsMember);
+  const [requested, setRequested] = useState(initialJoinPending);
   const [pending, startTransition] = useTransition();
 
   if (isAdmin) {
@@ -61,6 +66,14 @@ export default function GroupMembershipButton({
     );
   }
 
+  if (requested && !joined) {
+    return (
+      <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 px-4 py-2 rounded-lg font-semibold text-sm">
+        Request sent
+      </span>
+    );
+  }
+
   if (!joined) {
     return (
       <button
@@ -68,7 +81,7 @@ export default function GroupMembershipButton({
         onClick={handleJoin}
         className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold text-sm transition-colors flex items-center gap-1.5 shadow-sm"
       >
-        <Plus className="w-4 h-4" /> Join Group
+        <Plus className="w-4 h-4" /> {requiresApproval ? 'Request to join' : 'Join Group'}
       </button>
     );
   }
