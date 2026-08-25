@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { LoaderCircle, Upload, X } from 'lucide-react';
-import { uploadMediaFile } from '@/lib/upload';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
 
 /**
  * Settings-form field for the profile picture: upload a real image from the
@@ -21,6 +22,7 @@ export default function AvatarField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState<string>(initialUrl || '');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgressInfo | null>(null);
   const [error, setError] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,14 +36,16 @@ export default function AvatarField({
 
     setError('');
     setUploading(true);
+    setProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Profile picture must be an image.');
       setUrl(media.url);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -89,6 +93,7 @@ export default function AvatarField({
         )}
       </div>
       <input name={fieldName} type="hidden" value={url} />
+      {uploading && progress && <UploadProgress info={progress} label="Uploading photo…" />}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );

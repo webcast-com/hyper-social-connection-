@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Check, CheckCheck, Smile, Heart, ThumbsUp, Flame } from 'lucide-react';
+import { CheckCheck, Smile } from 'lucide-react';
+import ImageLightbox from '@/components/ImageLightbox';
 
 export type ChatUser = { id: number; name: string; avatar: string | null };
 export type ChatMessage = {
@@ -10,6 +11,8 @@ export type ChatMessage = {
   senderId: number;
   receiverId: number;
   content: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
   createdAt: string;
   user?: ChatUser | null;
 };
@@ -30,6 +33,7 @@ export default function ChatStream({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [reactions, setReactions] = useState<Record<number, string[]>>({});
   const [activeReactionMsgId, setActiveReactionMsgId] = useState<number | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const seenIds = useRef<Set<number>>(new Set(initialMessages.map((m) => m.id)));
   const lastIdRef = useRef<number>(initialMessages.reduce((max, m) => Math.max(max, m.id), 0));
@@ -81,6 +85,8 @@ export default function ChatStream({
             senderId: Number(row.senderId),
             receiverId: Number(row.receiverId),
             content: String(row.content ?? ''),
+            imageUrl: row.imageUrl || null,
+            videoUrl: row.videoUrl || null,
             createdAt: row.createdAt,
             user: usersById[Number(row.senderId)],
           });
@@ -164,7 +170,31 @@ export default function ChatStream({
                       : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-none'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                  {msg.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setLightboxSrc(msg.imageUrl!)}
+                      className="block mb-1.5 -mx-1 overflow-hidden rounded-xl"
+                    >
+                      <img
+                        src={msg.imageUrl}
+                        alt="attachment"
+                        className="max-h-56 w-full object-cover"
+                      />
+                    </button>
+                  )}
+                  {msg.videoUrl && (
+                    <video
+                      src={msg.videoUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="mb-1.5 -mx-1 max-h-56 w-full rounded-xl bg-black"
+                    />
+                  )}
+                  {msg.content ? (
+                    <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                  ) : null}
                   <div
                     className={`text-[10px] mt-1 flex items-center justify-end space-x-1 ${
                       isMe ? 'text-blue-200' : 'text-gray-400'
@@ -226,6 +256,14 @@ export default function ChatStream({
         );
       })}
       <div ref={bottomRef} />
+
+      {lightboxSrc && (
+        <ImageLightbox
+          src={lightboxSrc}
+          alt="Chat attachment"
+          onClose={() => setLightboxSrc(null)}
+        />
+      )}
     </div>
   );
 }

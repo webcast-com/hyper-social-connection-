@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import LinkPreviewCard from './LinkPreviewCard';
-import { uploadMediaFile } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
 import { extractUrls } from '@/lib/link-preview';
 
 type Media = { kind: 'image' | 'video'; url: string } | null;
@@ -31,6 +32,8 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressInfo | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [error, setError] = useState('');
 
   // Poll state
@@ -41,6 +44,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   // Story creation from the composer
   const storyFileRef = useRef<HTMLInputElement>(null);
   const [storyUploading, setStoryUploading] = useState(false);
+  const [storyProgress, setStoryProgress] = useState<UploadProgressInfo | null>(null);
   const [storyError, setStoryError] = useState('');
 
   const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,14 +58,16 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
 
     setStoryError('');
     setStoryUploading(true);
+    setStoryProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const mediaRes = await uploadMediaFile(file);
+      const mediaRes = await uploadMediaFile(file, { onProgress: setStoryProgress });
       if (mediaRes.kind !== 'image') throw new Error('Story must be an image.');
       await createStory(mediaRes.url);
     } catch (err: any) {
       setStoryError(err?.message || 'Upload failed');
     } finally {
       setStoryUploading(false);
+      setStoryProgress(null);
     }
   };
 
@@ -77,13 +83,17 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
 
     setError('');
     setUploading(true);
+    setUploadingVideo(file.type.startsWith('video/'));
+    setUploadProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const mediaRes = await uploadMediaFile(file);
+      const mediaRes = await uploadMediaFile(file, { onProgress: setUploadProgress });
       setMedia({ kind: mediaRes.kind, url: mediaRes.url });
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadingVideo(false);
+      setUploadProgress(null);
     }
   };
 
@@ -203,11 +213,11 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             </div>
           )}
 
-          {uploading && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/40 rounded-xl px-3 py-2.5">
-              <LoaderCircle className="w-4 h-4 animate-spin text-blue-500" />
-              <span>Uploading media…</span>
-            </div>
+          {uploading && uploadProgress && (
+            <UploadProgress
+              info={uploadProgress}
+              label={uploadingVideo ? 'Uploading video…' : 'Uploading photo…'}
+            />
           )}
 
           {media && !uploading && (
@@ -425,6 +435,10 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           <span className="truncate hidden min-[420px]:inline">Feeling</span>
         </button>
       </div>
+
+      {storyUploading && storyProgress && (
+        <UploadProgress info={storyProgress} label="Uploading story…" />
+      )}
 
       {storyError && (
         <p className="text-xs text-red-600 text-center mt-2">{storyError}</p>

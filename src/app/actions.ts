@@ -3,6 +3,7 @@
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
+import { isSafeMediaUrl } from '@/lib/media-url';
 
 async function getUserId(): Promise<number | null> {
   const viewer = await getViewer();
@@ -32,8 +33,10 @@ export async function createPost(formData: FormData) {
   const userId = await getUserId();
   if (!userId) return;
   const content = ((formData.get('content') as string) || '').trim();
-  const imageUrl = formData.get('imageUrl') as string | null;
-  const videoUrl = formData.get('videoUrl') as string | null;
+  const imageUrlRaw = formData.get('imageUrl') as string | null;
+  const videoUrlRaw = formData.get('videoUrl') as string | null;
+  const imageUrl = isSafeMediaUrl(imageUrlRaw) ? imageUrlRaw.trim() : null;
+  const videoUrl = isSafeMediaUrl(videoUrlRaw) ? videoUrlRaw.trim() : null;
   const hasPoll = formData.get('hasPoll') === 'true';
   const requestedGroupId = Number(formData.get('groupId') || 0);
 
@@ -261,9 +264,13 @@ export async function updateCoverPhoto(coverUrl: string) {
 export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   if (!senderId) return;
-  const content = formData.get('content') as string;
+  const content = ((formData.get('content') as string) || '').trim();
+  const imageUrlRaw = (formData.get('imageUrl') as string) || '';
+  const videoUrlRaw = (formData.get('videoUrl') as string) || '';
+  const imageUrl = isSafeMediaUrl(imageUrlRaw) ? imageUrlRaw.trim() : null;
+  const videoUrl = isSafeMediaUrl(videoUrlRaw) ? videoUrlRaw.trim() : null;
 
-  if (!content) return;
+  if (!content && !imageUrl && !videoUrl) return;
 
   try {
     const result = await prisma.message.create({
@@ -271,6 +278,8 @@ export async function sendMessage(receiverId: number, formData: FormData) {
         senderId,
         receiverId,
         content,
+        imageUrl,
+        videoUrl,
       },
     });
 

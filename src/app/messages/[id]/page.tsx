@@ -55,6 +55,8 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
     senderId: m.senderId,
     receiverId: m.receiverId,
     content: m.content,
+    imageUrl: m.imageUrl || null,
+    videoUrl: m.videoUrl || null,
     createdAt: m.createdAt,
     user: usersById[m.senderId],
   }));

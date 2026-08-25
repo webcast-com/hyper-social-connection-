@@ -158,6 +158,8 @@ model Message {
   senderId   Int      @map("sender_id")
   receiverId Int      @map("receiver_id")
   content    String
+  imageUrl   String?  @map("image_url")
+  videoUrl   String?  @map("video_url")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
   sender        User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)

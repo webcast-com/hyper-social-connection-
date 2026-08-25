@@ -3,35 +3,21 @@ import { randomUUID } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { getViewer } from '@/lib/viewer';
+import { mimeAgreesWithSniff, sniffMedia } from '@/lib/magic-bytes';
 
 export const runtime = 'nodejs';
-
-const IMAGE_TYPES: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/avif': 'avif',
-};
-
-const VIDEO_TYPES: Record<string, string> = {
-  'video/mp4': 'mp4',
-  'video/webm': 'webm',
-  'video/ogg': 'ogv',
-  'video/quicktime': 'mov',
-};
+export const maxDuration = 120;
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
-
-function sanitizeExt(ext: string) {
-  return ext.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
-}
 
 /**
  * Media uploads are stored on local disk under public/uploads and served as
  * static files. No external storage service is required. (Swap this handler
  * for S3/R2 later if you need CDN-backed storage.)
+ *
+ * The file's magic bytes are the source of truth — a spoofed Content-Type
+ * cannot turn an executable into an "image".
  */
 export async function POST(req: NextRequest) {
   try {
@@ -47,37 +33,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const kind = IMAGE_TYPES[file.type] ? 'image' : VIDEO_TYPES[file.type] ? 'video' : null;
-    if (!kind) {
+    if (file.size === 0) {
+      return NextResponse.json({ error: 'File is empty' }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const sniffed = sniffMedia(buffer);
+
+    if (!sniffed) {
       return NextResponse.json(
-        { error: `Unsupported file type "${file.type}". Upload an image or a video.` },
+        { error: 'File contents are not a recognized image or video. The file signature does not match.' },
         { status: 415 },
       );
     }
 
-    const maxBytes = kind === 'image' ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
-    if (file.size === 0) {
-      return NextResponse.json({ error: 'File is empty' }, { status: 400 });
+    if (!mimeAgreesWithSniff(file.type, sniffed)) {
+      return NextResponse.json(
+        { error: `File contents look like a ${sniffed.kind}, but the upload was labelled "${file.type || 'unknown'}".` },
+        { status: 415 },
+      );
     }
+
+    const kind = sniffed.kind;
+    const maxBytes = kind === 'image' ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
     if (file.size > maxBytes) {
       const mb = Math.round(maxBytes / (1024 * 1024));
       return NextResponse.json({ error: `File too large. Max ${mb} MB for ${kind}s.` }, { status: 413 });
     }
 
-    const knownExt = kind === 'image' ? IMAGE_TYPES[file.type] : VIDEO_TYPES[file.type];
-    const originalExt = file.name.includes('.') ? sanitizeExt(file.name.split('.').pop() || '') : '';
-    const ext = knownExt || originalExt || 'bin';
+    const ext = sniffed.ext;
     const filename = `${randomUUID()}.${ext}`;
 
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadsDir, { recursive: true });
-    const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(path.join(uploadsDir, filename), buffer);
 
     return NextResponse.json({
       url: `/uploads/${filename}`,
       kind,
-      type: file.type,
+      type: sniffed.mime,
       size: file.size,
       name: file.name,
     });

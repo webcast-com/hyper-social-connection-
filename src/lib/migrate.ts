@@ -129,10 +129,15 @@ async function runMigration() {
       "sender_id" integer NOT NULL,
       "receiver_id" integer NOT NULL,
       "content" text NOT NULL,
+      "image_url" text,
+      "video_url" text,
       "created_at" timestamp DEFAULT now() NOT NULL,
       CONSTRAINT "messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action,
       CONSTRAINT "messages_receiver_id_users_id_fk" FOREIGN KEY ("receiver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
     )`,
+    // Chat attachments (nullable; existing conversations stay text-only)
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_url text`,
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS video_url text`,
     // notifications
     `CREATE TABLE IF NOT EXISTS "notifications" (
       "id" serial PRIMARY KEY NOT NULL,

@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { Camera, LoaderCircle } from 'lucide-react';
 import { updateAvatar } from '@/app/actions';
-import { uploadMediaFile } from '@/lib/upload';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
 
 export default function ProfilePictureUpload({
   user,
@@ -15,6 +16,7 @@ export default function ProfilePictureUpload({
   const fileRef = useRef<HTMLInputElement>(null);
   const [avatar, setAvatar] = useState<string>(user.avatar || '');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgressInfo | null>(null);
   const [error, setError] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,8 +31,9 @@ export default function ProfilePictureUpload({
 
     setError('');
     setUploading(true);
+    setProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Profile picture must be an image.');
       setAvatar(media.url); // optimistic preview
       await updateAvatar(media.url); // persist + revalidate
@@ -38,6 +41,7 @@ export default function ProfilePictureUpload({
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -77,6 +81,11 @@ export default function ProfilePictureUpload({
               <Camera className="w-5 h-5" />
             )}
           </button>
+          {uploading && progress && (
+            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-64">
+              <UploadProgress info={progress} label="Uploading photo…" />
+            </div>
+          )}
           {error && (
             <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 w-64 text-center text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1">
               {error}

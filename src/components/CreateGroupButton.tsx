@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createGroup } from '@/app/actions';
 import { Plus, Users, X, LoaderCircle } from 'lucide-react';
+import GroupCoverField from '@/components/GroupCoverField';
 
 /**
  * "Create Group" button + modal form. The server action creates the group,
@@ -104,15 +105,8 @@ export default function CreateGroupButton() {
                 />
               </div>
               <div>
-                <label htmlFor="cg-cover" className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Cover image URL <span className="font-normal">(optional)</span></label>
-                <input
-                  id="cg-cover"
-                  value={coverPhoto}
-                  onChange={(e) => setCoverPhoto(e.target.value)}
-                  type="url"
-                  placeholder="https://…"
-                  className="w-full bg-gray-50 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Cover photo <span className="font-normal">(optional)</span></label>
+                <GroupCoverField value={coverPhoto} onChange={setCoverPhoto} />
               </div>
               {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
             </div>

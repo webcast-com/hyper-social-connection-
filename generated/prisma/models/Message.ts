@@ -43,6 +43,8 @@ export type MessageMinAggregateOutputType = {
   senderId: number | null
   receiverId: number | null
   content: string | null
+  imageUrl: string | null
+  videoUrl: string | null
   createdAt: Date | null
 }
 
@@ -51,6 +53,8 @@ export type MessageMaxAggregateOutputType = {
   senderId: number | null
   receiverId: number | null
   content: string | null
+  imageUrl: string | null
+  videoUrl: string | null
   createdAt: Date | null
 }
 
@@ -59,6 +63,8 @@ export type MessageCountAggregateOutputType = {
   senderId: number
   receiverId: number
   content: number
+  imageUrl: number
+  videoUrl: number
   createdAt: number
   _all: number
 }
@@ -81,6 +87,8 @@ export type MessageMinAggregateInputType = {
   senderId?: true
   receiverId?: true
   content?: true
+  imageUrl?: true
+  videoUrl?: true
   createdAt?: true
 }
 
@@ -89,6 +97,8 @@ export type MessageMaxAggregateInputType = {
   senderId?: true
   receiverId?: true
   content?: true
+  imageUrl?: true
+  videoUrl?: true
   createdAt?: true
 }
 
@@ -97,6 +107,8 @@ export type MessageCountAggregateInputType = {
   senderId?: true
   receiverId?: true
   content?: true
+  imageUrl?: true
+  videoUrl?: true
   createdAt?: true
   _all?: true
 }
@@ -192,6 +204,8 @@ export type MessageGroupByOutputType = {
   senderId: number
   receiverId: number
   content: string
+  imageUrl: string | null
+  videoUrl: string | null
   createdAt: Date
   _count: MessageCountAggregateOutputType | null
   _avg: MessageAvgAggregateOutputType | null
@@ -223,6 +237,8 @@ export type MessageWhereInput = {
   senderId?: Prisma.IntFilter<"Message"> | number
   receiverId?: Prisma.IntFilter<"Message"> | number
   content?: Prisma.StringFilter<"Message"> | string
+  imageUrl?: Prisma.StringNullableFilter<"Message"> | string | null
+  videoUrl?: Prisma.StringNullableFilter<"Message"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Message"> | Date | string
   sender?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   receiver?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -234,6 +250,8 @@ export type MessageOrderByWithRelationInput = {
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  imageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  videoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   sender?: Prisma.UserOrderByWithRelationInput
   receiver?: Prisma.UserOrderByWithRelationInput
@@ -248,6 +266,8 @@ export type MessageWhereUniqueInput = Prisma.AtLeast<{
   senderId?: Prisma.IntFilter<"Message"> | number
   receiverId?: Prisma.IntFilter<"Message"> | number
   content?: Prisma.StringFilter<"Message"> | string
+  imageUrl?: Prisma.StringNullableFilter<"Message"> | string | null
+  videoUrl?: Prisma.StringNullableFilter<"Message"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Message"> | Date | string
   sender?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   receiver?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -259,6 +279,8 @@ export type MessageOrderByWithAggregationInput = {
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  imageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  videoUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.MessageCountOrderByAggregateInput
   _avg?: Prisma.MessageAvgOrderByAggregateInput
@@ -275,11 +297,15 @@ export type MessageScalarWhereWithAggregatesInput = {
   senderId?: Prisma.IntWithAggregatesFilter<"Message"> | number
   receiverId?: Prisma.IntWithAggregatesFilter<"Message"> | number
   content?: Prisma.StringWithAggregatesFilter<"Message"> | string
+  imageUrl?: Prisma.StringNullableWithAggregatesFilter<"Message"> | string | null
+  videoUrl?: Prisma.StringNullableWithAggregatesFilter<"Message"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Message"> | Date | string
 }
 
 export type MessageCreateInput = {
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   sender: Prisma.UserCreateNestedOneWithoutMessagesSentInput
   receiver: Prisma.UserCreateNestedOneWithoutMessagesReceivedInput
@@ -291,12 +317,16 @@ export type MessageUncheckedCreateInput = {
   senderId: number
   receiverId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutMessageInput
 }
 
 export type MessageUpdateInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sender?: Prisma.UserUpdateOneRequiredWithoutMessagesSentNestedInput
   receiver?: Prisma.UserUpdateOneRequiredWithoutMessagesReceivedNestedInput
@@ -308,6 +338,8 @@ export type MessageUncheckedUpdateInput = {
   senderId?: Prisma.IntFieldUpdateOperationsInput | number
   receiverId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutMessageNestedInput
 }
@@ -317,11 +349,15 @@ export type MessageCreateManyInput = {
   senderId: number
   receiverId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
 }
 
 export type MessageUpdateManyMutationInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -330,6 +366,8 @@ export type MessageUncheckedUpdateManyInput = {
   senderId?: Prisma.IntFieldUpdateOperationsInput | number
   receiverId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -348,6 +386,8 @@ export type MessageCountOrderByAggregateInput = {
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  imageUrl?: Prisma.SortOrder
+  videoUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -362,6 +402,8 @@ export type MessageMaxOrderByAggregateInput = {
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  imageUrl?: Prisma.SortOrder
+  videoUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -370,6 +412,8 @@ export type MessageMinOrderByAggregateInput = {
   senderId?: Prisma.SortOrder
   receiverId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  imageUrl?: Prisma.SortOrder
+  videoUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -486,6 +530,8 @@ export type MessageUpdateOneWithoutNotificationsNestedInput = {
 
 export type MessageCreateWithoutSenderInput = {
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   receiver: Prisma.UserCreateNestedOneWithoutMessagesReceivedInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutMessageInput
@@ -495,6 +541,8 @@ export type MessageUncheckedCreateWithoutSenderInput = {
   id?: number
   receiverId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutMessageInput
 }
@@ -511,6 +559,8 @@ export type MessageCreateManySenderInputEnvelope = {
 
 export type MessageCreateWithoutReceiverInput = {
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   sender: Prisma.UserCreateNestedOneWithoutMessagesSentInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutMessageInput
@@ -520,6 +570,8 @@ export type MessageUncheckedCreateWithoutReceiverInput = {
   id?: number
   senderId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutMessageInput
 }
@@ -558,6 +610,8 @@ export type MessageScalarWhereInput = {
   senderId?: Prisma.IntFilter<"Message"> | number
   receiverId?: Prisma.IntFilter<"Message"> | number
   content?: Prisma.StringFilter<"Message"> | string
+  imageUrl?: Prisma.StringNullableFilter<"Message"> | string | null
+  videoUrl?: Prisma.StringNullableFilter<"Message"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Message"> | Date | string
 }
 
@@ -579,6 +633,8 @@ export type MessageUpdateManyWithWhereWithoutReceiverInput = {
 
 export type MessageCreateWithoutNotificationsInput = {
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
   sender: Prisma.UserCreateNestedOneWithoutMessagesSentInput
   receiver: Prisma.UserCreateNestedOneWithoutMessagesReceivedInput
@@ -589,6 +645,8 @@ export type MessageUncheckedCreateWithoutNotificationsInput = {
   senderId: number
   receiverId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
 }
 
@@ -610,6 +668,8 @@ export type MessageUpdateToOneWithWhereWithoutNotificationsInput = {
 
 export type MessageUpdateWithoutNotificationsInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sender?: Prisma.UserUpdateOneRequiredWithoutMessagesSentNestedInput
   receiver?: Prisma.UserUpdateOneRequiredWithoutMessagesReceivedNestedInput
@@ -620,6 +680,8 @@ export type MessageUncheckedUpdateWithoutNotificationsInput = {
   senderId?: Prisma.IntFieldUpdateOperationsInput | number
   receiverId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -627,6 +689,8 @@ export type MessageCreateManySenderInput = {
   id?: number
   receiverId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
 }
 
@@ -634,11 +698,15 @@ export type MessageCreateManyReceiverInput = {
   id?: number
   senderId: number
   content: string
+  imageUrl?: string | null
+  videoUrl?: string | null
   createdAt?: Date | string
 }
 
 export type MessageUpdateWithoutSenderInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receiver?: Prisma.UserUpdateOneRequiredWithoutMessagesReceivedNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutMessageNestedInput
@@ -648,6 +716,8 @@ export type MessageUncheckedUpdateWithoutSenderInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   receiverId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutMessageNestedInput
 }
@@ -656,11 +726,15 @@ export type MessageUncheckedUpdateManyWithoutSenderInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   receiverId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type MessageUpdateWithoutReceiverInput = {
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sender?: Prisma.UserUpdateOneRequiredWithoutMessagesSentNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutMessageNestedInput
@@ -670,6 +744,8 @@ export type MessageUncheckedUpdateWithoutReceiverInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   senderId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutMessageNestedInput
 }
@@ -678,6 +754,8 @@ export type MessageUncheckedUpdateManyWithoutReceiverInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   senderId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  videoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -717,6 +795,8 @@ export type MessageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   senderId?: boolean
   receiverId?: boolean
   content?: boolean
+  imageUrl?: boolean
+  videoUrl?: boolean
   createdAt?: boolean
   sender?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   receiver?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -729,6 +809,8 @@ export type MessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   senderId?: boolean
   receiverId?: boolean
   content?: boolean
+  imageUrl?: boolean
+  videoUrl?: boolean
   createdAt?: boolean
   sender?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   receiver?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -739,6 +821,8 @@ export type MessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   senderId?: boolean
   receiverId?: boolean
   content?: boolean
+  imageUrl?: boolean
+  videoUrl?: boolean
   createdAt?: boolean
   sender?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   receiver?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -749,10 +833,12 @@ export type MessageSelectScalar = {
   senderId?: boolean
   receiverId?: boolean
   content?: boolean
+  imageUrl?: boolean
+  videoUrl?: boolean
   createdAt?: boolean
 }
 
-export type MessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "senderId" | "receiverId" | "content" | "createdAt", ExtArgs["result"]["message"]>
+export type MessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "senderId" | "receiverId" | "content" | "imageUrl" | "videoUrl" | "createdAt", ExtArgs["result"]["message"]>
 export type MessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sender?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   receiver?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -780,6 +866,8 @@ export type $MessagePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     senderId: number
     receiverId: number
     content: string
+    imageUrl: string | null
+    videoUrl: string | null
     createdAt: Date
   }, ExtArgs["result"]["message"]>
   composites: {}
@@ -1211,6 +1299,8 @@ export interface MessageFieldRefs {
   readonly senderId: Prisma.FieldRef<"Message", 'Int'>
   readonly receiverId: Prisma.FieldRef<"Message", 'Int'>
   readonly content: Prisma.FieldRef<"Message", 'String'>
+  readonly imageUrl: Prisma.FieldRef<"Message", 'String'>
+  readonly videoUrl: Prisma.FieldRef<"Message", 'String'>
   readonly createdAt: Prisma.FieldRef<"Message", 'DateTime'>
 }
     

@@ -187,6 +187,8 @@ export const MessageScalarFieldEnum = {
   senderId: 'senderId',
   receiverId: 'receiverId',
   content: 'content',
+  imageUrl: 'imageUrl',
+  videoUrl: 'videoUrl',
   createdAt: 'createdAt'
 } as const
 

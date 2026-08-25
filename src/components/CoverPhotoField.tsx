@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { LoaderCircle, Upload, X } from 'lucide-react';
-import { uploadMediaFile } from '@/lib/upload';
+import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
 
 /**
  * Settings-form field for the cover photo: upload from the device (no URL
@@ -21,6 +22,7 @@ export default function CoverPhotoField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState<string>(initialUrl || '');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<UploadProgressInfo | null>(null);
   const [error, setError] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,6 +91,7 @@ export default function CoverPhotoField({
       </div>
 
       <input name={fieldName} type="hidden" value={url} />
+      {uploading && progress && <UploadProgress info={progress} label="Uploading cover…" />}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
