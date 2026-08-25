@@ -58,6 +58,7 @@ export type UserMinAggregateOutputType = {
   education: string | null
   profileVisibility: string | null
   messagePrivacy: string | null
+  followPrivacy: string | null
   notifyLikes: number | null
   notifyComments: number | null
   notifyFollows: number | null
@@ -81,6 +82,7 @@ export type UserMaxAggregateOutputType = {
   education: string | null
   profileVisibility: string | null
   messagePrivacy: string | null
+  followPrivacy: string | null
   notifyLikes: number | null
   notifyComments: number | null
   notifyFollows: number | null
@@ -104,6 +106,7 @@ export type UserCountAggregateOutputType = {
   education: number
   profileVisibility: number
   messagePrivacy: number
+  followPrivacy: number
   notifyLikes: number
   notifyComments: number
   notifyFollows: number
@@ -145,6 +148,7 @@ export type UserMinAggregateInputType = {
   education?: true
   profileVisibility?: true
   messagePrivacy?: true
+  followPrivacy?: true
   notifyLikes?: true
   notifyComments?: true
   notifyFollows?: true
@@ -168,6 +172,7 @@ export type UserMaxAggregateInputType = {
   education?: true
   profileVisibility?: true
   messagePrivacy?: true
+  followPrivacy?: true
   notifyLikes?: true
   notifyComments?: true
   notifyFollows?: true
@@ -191,6 +196,7 @@ export type UserCountAggregateInputType = {
   education?: true
   profileVisibility?: true
   messagePrivacy?: true
+  followPrivacy?: true
   notifyLikes?: true
   notifyComments?: true
   notifyFollows?: true
@@ -301,6 +307,7 @@ export type UserGroupByOutputType = {
   education: string | null
   profileVisibility: string
   messagePrivacy: string
+  followPrivacy: string
   notifyLikes: number
   notifyComments: number
   notifyFollows: number
@@ -347,6 +354,7 @@ export type UserWhereInput = {
   education?: Prisma.StringNullableFilter<"User"> | string | null
   profileVisibility?: Prisma.StringFilter<"User"> | string
   messagePrivacy?: Prisma.StringFilter<"User"> | string
+  followPrivacy?: Prisma.StringFilter<"User"> | string
   notifyLikes?: Prisma.IntFilter<"User"> | number
   notifyComments?: Prisma.IntFilter<"User"> | number
   notifyFollows?: Prisma.IntFilter<"User"> | number
@@ -367,9 +375,18 @@ export type UserWhereInput = {
   notificationsActed?: Prisma.NotificationListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
   reports?: Prisma.ReportListRelationFilter
+  reportsReceived?: Prisma.ReportListRelationFilter
   pollVotes?: Prisma.PollVoteListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  blocksGiven?: Prisma.BlockListRelationFilter
+  blocksReceived?: Prisma.BlockListRelationFilter
+  mutesGiven?: Prisma.MuteListRelationFilter
+  mutesReceived?: Prisma.MuteListRelationFilter
+  followRequestsSent?: Prisma.FollowRequestListRelationFilter
+  followRequestsReceived?: Prisma.FollowRequestListRelationFilter
+  groupEventsCreated?: Prisma.GroupEventListRelationFilter
+  eventRsvps?: Prisma.GroupEventRsvpListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -388,6 +405,7 @@ export type UserOrderByWithRelationInput = {
   education?: Prisma.SortOrderInput | Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
+  followPrivacy?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -408,9 +426,18 @@ export type UserOrderByWithRelationInput = {
   notificationsActed?: Prisma.NotificationOrderByRelationAggregateInput
   bookmarks?: Prisma.BookmarkOrderByRelationAggregateInput
   reports?: Prisma.ReportOrderByRelationAggregateInput
+  reportsReceived?: Prisma.ReportOrderByRelationAggregateInput
   pollVotes?: Prisma.PollVoteOrderByRelationAggregateInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
+  blocksGiven?: Prisma.BlockOrderByRelationAggregateInput
+  blocksReceived?: Prisma.BlockOrderByRelationAggregateInput
+  mutesGiven?: Prisma.MuteOrderByRelationAggregateInput
+  mutesReceived?: Prisma.MuteOrderByRelationAggregateInput
+  followRequestsSent?: Prisma.FollowRequestOrderByRelationAggregateInput
+  followRequestsReceived?: Prisma.FollowRequestOrderByRelationAggregateInput
+  groupEventsCreated?: Prisma.GroupEventOrderByRelationAggregateInput
+  eventRsvps?: Prisma.GroupEventRsvpOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -432,6 +459,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   education?: Prisma.StringNullableFilter<"User"> | string | null
   profileVisibility?: Prisma.StringFilter<"User"> | string
   messagePrivacy?: Prisma.StringFilter<"User"> | string
+  followPrivacy?: Prisma.StringFilter<"User"> | string
   notifyLikes?: Prisma.IntFilter<"User"> | number
   notifyComments?: Prisma.IntFilter<"User"> | number
   notifyFollows?: Prisma.IntFilter<"User"> | number
@@ -452,9 +480,18 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   notificationsActed?: Prisma.NotificationListRelationFilter
   bookmarks?: Prisma.BookmarkListRelationFilter
   reports?: Prisma.ReportListRelationFilter
+  reportsReceived?: Prisma.ReportListRelationFilter
   pollVotes?: Prisma.PollVoteListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  blocksGiven?: Prisma.BlockListRelationFilter
+  blocksReceived?: Prisma.BlockListRelationFilter
+  mutesGiven?: Prisma.MuteListRelationFilter
+  mutesReceived?: Prisma.MuteListRelationFilter
+  followRequestsSent?: Prisma.FollowRequestListRelationFilter
+  followRequestsReceived?: Prisma.FollowRequestListRelationFilter
+  groupEventsCreated?: Prisma.GroupEventListRelationFilter
+  eventRsvps?: Prisma.GroupEventRsvpListRelationFilter
 }, "id" | "email" | "username">
 
 export type UserOrderByWithAggregationInput = {
@@ -473,6 +510,7 @@ export type UserOrderByWithAggregationInput = {
   education?: Prisma.SortOrderInput | Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
+  followPrivacy?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -504,6 +542,7 @@ export type UserScalarWhereWithAggregatesInput = {
   education?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   profileVisibility?: Prisma.StringWithAggregatesFilter<"User"> | string
   messagePrivacy?: Prisma.StringWithAggregatesFilter<"User"> | string
+  followPrivacy?: Prisma.StringWithAggregatesFilter<"User"> | string
   notifyLikes?: Prisma.IntWithAggregatesFilter<"User"> | number
   notifyComments?: Prisma.IntWithAggregatesFilter<"User"> | number
   notifyFollows?: Prisma.IntWithAggregatesFilter<"User"> | number
@@ -526,6 +565,7 @@ export type UserCreateInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -546,9 +586,18 @@ export type UserCreateInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -567,6 +616,7 @@ export type UserUncheckedCreateInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -587,9 +637,18 @@ export type UserUncheckedCreateInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -607,6 +666,7 @@ export type UserUpdateInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -627,9 +687,18 @@ export type UserUpdateInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -648,6 +717,7 @@ export type UserUncheckedUpdateInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -668,9 +738,18 @@ export type UserUncheckedUpdateInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -689,6 +768,7 @@ export type UserCreateManyInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -711,6 +791,7 @@ export type UserUpdateManyMutationInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -734,6 +815,7 @@ export type UserUncheckedUpdateManyInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -757,6 +839,7 @@ export type UserCountOrderByAggregateInput = {
   education?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
+  followPrivacy?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -788,6 +871,7 @@ export type UserMaxOrderByAggregateInput = {
   education?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
+  followPrivacy?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -811,6 +895,7 @@ export type UserMinOrderByAggregateInput = {
   education?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
+  followPrivacy?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -829,6 +914,11 @@ export type UserSumOrderByAggregateInput = {
 export type UserScalarRelationFilter = {
   is?: Prisma.UserWhereInput
   isNot?: Prisma.UserWhereInput
+}
+
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -1053,12 +1143,140 @@ export type UserCreateNestedOneWithoutReportsInput = {
   connect?: Prisma.UserWhereUniqueInput
 }
 
+export type UserCreateNestedOneWithoutReportsReceivedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReportsReceivedInput, Prisma.UserUncheckedCreateWithoutReportsReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReportsReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
 export type UserUpdateOneRequiredWithoutReportsNestedInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutReportsInput, Prisma.UserUncheckedCreateWithoutReportsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutReportsInput
   upsert?: Prisma.UserUpsertWithoutReportsInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReportsInput, Prisma.UserUpdateWithoutReportsInput>, Prisma.UserUncheckedUpdateWithoutReportsInput>
+}
+
+export type UserUpdateOneWithoutReportsReceivedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutReportsReceivedInput, Prisma.UserUncheckedCreateWithoutReportsReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutReportsReceivedInput
+  upsert?: Prisma.UserUpsertWithoutReportsReceivedInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReportsReceivedInput, Prisma.UserUpdateWithoutReportsReceivedInput>, Prisma.UserUncheckedUpdateWithoutReportsReceivedInput>
+}
+
+export type UserCreateNestedOneWithoutBlocksGivenInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlocksGivenInput, Prisma.UserUncheckedCreateWithoutBlocksGivenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlocksGivenInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutBlocksReceivedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlocksReceivedInput, Prisma.UserUncheckedCreateWithoutBlocksReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlocksReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutBlocksGivenNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlocksGivenInput, Prisma.UserUncheckedCreateWithoutBlocksGivenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlocksGivenInput
+  upsert?: Prisma.UserUpsertWithoutBlocksGivenInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBlocksGivenInput, Prisma.UserUpdateWithoutBlocksGivenInput>, Prisma.UserUncheckedUpdateWithoutBlocksGivenInput>
+}
+
+export type UserUpdateOneRequiredWithoutBlocksReceivedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlocksReceivedInput, Prisma.UserUncheckedCreateWithoutBlocksReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlocksReceivedInput
+  upsert?: Prisma.UserUpsertWithoutBlocksReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBlocksReceivedInput, Prisma.UserUpdateWithoutBlocksReceivedInput>, Prisma.UserUncheckedUpdateWithoutBlocksReceivedInput>
+}
+
+export type UserCreateNestedOneWithoutMutesGivenInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMutesGivenInput, Prisma.UserUncheckedCreateWithoutMutesGivenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMutesGivenInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutMutesReceivedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMutesReceivedInput, Prisma.UserUncheckedCreateWithoutMutesReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMutesReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutMutesGivenNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMutesGivenInput, Prisma.UserUncheckedCreateWithoutMutesGivenInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMutesGivenInput
+  upsert?: Prisma.UserUpsertWithoutMutesGivenInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMutesGivenInput, Prisma.UserUpdateWithoutMutesGivenInput>, Prisma.UserUncheckedUpdateWithoutMutesGivenInput>
+}
+
+export type UserUpdateOneRequiredWithoutMutesReceivedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMutesReceivedInput, Prisma.UserUncheckedCreateWithoutMutesReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMutesReceivedInput
+  upsert?: Prisma.UserUpsertWithoutMutesReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMutesReceivedInput, Prisma.UserUpdateWithoutMutesReceivedInput>, Prisma.UserUncheckedUpdateWithoutMutesReceivedInput>
+}
+
+export type UserCreateNestedOneWithoutFollowRequestsSentInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsSentInput, Prisma.UserUncheckedCreateWithoutFollowRequestsSentInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFollowRequestsSentInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutFollowRequestsReceivedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedCreateWithoutFollowRequestsReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFollowRequestsReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutFollowRequestsSentNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsSentInput, Prisma.UserUncheckedCreateWithoutFollowRequestsSentInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFollowRequestsSentInput
+  upsert?: Prisma.UserUpsertWithoutFollowRequestsSentInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutFollowRequestsSentInput, Prisma.UserUpdateWithoutFollowRequestsSentInput>, Prisma.UserUncheckedUpdateWithoutFollowRequestsSentInput>
+}
+
+export type UserUpdateOneRequiredWithoutFollowRequestsReceivedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedCreateWithoutFollowRequestsReceivedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutFollowRequestsReceivedInput
+  upsert?: Prisma.UserUpsertWithoutFollowRequestsReceivedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutFollowRequestsReceivedInput, Prisma.UserUpdateWithoutFollowRequestsReceivedInput>, Prisma.UserUncheckedUpdateWithoutFollowRequestsReceivedInput>
+}
+
+export type UserCreateNestedOneWithoutGroupEventsCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupEventsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupEventsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutGroupEventsCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupEventsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupEventsCreatedInput
+  upsert?: Prisma.UserUpsertWithoutGroupEventsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGroupEventsCreatedInput, Prisma.UserUpdateWithoutGroupEventsCreatedInput>, Prisma.UserUncheckedUpdateWithoutGroupEventsCreatedInput>
+}
+
+export type UserCreateNestedOneWithoutEventRsvpsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEventRsvpsInput, Prisma.UserUncheckedCreateWithoutEventRsvpsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEventRsvpsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutEventRsvpsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutEventRsvpsInput, Prisma.UserUncheckedCreateWithoutEventRsvpsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutEventRsvpsInput
+  upsert?: Prisma.UserUpsertWithoutEventRsvpsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutEventRsvpsInput, Prisma.UserUpdateWithoutEventRsvpsInput>, Prisma.UserUncheckedUpdateWithoutEventRsvpsInput>
 }
 
 export type UserCreateNestedOneWithoutPollVotesInput = {
@@ -1118,6 +1336,7 @@ export type UserCreateWithoutPostsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1137,9 +1356,18 @@ export type UserCreateWithoutPostsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutPostsInput = {
@@ -1158,6 +1386,7 @@ export type UserUncheckedCreateWithoutPostsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1177,9 +1406,18 @@ export type UserUncheckedCreateWithoutPostsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPostsInput = {
@@ -1213,6 +1451,7 @@ export type UserUpdateWithoutPostsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1232,9 +1471,18 @@ export type UserUpdateWithoutPostsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPostsInput = {
@@ -1253,6 +1501,7 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1272,9 +1521,18 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutStoriesInput = {
@@ -1292,6 +1550,7 @@ export type UserCreateWithoutStoriesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1311,9 +1570,18 @@ export type UserCreateWithoutStoriesInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutStoriesInput = {
@@ -1332,6 +1600,7 @@ export type UserUncheckedCreateWithoutStoriesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1351,9 +1620,18 @@ export type UserUncheckedCreateWithoutStoriesInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutStoriesInput = {
@@ -1387,6 +1665,7 @@ export type UserUpdateWithoutStoriesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1406,9 +1685,18 @@ export type UserUpdateWithoutStoriesInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutStoriesInput = {
@@ -1427,6 +1715,7 @@ export type UserUncheckedUpdateWithoutStoriesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1446,9 +1735,18 @@ export type UserUncheckedUpdateWithoutStoriesInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAdminGroupsInput = {
@@ -1466,6 +1764,7 @@ export type UserCreateWithoutAdminGroupsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1485,9 +1784,18 @@ export type UserCreateWithoutAdminGroupsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAdminGroupsInput = {
@@ -1506,6 +1814,7 @@ export type UserUncheckedCreateWithoutAdminGroupsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1525,9 +1834,18 @@ export type UserUncheckedCreateWithoutAdminGroupsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAdminGroupsInput = {
@@ -1561,6 +1879,7 @@ export type UserUpdateWithoutAdminGroupsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1580,9 +1899,18 @@ export type UserUpdateWithoutAdminGroupsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAdminGroupsInput = {
@@ -1601,6 +1929,7 @@ export type UserUncheckedUpdateWithoutAdminGroupsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1620,9 +1949,18 @@ export type UserUncheckedUpdateWithoutAdminGroupsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGroupMembershipsInput = {
@@ -1640,6 +1978,7 @@ export type UserCreateWithoutGroupMembershipsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1659,9 +1998,18 @@ export type UserCreateWithoutGroupMembershipsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGroupMembershipsInput = {
@@ -1680,6 +2028,7 @@ export type UserUncheckedCreateWithoutGroupMembershipsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1699,9 +2048,18 @@ export type UserUncheckedCreateWithoutGroupMembershipsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGroupMembershipsInput = {
@@ -1735,6 +2093,7 @@ export type UserUpdateWithoutGroupMembershipsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1754,9 +2113,18 @@ export type UserUpdateWithoutGroupMembershipsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
@@ -1775,6 +2143,7 @@ export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1794,9 +2163,18 @@ export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutGroupJoinRequestsInput = {
@@ -1814,6 +2192,7 @@ export type UserCreateWithoutGroupJoinRequestsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1833,9 +2212,18 @@ export type UserCreateWithoutGroupJoinRequestsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
@@ -1854,6 +2242,7 @@ export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -1873,9 +2262,18 @@ export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutGroupJoinRequestsInput = {
@@ -1909,6 +2307,7 @@ export type UserUpdateWithoutGroupJoinRequestsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1928,9 +2327,18 @@ export type UserUpdateWithoutGroupJoinRequestsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
@@ -1949,6 +2357,7 @@ export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1968,9 +2377,18 @@ export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -1988,6 +2406,7 @@ export type UserCreateWithoutCommentsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2007,9 +2426,18 @@ export type UserCreateWithoutCommentsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -2028,6 +2456,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2047,9 +2476,18 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -2083,6 +2521,7 @@ export type UserUpdateWithoutCommentsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2102,9 +2541,18 @@ export type UserUpdateWithoutCommentsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -2123,6 +2571,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2142,9 +2591,18 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutLikesInput = {
@@ -2162,6 +2620,7 @@ export type UserCreateWithoutLikesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2181,9 +2640,18 @@ export type UserCreateWithoutLikesInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutLikesInput = {
@@ -2202,6 +2670,7 @@ export type UserUncheckedCreateWithoutLikesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2221,9 +2690,18 @@ export type UserUncheckedCreateWithoutLikesInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutLikesInput = {
@@ -2257,6 +2735,7 @@ export type UserUpdateWithoutLikesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2276,9 +2755,18 @@ export type UserUpdateWithoutLikesInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLikesInput = {
@@ -2297,6 +2785,7 @@ export type UserUncheckedUpdateWithoutLikesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2316,9 +2805,18 @@ export type UserUncheckedUpdateWithoutLikesInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutFollowsGivenInput = {
@@ -2336,6 +2834,7 @@ export type UserCreateWithoutFollowsGivenInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2355,9 +2854,18 @@ export type UserCreateWithoutFollowsGivenInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutFollowsGivenInput = {
@@ -2376,6 +2884,7 @@ export type UserUncheckedCreateWithoutFollowsGivenInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2395,9 +2904,18 @@ export type UserUncheckedCreateWithoutFollowsGivenInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutFollowsGivenInput = {
@@ -2420,6 +2938,7 @@ export type UserCreateWithoutFollowsReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2439,9 +2958,18 @@ export type UserCreateWithoutFollowsReceivedInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutFollowsReceivedInput = {
@@ -2460,6 +2988,7 @@ export type UserUncheckedCreateWithoutFollowsReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2479,9 +3008,18 @@ export type UserUncheckedCreateWithoutFollowsReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutFollowsReceivedInput = {
@@ -2515,6 +3053,7 @@ export type UserUpdateWithoutFollowsGivenInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2534,9 +3073,18 @@ export type UserUpdateWithoutFollowsGivenInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowsGivenInput = {
@@ -2555,6 +3103,7 @@ export type UserUncheckedUpdateWithoutFollowsGivenInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2574,9 +3123,18 @@ export type UserUncheckedUpdateWithoutFollowsGivenInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutFollowsReceivedInput = {
@@ -2605,6 +3163,7 @@ export type UserUpdateWithoutFollowsReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2624,9 +3183,18 @@ export type UserUpdateWithoutFollowsReceivedInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
@@ -2645,6 +3213,7 @@ export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2664,9 +3233,18 @@ export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMessagesSentInput = {
@@ -2684,6 +3262,7 @@ export type UserCreateWithoutMessagesSentInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2703,9 +3282,18 @@ export type UserCreateWithoutMessagesSentInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMessagesSentInput = {
@@ -2724,6 +3312,7 @@ export type UserUncheckedCreateWithoutMessagesSentInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2743,9 +3332,18 @@ export type UserUncheckedCreateWithoutMessagesSentInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMessagesSentInput = {
@@ -2768,6 +3366,7 @@ export type UserCreateWithoutMessagesReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2787,9 +3386,18 @@ export type UserCreateWithoutMessagesReceivedInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMessagesReceivedInput = {
@@ -2808,6 +3416,7 @@ export type UserUncheckedCreateWithoutMessagesReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -2827,9 +3436,18 @@ export type UserUncheckedCreateWithoutMessagesReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMessagesReceivedInput = {
@@ -2863,6 +3481,7 @@ export type UserUpdateWithoutMessagesSentInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2882,9 +3501,18 @@ export type UserUpdateWithoutMessagesSentInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessagesSentInput = {
@@ -2903,6 +3531,7 @@ export type UserUncheckedUpdateWithoutMessagesSentInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2922,9 +3551,18 @@ export type UserUncheckedUpdateWithoutMessagesSentInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutMessagesReceivedInput = {
@@ -2953,6 +3591,7 @@ export type UserUpdateWithoutMessagesReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -2972,9 +3611,18 @@ export type UserUpdateWithoutMessagesReceivedInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
@@ -2993,6 +3641,7 @@ export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3012,9 +3661,18 @@ export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotificationsReceivedInput = {
@@ -3032,6 +3690,7 @@ export type UserCreateWithoutNotificationsReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3051,9 +3710,18 @@ export type UserCreateWithoutNotificationsReceivedInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
@@ -3072,6 +3740,7 @@ export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3091,9 +3760,18 @@ export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsReceivedInput = {
@@ -3116,6 +3794,7 @@ export type UserCreateWithoutNotificationsActedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3135,9 +3814,18 @@ export type UserCreateWithoutNotificationsActedInput = {
   notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsActedInput = {
@@ -3156,6 +3844,7 @@ export type UserUncheckedCreateWithoutNotificationsActedInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3175,9 +3864,18 @@ export type UserUncheckedCreateWithoutNotificationsActedInput = {
   notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsActedInput = {
@@ -3211,6 +3909,7 @@ export type UserUpdateWithoutNotificationsReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3230,9 +3929,18 @@ export type UserUpdateWithoutNotificationsReceivedInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
@@ -3251,6 +3959,7 @@ export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3270,9 +3979,18 @@ export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutNotificationsActedInput = {
@@ -3301,6 +4019,7 @@ export type UserUpdateWithoutNotificationsActedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3320,9 +4039,18 @@ export type UserUpdateWithoutNotificationsActedInput = {
   notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsActedInput = {
@@ -3341,6 +4069,7 @@ export type UserUncheckedUpdateWithoutNotificationsActedInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3360,9 +4089,18 @@ export type UserUncheckedUpdateWithoutNotificationsActedInput = {
   notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutBookmarksInput = {
@@ -3380,6 +4118,7 @@ export type UserCreateWithoutBookmarksInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3399,9 +4138,18 @@ export type UserCreateWithoutBookmarksInput = {
   notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutBookmarksInput = {
@@ -3420,6 +4168,7 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3439,9 +4188,18 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutBookmarksInput = {
@@ -3475,6 +4233,7 @@ export type UserUpdateWithoutBookmarksInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3494,9 +4253,18 @@ export type UserUpdateWithoutBookmarksInput = {
   notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBookmarksInput = {
@@ -3515,6 +4283,7 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3534,9 +4303,18 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutReportsInput = {
@@ -3554,6 +4332,7 @@ export type UserCreateWithoutReportsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3573,9 +4352,18 @@ export type UserCreateWithoutReportsInput = {
   notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReportsInput = {
@@ -3594,6 +4382,7 @@ export type UserUncheckedCreateWithoutReportsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3613,14 +4402,127 @@ export type UserUncheckedCreateWithoutReportsInput = {
   notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReportsInput = {
   where: Prisma.UserWhereUniqueInput
   create: Prisma.XOR<Prisma.UserCreateWithoutReportsInput, Prisma.UserUncheckedCreateWithoutReportsInput>
+}
+
+export type UserCreateWithoutReportsReceivedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutReportsReceivedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutReportsReceivedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutReportsReceivedInput, Prisma.UserUncheckedCreateWithoutReportsReceivedInput>
 }
 
 export type UserUpsertWithoutReportsInput = {
@@ -3649,6 +4551,7 @@ export type UserUpdateWithoutReportsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3668,9 +4571,18 @@ export type UserUpdateWithoutReportsInput = {
   notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportsInput = {
@@ -3689,6 +4601,7 @@ export type UserUncheckedUpdateWithoutReportsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3708,12 +4621,131 @@ export type UserUncheckedUpdateWithoutReportsInput = {
   notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
-export type UserCreateWithoutPollVotesInput = {
+export type UserUpsertWithoutReportsReceivedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutReportsReceivedInput, Prisma.UserUncheckedUpdateWithoutReportsReceivedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutReportsReceivedInput, Prisma.UserUncheckedCreateWithoutReportsReceivedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutReportsReceivedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutReportsReceivedInput, Prisma.UserUncheckedUpdateWithoutReportsReceivedInput>
+}
+
+export type UserUpdateWithoutReportsReceivedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutReportsReceivedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutBlocksGivenInput = {
   name: string
   email: string
   password: string
@@ -3728,6 +4760,7 @@ export type UserCreateWithoutPollVotesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3748,11 +4781,20 @@ export type UserCreateWithoutPollVotesInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
-export type UserUncheckedCreateWithoutPollVotesInput = {
+export type UserUncheckedCreateWithoutBlocksGivenInput = {
   id?: number
   name: string
   email: string
@@ -3768,6 +4810,7 @@ export type UserUncheckedCreateWithoutPollVotesInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3788,8 +4831,1729 @@ export type UserUncheckedCreateWithoutPollVotesInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutBlocksGivenInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlocksGivenInput, Prisma.UserUncheckedCreateWithoutBlocksGivenInput>
+}
+
+export type UserCreateWithoutBlocksReceivedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutBlocksReceivedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutBlocksReceivedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlocksReceivedInput, Prisma.UserUncheckedCreateWithoutBlocksReceivedInput>
+}
+
+export type UserUpsertWithoutBlocksGivenInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutBlocksGivenInput, Prisma.UserUncheckedUpdateWithoutBlocksGivenInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlocksGivenInput, Prisma.UserUncheckedCreateWithoutBlocksGivenInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutBlocksGivenInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutBlocksGivenInput, Prisma.UserUncheckedUpdateWithoutBlocksGivenInput>
+}
+
+export type UserUpdateWithoutBlocksGivenInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutBlocksGivenInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutBlocksReceivedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutBlocksReceivedInput, Prisma.UserUncheckedUpdateWithoutBlocksReceivedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlocksReceivedInput, Prisma.UserUncheckedCreateWithoutBlocksReceivedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutBlocksReceivedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutBlocksReceivedInput, Prisma.UserUncheckedUpdateWithoutBlocksReceivedInput>
+}
+
+export type UserUpdateWithoutBlocksReceivedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutBlocksReceivedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutMutesGivenInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutMutesGivenInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutMutesGivenInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMutesGivenInput, Prisma.UserUncheckedCreateWithoutMutesGivenInput>
+}
+
+export type UserCreateWithoutMutesReceivedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutMutesReceivedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutMutesReceivedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMutesReceivedInput, Prisma.UserUncheckedCreateWithoutMutesReceivedInput>
+}
+
+export type UserUpsertWithoutMutesGivenInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMutesGivenInput, Prisma.UserUncheckedUpdateWithoutMutesGivenInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMutesGivenInput, Prisma.UserUncheckedCreateWithoutMutesGivenInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMutesGivenInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMutesGivenInput, Prisma.UserUncheckedUpdateWithoutMutesGivenInput>
+}
+
+export type UserUpdateWithoutMutesGivenInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMutesGivenInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutMutesReceivedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMutesReceivedInput, Prisma.UserUncheckedUpdateWithoutMutesReceivedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMutesReceivedInput, Prisma.UserUncheckedCreateWithoutMutesReceivedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMutesReceivedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMutesReceivedInput, Prisma.UserUncheckedUpdateWithoutMutesReceivedInput>
+}
+
+export type UserUpdateWithoutMutesReceivedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMutesReceivedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutFollowRequestsSentInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutFollowRequestsSentInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutFollowRequestsSentInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsSentInput, Prisma.UserUncheckedCreateWithoutFollowRequestsSentInput>
+}
+
+export type UserCreateWithoutFollowRequestsReceivedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutFollowRequestsReceivedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutFollowRequestsReceivedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedCreateWithoutFollowRequestsReceivedInput>
+}
+
+export type UserUpsertWithoutFollowRequestsSentInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutFollowRequestsSentInput, Prisma.UserUncheckedUpdateWithoutFollowRequestsSentInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsSentInput, Prisma.UserUncheckedCreateWithoutFollowRequestsSentInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutFollowRequestsSentInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutFollowRequestsSentInput, Prisma.UserUncheckedUpdateWithoutFollowRequestsSentInput>
+}
+
+export type UserUpdateWithoutFollowRequestsSentInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutFollowRequestsSentInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutFollowRequestsReceivedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedUpdateWithoutFollowRequestsReceivedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedCreateWithoutFollowRequestsReceivedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutFollowRequestsReceivedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutFollowRequestsReceivedInput, Prisma.UserUncheckedUpdateWithoutFollowRequestsReceivedInput>
+}
+
+export type UserUpdateWithoutFollowRequestsReceivedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutFollowRequestsReceivedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutGroupEventsCreatedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutGroupEventsCreatedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutGroupEventsCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupEventsCreatedInput>
+}
+
+export type UserUpsertWithoutGroupEventsCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedUpdateWithoutGroupEventsCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupEventsCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutGroupEventsCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedUpdateWithoutGroupEventsCreatedInput>
+}
+
+export type UserUpdateWithoutGroupEventsCreatedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutGroupEventsCreatedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutEventRsvpsInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutEventRsvpsInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutEventRsvpsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutEventRsvpsInput, Prisma.UserUncheckedCreateWithoutEventRsvpsInput>
+}
+
+export type UserUpsertWithoutEventRsvpsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutEventRsvpsInput, Prisma.UserUncheckedUpdateWithoutEventRsvpsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutEventRsvpsInput, Prisma.UserUncheckedCreateWithoutEventRsvpsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutEventRsvpsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutEventRsvpsInput, Prisma.UserUncheckedUpdateWithoutEventRsvpsInput>
+}
+
+export type UserUpdateWithoutEventRsvpsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutEventRsvpsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserCreateWithoutPollVotesInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutPollVotesInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutPollVotesInput = {
@@ -3823,6 +6587,7 @@ export type UserUpdateWithoutPollVotesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3843,8 +6608,17 @@ export type UserUpdateWithoutPollVotesInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPollVotesInput = {
@@ -3863,6 +6637,7 @@ export type UserUncheckedUpdateWithoutPollVotesInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -3883,8 +6658,17 @@ export type UserUncheckedUpdateWithoutPollVotesInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -3902,6 +6686,7 @@ export type UserCreateWithoutSessionsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3922,8 +6707,17 @@ export type UserCreateWithoutSessionsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -3942,6 +6736,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -3962,8 +6757,17 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -3997,6 +6801,7 @@ export type UserUpdateWithoutSessionsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4017,8 +6822,17 @@ export type UserUpdateWithoutSessionsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -4037,6 +6851,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4057,8 +6872,17 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -4076,6 +6900,7 @@ export type UserCreateWithoutAccountsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -4096,8 +6921,17 @@ export type UserCreateWithoutAccountsInput = {
   notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -4116,6 +6950,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   education?: string | null
   profileVisibility?: string
   messagePrivacy?: string
+  followPrivacy?: string
   notifyLikes?: number
   notifyComments?: number
   notifyFollows?: number
@@ -4136,8 +6971,17 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
   bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
   reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
   pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -4171,6 +7015,7 @@ export type UserUpdateWithoutAccountsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4191,8 +7036,17 @@ export type UserUpdateWithoutAccountsInput = {
   notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -4211,6 +7065,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
   notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
   notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
@@ -4231,8 +7086,17 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
   bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
   reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
   pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -4256,9 +7120,18 @@ export type UserCountOutputType = {
   notificationsActed: number
   bookmarks: number
   reports: number
+  reportsReceived: number
   pollVotes: number
   sessions: number
   accounts: number
+  blocksGiven: number
+  blocksReceived: number
+  mutesGiven: number
+  mutesReceived: number
+  followRequestsSent: number
+  followRequestsReceived: number
+  groupEventsCreated: number
+  eventRsvps: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4277,9 +7150,18 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   notificationsActed?: boolean | UserCountOutputTypeCountNotificationsActedArgs
   bookmarks?: boolean | UserCountOutputTypeCountBookmarksArgs
   reports?: boolean | UserCountOutputTypeCountReportsArgs
+  reportsReceived?: boolean | UserCountOutputTypeCountReportsReceivedArgs
   pollVotes?: boolean | UserCountOutputTypeCountPollVotesArgs
   sessions?: boolean | UserCountOutputTypeCountSessionsArgs
   accounts?: boolean | UserCountOutputTypeCountAccountsArgs
+  blocksGiven?: boolean | UserCountOutputTypeCountBlocksGivenArgs
+  blocksReceived?: boolean | UserCountOutputTypeCountBlocksReceivedArgs
+  mutesGiven?: boolean | UserCountOutputTypeCountMutesGivenArgs
+  mutesReceived?: boolean | UserCountOutputTypeCountMutesReceivedArgs
+  followRequestsSent?: boolean | UserCountOutputTypeCountFollowRequestsSentArgs
+  followRequestsReceived?: boolean | UserCountOutputTypeCountFollowRequestsReceivedArgs
+  groupEventsCreated?: boolean | UserCountOutputTypeCountGroupEventsCreatedArgs
+  eventRsvps?: boolean | UserCountOutputTypeCountEventRsvpsArgs
 }
 
 /**
@@ -4400,6 +7282,13 @@ export type UserCountOutputTypeCountReportsArgs<ExtArgs extends runtime.Types.Ex
 /**
  * UserCountOutputType without action
  */
+export type UserCountOutputTypeCountReportsReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReportWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
 export type UserCountOutputTypeCountPollVotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PollVoteWhereInput
 }
@@ -4416,6 +7305,62 @@ export type UserCountOutputTypeCountSessionsArgs<ExtArgs extends runtime.Types.E
  */
 export type UserCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.AccountWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountBlocksGivenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BlockWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountBlocksReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BlockWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountMutesGivenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MuteWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountMutesReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MuteWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountFollowRequestsSentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FollowRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountFollowRequestsReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FollowRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountGroupEventsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupEventWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountEventRsvpsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupEventRsvpWhereInput
 }
 
 
@@ -4435,6 +7380,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   education?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
+  followPrivacy?: boolean
   notifyLikes?: boolean
   notifyComments?: boolean
   notifyFollows?: boolean
@@ -4455,9 +7401,18 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   notificationsActed?: boolean | Prisma.User$notificationsActedArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
   reports?: boolean | Prisma.User$reportsArgs<ExtArgs>
+  reportsReceived?: boolean | Prisma.User$reportsReceivedArgs<ExtArgs>
   pollVotes?: boolean | Prisma.User$pollVotesArgs<ExtArgs>
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  blocksGiven?: boolean | Prisma.User$blocksGivenArgs<ExtArgs>
+  blocksReceived?: boolean | Prisma.User$blocksReceivedArgs<ExtArgs>
+  mutesGiven?: boolean | Prisma.User$mutesGivenArgs<ExtArgs>
+  mutesReceived?: boolean | Prisma.User$mutesReceivedArgs<ExtArgs>
+  followRequestsSent?: boolean | Prisma.User$followRequestsSentArgs<ExtArgs>
+  followRequestsReceived?: boolean | Prisma.User$followRequestsReceivedArgs<ExtArgs>
+  groupEventsCreated?: boolean | Prisma.User$groupEventsCreatedArgs<ExtArgs>
+  eventRsvps?: boolean | Prisma.User$eventRsvpsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -4477,6 +7432,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   education?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
+  followPrivacy?: boolean
   notifyLikes?: boolean
   notifyComments?: boolean
   notifyFollows?: boolean
@@ -4500,6 +7456,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   education?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
+  followPrivacy?: boolean
   notifyLikes?: boolean
   notifyComments?: boolean
   notifyFollows?: boolean
@@ -4523,6 +7480,7 @@ export type UserSelectScalar = {
   education?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
+  followPrivacy?: boolean
   notifyLikes?: boolean
   notifyComments?: boolean
   notifyFollows?: boolean
@@ -4530,7 +7488,7 @@ export type UserSelectScalar = {
   createdAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "location" | "website" | "pronouns" | "workplace" | "education" | "profileVisibility" | "messagePrivacy" | "notifyLikes" | "notifyComments" | "notifyFollows" | "notifyMessages" | "createdAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "location" | "website" | "pronouns" | "workplace" | "education" | "profileVisibility" | "messagePrivacy" | "followPrivacy" | "notifyLikes" | "notifyComments" | "notifyFollows" | "notifyMessages" | "createdAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   stories?: boolean | Prisma.User$storiesArgs<ExtArgs>
@@ -4547,9 +7505,18 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   notificationsActed?: boolean | Prisma.User$notificationsActedArgs<ExtArgs>
   bookmarks?: boolean | Prisma.User$bookmarksArgs<ExtArgs>
   reports?: boolean | Prisma.User$reportsArgs<ExtArgs>
+  reportsReceived?: boolean | Prisma.User$reportsReceivedArgs<ExtArgs>
   pollVotes?: boolean | Prisma.User$pollVotesArgs<ExtArgs>
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  blocksGiven?: boolean | Prisma.User$blocksGivenArgs<ExtArgs>
+  blocksReceived?: boolean | Prisma.User$blocksReceivedArgs<ExtArgs>
+  mutesGiven?: boolean | Prisma.User$mutesGivenArgs<ExtArgs>
+  mutesReceived?: boolean | Prisma.User$mutesReceivedArgs<ExtArgs>
+  followRequestsSent?: boolean | Prisma.User$followRequestsSentArgs<ExtArgs>
+  followRequestsReceived?: boolean | Prisma.User$followRequestsReceivedArgs<ExtArgs>
+  groupEventsCreated?: boolean | Prisma.User$groupEventsCreatedArgs<ExtArgs>
+  eventRsvps?: boolean | Prisma.User$eventRsvpsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -4573,9 +7540,18 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     notificationsActed: Prisma.$NotificationPayload<ExtArgs>[]
     bookmarks: Prisma.$BookmarkPayload<ExtArgs>[]
     reports: Prisma.$ReportPayload<ExtArgs>[]
+    reportsReceived: Prisma.$ReportPayload<ExtArgs>[]
     pollVotes: Prisma.$PollVotePayload<ExtArgs>[]
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
+    blocksGiven: Prisma.$BlockPayload<ExtArgs>[]
+    blocksReceived: Prisma.$BlockPayload<ExtArgs>[]
+    mutesGiven: Prisma.$MutePayload<ExtArgs>[]
+    mutesReceived: Prisma.$MutePayload<ExtArgs>[]
+    followRequestsSent: Prisma.$FollowRequestPayload<ExtArgs>[]
+    followRequestsReceived: Prisma.$FollowRequestPayload<ExtArgs>[]
+    groupEventsCreated: Prisma.$GroupEventPayload<ExtArgs>[]
+    eventRsvps: Prisma.$GroupEventRsvpPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -4593,6 +7569,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     education: string | null
     profileVisibility: string
     messagePrivacy: string
+    followPrivacy: string
     notifyLikes: number
     notifyComments: number
     notifyFollows: number
@@ -5007,9 +7984,18 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   notificationsActed<T extends Prisma.User$notificationsActedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsActedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bookmarks<T extends Prisma.User$bookmarksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$bookmarksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BookmarkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reports<T extends Prisma.User$reportsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reportsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reportsReceived<T extends Prisma.User$reportsReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$reportsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pollVotes<T extends Prisma.User$pollVotesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$pollVotesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PollVotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.User$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  blocksGiven<T extends Prisma.User$blocksGivenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$blocksGivenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BlockPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  blocksReceived<T extends Prisma.User$blocksReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$blocksReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BlockPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  mutesGiven<T extends Prisma.User$mutesGivenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$mutesGivenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MutePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  mutesReceived<T extends Prisma.User$mutesReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$mutesReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MutePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  followRequestsSent<T extends Prisma.User$followRequestsSentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$followRequestsSentArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  followRequestsReceived<T extends Prisma.User$followRequestsReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$followRequestsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  groupEventsCreated<T extends Prisma.User$groupEventsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupEventsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  eventRsvps<T extends Prisma.User$eventRsvpsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$eventRsvpsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupEventRsvpPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5054,6 +8040,7 @@ export interface UserFieldRefs {
   readonly education: Prisma.FieldRef<"User", 'String'>
   readonly profileVisibility: Prisma.FieldRef<"User", 'String'>
   readonly messagePrivacy: Prisma.FieldRef<"User", 'String'>
+  readonly followPrivacy: Prisma.FieldRef<"User", 'String'>
   readonly notifyLikes: Prisma.FieldRef<"User", 'Int'>
   readonly notifyComments: Prisma.FieldRef<"User", 'Int'>
   readonly notifyFollows: Prisma.FieldRef<"User", 'Int'>
@@ -5812,6 +8799,30 @@ export type User$reportsArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 }
 
 /**
+ * User.reportsReceived
+ */
+export type User$reportsReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Report
+   */
+  select?: Prisma.ReportSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Report
+   */
+  omit?: Prisma.ReportOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReportInclude<ExtArgs> | null
+  where?: Prisma.ReportWhereInput
+  orderBy?: Prisma.ReportOrderByWithRelationInput | Prisma.ReportOrderByWithRelationInput[]
+  cursor?: Prisma.ReportWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ReportScalarFieldEnum | Prisma.ReportScalarFieldEnum[]
+}
+
+/**
  * User.pollVotes
  */
 export type User$pollVotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5881,6 +8892,198 @@ export type User$accountsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
+}
+
+/**
+ * User.blocksGiven
+ */
+export type User$blocksGivenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Block
+   */
+  select?: Prisma.BlockSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Block
+   */
+  omit?: Prisma.BlockOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockInclude<ExtArgs> | null
+  where?: Prisma.BlockWhereInput
+  orderBy?: Prisma.BlockOrderByWithRelationInput | Prisma.BlockOrderByWithRelationInput[]
+  cursor?: Prisma.BlockWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BlockScalarFieldEnum | Prisma.BlockScalarFieldEnum[]
+}
+
+/**
+ * User.blocksReceived
+ */
+export type User$blocksReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Block
+   */
+  select?: Prisma.BlockSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Block
+   */
+  omit?: Prisma.BlockOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockInclude<ExtArgs> | null
+  where?: Prisma.BlockWhereInput
+  orderBy?: Prisma.BlockOrderByWithRelationInput | Prisma.BlockOrderByWithRelationInput[]
+  cursor?: Prisma.BlockWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BlockScalarFieldEnum | Prisma.BlockScalarFieldEnum[]
+}
+
+/**
+ * User.mutesGiven
+ */
+export type User$mutesGivenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Mute
+   */
+  select?: Prisma.MuteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Mute
+   */
+  omit?: Prisma.MuteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MuteInclude<ExtArgs> | null
+  where?: Prisma.MuteWhereInput
+  orderBy?: Prisma.MuteOrderByWithRelationInput | Prisma.MuteOrderByWithRelationInput[]
+  cursor?: Prisma.MuteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MuteScalarFieldEnum | Prisma.MuteScalarFieldEnum[]
+}
+
+/**
+ * User.mutesReceived
+ */
+export type User$mutesReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Mute
+   */
+  select?: Prisma.MuteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Mute
+   */
+  omit?: Prisma.MuteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MuteInclude<ExtArgs> | null
+  where?: Prisma.MuteWhereInput
+  orderBy?: Prisma.MuteOrderByWithRelationInput | Prisma.MuteOrderByWithRelationInput[]
+  cursor?: Prisma.MuteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MuteScalarFieldEnum | Prisma.MuteScalarFieldEnum[]
+}
+
+/**
+ * User.followRequestsSent
+ */
+export type User$followRequestsSentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FollowRequest
+   */
+  select?: Prisma.FollowRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FollowRequest
+   */
+  omit?: Prisma.FollowRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FollowRequestInclude<ExtArgs> | null
+  where?: Prisma.FollowRequestWhereInput
+  orderBy?: Prisma.FollowRequestOrderByWithRelationInput | Prisma.FollowRequestOrderByWithRelationInput[]
+  cursor?: Prisma.FollowRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FollowRequestScalarFieldEnum | Prisma.FollowRequestScalarFieldEnum[]
+}
+
+/**
+ * User.followRequestsReceived
+ */
+export type User$followRequestsReceivedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FollowRequest
+   */
+  select?: Prisma.FollowRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FollowRequest
+   */
+  omit?: Prisma.FollowRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FollowRequestInclude<ExtArgs> | null
+  where?: Prisma.FollowRequestWhereInput
+  orderBy?: Prisma.FollowRequestOrderByWithRelationInput | Prisma.FollowRequestOrderByWithRelationInput[]
+  cursor?: Prisma.FollowRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FollowRequestScalarFieldEnum | Prisma.FollowRequestScalarFieldEnum[]
+}
+
+/**
+ * User.groupEventsCreated
+ */
+export type User$groupEventsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupEvent
+   */
+  select?: Prisma.GroupEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupEvent
+   */
+  omit?: Prisma.GroupEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupEventInclude<ExtArgs> | null
+  where?: Prisma.GroupEventWhereInput
+  orderBy?: Prisma.GroupEventOrderByWithRelationInput | Prisma.GroupEventOrderByWithRelationInput[]
+  cursor?: Prisma.GroupEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupEventScalarFieldEnum | Prisma.GroupEventScalarFieldEnum[]
+}
+
+/**
+ * User.eventRsvps
+ */
+export type User$eventRsvpsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupEventRsvp
+   */
+  select?: Prisma.GroupEventRsvpSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupEventRsvp
+   */
+  omit?: Prisma.GroupEventRsvpOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupEventRsvpInclude<ExtArgs> | null
+  where?: Prisma.GroupEventRsvpWhereInput
+  orderBy?: Prisma.GroupEventRsvpOrderByWithRelationInput | Prisma.GroupEventRsvpOrderByWithRelationInput[]
+  cursor?: Prisma.GroupEventRsvpWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupEventRsvpScalarFieldEnum | Prisma.GroupEventRsvpScalarFieldEnum[]
 }
 
 /**

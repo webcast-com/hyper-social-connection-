@@ -9,6 +9,7 @@ import EmptyState from '@/components/EmptyState';
 import Post from '@/components/Post';
 import GroupMembershipButton from '@/components/GroupMembershipButton';
 import GroupAdminControls from '@/components/GroupAdminControls';
+import GroupEvents from '@/components/GroupEvents';
 
 export async function generateMetadata({
   params,
@@ -161,6 +162,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
   let joinRequests: { user: any; status?: string }[] = [];
   let joinPending = false;
+  let events: any[] = [];
   if (hasDatabase && viewer) {
     try {
       if (isAdmin) {
@@ -175,6 +177,24 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
           select: { id: true },
         });
         joinPending = !!mine;
+      }
+      if (canSeeFeed) {
+        const eventRows = await prisma.groupEvent.findMany({
+          where: { groupId, startsAt: { gte: new Date(Date.now() - 86400000) } },
+          include: { rsvps: true },
+          orderBy: { startsAt: 'asc' },
+          take: 8,
+        });
+        events = eventRows.map((ev) => ({
+          id: ev.id,
+          title: ev.title,
+          description: ev.description,
+          location: ev.location,
+          startsAt: ev.startsAt,
+          going: ev.rsvps.filter((r) => r.status === 'going').length,
+          maybe: ev.rsvps.filter((r) => r.status === 'maybe').length,
+          myStatus: ev.rsvps.find((r) => r.userId === viewer?.id)?.status || null,
+        }));
       }
     } catch (err) {
       console.warn('[group detail] join requests query failed:', (err as Error)?.message);
@@ -313,6 +333,14 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
+
+          {canSeeFeed && (
+            <GroupEvents
+              groupId={groupId}
+              events={events}
+              canCreate={isAdmin || members.some((m) => m.user?.id === viewer?.id && (m.role === 'admin' || m.role === 'moderator'))}
+            />
+          )}
 
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-5">
             <h3 className="font-bold text-base mb-3 flex items-center gap-2 text-gray-900 dark:text-white">

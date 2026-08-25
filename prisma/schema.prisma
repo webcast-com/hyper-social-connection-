@@ -32,6 +32,7 @@ model User {
   education  String?
   profileVisibility String @default("public") @map("profile_visibility")
   messagePrivacy    String @default("everyone") @map("message_privacy")
+  followPrivacy     String @default("everyone") @map("follow_privacy")
   notifyLikes       Int    @default(1) @map("notify_likes")
   notifyComments    Int    @default(1) @map("notify_comments")
   notifyFollows     Int    @default(1) @map("notify_follows")
@@ -52,10 +53,19 @@ model User {
   notificationsReceived Notification[] @relation("NotificationUser")
   notificationsActed  Notification[] @relation("NotificationActor")
   bookmarks           Bookmark[]
-  reports             Report[]
+  reports             Report[]         @relation("ReportReporter")
+  reportsReceived     Report[]         @relation("ReportTarget")
   pollVotes           PollVote[]
   sessions            Session[]
   accounts            Account[]
+  blocksGiven         Block[]          @relation("BlockBlocker")
+  blocksReceived      Block[]          @relation("BlockBlocked")
+  mutesGiven          Mute[]           @relation("MuteMuter")
+  mutesReceived       Mute[]           @relation("MuteMuted")
+  followRequestsSent      FollowRequest[] @relation("FollowRequestFrom")
+  followRequestsReceived  FollowRequest[] @relation("FollowRequestTo")
+  groupEventsCreated  GroupEvent[]
+  eventRsvps          GroupEventRsvp[]
 
   @@map("users")
 }
@@ -71,6 +81,7 @@ model Post {
   groupId      Int?      @map("group_id")
   likesCount   Int       @default(0) @map("likes_count")
   commentsCount Int      @default(0) @map("comments_count")
+  scheduledAt  DateTime? @map("scheduled_at") @db.Timestamp(6)
   updatedAt    DateTime? @map("updated_at") @db.Timestamp(6)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
 
@@ -118,6 +129,7 @@ model Group {
   posts        Post[]            @relation("PostGroup")
   groupMembers GroupMember[]
   joinRequests GroupJoinRequest[]
+  events       GroupEvent[]
 
   @@map("groups")
 }
@@ -234,17 +246,87 @@ model Bookmark {
 }
 
 model Report {
-  id         Int      @id @default(autoincrement())
-  reporterId Int      @map("reporter_id")
-  postId     Int?     @map("post_id")
-  reason     String
-  details    String?
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  id             Int      @id @default(autoincrement())
+  reporterId     Int      @map("reporter_id")
+  postId         Int?     @map("post_id")
+  reportedUserId Int?     @map("reported_user_id")
+  reason         String
+  details        String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  reporter User  @relation(fields: [reporterId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  post     Post? @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reporter     User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reportedUser User? @relation("ReportTarget", fields: [reportedUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  post         Post? @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("reports")
+}
+
+model Block {
+  blockerId Int      @map("blocker_id")
+  blockedId Int      @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  blocker User @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  blocked User @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([blockerId, blockedId])
+  @@map("blocks")
+}
+
+model Mute {
+  muterId   Int      @map("muter_id")
+  mutedId   Int      @map("muted_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  muter User @relation("MuteMuter", fields: [muterId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  muted User @relation("MuteMuted", fields: [mutedId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([muterId, mutedId])
+  @@map("mutes")
+}
+
+model FollowRequest {
+  id          Int      @id @default(autoincrement())
+  followerId  Int      @map("follower_id")
+  followingId Int      @map("following_id")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  follower  User @relation("FollowRequestFrom", fields: [followerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  following User @relation("FollowRequestTo", fields: [followingId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([followerId, followingId])
+  @@map("follow_requests")
+}
+
+model GroupEvent {
+  id          Int      @id @default(autoincrement())
+  groupId     Int      @map("group_id")
+  createdById Int      @map("created_by_id")
+  title       String
+  description String?
+  location    String?
+  startsAt    DateTime @map("starts_at") @db.Timestamp(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  group     Group            @relation(fields: [groupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdBy User             @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  rsvps     GroupEventRsvp[]
+
+  @@map("group_events")
+}
+
+model GroupEventRsvp {
+  eventId   Int      @map("event_id")
+  userId    Int      @map("user_id")
+  status    String   @default("going")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  event GroupEvent @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([eventId, userId])
+  @@map("group_event_rsvps")
 }
 
 model Poll {

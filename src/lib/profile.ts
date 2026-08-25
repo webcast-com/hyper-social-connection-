@@ -31,6 +31,7 @@ export function trimField(raw: string | null | undefined, max = 120) {
 
 export const PROFILE_VISIBILITY = ['public', 'followers', 'private'] as const;
 export const MESSAGE_PRIVACY = ['everyone', 'followers', 'nobody'] as const;
+export const FOLLOW_PRIVACY = ['everyone', 'approval'] as const;
 export const GROUP_PRIVACY = ['public', 'private'] as const;
 export const GROUP_ROLES = ['admin', 'moderator', 'member'] as const;
 export const GROUP_CATEGORIES = [

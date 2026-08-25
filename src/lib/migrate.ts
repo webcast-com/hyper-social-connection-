@@ -277,6 +277,56 @@ async function runMigration() {
       WHERE gm.group_id = g.id
         AND gm.user_id = g.admin_id
         AND (gm.role IS NULL OR gm.role = 'member')`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS follow_privacy text DEFAULT 'everyone'`,
+    `ALTER TABLE posts ADD COLUMN IF NOT EXISTS scheduled_at timestamp`,
+    `ALTER TABLE reports ADD COLUMN IF NOT EXISTS reported_user_id integer`,
+    `CREATE TABLE IF NOT EXISTS "blocks" (
+      "blocker_id" integer NOT NULL,
+      "blocked_id" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "blocks_pk" PRIMARY KEY ("blocker_id", "blocked_id"),
+      CONSTRAINT "blocks_blocker_fk" FOREIGN KEY ("blocker_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "blocks_blocked_fk" FOREIGN KEY ("blocked_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "mutes" (
+      "muter_id" integer NOT NULL,
+      "muted_id" integer NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "mutes_pk" PRIMARY KEY ("muter_id", "muted_id"),
+      CONSTRAINT "mutes_muter_fk" FOREIGN KEY ("muter_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "mutes_muted_fk" FOREIGN KEY ("muted_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "follow_requests" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "follower_id" integer NOT NULL,
+      "following_id" integer NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "follow_requests_pair_key" UNIQUE ("follower_id", "following_id"),
+      CONSTRAINT "follow_requests_from_fk" FOREIGN KEY ("follower_id") REFERENCES "public"."users"("id") ON DELETE cascade,
+      CONSTRAINT "follow_requests_to_fk" FOREIGN KEY ("following_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
+    `CREATE TABLE IF NOT EXISTS "group_events" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "created_by_id" integer NOT NULL,
+      "title" text NOT NULL,
+      "description" text,
+      "location" text,
+      "starts_at" timestamp NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_events_group_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade,
+      CONSTRAINT "group_events_user_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE no action
+    )`,
+    `CREATE TABLE IF NOT EXISTS "group_event_rsvps" (
+      "event_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "status" text DEFAULT 'going' NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      CONSTRAINT "group_event_rsvps_pk" PRIMARY KEY ("event_id", "user_id"),
+      CONSTRAINT "group_event_rsvps_event_fk" FOREIGN KEY ("event_id") REFERENCES "public"."group_events"("id") ON DELETE cascade,
+      CONSTRAINT "group_event_rsvps_user_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade
+    )`,
     `CREATE TABLE IF NOT EXISTS "group_join_requests" (
       "id" serial PRIMARY KEY NOT NULL,
       "group_id" integer NOT NULL,

@@ -70,8 +70,18 @@
   - Prisma + PostgreSQL only. New columns are nullable or defaulted (`ALTER … IF NOT EXISTS`) so current rows stay valid.
   - New table: `group_join_requests`. `group_members.role` backfilled (`admin` for `groups.admin_id`).
 
-- Phase 11: Next (not in this pass)
-  - Block / mute list and report-user.
-  - Follow-request inbox for locked accounts.
-  - Transfer group ownership; scheduled posts; group events.
-  - OAuth (Google / GitHub) and CDN-backed media.
+- Phase 11: Safety, follow requests, ownership, schedule & events ✅
+  Constraint: keep the current page formation. New controls sit on existing profiles, settings tabs, the composer, and the group modal.
+
+  - Block and mute lists (`blocks`, `mutes`). Blocked people cannot follow or message you; their posts drop out of your feed. Mute only hides posts.
+  - Report a person from their profile (extends `reports.reported_user_id` — post reports stay as they are).
+  - Follow-request inbox for locked accounts (`follow_privacy = approval`). Public accounts still follow instantly.
+  - Transfer group ownership from Group Settings → Members.
+  - Scheduled posts (`posts.scheduled_at`) from the composer; they stay hidden until the time.
+  - Group events with RSVP (`group_events`, `group_event_rsvps`) on the group page.
+
+- Phase 12: Next
+  - OAuth (Google / GitHub) via Auth.js.
+  - CDN-backed media (S3 / R2) in place of local `public/uploads`.
+  - Block/mute applied to search and discover.
+  - Recurring group events and event reminders.

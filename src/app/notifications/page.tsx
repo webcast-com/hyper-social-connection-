@@ -42,6 +42,7 @@ export default async function NotificationsPage() {
             {notificationsData.map(({ notification, actor }) => {
               const href =
                 notification.type === 'message' ? `/messages/${notification.actorId}` :
+                notification.type === 'follow_request' ? '/settings' :
                 notification.type === 'follow' ? `/profile/${notification.actorId}` :
                 notification.postId ? `/post/${notification.postId}` : `/profile/${notification.actorId}`;
 

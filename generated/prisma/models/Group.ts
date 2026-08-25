@@ -284,6 +284,7 @@ export type GroupWhereInput = {
   posts?: Prisma.PostListRelationFilter
   groupMembers?: Prisma.GroupMemberListRelationFilter
   joinRequests?: Prisma.GroupJoinRequestListRelationFilter
+  events?: Prisma.GroupEventListRelationFilter
 }
 
 export type GroupOrderByWithRelationInput = {
@@ -303,6 +304,7 @@ export type GroupOrderByWithRelationInput = {
   posts?: Prisma.PostOrderByRelationAggregateInput
   groupMembers?: Prisma.GroupMemberOrderByRelationAggregateInput
   joinRequests?: Prisma.GroupJoinRequestOrderByRelationAggregateInput
+  events?: Prisma.GroupEventOrderByRelationAggregateInput
 }
 
 export type GroupWhereUniqueInput = Prisma.AtLeast<{
@@ -325,6 +327,7 @@ export type GroupWhereUniqueInput = Prisma.AtLeast<{
   posts?: Prisma.PostListRelationFilter
   groupMembers?: Prisma.GroupMemberListRelationFilter
   joinRequests?: Prisma.GroupJoinRequestListRelationFilter
+  events?: Prisma.GroupEventListRelationFilter
 }, "id">
 
 export type GroupOrderByWithAggregationInput = {
@@ -380,6 +383,7 @@ export type GroupCreateInput = {
   posts?: Prisma.PostCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUncheckedCreateInput = {
@@ -398,6 +402,7 @@ export type GroupUncheckedCreateInput = {
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventUncheckedCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUpdateInput = {
@@ -415,6 +420,7 @@ export type GroupUpdateInput = {
   posts?: Prisma.PostUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateInput = {
@@ -433,6 +439,7 @@ export type GroupUncheckedUpdateInput = {
   posts?: Prisma.PostUncheckedUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUncheckedUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupCreateManyInput = {
@@ -641,6 +648,20 @@ export type GroupUpdateOneRequiredWithoutJoinRequestsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.GroupUpdateToOneWithWhereWithoutJoinRequestsInput, Prisma.GroupUpdateWithoutJoinRequestsInput>, Prisma.GroupUncheckedUpdateWithoutJoinRequestsInput>
 }
 
+export type GroupCreateNestedOneWithoutEventsInput = {
+  create?: Prisma.XOR<Prisma.GroupCreateWithoutEventsInput, Prisma.GroupUncheckedCreateWithoutEventsInput>
+  connectOrCreate?: Prisma.GroupCreateOrConnectWithoutEventsInput
+  connect?: Prisma.GroupWhereUniqueInput
+}
+
+export type GroupUpdateOneRequiredWithoutEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.GroupCreateWithoutEventsInput, Prisma.GroupUncheckedCreateWithoutEventsInput>
+  connectOrCreate?: Prisma.GroupCreateOrConnectWithoutEventsInput
+  upsert?: Prisma.GroupUpsertWithoutEventsInput
+  connect?: Prisma.GroupWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.GroupUpdateToOneWithWhereWithoutEventsInput, Prisma.GroupUpdateWithoutEventsInput>, Prisma.GroupUncheckedUpdateWithoutEventsInput>
+}
+
 export type GroupCreateWithoutAdminInput = {
   name: string
   description?: string | null
@@ -655,6 +676,7 @@ export type GroupCreateWithoutAdminInput = {
   posts?: Prisma.PostCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUncheckedCreateWithoutAdminInput = {
@@ -672,6 +694,7 @@ export type GroupUncheckedCreateWithoutAdminInput = {
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventUncheckedCreateNestedManyWithoutGroupInput
 }
 
 export type GroupCreateOrConnectWithoutAdminInput = {
@@ -732,6 +755,7 @@ export type GroupCreateWithoutPostsInput = {
   admin: Prisma.UserCreateNestedOneWithoutAdminGroupsInput
   groupMembers?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUncheckedCreateWithoutPostsInput = {
@@ -749,6 +773,7 @@ export type GroupUncheckedCreateWithoutPostsInput = {
   createdAt?: Date | string
   groupMembers?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventUncheckedCreateNestedManyWithoutGroupInput
 }
 
 export type GroupCreateOrConnectWithoutPostsInput = {
@@ -781,6 +806,7 @@ export type GroupUpdateWithoutPostsInput = {
   admin?: Prisma.UserUpdateOneRequiredWithoutAdminGroupsNestedInput
   groupMembers?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateWithoutPostsInput = {
@@ -798,6 +824,7 @@ export type GroupUncheckedUpdateWithoutPostsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   groupMembers?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUncheckedUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupCreateWithoutGroupMembersInput = {
@@ -814,6 +841,7 @@ export type GroupCreateWithoutGroupMembersInput = {
   admin: Prisma.UserCreateNestedOneWithoutAdminGroupsInput
   posts?: Prisma.PostCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUncheckedCreateWithoutGroupMembersInput = {
@@ -831,6 +859,7 @@ export type GroupUncheckedCreateWithoutGroupMembersInput = {
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutGroupInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventUncheckedCreateNestedManyWithoutGroupInput
 }
 
 export type GroupCreateOrConnectWithoutGroupMembersInput = {
@@ -863,6 +892,7 @@ export type GroupUpdateWithoutGroupMembersInput = {
   admin?: Prisma.UserUpdateOneRequiredWithoutAdminGroupsNestedInput
   posts?: Prisma.PostUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateWithoutGroupMembersInput = {
@@ -880,6 +910,7 @@ export type GroupUncheckedUpdateWithoutGroupMembersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUncheckedUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupCreateWithoutJoinRequestsInput = {
@@ -896,6 +927,7 @@ export type GroupCreateWithoutJoinRequestsInput = {
   admin: Prisma.UserCreateNestedOneWithoutAdminGroupsInput
   posts?: Prisma.PostCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventCreateNestedManyWithoutGroupInput
 }
 
 export type GroupUncheckedCreateWithoutJoinRequestsInput = {
@@ -913,6 +945,7 @@ export type GroupUncheckedCreateWithoutJoinRequestsInput = {
   createdAt?: Date | string
   posts?: Prisma.PostUncheckedCreateNestedManyWithoutGroupInput
   groupMembers?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
+  events?: Prisma.GroupEventUncheckedCreateNestedManyWithoutGroupInput
 }
 
 export type GroupCreateOrConnectWithoutJoinRequestsInput = {
@@ -945,6 +978,7 @@ export type GroupUpdateWithoutJoinRequestsInput = {
   admin?: Prisma.UserUpdateOneRequiredWithoutAdminGroupsNestedInput
   posts?: Prisma.PostUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateWithoutJoinRequestsInput = {
@@ -962,6 +996,93 @@ export type GroupUncheckedUpdateWithoutJoinRequestsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   posts?: Prisma.PostUncheckedUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUncheckedUpdateManyWithoutGroupNestedInput
+}
+
+export type GroupCreateWithoutEventsInput = {
+  name: string
+  description?: string | null
+  coverPhoto?: string | null
+  privacy?: string
+  category?: string | null
+  rules?: string | null
+  location?: string | null
+  website?: string | null
+  requireApproval?: number
+  createdAt?: Date | string
+  admin: Prisma.UserCreateNestedOneWithoutAdminGroupsInput
+  posts?: Prisma.PostCreateNestedManyWithoutGroupInput
+  groupMembers?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
+  joinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutGroupInput
+}
+
+export type GroupUncheckedCreateWithoutEventsInput = {
+  id?: number
+  name: string
+  description?: string | null
+  coverPhoto?: string | null
+  adminId: number
+  privacy?: string
+  category?: string | null
+  rules?: string | null
+  location?: string | null
+  website?: string | null
+  requireApproval?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutGroupInput
+  groupMembers?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
+  joinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutGroupInput
+}
+
+export type GroupCreateOrConnectWithoutEventsInput = {
+  where: Prisma.GroupWhereUniqueInput
+  create: Prisma.XOR<Prisma.GroupCreateWithoutEventsInput, Prisma.GroupUncheckedCreateWithoutEventsInput>
+}
+
+export type GroupUpsertWithoutEventsInput = {
+  update: Prisma.XOR<Prisma.GroupUpdateWithoutEventsInput, Prisma.GroupUncheckedUpdateWithoutEventsInput>
+  create: Prisma.XOR<Prisma.GroupCreateWithoutEventsInput, Prisma.GroupUncheckedCreateWithoutEventsInput>
+  where?: Prisma.GroupWhereInput
+}
+
+export type GroupUpdateToOneWithWhereWithoutEventsInput = {
+  where?: Prisma.GroupWhereInput
+  data: Prisma.XOR<Prisma.GroupUpdateWithoutEventsInput, Prisma.GroupUncheckedUpdateWithoutEventsInput>
+}
+
+export type GroupUpdateWithoutEventsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  privacy?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requireApproval?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  admin?: Prisma.UserUpdateOneRequiredWithoutAdminGroupsNestedInput
+  posts?: Prisma.PostUpdateManyWithoutGroupNestedInput
+  groupMembers?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
+  joinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutGroupNestedInput
+}
+
+export type GroupUncheckedUpdateWithoutEventsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminId?: Prisma.IntFieldUpdateOperationsInput | number
+  privacy?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rules?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  requireApproval?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutGroupNestedInput
+  groupMembers?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
+  joinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupCreateManyAdminInput = {
@@ -992,6 +1113,7 @@ export type GroupUpdateWithoutAdminInput = {
   posts?: Prisma.PostUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateWithoutAdminInput = {
@@ -1009,6 +1131,7 @@ export type GroupUncheckedUpdateWithoutAdminInput = {
   posts?: Prisma.PostUncheckedUpdateManyWithoutGroupNestedInput
   groupMembers?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
   joinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutGroupNestedInput
+  events?: Prisma.GroupEventUncheckedUpdateManyWithoutGroupNestedInput
 }
 
 export type GroupUncheckedUpdateManyWithoutAdminInput = {
@@ -1034,12 +1157,14 @@ export type GroupCountOutputType = {
   posts: number
   groupMembers: number
   joinRequests: number
+  events: number
 }
 
 export type GroupCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   posts?: boolean | GroupCountOutputTypeCountPostsArgs
   groupMembers?: boolean | GroupCountOutputTypeCountGroupMembersArgs
   joinRequests?: boolean | GroupCountOutputTypeCountJoinRequestsArgs
+  events?: boolean | GroupCountOutputTypeCountEventsArgs
 }
 
 /**
@@ -1073,6 +1198,13 @@ export type GroupCountOutputTypeCountJoinRequestsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.GroupJoinRequestWhereInput
 }
 
+/**
+ * GroupCountOutputType without action
+ */
+export type GroupCountOutputTypeCountEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupEventWhereInput
+}
+
 
 export type GroupSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1091,6 +1223,7 @@ export type GroupSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   posts?: boolean | Prisma.Group$postsArgs<ExtArgs>
   groupMembers?: boolean | Prisma.Group$groupMembersArgs<ExtArgs>
   joinRequests?: boolean | Prisma.Group$joinRequestsArgs<ExtArgs>
+  events?: boolean | Prisma.Group$eventsArgs<ExtArgs>
   _count?: boolean | Prisma.GroupCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["group"]>
 
@@ -1147,6 +1280,7 @@ export type GroupInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   posts?: boolean | Prisma.Group$postsArgs<ExtArgs>
   groupMembers?: boolean | Prisma.Group$groupMembersArgs<ExtArgs>
   joinRequests?: boolean | Prisma.Group$joinRequestsArgs<ExtArgs>
+  events?: boolean | Prisma.Group$eventsArgs<ExtArgs>
   _count?: boolean | Prisma.GroupCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type GroupIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1163,6 +1297,7 @@ export type $GroupPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     posts: Prisma.$PostPayload<ExtArgs>[]
     groupMembers: Prisma.$GroupMemberPayload<ExtArgs>[]
     joinRequests: Prisma.$GroupJoinRequestPayload<ExtArgs>[]
+    events: Prisma.$GroupEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1575,6 +1710,7 @@ export interface Prisma__GroupClient<T, Null = never, ExtArgs extends runtime.Ty
   posts<T extends Prisma.Group$postsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Group$postsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   groupMembers<T extends Prisma.Group$groupMembersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Group$groupMembersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   joinRequests<T extends Prisma.Group$joinRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Group$joinRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupJoinRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  events<T extends Prisma.Group$eventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Group$eventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2086,6 +2222,30 @@ export type Group$joinRequestsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.GroupJoinRequestScalarFieldEnum | Prisma.GroupJoinRequestScalarFieldEnum[]
+}
+
+/**
+ * Group.events
+ */
+export type Group$eventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupEvent
+   */
+  select?: Prisma.GroupEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupEvent
+   */
+  omit?: Prisma.GroupEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupEventInclude<ExtArgs> | null
+  where?: Prisma.GroupEventWhereInput
+  orderBy?: Prisma.GroupEventOrderByWithRelationInput | Prisma.GroupEventOrderByWithRelationInput[]
+  cursor?: Prisma.GroupEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupEventScalarFieldEnum | Prisma.GroupEventScalarFieldEnum[]
 }
 
 /**

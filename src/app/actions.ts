@@ -66,6 +66,14 @@ export async function createPost(formData: FormData) {
   const videoUrl = isSafeMediaUrl(videoUrlRaw) ? videoUrlRaw.trim() : null;
   const hasPoll = formData.get('hasPoll') === 'true';
   const requestedGroupId = Number(formData.get('groupId') || 0);
+  const scheduledRaw = String(formData.get('scheduledAt') || '').trim();
+  let scheduledAt: Date | null = null;
+  if (scheduledRaw) {
+    const parsed = new Date(scheduledRaw);
+    if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() + 30_000) {
+      scheduledAt = parsed;
+    }
+  }
 
   if (!content && !imageUrl && !videoUrl && !hasPoll) throw new Error('Content or media is required');
 
@@ -91,6 +99,7 @@ export async function createPost(formData: FormData) {
         imageUrl: imageUrl || null,
         videoUrl: videoUrl || null,
         groupId,
+        scheduledAt,
       },
     });
 
@@ -207,27 +216,70 @@ export async function createComment(postId: number, formData: FormData) {
 
 export async function toggleFollow(followingId: number) {
   const followerId = await getUserId();
-  if (!followerId) return;
-  if (followerId === followingId) return;
+  if (!followerId) return { status: 'error' as const };
+  if (followerId === followingId) return { status: 'error' as const };
 
   try {
+    const blocked = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: followerId, blockedId: followingId },
+          { blockerId: followingId, blockedId: followerId },
+        ],
+      },
+    });
+    if (blocked) return { status: 'blocked' as const };
+
     const existingFollow = await prisma.follow.findFirst({
       where: { followerId, followingId },
     });
 
     if (existingFollow) {
       await prisma.follow.deleteMany({ where: { followerId, followingId } });
-    } else {
-      await prisma.follow.create({ data: { followerId, followingId } });
-      await createNotification(followingId, followerId, 'follow');
+      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/discover');
+      revalidatePath('/notifications');
+      return { status: 'none' as const };
     }
+
+    const pending = await prisma.followRequest.findFirst({
+      where: { followerId, followingId, status: 'pending' },
+    });
+    if (pending) {
+      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      revalidatePath(`/profile/${followingId}`);
+      return { status: 'none' as const };
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: followingId },
+      select: { followPrivacy: true },
+    });
+    if ((target?.followPrivacy || 'everyone') === 'approval') {
+      await prisma.followRequest.upsert({
+        where: { followerId_followingId: { followerId, followingId } },
+        update: { status: 'pending' },
+        create: { followerId, followingId, status: 'pending' },
+      });
+      await createNotification(followingId, followerId, 'follow_request');
+      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/notifications');
+      revalidatePath('/settings');
+      return { status: 'requested' as const };
+    }
+
+    await prisma.follow.create({ data: { followerId, followingId } });
+    await createNotification(followingId, followerId, 'follow');
   } catch (e) {
     console.warn('[action:toggleFollow] DB unavailable:', (e as Error)?.message);
+    return { status: 'error' as const };
   }
 
   revalidatePath(`/profile/${followingId}`);
   revalidatePath('/discover');
   revalidatePath('/notifications');
+  return { status: 'following' as const };
 }
 
 export async function updateProfile(formData: FormData) {
@@ -249,11 +301,15 @@ export async function updateProfile(formData: FormData) {
 
   const profileVisibility = String(formData.get('profileVisibility') || 'public');
   const messagePrivacy = String(formData.get('messagePrivacy') || 'everyone');
+  const followPrivacy = String(formData.get('followPrivacy') || 'everyone');
   if (!PROFILE_VISIBILITY.includes(profileVisibility as (typeof PROFILE_VISIBILITY)[number])) {
     return { success: false, message: 'Invalid profile visibility' };
   }
   if (!MESSAGE_PRIVACY.includes(messagePrivacy as (typeof MESSAGE_PRIVACY)[number])) {
     return { success: false, message: 'Invalid message privacy' };
+  }
+  if (followPrivacy !== 'everyone' && followPrivacy !== 'approval') {
+    return { success: false, message: 'Invalid follow privacy' };
   }
 
   const data = {
@@ -269,6 +325,7 @@ export async function updateProfile(formData: FormData) {
     education: trimField(formData.get('education') as string, 80),
     profileVisibility,
     messagePrivacy,
+    followPrivacy,
     notifyLikes: formData.get('notifyLikes') === '1' ? 1 : 0,
     notifyComments: formData.get('notifyComments') === '1' ? 1 : 0,
     notifyFollows: formData.get('notifyFollows') === '1' ? 1 : 0,
@@ -367,6 +424,16 @@ export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   if (!senderId) return;
   try {
+    const blocked = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: senderId, blockedId: receiverId },
+          { blockerId: receiverId, blockedId: senderId },
+        ],
+      },
+    });
+    if (blocked) return;
+
     const target = await prisma.user.findUnique({
       where: { id: receiverId },
       select: { messagePrivacy: true },

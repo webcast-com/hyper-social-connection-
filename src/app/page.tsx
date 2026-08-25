@@ -139,6 +139,7 @@ export default async function Home() {
   let allPollVotes: any[] = [];
   let allGroups: any[] = [];
   let viewerGroupIds: number[] = [];
+  let hiddenAuthorIds = new Set<number>();
 
   // Set when the database is configured but the feed query failed — almost
   // always a schema drift (the DB is missing a column the app selects, e.g.
@@ -170,6 +171,16 @@ export default async function Home() {
           select: { groupId: true },
         });
         viewerGroupIds = memberships.map((m) => m.groupId);
+        const [blocks, mutes] = await Promise.all([
+          prisma.block.findMany({
+            where: { OR: [{ blockerId: currentUser.id }, { blockedId: currentUser.id }] },
+          }),
+          prisma.mute.findMany({ where: { muterId: currentUser.id } }),
+        ]);
+        hiddenAuthorIds = new Set<number>([
+          ...blocks.map((b) => (b.blockerId === currentUser.id ? b.blockedId : b.blockerId)),
+          ...mutes.map((m) => m.mutedId),
+        ]);
       }
     } catch (err) {
       dbFeedError = (err as Error)?.message || 'unknown database error';
@@ -274,9 +285,17 @@ export default async function Home() {
   const bookmarkedPostIds = userBookmarks.map((b) => b.postId);
   const bookmarkedSet = new Set(bookmarkedPostIds);
 
-  const forYouPosts = [...enrichedPosts];
-  const followingPosts = enrichedPosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
-  const savedPosts = enrichedPosts.filter((p) => bookmarkedSet.has(p.id));
+  const now = Date.now();
+  const visiblePosts = enrichedPosts.filter((p) => {
+    if (hiddenAuthorIds.has(p.userId)) return false;
+    if (p.scheduledAt && new Date(p.scheduledAt).getTime() > now && p.userId !== currentUser.id) return false;
+    if (p.scheduledAt && new Date(p.scheduledAt).getTime() > now && p.userId === currentUser.id) return false;
+    return true;
+  });
+
+  const forYouPosts = [...visiblePosts];
+  const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
+  const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
   const otherUsers = allUsers.filter((u) => u.id !== currentUser.id);
 

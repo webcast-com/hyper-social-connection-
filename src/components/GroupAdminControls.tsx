@@ -10,6 +10,7 @@ import {
   updateGroup,
   deleteGroup,
 } from '@/app/actions';
+import { transferGroupOwnership } from '@/app/social-actions';
 import { Settings, X, LoaderCircle, Trash2, Shield, Users, UserPlus } from 'lucide-react';
 import GroupCoverField from '@/components/GroupCoverField';
 import { GROUP_CATEGORIES } from '@/lib/profile';
@@ -363,6 +364,20 @@ export default function GroupAdminControls({
                               className="text-[11px] font-semibold text-red-600 hover:underline"
                             >
                               Remove
+                            </button>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => startTransition(async () => {
+                                if (!confirm(`Make ${u.name} the group owner? You will stay as an admin.`)) return;
+                                const result = await transferGroupOwnership(group.id, u.id);
+                                if (result && !result.success) setError(result.message || 'Could not transfer');
+                                else setNotice(result.message || 'Ownership transferred');
+                                router.refresh();
+                              })}
+                              className="text-[11px] font-semibold text-blue-600 hover:underline"
+                            >
+                              Make owner
                             </button>
                           </>
                         )}

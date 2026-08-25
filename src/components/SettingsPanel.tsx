@@ -12,14 +12,17 @@ import {
   Lock,
   Save,
   Shield,
+  ShieldAlert,
   UserRound,
 } from 'lucide-react';
+import SafetyPanel from '@/components/SafetyPanel';
 
-type Tab = 'profile' | 'privacy' | 'notifications' | 'account';
+type Tab = 'profile' | 'privacy' | 'safety' | 'notifications' | 'account';
 
 const TABS: { id: Tab; label: string; icon: typeof UserRound }[] = [
   { id: 'profile', label: 'Profile', icon: UserRound },
   { id: 'privacy', label: 'Privacy', icon: Shield },
+  { id: 'safety', label: 'Safety', icon: ShieldAlert },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'account', label: 'Account', icon: KeyRound },
 ];
@@ -27,7 +30,17 @@ const TABS: { id: Tab; label: string; icon: typeof UserRound }[] = [
 const inputClass =
   'mt-1.5 block w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-xl shadow-sm p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
 
-export default function SettingsPanel({ user }: { user: any }) {
+export default function SettingsPanel({
+  user,
+  blocked = [],
+  muted = [],
+  followRequests = [],
+}: {
+  user: any;
+  blocked?: any[];
+  muted?: any[];
+  followRequests?: any[];
+}) {
   const [tab, setTab] = useState<Tab>('profile');
   const [pending, startTransition] = useTransition();
   const [pwPending, startPw] = useTransition();
@@ -77,7 +90,11 @@ export default function SettingsPanel({ user }: { user: any }) {
         ))}
       </nav>
 
-      {tab !== 'account' && (
+      {tab === 'safety' && (
+        <SafetyPanel blocked={blocked} muted={muted} followRequests={followRequests} />
+      )}
+
+      {tab !== 'account' && tab !== 'safety' && (
         <form action={handleProfileSave} className="space-y-6">
           {tab === 'profile' && (
             <>
@@ -154,6 +171,7 @@ export default function SettingsPanel({ user }: { user: any }) {
               </div>
               <input type="hidden" name="profileVisibility" value={user.profileVisibility || 'public'} />
               <input type="hidden" name="messagePrivacy" value={user.messagePrivacy || 'everyone'} />
+              <input type="hidden" name="followPrivacy" value={user.followPrivacy || 'everyone'} />
               <input type="hidden" name="notifyLikes" value={user.notifyLikes === 0 ? '0' : '1'} />
               <input type="hidden" name="notifyComments" value={user.notifyComments === 0 ? '0' : '1'} />
               <input type="hidden" name="notifyFollows" value={user.notifyFollows === 0 ? '0' : '1'} />
@@ -180,6 +198,13 @@ export default function SettingsPanel({ user }: { user: any }) {
                   <option value="everyone">Everyone</option>
                   <option value="followers">People you follow or who follow you</option>
                   <option value="nobody">No one</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">Who can follow you</label>
+                <select name="followPrivacy" defaultValue={user.followPrivacy || 'everyone'} className={inputClass}>
+                  <option value="everyone">Everyone (instant)</option>
+                  <option value="approval">Approval required</option>
                 </select>
               </div>
               <input type="hidden" name="name" value={user.name} />
@@ -222,6 +247,7 @@ export default function SettingsPanel({ user }: { user: any }) {
               <input type="hidden" name="website" value={user.website || ''} />
               <input type="hidden" name="profileVisibility" value={user.profileVisibility || 'public'} />
               <input type="hidden" name="messagePrivacy" value={user.messagePrivacy || 'everyone'} />
+              <input type="hidden" name="followPrivacy" value={user.followPrivacy || 'everyone'} />
             </>
           )}
 

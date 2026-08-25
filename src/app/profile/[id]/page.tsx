@@ -9,6 +9,8 @@ import EmptyState from '@/components/EmptyState';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { canMessageUser, canViewProfileDetails } from '@/lib/profile';
+import FollowButton from '@/components/FollowButton';
+import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 
 export async function generateMetadata({
   params,
@@ -81,6 +83,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   let allLikes: any[] = [];
   let allComments: any[] = [];
   let isFollowing = false;
+  let followRequested = false;
+  let isBlocked = false;
+  let isMuted = false;
   let followersRes: any[] = [];
   let followingRes: any[] = [];
   let profileNotFound = false;
@@ -102,10 +107,26 @@ export default async function Profile({ params }: { params: Promise<{ id: string
         allLikes = await prisma.like.findMany();
         allComments = await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
 
-        const isFollowingRow = await prisma.follow.findFirst({
-          where: { followerId: currentUser.id || 0, followingId: profileId },
-        });
-        isFollowing = !!isFollowingRow;
+        if (currentUser.id) {
+          const [isFollowingRow, requestRow, blockRow, muteRow] = await Promise.all([
+            prisma.follow.findFirst({
+              where: { followerId: currentUser.id, followingId: profileId },
+            }),
+            prisma.followRequest.findFirst({
+              where: { followerId: currentUser.id, followingId: profileId, status: 'pending' },
+            }),
+            prisma.block.findFirst({
+              where: { blockerId: currentUser.id, blockedId: profileId },
+            }),
+            prisma.mute.findFirst({
+              where: { muterId: currentUser.id, mutedId: profileId },
+            }),
+          ]);
+          isFollowing = !!isFollowingRow;
+          followRequested = !!requestRow;
+          isBlocked = !!blockRow;
+          isMuted = !!muteRow;
+        }
 
         const followerRows = await prisma.follow.findMany({
           where: { followingId: profileId },
@@ -210,22 +231,26 @@ export default async function Profile({ params }: { params: Promise<{ id: string
             <div className="flex gap-2 mt-4 md:mt-0 md:mb-2 w-full sm:w-auto">
               {currentUser.id !== profileUser.id ? (
                 <>
-                  <form action={async () => {
-                    'use server';
-                    const { toggleFollow } = await import('@/app/actions');
-                    await toggleFollow(profileId);
-                  }} className="flex-1 sm:flex-none">
-                    <button type="submit" className={`w-full sm:w-auto px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm ${isFollowing ? 'bg-gray-200 hover:bg-gray-300 text-gray-800' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                      {isFollowing ? '✓ Following' : '+ Follow'}
-                    </button>
-                  </form>
-                  {showMessage && (
+                  {!isBlocked && (
+                    <FollowButton
+                      targetId={profileId}
+                      initialStatus={isFollowing ? 'following' : followRequested ? 'requested' : 'none'}
+                    />
+                  )}
+                  {showMessage && !isBlocked && (
                     <Link
                       href={`/messages/${profileId}`}
                       className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2 shadow-sm transition-colors"
                     >
                       <MessageCircle className="w-4 h-4 shrink-0" /> Message
                     </Link>
+                  )}
+                  {!!currentUser.id && (
+                    <ProfileSafetyMenu
+                      targetId={profileId}
+                      initiallyBlocked={isBlocked}
+                      initiallyMuted={isMuted}
+                    />
                   )}
                 </>
               ) : (
