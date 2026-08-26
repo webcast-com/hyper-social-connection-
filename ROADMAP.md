@@ -82,6 +82,12 @@
 
 - Phase 12: Next
   - OAuth (Google / GitHub) via Auth.js.
-  - CDN-backed media (S3 / R2) in place of local `public/uploads`.
-  - Block/mute applied to search and discover.
   - Recurring group events and event reminders.
+
+- Phase 13: Object-store media ✅
+  - Hybrid upload adapter (`src/lib/storage.ts`): Prisma Object Store / any
+    S3-compatible bucket when `S3_*` is set, local `public/uploads` otherwise.
+  - Stable `/uploads/<uuid>.<ext>` URLs in Postgres; `/api/media` streams
+    local files (Range) or 302s to a short-lived presigned GET.
+  - Client fail-fast size/type checks; avatar/cover/story/group URLs go
+    through `isSafeMediaUrl`.

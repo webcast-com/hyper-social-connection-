@@ -1,9 +1,12 @@
+import { clientRejectsFile } from '@/lib/media-limits';
+
 export type UploadedMedia = {
   url: string;
   kind: 'image' | 'video';
   type: string;
   size: number;
   name: string;
+  storage?: 's3' | 'local';
 };
 
 export type UploadProgressInfo = {
@@ -19,13 +22,7 @@ export function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * Client-side helper that sends a file to the shared upload endpoint
- * and resolves with the stored media descriptor. Throws on failure.
- *
- * Uses XHR so video (and large image) uploads can report real progress.
- */
-export function uploadMediaFile(
+function postFile(
   file: File,
   opts?: { onProgress?: (info: UploadProgressInfo) => void },
 ): Promise<UploadedMedia> {
@@ -64,4 +61,21 @@ export function uploadMediaFile(
     xhr.onabort = () => reject(new Error('Upload cancelled'));
     xhr.send(body);
   });
+}
+
+/**
+ * Client-side helper that sends a file to the shared upload endpoint
+ * and resolves with the stored media descriptor. Throws on failure.
+ *
+ * Uses XHR so video (and large image) uploads can report real progress.
+ * Size / type checks run here first so a 250 MB clip is not shipped only
+ * to be rejected by the API.
+ */
+export function uploadMediaFile(
+  file: File,
+  opts?: { onProgress?: (info: UploadProgressInfo) => void },
+): Promise<UploadedMedia> {
+  const reason = clientRejectsFile(file);
+  if (reason) return Promise.reject(new Error(reason));
+  return postFile(file, opts);
 }

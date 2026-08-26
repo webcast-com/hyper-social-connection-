@@ -115,6 +115,49 @@ If your network blocks outbound port 5432, Prisma's direct TCP endpoint will
 not be reachable; that setup needs Prisma's HTTP-based serverless driver,
 which this app does not use.
 
+## Media / object storage
+
+Prisma is the database layer. **Do not put photos or videos in Postgres**
+(`Bytes` columns). Media belongs in an object store; this app talks to one
+through a small adapter (`src/lib/storage.ts`).
+
+| Mode | When | Where the bytes live | URL stored in Postgres |
+| --- | --- | --- | --- |
+| **Prisma Object Store / S3 / R2 / MinIO** | `S3_BUCKET` + access key + secret are set | Bucket key `media/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+| **Local disk** (default) | those env vars are unset | `public/uploads/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+
+The public URL never changes. `/uploads/:filename` is rewritten to
+`/api/media/:filename`, which either streams the local file (with HTTP Range
+so video seeking works) or 302s to a short-lived presigned GET. Existing
+posts, avatars, stories and chat attachments keep working if you add a
+bucket later.
+
+### Using a Prisma Object Store bucket
+
+1. In the [Prisma Console](https://console.prisma.io) open the project →
+   **Object Store** → create a bucket (e.g. `uploads`).
+2. Mint a **read_write** key. The secret is shown once.
+3. Put the four fields from the key response into `.env.local`:
+
+```env
+S3_BUCKET=uploads
+S3_ENDPOINT=https://…          # `endpoint` from the key response
+S3_ACCESS_KEY_ID=…
+S3_SECRET_ACCESS_KEY=…
+S3_REGION=auto
+S3_FORCE_PATH_STYLE=true
+```
+
+`PRISMA_BUCKET_*` aliases are accepted if you prefer those names.
+
+`GET /api/health` reports `"storage": "s3"` or `"storage": "local"`.
+`GET /api/upload` reports the same plus the size caps.
+
+Uploads still go through the Next.js server (auth + magic-byte sniff) and
+are then `PutObject`'d to the bucket. That avoids needing CORS on the
+bucket for a browser PUT. Point `DATABASE_URL` at Prisma Postgres and the
+bucket at Prisma Object Store and the whole stack stays in one project.
+
 ## 3. Create the tables
 
 ```bash
@@ -150,7 +193,7 @@ Start the app (`npm run dev`) and open `/api/health`:
 | Before (Supabase) | Now |
 | --- | --- |
 | Supabase Auth (email + OAuth) | Email/password with bcrypt + Prisma-backed opaque sessions (`src/lib/auth.ts`, `/api/auth/*`) |
-| Supabase Storage | Local disk uploads served from `public/uploads` (`/api/upload`). Swap in S3/R2 if you need CDN storage. |
+| Supabase Storage | Prisma Object Store / any S3-compatible bucket when `S3_*` is set; otherwise local `public/uploads`. Postgres stores `/uploads/<uuid>.<ext>` only. |
 | Supabase Realtime chat | HTTP polling every 3s against `/api/messages` (`ChatStream.tsx`) |
 | Session-refresh proxy | Not needed — sessions are read and revoked directly through Prisma |
 

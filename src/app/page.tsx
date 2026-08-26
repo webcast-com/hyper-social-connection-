@@ -7,7 +7,8 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
-import { Compass, Users, Bookmark, Sparkles, Plus } from 'lucide-react';
+import { Compass, Users, Sparkles, Trophy } from 'lucide-react';
+import SportsLiveWidget from '@/components/SportsLiveWidget';
 
 export const metadata: Metadata = {
   title: 'Hyper — Connect with the world',
@@ -335,6 +336,13 @@ export default async function Home() {
           <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Communities & Groups</span>
         </Link>
 
+        <Link href="/sports" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
+          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+            <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Sports scores</span>
+        </Link>
+
         <div className="lg:pt-3 lg:border-t border-gray-200 dark:border-gray-800">
           <p className="text-xs text-gray-400 font-semibold px-2 uppercase tracking-wide mb-2">Shortcuts</p>
           {viewerGroups.slice(0, 4).map((g, i) => {
@@ -400,6 +408,8 @@ export default async function Home() {
       <aside className="order-3 lg:order-none flex flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
+
+        <SportsLiveWidget />
 
         {/* Suggested People */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">

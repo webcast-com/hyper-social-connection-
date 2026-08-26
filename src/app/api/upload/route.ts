@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
-import path from 'path';
 import { getViewer } from '@/lib/viewer';
 import { mimeAgreesWithSniff, sniffMedia } from '@/lib/magic-bytes';
+import { maxBytesForKind } from '@/lib/media-limits';
+import { getStorageDriver, putMediaObject } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
-const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
-
 /**
- * Media uploads are stored on local disk under public/uploads and served as
- * static files. No external storage service is required. (Swap this handler
- * for S3/R2 later if you need CDN-backed storage.)
+ * Authenticated media upload.
  *
- * The file's magic bytes are the source of truth — a spoofed Content-Type
- * cannot turn an executable into an "image".
+ * 1. Magic-byte sniff (declared Content-Type is not trusted).
+ * 2. Persist via the storage adapter — Prisma Object Store / S3 when
+ *    configured, otherwise local `public/uploads`.
+ * 3. Return a stable `/uploads/<uuid>.<ext>` URL. Postgres stores that
+ *    URL, never a presigned one.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -55,28 +53,43 @@ export async function POST(req: NextRequest) {
     }
 
     const kind = sniffed.kind;
-    const maxBytes = kind === 'image' ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
+    const maxBytes = maxBytesForKind(kind);
     if (file.size > maxBytes) {
       const mb = Math.round(maxBytes / (1024 * 1024));
       return NextResponse.json({ error: `File too large. Max ${mb} MB for ${kind}s.` }, { status: 413 });
     }
 
-    const ext = sniffed.ext;
-    const filename = `${randomUUID()}.${ext}`;
-
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, filename), buffer);
+    const filename = `${randomUUID()}.${sniffed.ext}`;
+    const stored = await putMediaObject({
+      filename,
+      body: buffer,
+      mime: sniffed.mime,
+    });
 
     return NextResponse.json({
-      url: `/uploads/${filename}`,
+      url: stored.url,
       kind,
       type: sniffed.mime,
       size: file.size,
       name: file.name,
+      storage: stored.driver,
     });
   } catch (error) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    const driver = getStorageDriver();
+    const hint =
+      driver === 's3'
+        ? 'Could not write to the object store. Check S3 / Prisma bucket credentials.'
+        : 'Upload failed';
+    return NextResponse.json({ error: hint }, { status: 500 });
   }
+}
+
+/** Lets the client (and /api/health consumers) see which backend will receive the next upload. */
+export async function GET() {
+  return NextResponse.json({
+    storage: getStorageDriver(),
+    maxImageBytes: maxBytesForKind('image'),
+    maxVideoBytes: maxBytesForKind('video'),
+  });
 }

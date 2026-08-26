@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
-import { Users, Sparkles } from 'lucide-react';
+import { Users, Sparkles, Trophy } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Discover People and Communities',
@@ -60,6 +60,19 @@ export default async function Discover() {
             <h2 className="text-xl font-bold mb-2">Discover People</h2>
             <p className="text-blue-50">Follow new people to see their posts in your feed.</p>
           </div>
+
+          <Link
+            href="/sports"
+            className="flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 text-white shadow-lg mb-6 hover:opacity-95 transition-opacity"
+          >
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Trophy className="w-5 h-5" /> Live sports
+              </h2>
+              <p className="text-amber-50 text-sm mt-1">Premier League, UCL, NBA, NFL and F1 from multiple feeds.</p>
+            </div>
+            <span className="text-sm font-semibold shrink-0">Open →</span>
+          </Link>
           
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
