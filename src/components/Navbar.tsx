@@ -13,6 +13,7 @@ import {
   Bell,
   Compass,
   Users,
+  Trophy,
 } from 'lucide-react';
 import DarkModeToggle from '@/components/Theme/DarkModeToggle';
 
@@ -187,6 +188,21 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
             <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
             <span className="text-[10px] font-semibold mt-0.5">Groups</span>
             {isDesktopActive('/groups') && (
+              <span className="absolute -bottom-1.5 w-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+            )}
+          </Link>
+
+          <Link
+            href="/sports"
+            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+              isDesktopActive('/sports')
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-semibold mt-0.5">Sports</span>
+            {isDesktopActive('/sports') && (
               <span className="absolute -bottom-1.5 w-6 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
             )}
           </Link>

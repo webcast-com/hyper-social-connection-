@@ -312,11 +312,20 @@ export async function updateProfile(formData: FormData) {
     return { success: false, message: 'Invalid follow privacy' };
   }
 
+  const avatarRaw = ((formData.get('avatar') as string) || '').trim();
+  const coverRaw = ((formData.get('coverPhoto') as string) || '').trim();
+  if (avatarRaw && !isSafeMediaUrl(avatarRaw)) {
+    return { success: false, message: 'Invalid avatar URL' };
+  }
+  if (coverRaw && !isSafeMediaUrl(coverRaw)) {
+    return { success: false, message: 'Invalid cover photo URL' };
+  }
+
   const data = {
     name,
     bio: trimField(formData.get('bio') as string, 280),
-    avatar: ((formData.get('avatar') as string) || '').trim() || null,
-    coverPhoto: ((formData.get('coverPhoto') as string) || '').trim() || null,
+    avatar: avatarRaw || null,
+    coverPhoto: coverRaw || null,
     username,
     location: trimField(formData.get('location') as string, 80),
     website,
@@ -391,7 +400,7 @@ export async function changePassword(formData: FormData) {
 export async function updateAvatar(avatarUrl: string) {
   const userId = await getUserId();
   if (!userId) return;
-  if (!avatarUrl) return;
+  if (!isSafeMediaUrl(avatarUrl)) return;
 
   try {
     await prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } });
@@ -408,7 +417,8 @@ export async function updateCoverPhoto(coverUrl: string) {
   const userId = await getUserId();
   if (!userId) return;
   // Empty string clears the cover photo (falls back to the gradient).
-  const coverPhoto = coverUrl?.trim() || null;
+  const trimmed = coverUrl?.trim() || '';
+  const coverPhoto = trimmed ? (isSafeMediaUrl(trimmed) ? trimmed : null) : null;
 
   try {
     await prisma.user.update({ where: { id: userId }, data: { coverPhoto } });
@@ -573,6 +583,7 @@ export async function markNotificationRead(id: number) {
 export async function createStory(imageUrl: string) {
   const userId = await getUserId();
   if (!userId) return;
+  if (!isSafeMediaUrl(imageUrl)) return;
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   try {
     await prisma.story.create({
@@ -593,7 +604,8 @@ export async function createGroup(formData: FormData) {
   if (!userId) return null;
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
-  const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+  const coverPhotoRaw = (formData.get('coverPhoto') as string || '').trim();
+  const coverPhoto = coverPhotoRaw && isSafeMediaUrl(coverPhotoRaw) ? coverPhotoRaw : '';
   const privacyRaw = String(formData.get('privacy') || 'public');
   const privacy = GROUP_PRIVACY.includes(privacyRaw as (typeof GROUP_PRIVACY)[number]) ? privacyRaw : 'public';
   const categoryRaw = (formData.get('category') as string || '').trim();
@@ -699,7 +711,11 @@ export async function updateGroup(groupId: number, formData: FormData) {
   if (!userId) return { success: false, message: 'Must be logged in' };
   const name = (formData.get('name') as string || '').trim();
   const description = (formData.get('description') as string || '').trim();
-  const coverPhoto = (formData.get('coverPhoto') as string || '').trim();
+  const coverPhotoRaw = (formData.get('coverPhoto') as string || '').trim();
+  if (coverPhotoRaw && !isSafeMediaUrl(coverPhotoRaw)) {
+    return { success: false, message: 'Invalid cover photo URL' };
+  }
+  const coverPhoto = coverPhotoRaw;
   const privacyRaw = String(formData.get('privacy') || 'public');
   const privacy = GROUP_PRIVACY.includes(privacyRaw as (typeof GROUP_PRIVACY)[number]) ? privacyRaw : 'public';
   const categoryRaw = (formData.get('category') as string || '').trim();

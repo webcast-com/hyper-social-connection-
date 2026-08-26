@@ -15,6 +15,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 - **Groups** — communities with member-only posting, admin controls, join/leave
 - **Profiles** — cover photo, avatar, bio, photo grid, followers
 - **Search** — people and posts, with trending topics computed from real hashtag usage
+- **Sports** — live scores and fixtures aggregated from ESPN + TheSportsDB (`/sports`)
 - **Notifications** — likes, comments, follows, messages, reposts with unread badges
 - **Dark mode** — fully themed, respects system preference, no flash on load
 - **PWA** — installable via `manifest.webmanifest`
@@ -81,7 +82,7 @@ src/
 ## 🔐 Auth & uploads
 
 - **Auth:** email + password (bcrypt) with opaque, revocable Prisma database sessions (`src/lib/auth.ts`). The session cookie is HttpOnly and expires after 7 days; demo/offline mode is anonymous and read-only.
-- **Uploads:** images/videos are stored on local disk under `public/uploads` and served statically. Swap in S3/R2 by replacing `src/app/api/upload/route.ts` if you need CDN-backed storage.
+- **Uploads:** images/videos go through `/api/upload` (login required, magic-byte sniff, 15 MB images / 250 MB videos). Files land in a **Prisma Object Store / S3-compatible bucket** when `S3_*` env vars are set, otherwise on local disk under `public/uploads`. Postgres stores only the stable URL `/uploads/<uuid>.<ext>` — never a presigned link. See **[DATABASE.md](DATABASE.md#media--object-storage)**.
 - **Chat delivery:** the client polls `/api/messages` every 3 seconds. Swap in WebSockets/SSE later if you want push delivery.
 
 ## 🌍 Deployment
@@ -92,7 +93,7 @@ Works anywhere Next.js runs. On **Vercel**:
 2. Add environment variable `DATABASE_URL` (and optionally `NEXT_PUBLIC_SITE_URL`). Authentication sessions are stored in Prisma's `sessions` table.
 3. Deploy — tables self-create on first request.
 
-Note: Vercel's serverless filesystem is ephemeral, so local-disk uploads won't persist across deployments. Use an S3-compatible store for production media.
+Note: Vercel's serverless filesystem is ephemeral, so local-disk uploads won't persist across deployments. Set the `S3_*` (or `PRISMA_BUCKET_*`) env vars so media is written to a Prisma Object Store bucket, R2, or S3.
 
 ## 🗺️ Roadmap
 

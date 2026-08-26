@@ -1,23 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import '@fontsource-variable/inter';
-import '@fontsource/poppins/500.css';
-import '@fontsource/poppins/600.css';
-import '@fontsource/poppins/700.css';
-import '@fontsource/poppins/800.css';
 import Navbar from '@/components/Navbar';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
 import { getSiteMetadata } from '@/components/SEO/SEOMeta';
+import { GOOGLE_FONTS_STYLESHEET } from '@/lib/fonts';
 
 const siteUrl = getSiteUrl();
-
-// Google Fonts (Inter + Poppins), self-hosted from the @fontsource packages
-// — no build-time fetch and no runtime requests, so builds work in
-// offline/restricted environments. Fonts are registered in globals.css via
-// the Tailwind theme (`--font-sans` / `--font-display`) and fall back to
-// the system stack if they are ever missing.
 
 export const metadata: Metadata = getSiteMetadata(siteUrl);
 
@@ -33,6 +23,24 @@ export const viewport: Viewport = {
 // prerendering (also keeps builds from needing live DB credentials).
 export const dynamic = 'force-dynamic';
 
+function DocumentHead() {
+  return (
+    <head>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="stylesheet" href={GOOGLE_FONTS_STYLESHEET} />
+      {/* Apply the saved/system theme before hydration to avoid a flash of
+          the wrong theme. Only touches <html>'s class (not managed by
+          React), so it can never cause a hydration mismatch. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
+        }}
+      />
+    </head>
+  );
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();
 
@@ -42,13 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   if (!user) {
     return (
       <html lang="en" suppressHydrationWarning>
-        <head>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
-            }}
-          />
-        </head>
+        <DocumentHead />
         <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
           {children}
         </body>
@@ -71,16 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Apply the saved/system theme before hydration to avoid a flash of
-            the wrong theme. Only touches <html>'s class (not managed by
-            React), so it can never cause a hydration mismatch. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
-          }}
-        />
-      </head>
+      <DocumentHead />
       <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
         {/* pb-20 on mobile leaves room for the bottom tab bar */}

@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "250mb",
     },
   },
+  // Files present in public/uploads are served statically first. Missing
+  // names (Prisma bucket / S3 objects) fall through to /api/media, which
+  // 302s to a short-lived presigned GET. Stored URLs stay `/uploads/…`.
+  async rewrites() {
+    return [{ source: "/uploads/:filename", destination: "/api/media/:filename" }];
+  },
 };
 
 export default nextConfig;
