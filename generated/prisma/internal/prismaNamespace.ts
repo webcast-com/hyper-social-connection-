@@ -413,6 +413,7 @@ export const ModelName = {
   Block: 'Block',
   Mute: 'Mute',
   FollowRequest: 'FollowRequest',
+  GroupCall: 'GroupCall',
   GroupEvent: 'GroupEvent',
   GroupEventRsvp: 'GroupEventRsvp',
   Poll: 'Poll',
@@ -436,7 +437,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "post" | "story" | "group" | "groupMember" | "groupJoinRequest" | "comment" | "like" | "follow" | "message" | "notification" | "bookmark" | "report" | "block" | "mute" | "followRequest" | "groupEvent" | "groupEventRsvp" | "poll" | "pollOption" | "pollVote" | "session" | "account" | "verificationToken"
+    modelProps: "user" | "post" | "story" | "group" | "groupMember" | "groupJoinRequest" | "comment" | "like" | "follow" | "message" | "notification" | "bookmark" | "report" | "block" | "mute" | "followRequest" | "groupCall" | "groupEvent" | "groupEventRsvp" | "poll" | "pollOption" | "pollVote" | "session" | "account" | "verificationToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1624,6 +1625,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    GroupCall: {
+      payload: Prisma.$GroupCallPayload<ExtArgs>
+      fields: Prisma.GroupCallFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GroupCallFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GroupCallFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        findFirst: {
+          args: Prisma.GroupCallFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GroupCallFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        findMany: {
+          args: Prisma.GroupCallFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>[]
+        }
+        create: {
+          args: Prisma.GroupCallCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        createMany: {
+          args: Prisma.GroupCallCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GroupCallCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>[]
+        }
+        delete: {
+          args: Prisma.GroupCallDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        update: {
+          args: Prisma.GroupCallUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        deleteMany: {
+          args: Prisma.GroupCallDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GroupCallUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GroupCallUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>[]
+        }
+        upsert: {
+          args: Prisma.GroupCallUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupCallPayload>
+        }
+        aggregate: {
+          args: Prisma.GroupCallAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGroupCall>
+        }
+        groupBy: {
+          args: Prisma.GroupCallGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupCallGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GroupCallCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupCallCountAggregateOutputType> | number
+        }
+      }
+    }
     GroupEvent: {
       payload: Prisma.$GroupEventPayload<ExtArgs>
       fields: Prisma.GroupEventFieldRefs
@@ -2460,6 +2535,20 @@ export const FollowRequestScalarFieldEnum = {
 export type FollowRequestScalarFieldEnum = (typeof FollowRequestScalarFieldEnum)[keyof typeof FollowRequestScalarFieldEnum]
 
 
+export const GroupCallScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  creatorId: 'creatorId',
+  title: 'title',
+  description: 'description',
+  roomUrl: 'roomUrl',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupCallScalarFieldEnum = (typeof GroupCallScalarFieldEnum)[keyof typeof GroupCallScalarFieldEnum]
+
+
 export const GroupEventScalarFieldEnum = {
   id: 'id',
   groupId: 'groupId',
@@ -2624,6 +2713,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+
 
 
 /**
@@ -2806,6 +2902,7 @@ export type GlobalOmitConfig = {
   block?: Prisma.BlockOmit
   mute?: Prisma.MuteOmit
   followRequest?: Prisma.FollowRequestOmit
+  groupCall?: Prisma.GroupCallOmit
   groupEvent?: Prisma.GroupEventOmit
   groupEventRsvp?: Prisma.GroupEventRsvpOmit
   poll?: Prisma.PollOmit

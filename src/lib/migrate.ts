@@ -327,6 +327,21 @@ async function runMigration() {
       CONSTRAINT "group_event_rsvps_event_fk" FOREIGN KEY ("event_id") REFERENCES "public"."group_events"("id") ON DELETE cascade,
       CONSTRAINT "group_event_rsvps_user_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade
     )`,
+    `CREATE TABLE IF NOT EXISTS "group_calls" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "creator_id" integer NOT NULL,
+      "title" text NOT NULL,
+      "description" text,
+      "room_url" text NOT NULL,
+      "is_active" boolean DEFAULT true NOT NULL,
+      "created_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "group_calls_group_id_room_url_key" UNIQUE ("group_id", "room_url"),
+      CONSTRAINT "group_calls_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_calls_creator_id_fk" FOREIGN KEY ("creator_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "group_calls_group_id_is_active_idx"
+       ON "group_calls"("group_id", "is_active")`,
     `CREATE TABLE IF NOT EXISTS "group_join_requests" (
       "id" serial PRIMARY KEY NOT NULL,
       "group_id" integer NOT NULL,

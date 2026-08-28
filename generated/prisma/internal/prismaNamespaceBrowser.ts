@@ -67,6 +67,7 @@ export const ModelName = {
   Block: 'Block',
   Mute: 'Mute',
   FollowRequest: 'FollowRequest',
+  GroupCall: 'GroupCall',
   GroupEvent: 'GroupEvent',
   GroupEventRsvp: 'GroupEventRsvp',
   Poll: 'Poll',
@@ -296,6 +297,20 @@ export const FollowRequestScalarFieldEnum = {
 } as const
 
 export type FollowRequestScalarFieldEnum = (typeof FollowRequestScalarFieldEnum)[keyof typeof FollowRequestScalarFieldEnum]
+
+
+export const GroupCallScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  creatorId: 'creatorId',
+  title: 'title',
+  description: 'description',
+  roomUrl: 'roomUrl',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupCallScalarFieldEnum = (typeof GroupCallScalarFieldEnum)[keyof typeof GroupCallScalarFieldEnum]
 
 
 export const GroupEventScalarFieldEnum = {

@@ -387,6 +387,7 @@ export type UserWhereInput = {
   followRequestsReceived?: Prisma.FollowRequestListRelationFilter
   groupEventsCreated?: Prisma.GroupEventListRelationFilter
   eventRsvps?: Prisma.GroupEventRsvpListRelationFilter
+  groupCallsCreated?: Prisma.GroupCallListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -438,6 +439,7 @@ export type UserOrderByWithRelationInput = {
   followRequestsReceived?: Prisma.FollowRequestOrderByRelationAggregateInput
   groupEventsCreated?: Prisma.GroupEventOrderByRelationAggregateInput
   eventRsvps?: Prisma.GroupEventRsvpOrderByRelationAggregateInput
+  groupCallsCreated?: Prisma.GroupCallOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -492,6 +494,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   followRequestsReceived?: Prisma.FollowRequestListRelationFilter
   groupEventsCreated?: Prisma.GroupEventListRelationFilter
   eventRsvps?: Prisma.GroupEventRsvpListRelationFilter
+  groupCallsCreated?: Prisma.GroupCallListRelationFilter
 }, "id" | "email" | "username">
 
 export type UserOrderByWithAggregationInput = {
@@ -598,6 +601,7 @@ export type UserCreateInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -649,6 +653,7 @@ export type UserUncheckedCreateInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUpdateInput = {
@@ -699,6 +704,7 @@ export type UserUpdateInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -750,6 +756,7 @@ export type UserUncheckedUpdateInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -1251,6 +1258,20 @@ export type UserUpdateOneRequiredWithoutFollowRequestsReceivedNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutFollowRequestsReceivedInput, Prisma.UserUpdateWithoutFollowRequestsReceivedInput>, Prisma.UserUncheckedUpdateWithoutFollowRequestsReceivedInput>
 }
 
+export type UserCreateNestedOneWithoutGroupCallsCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupCallsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupCallsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutGroupCallsCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupCallsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupCallsCreatedInput
+  upsert?: Prisma.UserUpsertWithoutGroupCallsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutGroupCallsCreatedInput, Prisma.UserUpdateWithoutGroupCallsCreatedInput>, Prisma.UserUncheckedUpdateWithoutGroupCallsCreatedInput>
+}
+
 export type UserCreateNestedOneWithoutGroupEventsCreatedInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutGroupEventsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupEventsCreatedInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutGroupEventsCreatedInput
@@ -1368,6 +1389,7 @@ export type UserCreateWithoutPostsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutPostsInput = {
@@ -1418,6 +1440,7 @@ export type UserUncheckedCreateWithoutPostsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutPostsInput = {
@@ -1483,6 +1506,7 @@ export type UserUpdateWithoutPostsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPostsInput = {
@@ -1533,6 +1557,7 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutStoriesInput = {
@@ -1582,6 +1607,7 @@ export type UserCreateWithoutStoriesInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutStoriesInput = {
@@ -1632,6 +1658,7 @@ export type UserUncheckedCreateWithoutStoriesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutStoriesInput = {
@@ -1697,6 +1724,7 @@ export type UserUpdateWithoutStoriesInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutStoriesInput = {
@@ -1747,6 +1775,7 @@ export type UserUncheckedUpdateWithoutStoriesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutAdminGroupsInput = {
@@ -1796,6 +1825,7 @@ export type UserCreateWithoutAdminGroupsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutAdminGroupsInput = {
@@ -1846,6 +1876,7 @@ export type UserUncheckedCreateWithoutAdminGroupsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutAdminGroupsInput = {
@@ -1911,6 +1942,7 @@ export type UserUpdateWithoutAdminGroupsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAdminGroupsInput = {
@@ -1961,6 +1993,7 @@ export type UserUncheckedUpdateWithoutAdminGroupsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutGroupMembershipsInput = {
@@ -2010,6 +2043,7 @@ export type UserCreateWithoutGroupMembershipsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutGroupMembershipsInput = {
@@ -2060,6 +2094,7 @@ export type UserUncheckedCreateWithoutGroupMembershipsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutGroupMembershipsInput = {
@@ -2125,6 +2160,7 @@ export type UserUpdateWithoutGroupMembershipsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
@@ -2175,6 +2211,7 @@ export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutGroupJoinRequestsInput = {
@@ -2224,6 +2261,7 @@ export type UserCreateWithoutGroupJoinRequestsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
@@ -2274,6 +2312,7 @@ export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutGroupJoinRequestsInput = {
@@ -2339,6 +2378,7 @@ export type UserUpdateWithoutGroupJoinRequestsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
@@ -2389,6 +2429,7 @@ export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -2438,6 +2479,7 @@ export type UserCreateWithoutCommentsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -2488,6 +2530,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -2553,6 +2596,7 @@ export type UserUpdateWithoutCommentsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -2603,6 +2647,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutLikesInput = {
@@ -2652,6 +2697,7 @@ export type UserCreateWithoutLikesInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutLikesInput = {
@@ -2702,6 +2748,7 @@ export type UserUncheckedCreateWithoutLikesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutLikesInput = {
@@ -2767,6 +2814,7 @@ export type UserUpdateWithoutLikesInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutLikesInput = {
@@ -2817,6 +2865,7 @@ export type UserUncheckedUpdateWithoutLikesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutFollowsGivenInput = {
@@ -2866,6 +2915,7 @@ export type UserCreateWithoutFollowsGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutFollowsGivenInput = {
@@ -2916,6 +2966,7 @@ export type UserUncheckedCreateWithoutFollowsGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutFollowsGivenInput = {
@@ -2970,6 +3021,7 @@ export type UserCreateWithoutFollowsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutFollowsReceivedInput = {
@@ -3020,6 +3072,7 @@ export type UserUncheckedCreateWithoutFollowsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutFollowsReceivedInput = {
@@ -3085,6 +3138,7 @@ export type UserUpdateWithoutFollowsGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowsGivenInput = {
@@ -3135,6 +3189,7 @@ export type UserUncheckedUpdateWithoutFollowsGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutFollowsReceivedInput = {
@@ -3195,6 +3250,7 @@ export type UserUpdateWithoutFollowsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
@@ -3245,6 +3301,7 @@ export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutMessagesSentInput = {
@@ -3294,6 +3351,7 @@ export type UserCreateWithoutMessagesSentInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutMessagesSentInput = {
@@ -3344,6 +3402,7 @@ export type UserUncheckedCreateWithoutMessagesSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutMessagesSentInput = {
@@ -3398,6 +3457,7 @@ export type UserCreateWithoutMessagesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutMessagesReceivedInput = {
@@ -3448,6 +3508,7 @@ export type UserUncheckedCreateWithoutMessagesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutMessagesReceivedInput = {
@@ -3513,6 +3574,7 @@ export type UserUpdateWithoutMessagesSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessagesSentInput = {
@@ -3563,6 +3625,7 @@ export type UserUncheckedUpdateWithoutMessagesSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutMessagesReceivedInput = {
@@ -3623,6 +3686,7 @@ export type UserUpdateWithoutMessagesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
@@ -3673,6 +3737,7 @@ export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutNotificationsReceivedInput = {
@@ -3722,6 +3787,7 @@ export type UserCreateWithoutNotificationsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
@@ -3772,6 +3838,7 @@ export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsReceivedInput = {
@@ -3826,6 +3893,7 @@ export type UserCreateWithoutNotificationsActedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsActedInput = {
@@ -3876,6 +3944,7 @@ export type UserUncheckedCreateWithoutNotificationsActedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsActedInput = {
@@ -3941,6 +4010,7 @@ export type UserUpdateWithoutNotificationsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
@@ -3991,6 +4061,7 @@ export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutNotificationsActedInput = {
@@ -4051,6 +4122,7 @@ export type UserUpdateWithoutNotificationsActedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsActedInput = {
@@ -4101,6 +4173,7 @@ export type UserUncheckedUpdateWithoutNotificationsActedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutBookmarksInput = {
@@ -4150,6 +4223,7 @@ export type UserCreateWithoutBookmarksInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutBookmarksInput = {
@@ -4200,6 +4274,7 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutBookmarksInput = {
@@ -4265,6 +4340,7 @@ export type UserUpdateWithoutBookmarksInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBookmarksInput = {
@@ -4315,6 +4391,7 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutReportsInput = {
@@ -4364,6 +4441,7 @@ export type UserCreateWithoutReportsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutReportsInput = {
@@ -4414,6 +4492,7 @@ export type UserUncheckedCreateWithoutReportsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutReportsInput = {
@@ -4468,6 +4547,7 @@ export type UserCreateWithoutReportsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutReportsReceivedInput = {
@@ -4518,6 +4598,7 @@ export type UserUncheckedCreateWithoutReportsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutReportsReceivedInput = {
@@ -4583,6 +4664,7 @@ export type UserUpdateWithoutReportsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportsInput = {
@@ -4633,6 +4715,7 @@ export type UserUncheckedUpdateWithoutReportsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutReportsReceivedInput = {
@@ -4693,6 +4776,7 @@ export type UserUpdateWithoutReportsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReportsReceivedInput = {
@@ -4743,6 +4827,7 @@ export type UserUncheckedUpdateWithoutReportsReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutBlocksGivenInput = {
@@ -4792,6 +4877,7 @@ export type UserCreateWithoutBlocksGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutBlocksGivenInput = {
@@ -4842,6 +4928,7 @@ export type UserUncheckedCreateWithoutBlocksGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutBlocksGivenInput = {
@@ -4896,6 +4983,7 @@ export type UserCreateWithoutBlocksReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutBlocksReceivedInput = {
@@ -4946,6 +5034,7 @@ export type UserUncheckedCreateWithoutBlocksReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutBlocksReceivedInput = {
@@ -5011,6 +5100,7 @@ export type UserUpdateWithoutBlocksGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBlocksGivenInput = {
@@ -5061,6 +5151,7 @@ export type UserUncheckedUpdateWithoutBlocksGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutBlocksReceivedInput = {
@@ -5121,6 +5212,7 @@ export type UserUpdateWithoutBlocksReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBlocksReceivedInput = {
@@ -5171,6 +5263,7 @@ export type UserUncheckedUpdateWithoutBlocksReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutMutesGivenInput = {
@@ -5220,6 +5313,7 @@ export type UserCreateWithoutMutesGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutMutesGivenInput = {
@@ -5270,6 +5364,7 @@ export type UserUncheckedCreateWithoutMutesGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutMutesGivenInput = {
@@ -5324,6 +5419,7 @@ export type UserCreateWithoutMutesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutMutesReceivedInput = {
@@ -5374,6 +5470,7 @@ export type UserUncheckedCreateWithoutMutesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutMutesReceivedInput = {
@@ -5439,6 +5536,7 @@ export type UserUpdateWithoutMutesGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMutesGivenInput = {
@@ -5489,6 +5587,7 @@ export type UserUncheckedUpdateWithoutMutesGivenInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutMutesReceivedInput = {
@@ -5549,6 +5648,7 @@ export type UserUpdateWithoutMutesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMutesReceivedInput = {
@@ -5599,6 +5699,7 @@ export type UserUncheckedUpdateWithoutMutesReceivedInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutFollowRequestsSentInput = {
@@ -5648,6 +5749,7 @@ export type UserCreateWithoutFollowRequestsSentInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutFollowRequestsSentInput = {
@@ -5698,6 +5800,7 @@ export type UserUncheckedCreateWithoutFollowRequestsSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutFollowRequestsSentInput = {
@@ -5752,6 +5855,7 @@ export type UserCreateWithoutFollowRequestsReceivedInput = {
   followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutFollowRequestsReceivedInput = {
@@ -5802,6 +5906,7 @@ export type UserUncheckedCreateWithoutFollowRequestsReceivedInput = {
   followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutFollowRequestsReceivedInput = {
@@ -5867,6 +5972,7 @@ export type UserUpdateWithoutFollowRequestsSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowRequestsSentInput = {
@@ -5917,6 +6023,7 @@ export type UserUncheckedUpdateWithoutFollowRequestsSentInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUpsertWithoutFollowRequestsReceivedInput = {
@@ -5977,6 +6084,7 @@ export type UserUpdateWithoutFollowRequestsReceivedInput = {
   followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutFollowRequestsReceivedInput = {
@@ -6025,6 +6133,225 @@ export type UserUncheckedUpdateWithoutFollowRequestsReceivedInput = {
   mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
   mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
   followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserCreateWithoutGroupCallsCreatedInput = {
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutGroupCallsCreatedInput = {
+  id?: number
+  name: string
+  email: string
+  password: string
+  username?: string | null
+  avatar?: string | null
+  coverPhoto?: string | null
+  bio?: string | null
+  location?: string | null
+  website?: string | null
+  pronouns?: string | null
+  workplace?: string | null
+  education?: string | null
+  profileVisibility?: string
+  messagePrivacy?: string
+  followPrivacy?: string
+  notifyLikes?: number
+  notifyComments?: number
+  notifyFollows?: number
+  notifyMessages?: number
+  createdAt?: Date | string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutUserInput
+  stories?: Prisma.StoryUncheckedCreateNestedManyWithoutUserInput
+  adminGroups?: Prisma.GroupUncheckedCreateNestedManyWithoutAdminInput
+  groupMemberships?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutUserInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  likes?: Prisma.LikeUncheckedCreateNestedManyWithoutUserInput
+  followsGiven?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowerInput
+  followsReceived?: Prisma.FollowUncheckedCreateNestedManyWithoutFollowingInput
+  messagesSent?: Prisma.MessageUncheckedCreateNestedManyWithoutSenderInput
+  messagesReceived?: Prisma.MessageUncheckedCreateNestedManyWithoutReceiverInput
+  notificationsReceived?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  notificationsActed?: Prisma.NotificationUncheckedCreateNestedManyWithoutActorInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  reports?: Prisma.ReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.ReportUncheckedCreateNestedManyWithoutReportedUserInput
+  pollVotes?: Prisma.PollVoteUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  blocksGiven?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockerInput
+  blocksReceived?: Prisma.BlockUncheckedCreateNestedManyWithoutBlockedInput
+  mutesGiven?: Prisma.MuteUncheckedCreateNestedManyWithoutMuterInput
+  mutesReceived?: Prisma.MuteUncheckedCreateNestedManyWithoutMutedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
+  groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutGroupCallsCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupCallsCreatedInput>
+}
+
+export type UserUpsertWithoutGroupCallsCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedUpdateWithoutGroupCallsCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedCreateWithoutGroupCallsCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutGroupCallsCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutGroupCallsCreatedInput, Prisma.UserUncheckedUpdateWithoutGroupCallsCreatedInput>
+}
+
+export type UserUpdateWithoutGroupCallsCreatedInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
+  groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutGroupCallsCreatedInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatar?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  coverPhoto?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
+  messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
+  notifyLikes?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyComments?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyFollows?: Prisma.IntFieldUpdateOperationsInput | number
+  notifyMessages?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutUserNestedInput
+  stories?: Prisma.StoryUncheckedUpdateManyWithoutUserNestedInput
+  adminGroups?: Prisma.GroupUncheckedUpdateManyWithoutAdminNestedInput
+  groupMemberships?: Prisma.GroupMemberUncheckedUpdateManyWithoutUserNestedInput
+  groupJoinRequests?: Prisma.GroupJoinRequestUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  likes?: Prisma.LikeUncheckedUpdateManyWithoutUserNestedInput
+  followsGiven?: Prisma.FollowUncheckedUpdateManyWithoutFollowerNestedInput
+  followsReceived?: Prisma.FollowUncheckedUpdateManyWithoutFollowingNestedInput
+  messagesSent?: Prisma.MessageUncheckedUpdateManyWithoutSenderNestedInput
+  messagesReceived?: Prisma.MessageUncheckedUpdateManyWithoutReceiverNestedInput
+  notificationsReceived?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  notificationsActed?: Prisma.NotificationUncheckedUpdateManyWithoutActorNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  reports?: Prisma.ReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.ReportUncheckedUpdateManyWithoutReportedUserNestedInput
+  pollVotes?: Prisma.PollVoteUncheckedUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  blocksGiven?: Prisma.BlockUncheckedUpdateManyWithoutBlockerNestedInput
+  blocksReceived?: Prisma.BlockUncheckedUpdateManyWithoutBlockedNestedInput
+  mutesGiven?: Prisma.MuteUncheckedUpdateManyWithoutMuterNestedInput
+  mutesReceived?: Prisma.MuteUncheckedUpdateManyWithoutMutedNestedInput
+  followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
+  followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -6076,6 +6403,7 @@ export type UserCreateWithoutGroupEventsCreatedInput = {
   followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutGroupEventsCreatedInput = {
@@ -6126,6 +6454,7 @@ export type UserUncheckedCreateWithoutGroupEventsCreatedInput = {
   followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutGroupEventsCreatedInput = {
@@ -6191,6 +6520,7 @@ export type UserUpdateWithoutGroupEventsCreatedInput = {
   followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutGroupEventsCreatedInput = {
@@ -6241,6 +6571,7 @@ export type UserUncheckedUpdateWithoutGroupEventsCreatedInput = {
   followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutEventRsvpsInput = {
@@ -6290,6 +6621,7 @@ export type UserCreateWithoutEventRsvpsInput = {
   followRequestsSent?: Prisma.FollowRequestCreateNestedManyWithoutFollowerInput
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutEventRsvpsInput = {
@@ -6340,6 +6672,7 @@ export type UserUncheckedCreateWithoutEventRsvpsInput = {
   followRequestsSent?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowerInput
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutEventRsvpsInput = {
@@ -6405,6 +6738,7 @@ export type UserUpdateWithoutEventRsvpsInput = {
   followRequestsSent?: Prisma.FollowRequestUpdateManyWithoutFollowerNestedInput
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEventRsvpsInput = {
@@ -6455,6 +6789,7 @@ export type UserUncheckedUpdateWithoutEventRsvpsInput = {
   followRequestsSent?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowerNestedInput
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutPollVotesInput = {
@@ -6504,6 +6839,7 @@ export type UserCreateWithoutPollVotesInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutPollVotesInput = {
@@ -6554,6 +6890,7 @@ export type UserUncheckedCreateWithoutPollVotesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutPollVotesInput = {
@@ -6619,6 +6956,7 @@ export type UserUpdateWithoutPollVotesInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPollVotesInput = {
@@ -6669,6 +7007,7 @@ export type UserUncheckedUpdateWithoutPollVotesInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -6718,6 +7057,7 @@ export type UserCreateWithoutSessionsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -6768,6 +7108,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -6833,6 +7174,7 @@ export type UserUpdateWithoutSessionsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -6883,6 +7225,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -6932,6 +7275,7 @@ export type UserCreateWithoutAccountsInput = {
   followRequestsReceived?: Prisma.FollowRequestCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -6982,6 +7326,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedCreateNestedManyWithoutFollowingInput
   groupEventsCreated?: Prisma.GroupEventUncheckedCreateNestedManyWithoutCreatedByInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedCreateNestedManyWithoutUserInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -7047,6 +7392,7 @@ export type UserUpdateWithoutAccountsInput = {
   followRequestsReceived?: Prisma.FollowRequestUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -7097,6 +7443,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   followRequestsReceived?: Prisma.FollowRequestUncheckedUpdateManyWithoutFollowingNestedInput
   groupEventsCreated?: Prisma.GroupEventUncheckedUpdateManyWithoutCreatedByNestedInput
   eventRsvps?: Prisma.GroupEventRsvpUncheckedUpdateManyWithoutUserNestedInput
+  groupCallsCreated?: Prisma.GroupCallUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 
@@ -7132,6 +7479,7 @@ export type UserCountOutputType = {
   followRequestsReceived: number
   groupEventsCreated: number
   eventRsvps: number
+  groupCallsCreated: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -7162,6 +7510,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   followRequestsReceived?: boolean | UserCountOutputTypeCountFollowRequestsReceivedArgs
   groupEventsCreated?: boolean | UserCountOutputTypeCountGroupEventsCreatedArgs
   eventRsvps?: boolean | UserCountOutputTypeCountEventRsvpsArgs
+  groupCallsCreated?: boolean | UserCountOutputTypeCountGroupCallsCreatedArgs
 }
 
 /**
@@ -7363,6 +7712,13 @@ export type UserCountOutputTypeCountEventRsvpsArgs<ExtArgs extends runtime.Types
   where?: Prisma.GroupEventRsvpWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountGroupCallsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.GroupCallWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -7413,6 +7769,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   followRequestsReceived?: boolean | Prisma.User$followRequestsReceivedArgs<ExtArgs>
   groupEventsCreated?: boolean | Prisma.User$groupEventsCreatedArgs<ExtArgs>
   eventRsvps?: boolean | Prisma.User$eventRsvpsArgs<ExtArgs>
+  groupCallsCreated?: boolean | Prisma.User$groupCallsCreatedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -7517,6 +7874,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   followRequestsReceived?: boolean | Prisma.User$followRequestsReceivedArgs<ExtArgs>
   groupEventsCreated?: boolean | Prisma.User$groupEventsCreatedArgs<ExtArgs>
   eventRsvps?: boolean | Prisma.User$eventRsvpsArgs<ExtArgs>
+  groupCallsCreated?: boolean | Prisma.User$groupCallsCreatedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -7552,6 +7910,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     followRequestsReceived: Prisma.$FollowRequestPayload<ExtArgs>[]
     groupEventsCreated: Prisma.$GroupEventPayload<ExtArgs>[]
     eventRsvps: Prisma.$GroupEventRsvpPayload<ExtArgs>[]
+    groupCallsCreated: Prisma.$GroupCallPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -7996,6 +8355,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   followRequestsReceived<T extends Prisma.User$followRequestsReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$followRequestsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FollowRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   groupEventsCreated<T extends Prisma.User$groupEventsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupEventsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   eventRsvps<T extends Prisma.User$eventRsvpsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$eventRsvpsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupEventRsvpPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  groupCallsCreated<T extends Prisma.User$groupCallsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$groupCallsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GroupCallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -9084,6 +9444,30 @@ export type User$eventRsvpsArgs<ExtArgs extends runtime.Types.Extensions.Interna
   take?: number
   skip?: number
   distinct?: Prisma.GroupEventRsvpScalarFieldEnum | Prisma.GroupEventRsvpScalarFieldEnum[]
+}
+
+/**
+ * User.groupCallsCreated
+ */
+export type User$groupCallsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the GroupCall
+   */
+  select?: Prisma.GroupCallSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the GroupCall
+   */
+  omit?: Prisma.GroupCallOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.GroupCallInclude<ExtArgs> | null
+  where?: Prisma.GroupCallWhereInput
+  orderBy?: Prisma.GroupCallOrderByWithRelationInput | Prisma.GroupCallOrderByWithRelationInput[]
+  cursor?: Prisma.GroupCallWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.GroupCallScalarFieldEnum | Prisma.GroupCallScalarFieldEnum[]
 }
 
 /**

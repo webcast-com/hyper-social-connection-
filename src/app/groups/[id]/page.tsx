@@ -10,6 +10,7 @@ import Post from '@/components/Post';
 import GroupMembershipButton from '@/components/GroupMembershipButton';
 import GroupAdminControls from '@/components/GroupAdminControls';
 import GroupEvents from '@/components/GroupEvents';
+import CallModal from '@/components/Call/CallModal';
 
 export async function generateMetadata({
   params,
@@ -180,6 +181,8 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
       }
       if (canSeeFeed) {
         const eventRows = await prisma.groupEvent.findMany({
+          // This dynamic server route intentionally computes a request-time cutoff.
+          // eslint-disable-next-line react-hooks/purity
           where: { groupId, startsAt: { gte: new Date(Date.now() - 86400000) } },
           include: { rsvps: true },
           orderBy: { startsAt: 'asc' },
@@ -240,9 +243,12 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               {viewer ? (
                 <>
+                  {(isMember || isAdmin) && (
+                    <CallModal groupId={groupId} groupName={group.name} />
+                  )}
                   <GroupMembershipButton
                     groupId={groupId}
                     isMember={isMember}
