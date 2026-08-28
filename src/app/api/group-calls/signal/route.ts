@@ -86,8 +86,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signaling kind.' }, { status: 400 });
   }
   const payload = typeof body.payload === 'string' ? body.payload : '';
-  if (!payload) {
+  // Control signals ('bye', 'join') carry no body. Previously every kind was
+  // required to have a payload, so the client's `bye` was rejected with a 400
+  // and peers were left staring at a frozen tile until ICE timed out.
+  const PAYLOAD_OPTIONAL = new Set(['bye', 'join']);
+  if (!payload && !PAYLOAD_OPTIONAL.has(kind)) {
     return NextResponse.json({ error: 'A signaling payload is required.' }, { status: 400 });
+  }
+  if (payload.length > 100_000) {
+    return NextResponse.json({ error: 'Signaling payload is too large.' }, { status: 413 });
   }
   // toId is optional — null broadcasts to everyone in the call.
   const toId = parsePositiveInt(typeof body.toId === 'number' ? String(body.toId) : (body.toId as string | null)) ?? null;

@@ -21,6 +21,7 @@ type GroupCall = {
   title: string;
   description: string | null;
   roomUrl: string;
+  callType?: CallType;
   createdAt: string;
   participantCount?: number;
   creator: {
@@ -163,7 +164,7 @@ export default function CallModal({
               <WebRTCRoom
                 call={roomCall}
                 viewer={{ id: viewer?.id ?? 0, name: viewer?.name ?? 'You', avatar: viewer?.avatar ?? null }}
-                callType={callType}
+                callType={roomCall.callType ?? callType}
                 onLeave={() => {
                   setRoomCall(null);
                   setError('');
@@ -205,7 +206,7 @@ export default function CallModal({
                       </div>
                       <div className="mt-1 font-bold text-indigo-950 dark:text-white">{activeCall.title}</div>
                       <div className="mt-0.5 text-xs text-indigo-800 dark:text-indigo-200">
-                        Started by {activeCall.creator.name}
+                        {activeCall.callType === 'audio' ? 'Audio call' : 'Video call'} · Started by {activeCall.creator.name}
                         {typeof activeCall.participantCount === 'number'
                           ? ` · ${activeCall.participantCount} ${activeCall.participantCount === 1 ? 'person' : 'people'}`
                           : ''}

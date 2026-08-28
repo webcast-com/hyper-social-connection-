@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
 import { hasDatabase, prisma } from '@/lib/prisma';
-import { buildRoomUrl, createCall, deactivateGroupCalls, findCallById, listParticipants } from '@/lib/group-call';
+import { buildRoomUrl, createCall, deactivateGroupCalls, endCall, findCallById, getCallAccess, listParticipants } from '@/lib/group-call';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
 
   const suppliedTitle = typeof body.title === 'string' ? body.title.trim() : '';
   const description = typeof body.description === 'string' ? body.description.trim() : '';
-  const audioOnly = body.callType === 'audio';
+  const callType: 'video' | 'audio' = body.callType === 'audio' ? 'audio' : 'video';
 
   if (suppliedTitle.length > 120) {
     return NextResponse.json({ error: 'The call title must be 120 characters or fewer.' }, { status: 400 });
@@ -159,11 +159,54 @@ export async function POST(req: NextRequest) {
     const roomUrl = buildRoomUrl(groupId, token);
 
     await deactivateGroupCalls(groupId);
-    const call = await createCall(groupId, viewer.id, title, description || null, roomUrl);
+    const call = await createCall(groupId, viewer.id, title, description || null, roomUrl, callType);
 
     return NextResponse.json({ call }, { status: 201 });
   } catch (error) {
     console.warn('[api/group-calls] create failed:', (error as Error)?.message);
     return NextResponse.json({ error: 'Could not start the group call.' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/group-calls?callId=<id>
+ *
+ * Ends a call for everyone. Restricted to the person who started it or the
+ * group admin — a regular participant leaving should use
+ * DELETE /api/group-calls/participants instead.
+ */
+export async function DELETE(req: NextRequest) {
+  const viewer = await getViewer();
+  if (!viewer) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!hasDatabase) {
+    return NextResponse.json({ error: 'Group calls require a connected database.' }, { status: 503 });
+  }
+
+  const callId = parsePositiveInt(req.nextUrl.searchParams.get('callId'));
+  if (!callId) {
+    return NextResponse.json({ error: 'A valid callId query parameter is required.' }, { status: 400 });
+  }
+
+  try {
+    const access = await getCallAccess(callId, viewer.id);
+    if (!access) return NextResponse.json({ error: 'Call not found.' }, { status: 404 });
+
+    const group = await prisma.group.findUnique({
+      where: { id: access.call.groupId },
+      select: { adminId: true },
+    });
+    const isHost = access.call.creatorId === viewer.id || group?.adminId === viewer.id;
+    if (!isHost) {
+      return NextResponse.json(
+        { error: 'Only the call host or group admin can end the call for everyone.' },
+        { status: 403 },
+      );
+    }
+
+    await endCall(callId);
+    return NextResponse.json({ ended: true });
+  } catch (error) {
+    console.warn('[api/group-calls] end failed:', (error as Error)?.message);
+    return NextResponse.json({ error: 'Could not end the call.' }, { status: 500 });
   }
 }
