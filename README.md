@@ -12,7 +12,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 - **Posts** — text, images, videos, link previews, polls, edit & delete, hashtags & mentions, privacy levels
 - **Stories** — 24-hour stories with a full-screen viewer (auto-advance, pause, keyboard nav)
 - **Chat** — direct messages with live updates, quick emoji reactions, active-status banner
-- **Groups** — communities with member-only posting, admin controls, events, and Daily.co video/audio calls
+- **Groups** — communities with member-only posting, admin controls, events, and native peer-to-peer WebRTC video/audio calls
 - **Movies API** — searchable, paginated demo catalog at `/api/movies`
 - **Profiles** — cover photo, avatar, bio, photo grid, followers
 - **Search** — people and posts, with trending topics computed from real hashtag usage
@@ -85,7 +85,7 @@ src/
 - **Auth:** email + password (bcrypt) with opaque, revocable Prisma database sessions (`src/lib/auth.ts`). The session cookie is HttpOnly and expires after 7 days; demo/offline mode is anonymous and read-only.
 - **Uploads:** images/videos go through `/api/upload` (login required, magic-byte sniff, 15 MB images / 250 MB videos). Files land in a **Prisma Object Store / S3-compatible bucket** when `S3_*` env vars are set, otherwise on local disk under `public/uploads`. Postgres stores only the stable URL `/uploads/<uuid>.<ext>` — never a presigned link. See **[DATABASE.md](DATABASE.md#media--object-storage)**.
 - **Chat delivery:** the client polls `/api/messages` every 3 seconds. Swap in WebSockets/SSE later if you want push delivery.
-- **Group calls:** set the server-only `DAILY_API_KEY` to let members create temporary Daily.co video/audio rooms. The key is used only by `/api/group-calls` and is never sent to the browser.
+- **Group calls:** native peer-to-peer WebRTC. Browsers connect directly to each other, while Postgres serves as the signaling relay (who is in the call plus SDP/ICE messages) via `/api/group-calls` — no third-party provider or API key required. See [`src/lib/group-call.ts`](src/lib/group-call.ts). For reliable connectivity across strict NATs a TURN server can be added in `src/components/Call/WebRTCRoom.tsx`.
 
 ## 🌍 Deployment
 

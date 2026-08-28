@@ -11,8 +11,10 @@ import {
   Video,
   X,
 } from 'lucide-react';
+import WebRTCRoom from './WebRTCRoom';
 
 type CallType = 'video' | 'audio';
+type Viewer = { id: number; name: string; avatar: string | null } | null;
 
 type GroupCall = {
   id: number;
@@ -20,6 +22,7 @@ type GroupCall = {
   description: string | null;
   roomUrl: string;
   createdAt: string;
+  participantCount?: number;
   creator: {
     id: number;
     name: string;
@@ -27,28 +30,14 @@ type GroupCall = {
   };
 };
 
-function dailyEmbedUrl(roomUrl: string, callType: CallType) {
-  try {
-    const url = new URL(roomUrl);
-    const isDaily = url.hostname === 'daily.co' || url.hostname.endsWith('.daily.co');
-    if (url.protocol !== 'https:' || !isDaily) return null;
-
-    url.searchParams.set('embed', 'true');
-    url.searchParams.set('showLeaveButton', 'true');
-    url.searchParams.set('showFullscreenButton', 'true');
-    if (callType === 'audio') url.searchParams.set('startVideoOff', 'true');
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
 export default function CallModal({
   groupId,
   groupName,
+  viewer,
 }: {
   groupId: number;
   groupName: string;
+  viewer: Viewer;
 }) {
   const [open, setOpen] = useState(false);
   const [loadingCalls, setLoadingCalls] = useState(false);
@@ -88,6 +77,12 @@ export default function CallModal({
     setOpen(true);
     setError('');
     setLoadingCalls(true);
+
+    // WebRTC requires a secure context. On non-secure origins getUserMedia is
+    // blocked, so surface that immediately rather than failing silently later.
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setError('Calling requires a secure (HTTPS) connection.');
+    }
 
     try {
       const response = await fetch(`/api/group-calls?groupId=${groupId}&active=true`, {
@@ -138,7 +133,9 @@ export default function CallModal({
     }
   };
 
-  const embedUrl = roomCall ? dailyEmbedUrl(roomCall.roomUrl, callType) : null;
+  const joinCall = () => {
+    if (activeCall) setRoomCall(activeCall);
+  };
 
   return (
     <>
@@ -163,39 +160,15 @@ export default function CallModal({
         >
           <div className={`relative w-full overflow-hidden border border-indigo-200 bg-white shadow-2xl dark:border-indigo-400/40 dark:bg-gray-900 ${roomCall ? 'h-[min(92vh,860px)] max-w-6xl rounded-2xl' : 'max-w-xl rounded-3xl'}`}>
             {roomCall ? (
-              <div className="flex h-full flex-col">
-                <div className="flex items-center justify-between gap-4 border-b border-indigo-100 bg-indigo-50 px-4 py-3 dark:border-indigo-400/30 dark:bg-gray-900 sm:px-5">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                      <Radio className="h-3.5 w-3.5" aria-hidden="true" /> Live group call
-                    </div>
-                    <h2 id="group-call-title" className="truncate text-base font-bold text-indigo-950 dark:text-white">
-                      {roomCall.title}
-                    </h2>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    aria-label="Leave call"
-                    className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
-                  >
-                    <PhoneCall className="h-4 w-4" aria-hidden="true" />
-                    <span className="hidden sm:inline">Leave</span>
-                  </button>
-                </div>
-                {embedUrl ? (
-                  <iframe
-                    src={embedUrl}
-                    title={`${roomCall.title} video call`}
-                    allow="camera; microphone; fullscreen; display-capture; autoplay"
-                    className="min-h-0 flex-1 border-0 bg-gray-950"
-                  />
-                ) : (
-                  <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-red-700 dark:text-red-300">
-                    This call has an invalid room URL.
-                  </div>
-                )}
-              </div>
+              <WebRTCRoom
+                call={roomCall}
+                viewer={{ id: viewer?.id ?? 0, name: viewer?.name ?? 'You', avatar: viewer?.avatar ?? null }}
+                callType={callType}
+                onLeave={() => {
+                  setRoomCall(null);
+                  setError('');
+                }}
+              />
             ) : (
               <div>
                 <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-violet-600 px-6 py-6 text-white sm:px-8">
@@ -215,7 +188,7 @@ export default function CallModal({
                     Call {groupName}
                   </h2>
                   <p className="relative mt-1 text-sm text-indigo-100">
-                    Start a video or audio room and invite everyone in the group.
+                    Start a peer-to-peer video or audio room. No third-party service or API key required.
                   </p>
                 </div>
 
@@ -233,13 +206,16 @@ export default function CallModal({
                       <div className="mt-1 font-bold text-indigo-950 dark:text-white">{activeCall.title}</div>
                       <div className="mt-0.5 text-xs text-indigo-800 dark:text-indigo-200">
                         Started by {activeCall.creator.name}
+                        {typeof activeCall.participantCount === 'number'
+                          ? ` · ${activeCall.participantCount} ${activeCall.participantCount === 1 ? 'person' : 'people'}`
+                          : ''}
                       </div>
                       {activeCall.description && (
                         <p className="mt-2 text-sm text-indigo-900/80 dark:text-indigo-100/80">{activeCall.description}</p>
                       )}
                       <button
                         type="button"
-                        onClick={() => setRoomCall(activeCall)}
+                        onClick={joinCall}
                         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700"
                       >
                         <PhoneCall className="h-4 w-4" aria-hidden="true" /> Join live call
@@ -315,13 +291,13 @@ export default function CallModal({
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {starting ? (
-                        <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> Creating secure room…</>
+                        <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> Starting call…</>
                       ) : (
                         <><Plus className="h-4 w-4" aria-hidden="true" /> Start {callType} call</>
                       )}
                     </button>
                     <p className="flex items-center justify-center gap-1.5 text-center text-xs text-gray-500 dark:text-gray-400">
-                      <Mic className="h-3.5 w-3.5" aria-hidden="true" /> Daily.co will ask for device permission when you join.
+                      <Mic className="h-3.5 w-3.5" aria-hidden="true" /> Your browser will ask for device permission when you join.
                     </p>
                   </form>
                 </div>

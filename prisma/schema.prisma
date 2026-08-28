@@ -307,6 +307,8 @@ model GroupCall {
   creatorId   Int      @map("creator_id")
   title       String
   description String?
+  // Native WebRTC room identifier ("webrtc://call/<uuid>") used to identify a
+  // call in the signaling relay. No third-party provider is used.
   roomUrl     String   @map("room_url")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
