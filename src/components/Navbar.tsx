@@ -16,6 +16,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import DarkModeToggle from '@/components/Theme/DarkModeToggle';
+import BrandLogo from '@/components/BrandLogo';
 
 const MOBILE_TABS = [
   { href: '/', label: 'Home', icon: Home, isActive: (p: string) => p === '/' },
@@ -35,12 +36,7 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
     return (
       <header className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-50 px-4 h-14 flex items-center justify-between shadow-sm">
         <div className="flex items-center space-x-2 min-w-0">
-          <Link
-            href="/"
-            className="text-blue-600 dark:text-blue-500 font-extrabold text-2xl tracking-tighter hover:scale-105 transition-transform font-display shrink-0"
-          >
-            hyper
-          </Link>
+          <BrandLogo />
         </div>
         <div className="flex items-center gap-2">
           <DarkModeToggle />
@@ -85,13 +81,7 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
       <header className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-50 px-4 h-14 flex items-center justify-between shadow-sm">
         {/* Left: Brand logo + Integrated Search Bar */}
         <div className="flex items-center space-x-3 min-w-0">
-          <Link
-            href="/"
-            className="text-blue-600 dark:text-blue-500 font-extrabold text-2xl tracking-tighter hover:scale-105 transition-transform font-display shrink-0"
-            aria-label="Hyper Home"
-          >
-            hyper
-          </Link>
+          <BrandLogo ariaLabel="Hyper Home" />
 
           {/* Desktop Search Input */}
           <form onSubmit={handleSearchSubmit} className="hidden sm:flex items-center relative max-w-xs">
