@@ -63,7 +63,7 @@ export default function Login() {
 
           <div className="relative">
             <Link href="/" className="inline-block hover:scale-105 transition-transform">
-              <span className="text-4xl sm:text-5xl font-extrabold tracking-tighter font-display">hyper</span>
+              <img src="/logo-wordmark-white.svg" alt="Hyper" width={651} height={242} className="h-11 sm:h-14 w-auto select-none" draggable={false} />
             </Link>
             <p className="mt-3 text-blue-100 text-sm sm:text-base leading-relaxed">
               Connect with friends, share stories, and explore communities.

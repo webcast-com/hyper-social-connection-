@@ -363,6 +363,32 @@ async function runMigration() {
       CONSTRAINT "group_call_signals_call_id_fk" FOREIGN KEY ("call_id") REFERENCES "public"."group_calls"("id") ON DELETE cascade ON UPDATE no action
     )`,
     `CREATE INDEX IF NOT EXISTS "group_call_signals_call_id_id_idx" ON "group_call_signals"("call_id", "id")`,
+    // Call type ('video' | 'audio') is chosen by the person who starts the call
+    // and must be honoured by everyone who joins — previously the API accepted
+    // callType and then dropped it, so joiners always got a camera call.
+    `ALTER TABLE "group_calls" ADD COLUMN IF NOT EXISTS "call_type" text NOT NULL DEFAULT 'video'`,
+    `ALTER TABLE "group_calls" ADD COLUMN IF NOT EXISTS "ended_at" timestamp(6)`,
+    // Live per-participant state: mute / camera / screen-share / hand raised,
+    // so remote tiles can show accurate badges without extra signaling traffic.
+    `ALTER TABLE "group_call_participants" ADD COLUMN IF NOT EXISTS "is_muted" boolean NOT NULL DEFAULT false`,
+    `ALTER TABLE "group_call_participants" ADD COLUMN IF NOT EXISTS "is_camera_off" boolean NOT NULL DEFAULT false`,
+    `ALTER TABLE "group_call_participants" ADD COLUMN IF NOT EXISTS "is_sharing" boolean NOT NULL DEFAULT false`,
+    `ALTER TABLE "group_call_participants" ADD COLUMN IF NOT EXISTS "hand_raised_at" timestamp(6)`,
+    // Heartbeat: lets peers drop participants whose tab crashed or closed
+    // without a clean leave, instead of showing a frozen tile forever.
+    `ALTER TABLE "group_call_participants" ADD COLUMN IF NOT EXISTS "last_seen_at" timestamp(6) DEFAULT now() NOT NULL`,
+    // In-call text chat, kept separate from the signaling relay so pruning
+    // signals never deletes chat history.
+    `CREATE TABLE IF NOT EXISTS "group_call_messages" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "call_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "body" text NOT NULL,
+      "created_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "group_call_messages_call_id_fk" FOREIGN KEY ("call_id") REFERENCES "public"."group_calls"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_call_messages_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "group_call_messages_call_id_id_idx" ON "group_call_messages"("call_id", "id")`,
     `CREATE TABLE IF NOT EXISTS "group_join_requests" (
       "id" serial PRIMARY KEY NOT NULL,
       "group_id" integer NOT NULL,
