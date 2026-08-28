@@ -286,6 +286,8 @@ export default async function Home() {
   const bookmarkedPostIds = userBookmarks.map((b) => b.postId);
   const bookmarkedSet = new Set(bookmarkedPostIds);
 
+  // This dynamic server route intentionally evaluates scheduled posts per request.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const visiblePosts = enrichedPosts.filter((p) => {
     if (hiddenAuthorIds.has(p.userId)) return false;
