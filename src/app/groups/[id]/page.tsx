@@ -247,7 +247,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               {viewer ? (
                 <>
                   {(isMember || isAdmin) && (
-                    <CallModal groupId={groupId} groupName={group.name} />
+                    <CallModal groupId={groupId} groupName={group.name} viewer={viewer} />
                   )}
                   <GroupMembershipButton
                     groupId={groupId}

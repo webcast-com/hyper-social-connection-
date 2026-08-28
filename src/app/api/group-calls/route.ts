@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
 import { hasDatabase, prisma } from '@/lib/prisma';
+import { buildRoomUrl, createCall, deactivateGroupCalls, findCallById, listParticipants } from '@/lib/group-call';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,57 +43,10 @@ function parseActiveFilter(value: string | null): boolean | undefined | null {
   return null;
 }
 
-function isDailyRoomUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && (url.hostname === 'daily.co' || url.hostname.endsWith('.daily.co'));
-  } catch {
-    return false;
-  }
-}
-
-async function createDailyRoom(groupId: number, audioOnly: boolean) {
-  // DAILY_API_KEY is intentionally server-only. NEXT_PUBLIC_DAILY_API_KEY is
-  // accepted for compatibility with older deployments, but should be migrated.
-  const apiKey = process.env.DAILY_API_KEY || process.env.NEXT_PUBLIC_DAILY_API_KEY;
-  if (!apiKey) {
-    throw new Error('DAILY_NOT_CONFIGURED');
-  }
-
-  const roomName = `hyper-group-${groupId}-${randomUUID().replaceAll('-', '').slice(0, 14)}`;
-  const expiresAt = Math.floor(Date.now() / 1000) + 4 * 60 * 60;
-  const response = await fetch('https://api.daily.co/v1/rooms', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: roomName,
-      privacy: 'public',
-      properties: {
-        exp: expiresAt,
-        enable_chat: true,
-        enable_screenshare: true,
-        start_video_off: audioOnly,
-      },
-    }),
-    cache: 'no-store',
-  });
-
-  const payload = (await response.json().catch(() => null)) as { url?: string } | null;
-  if (!response.ok || !payload?.url || !isDailyRoomUrl(payload.url)) {
-    console.warn('[api/group-calls] Daily room creation failed:', response.status);
-    throw new Error('DAILY_CREATE_FAILED');
-  }
-
-  return payload.url;
-}
-
 /**
  * GET /api/group-calls?groupId=<id>&active=true
  *
- * Lists calls for a group. Call room URLs are member-only, including for
+ * Lists calls for a group. Call room data is member-only, including for
  * public groups, so a signed-in group member (or the group admin) is required.
  */
 export async function GET(req: NextRequest) {
@@ -132,8 +86,18 @@ export async function GET(req: NextRequest) {
       take: 50,
     });
 
+    // Attach the number of current participants to each call.
+    const callsWithCounts = await Promise.all(
+      calls.map(async (call) => ({
+        ...call,
+        participantCount: (await listParticipants(call.id)).length,
+        // Signal that this is a native WebRTC call (no third-party URL).
+        native: true,
+      })),
+    );
+
     return NextResponse.json(
-      { calls },
+      { calls: callsWithCounts },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
@@ -145,7 +109,7 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/group-calls
  *
- * Creates a four-hour Daily room and broadcasts it to the group. Only a
+ * Creates a native WebRTC group call (no Daily/third-party room). Only a
  * signed-in member (or group admin) can start a call. Starting a new call
  * deactivates older call records for the same group.
  */
@@ -190,45 +154,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must join this group before starting a call.' }, { status: 403 });
     }
 
-    const roomUrl = await createDailyRoom(groupId, audioOnly);
     const title = suppliedTitle || `${access.group.name} call`;
+    const token = randomUUID().replaceAll('-', '').slice(0, 16);
+    const roomUrl = buildRoomUrl(groupId, token);
 
-    const call = await prisma.$transaction(async (tx) => {
-      await tx.groupCall.updateMany({
-        where: { groupId, isActive: true },
-        data: { isActive: false },
-      });
-      return tx.groupCall.create({
-        data: {
-          groupId,
-          creatorId: viewer.id,
-          title,
-          description: description || null,
-          roomUrl,
-        },
-        include: {
-          creator: { select: { id: true, name: true, avatar: true } },
-        },
-      });
-    });
+    await deactivateGroupCalls(groupId);
+    const call = await createCall(groupId, viewer.id, title, description || null, roomUrl);
 
     return NextResponse.json({ call }, { status: 201 });
   } catch (error) {
-    const message = (error as Error)?.message;
-    if (message === 'DAILY_NOT_CONFIGURED') {
-      return NextResponse.json(
-        { error: 'Video calling is not configured. Add DAILY_API_KEY to the server environment.' },
-        { status: 503 },
-      );
-    }
-    if (message === 'DAILY_CREATE_FAILED') {
-      return NextResponse.json(
-        { error: 'The video room provider could not create a room. Please try again.' },
-        { status: 502 },
-      );
-    }
-
-    console.warn('[api/group-calls] create failed:', message);
+    console.warn('[api/group-calls] create failed:', (error as Error)?.message);
     return NextResponse.json({ error: 'Could not start the group call.' }, { status: 500 });
   }
 }

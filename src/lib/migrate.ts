@@ -342,6 +342,27 @@ async function runMigration() {
     )`,
     `CREATE INDEX IF NOT EXISTS "group_calls_group_id_is_active_idx"
        ON "group_calls"("group_id", "is_active")`,
+    `CREATE TABLE IF NOT EXISTS "group_call_participants" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "call_id" integer NOT NULL,
+      "user_id" integer NOT NULL,
+      "joined_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "group_call_participants_call_id_user_id_key" UNIQUE ("call_id", "user_id"),
+      CONSTRAINT "group_call_participants_call_id_fk" FOREIGN KEY ("call_id") REFERENCES "public"."group_calls"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_call_participants_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "group_call_participants_call_id_idx" ON "group_call_participants"("call_id")`,
+    `CREATE TABLE IF NOT EXISTS "group_call_signals" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "call_id" integer NOT NULL,
+      "from_id" integer NOT NULL,
+      "to_id" integer,
+      "kind" text NOT NULL,
+      "payload" text NOT NULL,
+      "created_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "group_call_signals_call_id_fk" FOREIGN KEY ("call_id") REFERENCES "public"."group_calls"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "group_call_signals_call_id_id_idx" ON "group_call_signals"("call_id", "id")`,
     `CREATE TABLE IF NOT EXISTS "group_join_requests" (
       "id" serial PRIMARY KEY NOT NULL,
       "group_id" integer NOT NULL,
