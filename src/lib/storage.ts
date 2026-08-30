@@ -38,6 +38,9 @@ export type StoredObject = {
 const LOCAL_DIR = path.join(process.cwd(), 'public', 'uploads');
 const OBJECT_PREFIX = 'media/';
 const SIGNED_GET_TTL_SECONDS = 60 * 60; // 1 hour — enough for a video session
+const SIGNED_PUT_TTL_SECONDS = 10 * 60; // 10 minutes to start the upload
+/** Bytes read back from a stored object to sniff its real type. */
+const SNIFF_BYTES = 8192;
 
 function env(name: string, ...aliases: string[]) {
   for (const key of [name, ...aliases]) {
@@ -76,6 +79,11 @@ function getS3(): { client: S3Client; bucket: string } | null {
         accessKeyId: cfg.accessKeyId,
         secretAccessKey: cfg.secretAccessKey,
       },
+      // Default ("WHEN_SUPPORTED") makes presigned PUTs carry
+      // x-amz-checksum-crc32 / x-amz-sdk-checksum-algorithm, which the
+      // browser never sends — S3 then rejects the upload. Only calculate
+      // checksums when the operation genuinely requires them.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
     });
     cachedClientKey = key;
   }
@@ -155,6 +163,90 @@ export async function statLocalMedia(filename: string) {
       size: info.size,
       mime: MEDIA_MIME_BY_EXT[extOf(filename)] || 'application/octet-stream',
     };
+  } catch {
+    return null;
+  }
+}
+
+export type SignedUpload = {
+  uploadUrl: string;
+  /** Headers that were signed and MUST be sent verbatim by the client. */
+  headers: Record<string, string>;
+  expiresIn: number;
+};
+
+/**
+ * Mint a presigned PUT so the browser can upload straight to the bucket.
+ *
+ * Serverless platforms cap request bodies (Vercel: 4.5 MB), which makes the
+ * proxy-through-`/api/upload` path unusable for photos and video. With this
+ * URL the bytes never touch a function — only the signature does.
+ *
+ * Returns `null` when no object store is configured (local disk driver), in
+ * which case callers should fall back to posting the file to `/api/upload`.
+ */
+export async function getSignedUploadUrl(opts: {
+  filename: string;
+  mime: string;
+}): Promise<SignedUpload | null> {
+  const s3 = getS3();
+  if (!s3) return null;
+
+  // Only Content-Type is signed (and therefore enforced by storage), which
+  // stops a client from pushing video bytes into an `.png` key. Cache-Control
+  // and Content-Disposition are applied to the presigned GET in
+  // getSignedDownloadUrl instead, so they do not need to be signed here.
+  const headers = { 'Content-Type': opts.mime };
+
+  const uploadUrl = await getSignedUrl(
+    s3.client,
+    new PutObjectCommand({
+      Bucket: s3.bucket,
+      Key: objectKeyFor(opts.filename),
+      ContentType: opts.mime,
+    }),
+    { expiresIn: SIGNED_PUT_TTL_SECONDS, signableHeaders: new Set(['content-type']) },
+  );
+
+  return { uploadUrl, headers, expiresIn: SIGNED_PUT_TTL_SECONDS };
+}
+
+/**
+ * Read back the head of a stored object (S3 or local) so its real type can be
+ * sniffed *after* a direct-to-storage upload. Returns the object size too, so
+ * oversized uploads can be rejected once they have landed.
+ */
+export async function inspectMediaObject(
+  filename: string,
+): Promise<{ size: number; head: Buffer } | null> {
+  const s3 = getS3();
+
+  if (!s3) {
+    const info = await statLocalMedia(filename);
+    if (!info) return null;
+    const { open } = await import('node:fs/promises');
+    const handle = await open(info.path, 'r');
+    try {
+      const head = Buffer.alloc(Math.min(SNIFF_BYTES, info.size));
+      await handle.read(head, 0, head.length, 0);
+      return { size: info.size, head };
+    } finally {
+      await handle.close();
+    }
+  }
+
+  try {
+    const result = await s3.client.send(
+      new GetObjectCommand({
+        Bucket: s3.bucket,
+        Key: objectKeyFor(filename),
+        Range: `bytes=0-${SNIFF_BYTES - 1}`,
+      }),
+    );
+    const bytes = await result.Body?.transformToByteArray();
+    if (!bytes) return null;
+    const total = Number(result.ContentRange?.split('/')[1]) || bytes.length;
+    return { size: total, head: Buffer.from(bytes) };
   } catch {
     return null;
   }

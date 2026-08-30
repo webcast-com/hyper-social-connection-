@@ -14,7 +14,8 @@
     "db:local": "bash scripts/dev-db.sh start",
     "db:local:stop": "bash scripts/dev-db.sh stop",
     "db:local:status": "bash scripts/dev-db.sh status",
-    "db:local:reset": "bash scripts/dev-db.sh reset"
+    "db:local:reset": "bash scripts/dev-db.sh reset",
+    "storage:cors": "node scripts/s3-cors.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
