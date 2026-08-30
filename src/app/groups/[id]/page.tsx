@@ -10,7 +10,7 @@ import Post from '@/components/Post';
 import GroupMembershipButton from '@/components/GroupMembershipButton';
 import GroupAdminControls from '@/components/GroupAdminControls';
 import GroupEvents from '@/components/GroupEvents';
-import CallModal from '@/components/Call/CallModal';
+import { StartCallButton } from '@/components/Call/StartCallButton';
 
 export async function generateMetadata({
   params,
@@ -247,7 +247,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
               {viewer ? (
                 <>
                   {(isMember || isAdmin) && (
-                    <CallModal groupId={groupId} groupName={group.name} viewer={viewer} />
+                    <StartCallButton groupId={groupId} groupName={group.name} viewer={viewer} />
                   )}
                   <GroupMembershipButton
                     groupId={groupId}

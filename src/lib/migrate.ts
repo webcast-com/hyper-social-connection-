@@ -263,6 +263,10 @@ async function runMigration() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_comments integer DEFAULT 1`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_follows integer DEFAULT 1`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_messages integer DEFAULT 1`,
+    // Profile extras behind User.age / User.gender / User.relationship
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS age integer DEFAULT 18`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS gender text DEFAULT 'male'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS relationship_status text DEFAULT 'single'`,
     // ── Group community extras
     `ALTER TABLE groups ADD COLUMN IF NOT EXISTS privacy text DEFAULT 'public'`,
     `ALTER TABLE groups ADD COLUMN IF NOT EXISTS category text`,

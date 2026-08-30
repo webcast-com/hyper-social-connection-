@@ -28,6 +28,7 @@ export type AggregateUser = {
 
 export type UserAvgAggregateOutputType = {
   id: number | null
+  age: number | null
   notifyLikes: number | null
   notifyComments: number | null
   notifyFollows: number | null
@@ -36,6 +37,7 @@ export type UserAvgAggregateOutputType = {
 
 export type UserSumAggregateOutputType = {
   id: number | null
+  age: number | null
   notifyLikes: number | null
   notifyComments: number | null
   notifyFollows: number | null
@@ -56,6 +58,9 @@ export type UserMinAggregateOutputType = {
   pronouns: string | null
   workplace: string | null
   education: string | null
+  age: number | null
+  gender: string | null
+  relationship: string | null
   profileVisibility: string | null
   messagePrivacy: string | null
   followPrivacy: string | null
@@ -80,6 +85,9 @@ export type UserMaxAggregateOutputType = {
   pronouns: string | null
   workplace: string | null
   education: string | null
+  age: number | null
+  gender: string | null
+  relationship: string | null
   profileVisibility: string | null
   messagePrivacy: string | null
   followPrivacy: string | null
@@ -104,6 +112,9 @@ export type UserCountAggregateOutputType = {
   pronouns: number
   workplace: number
   education: number
+  age: number
+  gender: number
+  relationship: number
   profileVisibility: number
   messagePrivacy: number
   followPrivacy: number
@@ -118,6 +129,7 @@ export type UserCountAggregateOutputType = {
 
 export type UserAvgAggregateInputType = {
   id?: true
+  age?: true
   notifyLikes?: true
   notifyComments?: true
   notifyFollows?: true
@@ -126,6 +138,7 @@ export type UserAvgAggregateInputType = {
 
 export type UserSumAggregateInputType = {
   id?: true
+  age?: true
   notifyLikes?: true
   notifyComments?: true
   notifyFollows?: true
@@ -146,6 +159,9 @@ export type UserMinAggregateInputType = {
   pronouns?: true
   workplace?: true
   education?: true
+  age?: true
+  gender?: true
+  relationship?: true
   profileVisibility?: true
   messagePrivacy?: true
   followPrivacy?: true
@@ -170,6 +186,9 @@ export type UserMaxAggregateInputType = {
   pronouns?: true
   workplace?: true
   education?: true
+  age?: true
+  gender?: true
+  relationship?: true
   profileVisibility?: true
   messagePrivacy?: true
   followPrivacy?: true
@@ -194,6 +213,9 @@ export type UserCountAggregateInputType = {
   pronouns?: true
   workplace?: true
   education?: true
+  age?: true
+  gender?: true
+  relationship?: true
   profileVisibility?: true
   messagePrivacy?: true
   followPrivacy?: true
@@ -305,6 +327,9 @@ export type UserGroupByOutputType = {
   pronouns: string | null
   workplace: string | null
   education: string | null
+  age: number
+  gender: string
+  relationship: string
   profileVisibility: string
   messagePrivacy: string
   followPrivacy: string
@@ -352,6 +377,9 @@ export type UserWhereInput = {
   pronouns?: Prisma.StringNullableFilter<"User"> | string | null
   workplace?: Prisma.StringNullableFilter<"User"> | string | null
   education?: Prisma.StringNullableFilter<"User"> | string | null
+  age?: Prisma.IntFilter<"User"> | number
+  gender?: Prisma.StringFilter<"User"> | string
+  relationship?: Prisma.StringFilter<"User"> | string
   profileVisibility?: Prisma.StringFilter<"User"> | string
   messagePrivacy?: Prisma.StringFilter<"User"> | string
   followPrivacy?: Prisma.StringFilter<"User"> | string
@@ -404,6 +432,9 @@ export type UserOrderByWithRelationInput = {
   pronouns?: Prisma.SortOrderInput | Prisma.SortOrder
   workplace?: Prisma.SortOrderInput | Prisma.SortOrder
   education?: Prisma.SortOrderInput | Prisma.SortOrder
+  age?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
+  relationship?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
   followPrivacy?: Prisma.SortOrder
@@ -459,6 +490,9 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   pronouns?: Prisma.StringNullableFilter<"User"> | string | null
   workplace?: Prisma.StringNullableFilter<"User"> | string | null
   education?: Prisma.StringNullableFilter<"User"> | string | null
+  age?: Prisma.IntFilter<"User"> | number
+  gender?: Prisma.StringFilter<"User"> | string
+  relationship?: Prisma.StringFilter<"User"> | string
   profileVisibility?: Prisma.StringFilter<"User"> | string
   messagePrivacy?: Prisma.StringFilter<"User"> | string
   followPrivacy?: Prisma.StringFilter<"User"> | string
@@ -511,6 +545,9 @@ export type UserOrderByWithAggregationInput = {
   pronouns?: Prisma.SortOrderInput | Prisma.SortOrder
   workplace?: Prisma.SortOrderInput | Prisma.SortOrder
   education?: Prisma.SortOrderInput | Prisma.SortOrder
+  age?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
+  relationship?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
   followPrivacy?: Prisma.SortOrder
@@ -543,6 +580,9 @@ export type UserScalarWhereWithAggregatesInput = {
   pronouns?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   workplace?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   education?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  age?: Prisma.IntWithAggregatesFilter<"User"> | number
+  gender?: Prisma.StringWithAggregatesFilter<"User"> | string
+  relationship?: Prisma.StringWithAggregatesFilter<"User"> | string
   profileVisibility?: Prisma.StringWithAggregatesFilter<"User"> | string
   messagePrivacy?: Prisma.StringWithAggregatesFilter<"User"> | string
   followPrivacy?: Prisma.StringWithAggregatesFilter<"User"> | string
@@ -566,6 +606,9 @@ export type UserCreateInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -618,6 +661,9 @@ export type UserUncheckedCreateInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -669,6 +715,9 @@ export type UserUpdateInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -721,6 +770,9 @@ export type UserUncheckedUpdateInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -773,6 +825,9 @@ export type UserCreateManyInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -796,6 +851,9 @@ export type UserUpdateManyMutationInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -820,6 +878,9 @@ export type UserUncheckedUpdateManyInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -844,6 +905,9 @@ export type UserCountOrderByAggregateInput = {
   pronouns?: Prisma.SortOrder
   workplace?: Prisma.SortOrder
   education?: Prisma.SortOrder
+  age?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
+  relationship?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
   followPrivacy?: Prisma.SortOrder
@@ -856,6 +920,7 @@ export type UserCountOrderByAggregateInput = {
 
 export type UserAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  age?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -876,6 +941,9 @@ export type UserMaxOrderByAggregateInput = {
   pronouns?: Prisma.SortOrder
   workplace?: Prisma.SortOrder
   education?: Prisma.SortOrder
+  age?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
+  relationship?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
   followPrivacy?: Prisma.SortOrder
@@ -900,6 +968,9 @@ export type UserMinOrderByAggregateInput = {
   pronouns?: Prisma.SortOrder
   workplace?: Prisma.SortOrder
   education?: Prisma.SortOrder
+  age?: Prisma.SortOrder
+  gender?: Prisma.SortOrder
+  relationship?: Prisma.SortOrder
   profileVisibility?: Prisma.SortOrder
   messagePrivacy?: Prisma.SortOrder
   followPrivacy?: Prisma.SortOrder
@@ -912,6 +983,7 @@ export type UserMinOrderByAggregateInput = {
 
 export type UserSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  age?: Prisma.SortOrder
   notifyLikes?: Prisma.SortOrder
   notifyComments?: Prisma.SortOrder
   notifyFollows?: Prisma.SortOrder
@@ -1355,6 +1427,9 @@ export type UserCreateWithoutPostsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1406,6 +1481,9 @@ export type UserUncheckedCreateWithoutPostsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1472,6 +1550,9 @@ export type UserUpdateWithoutPostsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1523,6 +1604,9 @@ export type UserUncheckedUpdateWithoutPostsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1573,6 +1657,9 @@ export type UserCreateWithoutStoriesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1624,6 +1711,9 @@ export type UserUncheckedCreateWithoutStoriesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1690,6 +1780,9 @@ export type UserUpdateWithoutStoriesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1741,6 +1834,9 @@ export type UserUncheckedUpdateWithoutStoriesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1791,6 +1887,9 @@ export type UserCreateWithoutAdminGroupsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1842,6 +1941,9 @@ export type UserUncheckedCreateWithoutAdminGroupsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -1908,6 +2010,9 @@ export type UserUpdateWithoutAdminGroupsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1959,6 +2064,9 @@ export type UserUncheckedUpdateWithoutAdminGroupsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2009,6 +2117,9 @@ export type UserCreateWithoutGroupMembershipsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2060,6 +2171,9 @@ export type UserUncheckedCreateWithoutGroupMembershipsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2126,6 +2240,9 @@ export type UserUpdateWithoutGroupMembershipsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2177,6 +2294,9 @@ export type UserUncheckedUpdateWithoutGroupMembershipsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2227,6 +2347,9 @@ export type UserCreateWithoutGroupJoinRequestsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2278,6 +2401,9 @@ export type UserUncheckedCreateWithoutGroupJoinRequestsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2344,6 +2470,9 @@ export type UserUpdateWithoutGroupJoinRequestsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2395,6 +2524,9 @@ export type UserUncheckedUpdateWithoutGroupJoinRequestsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2445,6 +2577,9 @@ export type UserCreateWithoutCommentsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2496,6 +2631,9 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2562,6 +2700,9 @@ export type UserUpdateWithoutCommentsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2613,6 +2754,9 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2663,6 +2807,9 @@ export type UserCreateWithoutLikesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2714,6 +2861,9 @@ export type UserUncheckedCreateWithoutLikesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2780,6 +2930,9 @@ export type UserUpdateWithoutLikesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2831,6 +2984,9 @@ export type UserUncheckedUpdateWithoutLikesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2881,6 +3037,9 @@ export type UserCreateWithoutFollowsGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2932,6 +3091,9 @@ export type UserUncheckedCreateWithoutFollowsGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -2987,6 +3149,9 @@ export type UserCreateWithoutFollowsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3038,6 +3203,9 @@ export type UserUncheckedCreateWithoutFollowsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3104,6 +3272,9 @@ export type UserUpdateWithoutFollowsGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3155,6 +3326,9 @@ export type UserUncheckedUpdateWithoutFollowsGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3216,6 +3390,9 @@ export type UserUpdateWithoutFollowsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3267,6 +3444,9 @@ export type UserUncheckedUpdateWithoutFollowsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3317,6 +3497,9 @@ export type UserCreateWithoutMessagesSentInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3368,6 +3551,9 @@ export type UserUncheckedCreateWithoutMessagesSentInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3423,6 +3609,9 @@ export type UserCreateWithoutMessagesReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3474,6 +3663,9 @@ export type UserUncheckedCreateWithoutMessagesReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3540,6 +3732,9 @@ export type UserUpdateWithoutMessagesSentInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3591,6 +3786,9 @@ export type UserUncheckedUpdateWithoutMessagesSentInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3652,6 +3850,9 @@ export type UserUpdateWithoutMessagesReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3703,6 +3904,9 @@ export type UserUncheckedUpdateWithoutMessagesReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3753,6 +3957,9 @@ export type UserCreateWithoutNotificationsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3804,6 +4011,9 @@ export type UserUncheckedCreateWithoutNotificationsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3859,6 +4069,9 @@ export type UserCreateWithoutNotificationsActedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3910,6 +4123,9 @@ export type UserUncheckedCreateWithoutNotificationsActedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -3976,6 +4192,9 @@ export type UserUpdateWithoutNotificationsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4027,6 +4246,9 @@ export type UserUncheckedUpdateWithoutNotificationsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4088,6 +4310,9 @@ export type UserUpdateWithoutNotificationsActedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4139,6 +4364,9 @@ export type UserUncheckedUpdateWithoutNotificationsActedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4189,6 +4417,9 @@ export type UserCreateWithoutBookmarksInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4240,6 +4471,9 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4306,6 +4540,9 @@ export type UserUpdateWithoutBookmarksInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4357,6 +4594,9 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4407,6 +4647,9 @@ export type UserCreateWithoutReportsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4458,6 +4701,9 @@ export type UserUncheckedCreateWithoutReportsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4513,6 +4759,9 @@ export type UserCreateWithoutReportsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4564,6 +4813,9 @@ export type UserUncheckedCreateWithoutReportsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4630,6 +4882,9 @@ export type UserUpdateWithoutReportsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4681,6 +4936,9 @@ export type UserUncheckedUpdateWithoutReportsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4742,6 +5000,9 @@ export type UserUpdateWithoutReportsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4793,6 +5054,9 @@ export type UserUncheckedUpdateWithoutReportsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -4843,6 +5107,9 @@ export type UserCreateWithoutBlocksGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4894,6 +5161,9 @@ export type UserUncheckedCreateWithoutBlocksGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -4949,6 +5219,9 @@ export type UserCreateWithoutBlocksReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5000,6 +5273,9 @@ export type UserUncheckedCreateWithoutBlocksReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5066,6 +5342,9 @@ export type UserUpdateWithoutBlocksGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5117,6 +5396,9 @@ export type UserUncheckedUpdateWithoutBlocksGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5178,6 +5460,9 @@ export type UserUpdateWithoutBlocksReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5229,6 +5514,9 @@ export type UserUncheckedUpdateWithoutBlocksReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5279,6 +5567,9 @@ export type UserCreateWithoutMutesGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5330,6 +5621,9 @@ export type UserUncheckedCreateWithoutMutesGivenInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5385,6 +5679,9 @@ export type UserCreateWithoutMutesReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5436,6 +5733,9 @@ export type UserUncheckedCreateWithoutMutesReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5502,6 +5802,9 @@ export type UserUpdateWithoutMutesGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5553,6 +5856,9 @@ export type UserUncheckedUpdateWithoutMutesGivenInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5614,6 +5920,9 @@ export type UserUpdateWithoutMutesReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5665,6 +5974,9 @@ export type UserUncheckedUpdateWithoutMutesReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5715,6 +6027,9 @@ export type UserCreateWithoutFollowRequestsSentInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5766,6 +6081,9 @@ export type UserUncheckedCreateWithoutFollowRequestsSentInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5821,6 +6139,9 @@ export type UserCreateWithoutFollowRequestsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5872,6 +6193,9 @@ export type UserUncheckedCreateWithoutFollowRequestsReceivedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -5938,6 +6262,9 @@ export type UserUpdateWithoutFollowRequestsSentInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -5989,6 +6316,9 @@ export type UserUncheckedUpdateWithoutFollowRequestsSentInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6050,6 +6380,9 @@ export type UserUpdateWithoutFollowRequestsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6101,6 +6434,9 @@ export type UserUncheckedUpdateWithoutFollowRequestsReceivedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6151,6 +6487,9 @@ export type UserCreateWithoutGroupCallsCreatedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6202,6 +6541,9 @@ export type UserUncheckedCreateWithoutGroupCallsCreatedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6268,6 +6610,9 @@ export type UserUpdateWithoutGroupCallsCreatedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6319,6 +6664,9 @@ export type UserUncheckedUpdateWithoutGroupCallsCreatedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6369,6 +6717,9 @@ export type UserCreateWithoutGroupEventsCreatedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6420,6 +6771,9 @@ export type UserUncheckedCreateWithoutGroupEventsCreatedInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6486,6 +6840,9 @@ export type UserUpdateWithoutGroupEventsCreatedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6537,6 +6894,9 @@ export type UserUncheckedUpdateWithoutGroupEventsCreatedInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6587,6 +6947,9 @@ export type UserCreateWithoutEventRsvpsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6638,6 +7001,9 @@ export type UserUncheckedCreateWithoutEventRsvpsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6704,6 +7070,9 @@ export type UserUpdateWithoutEventRsvpsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6755,6 +7124,9 @@ export type UserUncheckedUpdateWithoutEventRsvpsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6805,6 +7177,9 @@ export type UserCreateWithoutPollVotesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6856,6 +7231,9 @@ export type UserUncheckedCreateWithoutPollVotesInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -6922,6 +7300,9 @@ export type UserUpdateWithoutPollVotesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -6973,6 +7354,9 @@ export type UserUncheckedUpdateWithoutPollVotesInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -7023,6 +7407,9 @@ export type UserCreateWithoutSessionsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -7074,6 +7461,9 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -7140,6 +7530,9 @@ export type UserUpdateWithoutSessionsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -7191,6 +7584,9 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -7241,6 +7637,9 @@ export type UserCreateWithoutAccountsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -7292,6 +7691,9 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   pronouns?: string | null
   workplace?: string | null
   education?: string | null
+  age?: number
+  gender?: string
+  relationship?: string
   profileVisibility?: string
   messagePrivacy?: string
   followPrivacy?: string
@@ -7358,6 +7760,9 @@ export type UserUpdateWithoutAccountsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -7409,6 +7814,9 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   pronouns?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   workplace?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   education?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  age?: Prisma.IntFieldUpdateOperationsInput | number
+  gender?: Prisma.StringFieldUpdateOperationsInput | string
+  relationship?: Prisma.StringFieldUpdateOperationsInput | string
   profileVisibility?: Prisma.StringFieldUpdateOperationsInput | string
   messagePrivacy?: Prisma.StringFieldUpdateOperationsInput | string
   followPrivacy?: Prisma.StringFieldUpdateOperationsInput | string
@@ -7734,6 +8142,9 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   pronouns?: boolean
   workplace?: boolean
   education?: boolean
+  age?: boolean
+  gender?: boolean
+  relationship?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
   followPrivacy?: boolean
@@ -7787,6 +8198,9 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   pronouns?: boolean
   workplace?: boolean
   education?: boolean
+  age?: boolean
+  gender?: boolean
+  relationship?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
   followPrivacy?: boolean
@@ -7811,6 +8225,9 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   pronouns?: boolean
   workplace?: boolean
   education?: boolean
+  age?: boolean
+  gender?: boolean
+  relationship?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
   followPrivacy?: boolean
@@ -7835,6 +8252,9 @@ export type UserSelectScalar = {
   pronouns?: boolean
   workplace?: boolean
   education?: boolean
+  age?: boolean
+  gender?: boolean
+  relationship?: boolean
   profileVisibility?: boolean
   messagePrivacy?: boolean
   followPrivacy?: boolean
@@ -7845,7 +8265,7 @@ export type UserSelectScalar = {
   createdAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "location" | "website" | "pronouns" | "workplace" | "education" | "profileVisibility" | "messagePrivacy" | "followPrivacy" | "notifyLikes" | "notifyComments" | "notifyFollows" | "notifyMessages" | "createdAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "password" | "username" | "avatar" | "coverPhoto" | "bio" | "location" | "website" | "pronouns" | "workplace" | "education" | "age" | "gender" | "relationship" | "profileVisibility" | "messagePrivacy" | "followPrivacy" | "notifyLikes" | "notifyComments" | "notifyFollows" | "notifyMessages" | "createdAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   posts?: boolean | Prisma.User$postsArgs<ExtArgs>
   stories?: boolean | Prisma.User$storiesArgs<ExtArgs>
@@ -7926,6 +8346,9 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     pronouns: string | null
     workplace: string | null
     education: string | null
+    age: number
+    gender: string
+    relationship: string
     profileVisibility: string
     messagePrivacy: string
     followPrivacy: string
@@ -8398,6 +8821,9 @@ export interface UserFieldRefs {
   readonly pronouns: Prisma.FieldRef<"User", 'String'>
   readonly workplace: Prisma.FieldRef<"User", 'String'>
   readonly education: Prisma.FieldRef<"User", 'String'>
+  readonly age: Prisma.FieldRef<"User", 'Int'>
+  readonly gender: Prisma.FieldRef<"User", 'String'>
+  readonly relationship: Prisma.FieldRef<"User", 'String'>
   readonly profileVisibility: Prisma.FieldRef<"User", 'String'>
   readonly messagePrivacy: Prisma.FieldRef<"User", 'String'>
   readonly followPrivacy: Prisma.FieldRef<"User", 'String'>
