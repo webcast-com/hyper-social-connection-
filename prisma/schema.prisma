@@ -30,6 +30,12 @@ model User {
   pronouns   String?
   workplace  String?
   education  String?
+  // Profile extras: shown on the profile page and used for discovery.
+  // Plain columns (not enums) so the boot DDL in src/lib/migrate.ts stays the
+  // single source of truth for the physical schema.
+  age        Int       @default(18)
+  gender     String    @default("male")
+  relationship String  @default("single") @map("relationship_status")
   profileVisibility String @default("public") @map("profile_visibility")
   messagePrivacy    String @default("everyone") @map("message_privacy")
   followPrivacy     String @default("everyone") @map("follow_privacy")

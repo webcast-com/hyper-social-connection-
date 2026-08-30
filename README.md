@@ -83,7 +83,7 @@ src/
 ## 🔐 Auth & uploads
 
 - **Auth:** email + password (bcrypt) with opaque, revocable Prisma database sessions (`src/lib/auth.ts`). The session cookie is HttpOnly and expires after 7 days; demo/offline mode is anonymous and read-only.
-- **Uploads:** images/videos go through `/api/upload` (login required, magic-byte sniff, 15 MB images / 250 MB videos). Files land in a **Prisma Object Store / S3-compatible bucket** when `S3_*` env vars are set, otherwise on local disk under `public/uploads`. Postgres stores only the stable URL `/uploads/<uuid>.<ext>` — never a presigned link. See **[DATABASE.md](DATABASE.md#media--object-storage)**.
+- **Uploads:** images/videos (15 MB images / 250 MB videos, login required, magic-byte sniffed). The browser first asks `/api/upload/presign` for a presigned PUT and sends the bytes **straight to the object store**, then `/api/upload/verify` sniffs what landed and deletes anything that is not a real image/video. That keeps large files working on platforms with small request-body caps. With no object store configured (local disk under `public/uploads`) it falls back to posting the bytes to `/api/upload`. Postgres stores only the stable URL `/uploads/<uuid>.<ext>` — never a presigned link. See **[DATABASE.md](DATABASE.md#media--object-storage)**.
 - **Chat delivery:** the client polls `/api/messages` every 3 seconds. Swap in WebSockets/SSE later if you want push delivery.
 - **Group calls:** native peer-to-peer WebRTC. Browsers connect directly to each other, while Postgres serves as the signaling relay (who is in the call plus SDP/ICE messages) via `/api/group-calls` — no third-party provider or API key required. See [`src/lib/group-call.ts`](src/lib/group-call.ts). For reliable connectivity across strict NATs a TURN server can be added in `src/components/Call/WebRTCRoom.tsx`.
 
@@ -92,10 +92,27 @@ src/
 Works anywhere Next.js runs. On **Vercel**:
 
 1. Import the repo.
-2. Add environment variable `DATABASE_URL` (and optionally `NEXT_PUBLIC_SITE_URL`). Authentication sessions are stored in Prisma's `sessions` table.
-3. Deploy — tables self-create on first request.
+2. Add the environment variables below (Project → Settings → Environment Variables, for Production *and* Preview).
+3. Deploy — tables self-create on the first request.
 
-Note: Vercel's serverless filesystem is ephemeral, so local-disk uploads won't persist across deployments. Set the `S3_*` (or `PRISMA_BUCKET_*`) env vars so media is written to a Prisma Object Store bucket, R2, or S3.
+| Variable | Notes |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string. Authentication sessions live in Prisma's `sessions` table. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical origin, e.g. `https://your-app.vercel.app`. |
+| `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Object store for media (`PRISMA_BUCKET_*` aliases are accepted). |
+| `S3_REGION`, `S3_FORCE_PATH_STYLE` | Usually `auto` and `true` for S3-compatible providers. |
+| `ALLOW_DEMO_SEED` | Set `true` **only** for demo instances — see below. |
+
+Notes that matter on serverless:
+
+- **Object storage is required, not optional.** The Vercel filesystem is ephemeral, and functions cap request bodies at **4.5 MB** — larger photos and all video fail with `413` if the bytes go through a function. With `S3_*` configured, uploads bypass functions entirely via presigned PUTs.
+- **Allow the site's origin on the bucket** so those direct PUTs are not blocked by CORS:
+  ```bash
+  npm run storage:cors               # uses NEXT_PUBLIC_SITE_URL + localhost + *.vercel.app
+  npm run storage:cors -- https://my-domain.com
+  ```
+  Until CORS is set, uploads quietly fall back to `/api/upload` (fine under 4.5 MB).
+- **Demo seeding is disabled in production.** `ensureSeeded()` only runs outside `NODE_ENV=production`, or when `ALLOW_DEMO_SEED=true`, so demo logins (`alex@example.com` / `changeme123`) never appear on a live deployment. For a demo instance set the flag, or seed with `npm run db:seed`.
 
 ## 🗺️ Roadmap
 

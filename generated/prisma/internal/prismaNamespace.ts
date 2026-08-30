@@ -2344,6 +2344,9 @@ export const UserScalarFieldEnum = {
   pronouns: 'pronouns',
   workplace: 'workplace',
   education: 'education',
+  age: 'age',
+  gender: 'gender',
+  relationship: 'relationship',
   profileVisibility: 'profileVisibility',
   messagePrivacy: 'messagePrivacy',
   followPrivacy: 'followPrivacy',
@@ -2719,7 +2722,7 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-
+    
 
 
 /**

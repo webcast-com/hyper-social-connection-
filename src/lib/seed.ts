@@ -6,6 +6,15 @@ let seedPromise: Promise<void> | null = null;
 
 export async function ensureSeeded() {
   if (!hasDatabase) return;
+
+  // Demo accounts have well-known passwords, so never seed a deployment by
+  // accident: if the production database is ever empty you get an empty app,
+  // not `alex@example.com / changeme123` published on the internet. Opt in
+  // with ALLOW_DEMO_SEED=true (or run `npm run db:seed`) for a demo instance.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
+    return;
+  }
+
   // Share the first seed operation across concurrent cold-start requests.
   if (seedPromise) return seedPromise;
 

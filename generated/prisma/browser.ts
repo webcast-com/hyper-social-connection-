@@ -99,7 +99,7 @@ export type Mute = Prisma.MuteModel
 export type FollowRequest = Prisma.FollowRequestModel
 /**
  * Model GroupCall
- *
+ * 
  */
 export type GroupCall = Prisma.GroupCallModel
 /**
