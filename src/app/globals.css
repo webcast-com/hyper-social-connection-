@@ -35,6 +35,77 @@ h3 {
    This makes Tailwind's `dark:` utilities respond to that class. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── App-wide visual refresh ────────────────────────────────────────────────
+   A soft social-app gradient background plus glassy card surfaces. These are
+   scoped to the app shell so existing Tailwind layout classes keep working. */
+body.app-page-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(59, 130, 246, 0.20), transparent 28rem),
+    radial-gradient(circle at 88% 12%, rgba(217, 70, 239, 0.16), transparent 24rem),
+    radial-gradient(circle at 50% 92%, rgba(20, 184, 166, 0.13), transparent 28rem),
+    linear-gradient(135deg, #eef6ff 0%, #f8f5ff 45%, #ecfeff 100%);
+  background-attachment: fixed;
+}
+
+.dark body.app-page-bg {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(37, 99, 235, 0.24), transparent 28rem),
+    radial-gradient(circle at 90% 14%, rgba(168, 85, 247, 0.20), transparent 25rem),
+    radial-gradient(circle at 50% 92%, rgba(13, 148, 136, 0.14), transparent 28rem),
+    linear-gradient(135deg, #08111f 0%, #111827 45%, #0f172a 100%);
+}
+
+.app-surface .bg-white {
+  background-color: rgba(255, 255, 255, 0.86);
+  border-color: rgba(219, 234, 254, 0.82);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.dark .app-surface .bg-white,
+.dark .app-surface .dark\:bg-gray-800 {
+  background-color: rgba(30, 41, 59, 0.84);
+  border-color: rgba(71, 85, 105, 0.72);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22);
+}
+
+.app-surface .bg-gray-100 {
+  background-color: rgba(239, 246, 255, 0.95);
+}
+
+.app-surface .border-gray-100,
+.app-surface .border-gray-200 {
+  border-color: rgba(191, 219, 254, 0.72);
+}
+
+.app-surface .shadow,
+.app-surface .shadow-sm {
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
+.app-surface .bg-blue-600 {
+  background-image: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.app-surface .hover\:bg-blue-700:hover {
+  background-image: linear-gradient(135deg, #1d4ed8, #6d28d9);
+}
+
+.app-surface input,
+.app-surface textarea {
+  background-color: rgba(255, 255, 255, 0.88);
+}
+
+.dark .app-surface input,
+.dark .app-surface textarea {
+  background-color: rgba(15, 23, 42, 0.72);
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.28);
+}
+
 /* ── Dark palette (light mode is untouched — these only apply under .dark) ── */
 .dark { background: #0f172a; color: #f8fafc; }
 .dark body { background: #0f172a; color: #f8fafc; }

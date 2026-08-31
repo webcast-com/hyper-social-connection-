@@ -7,8 +7,9 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
-import { Compass, Users, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } from 'lucide-react';
 import SportsLiveWidget from '@/components/SportsLiveWidget';
+import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = {
   title: 'Hyper — Connect with the world',
@@ -127,6 +128,7 @@ export default async function Home() {
     bio: null,
     createdAt: new Date(),
   };
+  const sportsBoard = await getSportsBoard();
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -296,20 +298,31 @@ export default async function Home() {
     return true;
   });
 
+  const sportsFeedPosts = sportsBoard.events.slice(0, 2).map((event, index) => ({
+    id: `sports-${event.id}`,
+    type: 'sports',
+    event,
+    createdAt: new Date(Date.now() - (index + 1) * 90_000),
+  }));
   const forYouPosts = [...visiblePosts];
+  sportsFeedPosts.forEach((sportsPost, index) => {
+    const insertAt = Math.min(index === 0 ? 1 : 4, forYouPosts.length);
+    forYouPosts.splice(insertAt, 0, sportsPost);
+  });
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
   const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
   const otherUsers = allUsers.filter((u) => u.id !== currentUser.id);
+  const mobileGroups = (viewerGroups.length > 0 ? viewerGroups : allGroups).slice(0, 6);
 
   // Live trending hashtags — computed from whatever posts we ended up with
   // (real DB rows, or the demo feed offline). Empty → widget's own defaults.
   const trendingTopics = computeTrendingTopics(allPosts);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto">
-      {/* Left Sidebar — below the feed on mobile (order-2), left column on desktop */}
-      <aside className="order-2 lg:order-none flex flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+      {/* Left Sidebar — desktop shortcuts */}
+      <aside className="hidden lg:flex order-2 lg:order-none flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         <Link href={`/profile/${currentUser.id}`} className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
           {currentUser.avatar ? (
             <img src={currentUser.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/30" />
@@ -371,6 +384,134 @@ export default async function Home() {
 
       {/* Main Feed — first on mobile */}
       <div className="order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+        <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
+          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-fuchsia-600 px-4 py-4 text-white">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-100">Quick access</p>
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight">Catch up fast</h1>
+                <p className="text-xs text-blue-100">Sports, trends, contacts and new people are now at the top.</p>
+              </div>
+              <Link href="/sports" className="shrink-0 rounded-2xl bg-white/20 px-3 py-2 text-xs font-bold backdrop-blur hover:bg-white/30">
+                Live scores
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5 px-3 py-3">
+            <Link href="/sports" className="rounded-2xl bg-amber-50 p-2 text-center text-amber-700 ring-1 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
+              <Trophy className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Sports</span>
+            </Link>
+            <a href="#trending-now" className="rounded-2xl bg-orange-50 p-2 text-center text-orange-700 ring-1 ring-orange-100 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-900/60">
+              <Hash className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Trending</span>
+            </a>
+            <Link href="/groups" className="rounded-2xl bg-violet-50 p-2 text-center text-violet-700 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60">
+              <Users className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Groups</span>
+            </Link>
+            <a href="#people-you-may-know" className="rounded-2xl bg-fuchsia-50 p-2 text-center text-fuchsia-700 ring-1 ring-fuchsia-100 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:ring-fuchsia-900/60">
+              <Sparkles className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">People</span>
+            </a>
+            <a href="#contacts" className="rounded-2xl bg-emerald-50 p-2 text-center text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60">
+              <MessageCircle className="mx-auto h-5 w-5" />
+              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Contacts</span>
+            </a>
+          </div>
+
+          <div id="groups" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Groups</h2>
+              <Link href="/groups" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
+            </div>
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+              {mobileGroups.length > 0 ? mobileGroups.map((g, i) => {
+                const colors = ['from-violet-500 to-fuchsia-500', 'from-blue-500 to-cyan-500', 'from-emerald-500 to-teal-500', 'from-amber-500 to-orange-500'];
+                return (
+                  <Link key={g.id} href={`/groups/${g.id}`} className="min-w-[132px] rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
+                    <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${colors[i % colors.length]} text-sm font-black text-white shadow-sm`}>
+                      {g.name?.charAt(0) || 'G'}
+                    </div>
+                    <span className="block truncate text-xs font-extrabold text-gray-900 dark:text-white">{g.name}</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold text-violet-600 dark:text-violet-300">Open group</span>
+                  </Link>
+                );
+              }) : (
+                <Link href="/groups" className="flex min-w-full items-center justify-between rounded-2xl bg-violet-50 px-3 py-3 text-violet-700 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:ring-violet-900/50">
+                  <span className="text-xs font-extrabold">Find groups to join</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div id="trending-now" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Trending now</h2>
+              <Link href="/search" className="flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                Explore <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+              {(trendingTopics.length ? trendingTopics : [
+                { tag: '#NextJS', postsCount: 142 },
+                { tag: '#WebDev', postsCount: 64 },
+                { tag: '#Fitness', postsCount: 45 },
+              ]).slice(0, 5).map((topic) => (
+                <Link key={topic.tag} href={`/search?q=${encodeURIComponent(topic.tag)}`} className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-extrabold text-gray-800 ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                  {topic.tag} <span className="font-semibold text-gray-400">{topic.postsCount}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div id="people-you-may-know" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">People you may know</h2>
+              <Link href="/discover" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
+            </div>
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+              {otherUsers.slice(0, 6).map((u) => (
+                <Link key={u.id} href={`/profile/${u.id}`} className="min-w-[92px] rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
+                  {u.avatar ? (
+                    <img src={u.avatar} alt={u.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
+                  ) : (
+                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-white dark:ring-slate-900">{u.name.charAt(0)}</div>
+                  )}
+                  <span className="mt-1 block truncate text-[11px] font-bold text-gray-900 dark:text-white">{u.name}</span>
+                  <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">View</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div id="contacts" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Contacts</h2>
+              <Link href="/messages" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Inbox</Link>
+            </div>
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+              {otherUsers.slice(0, 8).map((u) => (
+                <Link key={u.id} href={`/messages/${u.id}`} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      {u.avatar ? (
+                        <img src={u.avatar} alt={u.name} className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">{u.name.charAt(0)}</div>
+                      )}
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-green-500 dark:border-slate-900" />
+                    </div>
+                    <span className="max-w-[82px] truncate text-xs font-bold text-gray-900 dark:text-white">{u.name}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {dbFeedError && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-2xl px-4 py-3">
             <p className="font-bold mb-0.5">Showing demo content — live data unavailable</p>
@@ -406,8 +547,8 @@ export default async function Home() {
         />
       </div>
 
-      {/* Right Sidebar — below the feed on mobile (order-3), right column on desktop */}
-      <aside className="order-3 lg:order-none flex flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+      {/* Right Sidebar — desktop discovery rail */}
+      <aside className="hidden lg:flex order-3 lg:order-none flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
 

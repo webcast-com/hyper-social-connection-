@@ -20,9 +20,10 @@ import BrandLogo from '@/components/BrandLogo';
 
 const MOBILE_TABS = [
   { href: '/', label: 'Home', icon: Home, isActive: (p: string) => p === '/' },
-  { href: '/discover', label: 'Discover', icon: Compass, isActive: (p: string) => p.startsWith('/discover') },
+  { href: '/discover', label: 'People', icon: Compass, isActive: (p: string) => p.startsWith('/discover') },
+  { href: '/sports', label: 'Sports', icon: Trophy, isActive: (p: string) => p.startsWith('/sports') },
   { href: '/groups', label: 'Groups', icon: Users, isActive: (p: string) => p.startsWith('/groups') },
-  { href: '/messages', label: 'Messages', icon: MessageCircle, isActive: (p: string) => p.startsWith('/messages') },
+  { href: '/messages', label: 'Contacts', icon: MessageCircle, isActive: (p: string) => p.startsWith('/messages') },
   { href: '/notifications', label: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true },
 ];
 
@@ -34,7 +35,7 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
   // Gracefully handle unauthenticated state
   if (!user) {
     return (
-      <header className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-50 px-4 h-14 flex items-center justify-between shadow-sm">
+      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
         <div className="flex items-center space-x-2 min-w-0">
           <BrandLogo />
         </div>
@@ -78,7 +79,7 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
 
   return (
     <>
-      <header className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-50 px-4 h-14 flex items-center justify-between shadow-sm">
+      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
         {/* Left: Brand logo + Integrated Search Bar */}
         <div className="flex items-center space-x-3 min-w-0">
           <BrandLogo ariaLabel="Hyper Home" />
@@ -273,8 +274,8 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
       </header>
 
       {/* Mobile Bottom Tab Bar (shown below md) */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex h-14">
+      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/88 dark:bg-slate-950/88 backdrop-blur-xl border-t border-blue-100 dark:border-slate-800 shadow-[0_-14px_36px_rgba(37,99,235,0.14)] pb-[env(safe-area-inset-bottom)]">
+        <div className="flex h-[60px]">
           {MOBILE_TABS.map((tab) => {
             const active = tab.isActive(pathname);
             const Icon = tab.icon;
@@ -283,8 +284,10 @@ export default function Navbar({ user, unreadCount, isDemo }: { user?: any; unre
                 key={tab.href}
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
-                className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                  active ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-blue-500'
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-2xl mx-0.5 my-1 transition-all ${
+                  active
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 font-bold'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-500'
                 }`}
               >
                 <span className="relative">
