@@ -316,10 +316,17 @@ export default async function Home() {
     prediction: findPredictionForEvent(event) || sportsBoard.predictions?.[index] || null,
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
+  const predictionFeedPosts = (sportsBoard.predictions || []).slice(0, 2).map((prediction, index) => ({
+    id: `prediction-${prediction.id}`,
+    type: 'prediction',
+    prediction,
+    createdAt: new Date(Date.now() - (index + 1) * 120_000),
+  }));
   const forYouPosts = [...visiblePosts];
-  sportsFeedPosts.forEach((sportsPost, index) => {
-    const insertAt = Math.min(index === 0 ? 1 : 4, forYouPosts.length);
-    forYouPosts.splice(insertAt, 0, sportsPost);
+  [...sportsFeedPosts, ...predictionFeedPosts].forEach((feedCard, index) => {
+    const slots = [1, 3, 5, 7];
+    const insertAt = Math.min(slots[index] ?? forYouPosts.length, forYouPosts.length);
+    forYouPosts.splice(insertAt, 0, feedCard);
   });
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
   const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
