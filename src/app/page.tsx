@@ -298,10 +298,22 @@ export default async function Home() {
     return true;
   });
 
+  const normalizeTeam = (name?: string | null) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const findPredictionForEvent = (event: any) => {
+    const home = normalizeTeam(event.home?.name);
+    const away = normalizeTeam(event.away?.name);
+    return (sportsBoard.predictions || []).find((prediction) => {
+      const pHome = normalizeTeam(prediction.homeTeam);
+      const pAway = normalizeTeam(prediction.awayTeam);
+      return (pHome.includes(home) || home.includes(pHome)) && (pAway.includes(away) || away.includes(pAway));
+    }) || null;
+  };
+
   const sportsFeedPosts = sportsBoard.events.slice(0, 2).map((event, index) => ({
     id: `sports-${event.id}`,
     type: 'sports',
     event,
+    prediction: findPredictionForEvent(event) || sportsBoard.predictions?.[index] || null,
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
   const forYouPosts = [...visiblePosts];

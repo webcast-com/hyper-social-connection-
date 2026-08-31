@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import SportsEventCard from '@/components/SportsEventCard';
 import {
@@ -76,6 +76,33 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
           {board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'}
         </span>
       </div>
+
+      {board.predictions?.length > 0 && (
+        <section className="mb-5 rounded-3xl border border-violet-100 bg-white/90 p-4 shadow-sm dark:border-violet-900/50 dark:bg-gray-800/90">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-black text-gray-900 dark:text-white">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              Match predictions
+            </h2>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-violet-500">RapidAPI</span>
+          </div>
+          <div className="scrollbar-hide flex gap-3 overflow-x-auto pb-1">
+            {board.predictions.slice(0, 8).map((prediction) => (
+              <div key={prediction.id} className="min-w-[220px] rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-violet-500">
+                  {prediction.competition || prediction.federation}
+                </div>
+                <div className="text-xs font-extrabold text-gray-900 dark:text-white">
+                  {prediction.awayTeam} vs {prediction.homeTeam}
+                </div>
+                <div className="mt-2 inline-flex rounded-full bg-violet-600 px-2.5 py-1 text-[11px] font-black text-white">
+                  {prediction.prediction}{prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
         {SPORT_FILTERS.map((chip) => {

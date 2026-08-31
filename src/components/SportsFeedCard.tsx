@@ -15,7 +15,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
-import type { SportsEvent } from '@/lib/sports';
+import type { SportsEvent, SportsPrediction } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
 type ActionMode = 'comment' | 'share' | 'poll';
@@ -39,10 +39,11 @@ function matchLine(event: SportsEvent) {
   return `${event.away.short || event.away.name} ${score} ${event.home.short || event.home.name}`;
 }
 
-function matchPostText(event: SportsEvent, note?: string) {
+function matchPostText(event: SportsEvent, note?: string, prediction?: SportsPrediction | null) {
   const parts = [
     `🏆 ${matchLine(event)}`,
     `${event.leagueName} · ${statusLabel(event)}`,
+    prediction ? `🔮 Prediction: ${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}` : '',
     event.venue ? `📍 ${event.venue}` : '',
     note?.trim() ? `\n${note.trim()}` : '',
     '\n#Sports #MatchDay',
@@ -76,7 +77,15 @@ function modeTitle(mode: ActionMode) {
   return 'Share this match';
 }
 
-export default function SportsFeedCard({ event, currentUser }: { event: SportsEvent; currentUser?: any }) {
+export default function SportsFeedCard({
+  event,
+  prediction,
+  currentUser,
+}: {
+  event: SportsEvent;
+  prediction?: SportsPrediction | null;
+  currentUser?: any;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<ActionMode | null>(null);
   const [text, setText] = useState('');
@@ -91,6 +100,10 @@ export default function SportsFeedCard({ event, currentUser }: { event: SportsEv
   const score = event.status === 'upcoming'
     ? 'vs'
     : `${event.away.score ?? 0}–${event.home.score ?? 0}`;
+  const predictionLabel = prediction
+    ? `${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`
+    : null;
+
   const placeholder = useMemo(() => {
     if (mode === 'comment') return 'Add your take on this match...';
     if (mode === 'poll') return `Ask a question, e.g. Who wins: ${matchLine(event)}?`;
@@ -102,6 +115,7 @@ export default function SportsFeedCard({ event, currentUser }: { event: SportsEv
     setError('');
     if (nextMode === 'poll' && !text.trim()) {
       setText(`Who wins: ${matchLine(event)}?`);
+      setPollOptions([event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
     } else if (nextMode !== 'poll') {
       setText('');
     }
@@ -112,7 +126,7 @@ export default function SportsFeedCard({ event, currentUser }: { event: SportsEv
     setError('');
 
     const data = new FormData();
-    data.set('content', matchPostText(event, text));
+    data.set('content', matchPostText(event, text, prediction));
 
     if (mode === 'poll') {
       const validOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
@@ -178,6 +192,13 @@ export default function SportsFeedCard({ event, currentUser }: { event: SportsEv
             <TeamBadge team={event.home} align="right" />
           </div>
         </div>
+
+        {predictionLabel && (
+          <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300">
+            🔮 Prediction: {predictionLabel}
+            {prediction?.competition && <span className="font-semibold opacity-75"> · {prediction.competition}</span>}
+          </div>
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
           <span className="inline-flex items-center gap-1">

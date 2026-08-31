@@ -105,7 +105,7 @@ export default function FeedTabs({
         ) : (
           postsToRender.map((post) => (
             post.type === 'sports' ? (
-              <SportsFeedCard key={post.id} event={post.event} currentUser={currentUser} />
+              <SportsFeedCard key={post.id} event={post.event} prediction={post.prediction} currentUser={currentUser} />
             ) : (
               <Post
                 key={post.id}
