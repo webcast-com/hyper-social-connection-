@@ -7,6 +7,12 @@ let seedPromise: Promise<void> | null = null;
 export async function ensureSeeded() {
   if (!hasDatabase) return;
 
+  // Always run the non-destructive schema bootstrap, including in production.
+  // The production seed guard below must not skip migrations: otherwise an
+  // older database can be missing newly-added columns such as users.age, and
+  // Prisma's default `findUnique()` selection will fail before login can run.
+  await ensureMigrated();
+
   // Demo accounts have well-known passwords, so never seed a deployment by
   // accident: if the production database is ever empty you get an empty app,
   // not `alex@example.com / changeme123` published on the internet. Opt in

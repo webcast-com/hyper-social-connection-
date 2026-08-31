@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import Link from 'next/link';
+import { Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import SportsEventCard from '@/components/SportsEventCard';
 import {
@@ -75,6 +76,19 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
         >
           {board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'}
         </span>
+      </div>
+
+      <div className="mb-5 flex flex-wrap gap-2">
+        <Link
+          href="/sports/predictions"
+          className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-700"
+        >
+          <Sparkles className="h-4 w-4" />
+          View predictions
+          {board.predictions?.length > 0 && (
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px]">{board.predictions.length}</span>
+          )}
+        </Link>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">

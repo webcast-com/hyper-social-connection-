@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Post from '@/components/Post';
+import SportsFeedCard from '@/components/SportsFeedCard';
+import SportsPredictionFeedCard from '@/components/SportsPredictionFeedCard';
 import { Sparkles, Users, Bookmark, Compass } from 'lucide-react';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
@@ -103,12 +105,18 @@ export default function FeedTabs({
           )
         ) : (
           postsToRender.map((post) => (
-            <Post
-              key={post.id}
-              post={post}
-              currentUser={currentUser}
-              isBookmarked={bookmarkedSet.has(post.id)}
-            />
+            post.type === 'sports' ? (
+              <SportsFeedCard key={post.id} event={post.event} prediction={post.prediction} currentUser={currentUser} />
+            ) : post.type === 'prediction' ? (
+              <SportsPredictionFeedCard key={post.id} prediction={post.prediction} currentUser={currentUser} />
+            ) : (
+              <Post
+                key={post.id}
+                post={post}
+                currentUser={currentUser}
+                isBookmarked={bookmarkedSet.has(post.id)}
+              />
+            )
           ))
         )}
       </div>

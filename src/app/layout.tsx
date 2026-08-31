@@ -6,6 +6,7 @@ import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
 import { getSiteMetadata } from '@/components/SEO/SEOMeta';
 import { GOOGLE_FONTS_STYLESHEET } from '@/lib/fonts';
+import { Analytics } from '@vercel/analytics/next';
 
 const siteUrl = getSiteUrl();
 
@@ -51,8 +52,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return (
       <html lang="en" suppressHydrationWarning>
         <DocumentHead />
-        <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
-          {children}
+        <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
+          <div className="app-surface">{children}</div>
+          <Analytics />
         </body>
       </html>
     );
@@ -74,10 +76,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" suppressHydrationWarning>
       <DocumentHead />
-      <body className="font-sans bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
+      <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
         {/* pb-20 on mobile leaves room for the bottom tab bar */}
-        <main className="pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
+        <main className="app-surface pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
