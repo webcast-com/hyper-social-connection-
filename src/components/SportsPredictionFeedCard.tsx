@@ -4,13 +4,14 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { BarChart2, CalendarClock, MessageCircle, Send, Share2, Sparkles, Trophy, X } from 'lucide-react';
 import type { SportsPrediction } from '@/lib/sports';
+import { formatPredictionKickoff } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
 type Mode = 'comment' | 'poll' | 'share';
 
 function predictionPostText(prediction: SportsPrediction, note?: string, asPoll = false) {
   const parts = [
-    `🔮 Match prediction: ${prediction.awayTeam} vs ${prediction.homeTeam}`,
+    `🔮 Match prediction: ${prediction.homeTeam} vs ${prediction.awayTeam}`,
     `${prediction.competition || prediction.federation} · ${prediction.market}`,
     `Pick: ${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`,
     note?.trim() ? `\n${note.trim()}` : '',
@@ -44,9 +45,9 @@ export default function SportsPredictionFeedCard({
     formData.set('content', predictionPostText(prediction, note, mode === 'poll'));
     if (mode === 'poll') {
       formData.set('hasPoll', 'true');
-      formData.set('pollOption1', prediction.awayTeam);
+      formData.set('pollOption1', prediction.homeTeam);
       formData.set('pollOption2', 'Draw');
-      formData.set('pollOption3', prediction.homeTeam);
+      formData.set('pollOption3', prediction.awayTeam);
       formData.set('pollDurationDays', '1');
     }
 
@@ -92,16 +93,16 @@ export default function SportsPredictionFeedCard({
         <div className="rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-violet-500">Away</div>
-              <div className="truncate text-sm font-black text-gray-900 dark:text-white">{prediction.awayTeam}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-violet-500">Home</div>
+              <div className="truncate text-sm font-black text-gray-900 dark:text-white">{prediction.homeTeam}</div>
             </div>
             <div className="rounded-2xl bg-white px-3 py-2 text-center shadow-sm ring-1 ring-violet-100 dark:bg-slate-800 dark:ring-violet-900/60">
               <div className="text-[10px] font-bold uppercase text-violet-500">Prediction</div>
               <div className="text-lg font-black text-violet-700 dark:text-violet-200">{prediction.prediction}</div>
             </div>
             <div className="min-w-0 text-right">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-violet-500">Home</div>
-              <div className="truncate text-sm font-black text-gray-900 dark:text-white">{prediction.homeTeam}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-violet-500">Away</div>
+              <div className="truncate text-sm font-black text-gray-900 dark:text-white">{prediction.awayTeam}</div>
             </div>
           </div>
         </div>
@@ -113,7 +114,7 @@ export default function SportsPredictionFeedCard({
           </span>
           <span className="inline-flex items-center gap-1">
             <CalendarClock className="h-3.5 w-3.5" />
-            <span suppressHydrationWarning>{new Date(prediction.startAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <span suppressHydrationWarning>{formatPredictionKickoff(prediction.startAt)}</span>
           </span>
         </div>
       </Link>

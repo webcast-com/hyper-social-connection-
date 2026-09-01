@@ -578,6 +578,24 @@ export async function markNotificationRead(id: number) {
     console.warn('[action:markNotificationRead] DB unavailable:', (e as Error)?.message);
   }
   revalidatePath('/notifications');
+  revalidatePath('/', 'layout');
+}
+
+export async function markAllNotificationsRead() {
+  const userId = await getUserId();
+  if (!userId) return 0;
+  try {
+    const result = await prisma.notification.updateMany({
+      where: { userId, isRead: 0 },
+      data: { isRead: 1 },
+    });
+    revalidatePath('/notifications');
+    revalidatePath('/', 'layout');
+    return result.count;
+  } catch (e) {
+    console.warn('[action:markAllNotificationsRead] DB unavailable:', (e as Error)?.message);
+    return 0;
+  }
 }
 
 export async function createStory(imageUrl: string) {
