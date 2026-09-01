@@ -100,7 +100,10 @@ const SPORTSDB_LEAGUES: { id: string; slug: string; name: string; kind: SportKin
 
 const PREDICTION_ENDPOINT = 'https://football-prediction-api.p.rapidapi.com/api/v2/predictions';
 const PREDICTION_HOST = 'football-prediction-api.p.rapidapi.com';
+// Day boundary the API uses for the iso_date query parameter.
 const API_TZ = 'Europe/London';
+// Kickoff times are shown to users in Kenyan time (EAT, UTC+3 — no DST).
+export const PREDICTION_DISPLAY_TZ = 'Africa/Nairobi';
 
 const FETCH_MS = 7_000;
 const CACHE_MS = 45_000;
@@ -252,19 +255,47 @@ function dateInTimeZone(offsetDays: number, timeZone: string) {
 }
 
 function parsePredictionStart(value: unknown) {
-  const raw = String(value || '');
+  const raw = String(value || '').trim();
   if (!raw) return new Date().toISOString();
-  // The RapidAPI example treats start_date as Europe/London local time. Store
-  // it as an ISO-ish value for display; browsers render it in the user's local
-  // timezone when cards call toLocaleTimeString().
-  return raw.endsWith('Z') || raw.includes('+') ? new Date(raw).toISOString() : new Date(`${raw}Z`).toISOString();
+  // RapidAPI returns a naive timestamp like "2018-12-06T19:00:00" (also seen
+  // space-separated). Cross-checked against the provider's documented sample —
+  // Feyenoord vs VVV-Venlo, a 20:00 CET Eredivisie evening kickoff, is listed
+  // as 19:00 — so the value is UTC. Tag it as such and convert to ISO.
+  if (raw.endsWith('Z') || raw.includes('+') || /-\d{2}:\d{2}$/.test(raw)) {
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+  }
+  const normalized = `${raw.replace(' ', 'T')}Z`;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+/**
+ * Kickoff label in Nairobi time, e.g. "Sep 2, 22:00 EAT". Explicit locale +
+ * timeZone keeps server and client renders identical (no hydration drift),
+ * regardless of the viewer's device timezone.
+ */
+export function formatPredictionKickoff(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const label = new Intl.DateTimeFormat('en-KE', {
+    timeZone: PREDICTION_DISPLAY_TZ,
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+  return `${label} EAT`;
 }
 
 async function fetchRapidApiPredictions(): Promise<SportsPrediction[]> {
   const key = process.env.RAPIDAPI_KEY;
   if (!key) return [];
 
-  const isoDate = dateInTimeZone(1, API_TZ);
+  // Today's board: the API day starts at 00:00 London time, so ask for the
+  // current London date to get today's fixtures (was +1 / tomorrow).
+  const isoDate = dateInTimeZone(0, API_TZ);
   const url = new URL(PREDICTION_ENDPOINT);
   url.searchParams.set('federation', 'UEFA');
   url.searchParams.set('market', 'classic');

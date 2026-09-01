@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { ArrowLeft, BarChart2, CalendarClock, Send, Share2, Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import type { SportsBoard, SportsPrediction } from '@/lib/sports';
+import { formatPredictionKickoff } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
 function predictionPostText(prediction: SportsPrediction, note?: string, asPoll = false) {
   const parts = [
-    `🔮 Match prediction: ${prediction.awayTeam} vs ${prediction.homeTeam}`,
+    `🔮 Match prediction: ${prediction.homeTeam} vs ${prediction.awayTeam}`,
     `${prediction.competition || prediction.federation} · ${prediction.market}`,
     `Pick: ${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`,
     note?.trim() ? `\n${note.trim()}` : '',
@@ -28,9 +29,9 @@ function PredictionCard({ prediction }: { prediction: SportsPrediction }) {
     data.set('content', predictionPostText(prediction, note, kind === 'poll'));
     if (kind === 'poll') {
       data.set('hasPoll', 'true');
-      data.set('pollOption1', prediction.awayTeam);
+      data.set('pollOption1', prediction.homeTeam);
       data.set('pollOption2', 'Draw');
-      data.set('pollOption3', prediction.homeTeam);
+      data.set('pollOption3', prediction.awayTeam);
       data.set('pollDurationDays', '1');
     }
     startTransition(async () => {
@@ -47,7 +48,7 @@ function PredictionCard({ prediction }: { prediction: SportsPrediction }) {
             <Sparkles className="h-3.5 w-3.5" /> Prediction
           </div>
           <h2 className="text-base font-black text-gray-900 dark:text-white">
-            {prediction.awayTeam} <span className="text-gray-400">vs</span> {prediction.homeTeam}
+            {prediction.homeTeam} <span className="text-gray-400">vs</span> {prediction.awayTeam}
           </h2>
           <p className="mt-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
             {prediction.competition || prediction.federation} · {prediction.market}
@@ -68,7 +69,7 @@ function PredictionCard({ prediction }: { prediction: SportsPrediction }) {
           <div className="font-bold uppercase tracking-wide text-violet-500">Kickoff</div>
           <div className="mt-1 flex items-center gap-1 font-black text-gray-900 dark:text-white" suppressHydrationWarning>
             <CalendarClock className="h-3.5 w-3.5" />
-            {new Date(prediction.startAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {formatPredictionKickoff(prediction.startAt)}
           </div>
         </div>
       </div>
