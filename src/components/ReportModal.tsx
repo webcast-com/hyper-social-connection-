@@ -51,18 +51,30 @@ export default function ReportModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Pinned header — the close button stays in reach while the long
+            reason list scrolls on short viewports. */}
+        <div className="relative shrink-0 px-6 pt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
+          <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 pr-10">
+            <Flag className="w-5 h-5 shrink-0" />
+            <h2 id="report-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">
+              Report Post
+            </h2>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto min-h-0 px-6 pt-4 pb-6">
         {submitted ? (
           <div className="py-8 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto animate-bounce" />
@@ -73,12 +85,6 @@ export default function ReportModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-              <Flag className="w-5 h-5" />
-              <h2 id="report-modal-title" className="text-lg font-bold text-gray-900 dark:text-white">
-                Report Post
-              </h2>
-            </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Select the reason that best describes why this content violates community guidelines.
             </p>
@@ -138,6 +144,7 @@ export default function ReportModal({
             </div>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

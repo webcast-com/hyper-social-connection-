@@ -34,11 +34,37 @@ export default function ReportUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700">
-        <button type="button" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1.5 rounded-full" aria-label="Close">
-          <X className="w-5 h-5" />
-        </button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="report-user-title"
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Pinned header — the close button stays in reach while the long
+            reason list scrolls on short viewports. */}
+        <div className="relative shrink-0 px-6 pt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 pr-10">
+            <Flag className="w-5 h-5 shrink-0" />
+            <h2 id="report-user-title" className="text-lg font-bold text-gray-900 dark:text-white">
+              Report account
+            </h2>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto min-h-0 px-6 pt-4 pb-6">
         {submitted ? (
           <div className="py-8 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
@@ -47,10 +73,6 @@ export default function ReportUserModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center gap-2 text-red-600">
-              <Flag className="w-5 h-5" />
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Report account</h2>
-            </div>
             <div className="space-y-2">
               {REASONS.map((r) => (
                 <label key={r.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${reason === r.id ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'}`}>
@@ -71,6 +93,7 @@ export default function ReportUserModal({
             </button>
           </form>
         )}
+        </div>
       </div>
     </div>
   );
