@@ -27,6 +27,7 @@ import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
 import FormattedContent from './FormattedContent';
 import LinkPreviewCard from './LinkPreviewCard';
+import SharedProfileCard from './SharedProfileCard';
 import { extractUrls } from '@/lib/link-preview';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
@@ -103,6 +104,13 @@ export default function Post({
   return (
     <article id={`post-${post.id}`} className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
       {/* If this is a repost, show repost banner */}
+      {post.sharedProfile && !post.repostOf && (
+        <div className="bg-blue-50/70 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800/40 flex items-center space-x-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
+          <Share2 className="w-4 h-4 text-blue-500" />
+          <span>{post.user?.name || 'Someone'} shared a profile</span>
+        </div>
+      )}
+
       {post.repostOf && (
         <div className="bg-blue-50/70 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800/40 flex items-center space-x-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
           <Repeat2 className="w-4 h-4 text-blue-500" />
@@ -254,6 +262,13 @@ export default function Post({
       <div className="px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
         <FormattedContent content={postContent} />
       </div>
+
+      {/* Shared profile card (post created via "share profile") */}
+      {post.sharedProfile && (
+        <div className="px-4 pb-1">
+          <SharedProfileCard profile={post.sharedProfile} />
+        </div>
+      )}
 
       {/* Interactive Poll (if present) */}
       {post.poll && (

@@ -75,7 +75,9 @@ export const ModelName = {
   PollVote: 'PollVote',
   Session: 'Session',
   Account: 'Account',
-  VerificationToken: 'VerificationToken'
+  VerificationToken: 'VerificationToken',
+  GroupInvite: 'GroupInvite',
+  ProfileShare: 'ProfileShare'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -133,6 +135,7 @@ export const PostScalarFieldEnum = {
   privacy: 'privacy',
   repostOfId: 'repostOfId',
   groupId: 'groupId',
+  sharedProfileId: 'sharedProfileId',
   likesCount: 'likesCount',
   commentsCount: 'commentsCount',
   scheduledAt: 'scheduledAt',
@@ -408,6 +411,31 @@ export const VerificationTokenScalarFieldEnum = {
 } as const
 
 export type VerificationTokenScalarFieldEnum = (typeof VerificationTokenScalarFieldEnum)[keyof typeof VerificationTokenScalarFieldEnum]
+
+
+export const GroupInviteScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  inviterId: 'inviterId',
+  inviteeId: 'inviteeId',
+  status: 'status',
+  message: 'message',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupInviteScalarFieldEnum = (typeof GroupInviteScalarFieldEnum)[keyof typeof GroupInviteScalarFieldEnum]
+
+
+export const ProfileShareScalarFieldEnum = {
+  id: 'id',
+  profileId: 'profileId',
+  sharerId: 'sharerId',
+  channel: 'channel',
+  groupId: 'groupId',
+  createdAt: 'createdAt'
+} as const
+
+export type ProfileShareScalarFieldEnum = (typeof ProfileShareScalarFieldEnum)[keyof typeof ProfileShareScalarFieldEnum]
 
 
 export const SortOrder = {

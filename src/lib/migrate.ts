@@ -403,6 +403,40 @@ async function runMigration() {
       CONSTRAINT "group_join_requests_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade ON UPDATE no action,
       CONSTRAINT "group_join_requests_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
     )`,
+    // Group invites: an admin/member invites someone to join a group. The
+    // invitee accepts or declines from their notifications / group page.
+    `CREATE TABLE IF NOT EXISTS "group_invites" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "group_id" integer NOT NULL,
+      "inviter_id" integer NOT NULL,
+      "invitee_id" integer NOT NULL,
+      "status" text DEFAULT 'pending' NOT NULL,
+      "message" text,
+      "created_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "group_invites_group_id_invitee_id_key" UNIQUE ("group_id", "invitee_id"),
+      CONSTRAINT "group_invites_group_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."groups"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_invites_inviter_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "group_invites_invitee_id_fk" FOREIGN KEY ("invitee_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "group_invites_invitee_id_status_idx" ON "group_invites"("invitee_id", "status")`,
+    // Profile sharing: a post can carry a profile card, and every share
+    // (internal or to an external network) is logged for the share counter.
+    `ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "shared_profile_id" integer`,
+    `DO $$ BEGIN
+      ALTER TABLE "posts" ADD CONSTRAINT "posts_shared_profile_id_fk"
+        FOREIGN KEY ("shared_profile_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
+    `CREATE TABLE IF NOT EXISTS "profile_shares" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "profile_id" integer NOT NULL,
+      "sharer_id" integer,
+      "channel" text NOT NULL,
+      "group_id" integer,
+      "created_at" timestamp(6) DEFAULT now() NOT NULL,
+      CONSTRAINT "profile_shares_profile_id_fk" FOREIGN KEY ("profile_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+      CONSTRAINT "profile_shares_sharer_id_fk" FOREIGN KEY ("sharer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "profile_shares_profile_id_created_at_idx" ON "profile_shares"("profile_id", "created_at")`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

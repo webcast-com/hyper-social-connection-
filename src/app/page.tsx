@@ -262,6 +262,8 @@ export default async function Home() {
       ...post,
       poll: postPoll,
       user: usersById.get(post.userId),
+      // Profile card attached via "share profile to feed/group".
+      sharedProfile: post.sharedProfileId ? usersById.get(post.sharedProfileId) || null : null,
       group: post.groupId ? groupsById.get(post.groupId) || null : null,
       likes: allLikes
         .filter((l) => l.postId === post.id)

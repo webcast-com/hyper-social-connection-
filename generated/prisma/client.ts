@@ -166,3 +166,19 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type VerificationToken = Prisma.VerificationTokenModel
+/**
+ * Model GroupInvite
+ * An invitation for a user to join a group. Distinct from GroupJoinRequest
+ * (which goes the other way: a user asking to join). The invitee accepts or
+ * declines; an accepted invite creates the GroupMember row.
+ */
+export type GroupInvite = Prisma.GroupInviteModel
+/**
+ * Model ProfileShare
+ * Analytics row written every time a profile is shared, so a profile can show
+ * how often (and where) it has been shared. `channel` is one of the internal
+ * targets ("feed", "group", "message", "copy_link") or an external network
+ * ("facebook", "whatsapp", "x", "telegram", "linkedin", "reddit", "youtube",
+ * "tiktok", "email", "native").
+ */
+export type ProfileShare = Prisma.ProfileShareModel

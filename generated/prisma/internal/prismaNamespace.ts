@@ -421,7 +421,9 @@ export const ModelName = {
   PollVote: 'PollVote',
   Session: 'Session',
   Account: 'Account',
-  VerificationToken: 'VerificationToken'
+  VerificationToken: 'VerificationToken',
+  GroupInvite: 'GroupInvite',
+  ProfileShare: 'ProfileShare'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -437,7 +439,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "post" | "story" | "group" | "groupMember" | "groupJoinRequest" | "comment" | "like" | "follow" | "message" | "notification" | "bookmark" | "report" | "block" | "mute" | "followRequest" | "groupCall" | "groupEvent" | "groupEventRsvp" | "poll" | "pollOption" | "pollVote" | "session" | "account" | "verificationToken"
+    modelProps: "user" | "post" | "story" | "group" | "groupMember" | "groupJoinRequest" | "comment" | "like" | "follow" | "message" | "notification" | "bookmark" | "report" | "block" | "mute" | "followRequest" | "groupCall" | "groupEvent" | "groupEventRsvp" | "poll" | "pollOption" | "pollVote" | "session" | "account" | "verificationToken" | "groupInvite" | "profileShare"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2291,6 +2293,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    GroupInvite: {
+      payload: Prisma.$GroupInvitePayload<ExtArgs>
+      fields: Prisma.GroupInviteFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GroupInviteFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GroupInviteFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        findFirst: {
+          args: Prisma.GroupInviteFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GroupInviteFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        findMany: {
+          args: Prisma.GroupInviteFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>[]
+        }
+        create: {
+          args: Prisma.GroupInviteCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        createMany: {
+          args: Prisma.GroupInviteCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GroupInviteCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>[]
+        }
+        delete: {
+          args: Prisma.GroupInviteDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        update: {
+          args: Prisma.GroupInviteUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        deleteMany: {
+          args: Prisma.GroupInviteDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GroupInviteUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GroupInviteUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>[]
+        }
+        upsert: {
+          args: Prisma.GroupInviteUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroupInvitePayload>
+        }
+        aggregate: {
+          args: Prisma.GroupInviteAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGroupInvite>
+        }
+        groupBy: {
+          args: Prisma.GroupInviteGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupInviteGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GroupInviteCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroupInviteCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProfileShare: {
+      payload: Prisma.$ProfileSharePayload<ExtArgs>
+      fields: Prisma.ProfileShareFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProfileShareFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProfileShareFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        findFirst: {
+          args: Prisma.ProfileShareFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProfileShareFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        findMany: {
+          args: Prisma.ProfileShareFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>[]
+        }
+        create: {
+          args: Prisma.ProfileShareCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        createMany: {
+          args: Prisma.ProfileShareCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProfileShareCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>[]
+        }
+        delete: {
+          args: Prisma.ProfileShareDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        update: {
+          args: Prisma.ProfileShareUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        deleteMany: {
+          args: Prisma.ProfileShareDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProfileShareUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProfileShareUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>[]
+        }
+        upsert: {
+          args: Prisma.ProfileShareUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProfileSharePayload>
+        }
+        aggregate: {
+          args: Prisma.ProfileShareAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProfileShare>
+        }
+        groupBy: {
+          args: Prisma.ProfileShareGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProfileShareGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProfileShareCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProfileShareCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2369,6 +2519,7 @@ export const PostScalarFieldEnum = {
   privacy: 'privacy',
   repostOfId: 'repostOfId',
   groupId: 'groupId',
+  sharedProfileId: 'sharedProfileId',
   likesCount: 'likesCount',
   commentsCount: 'commentsCount',
   scheduledAt: 'scheduledAt',
@@ -2646,6 +2797,31 @@ export const VerificationTokenScalarFieldEnum = {
 export type VerificationTokenScalarFieldEnum = (typeof VerificationTokenScalarFieldEnum)[keyof typeof VerificationTokenScalarFieldEnum]
 
 
+export const GroupInviteScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  inviterId: 'inviterId',
+  inviteeId: 'inviteeId',
+  status: 'status',
+  message: 'message',
+  createdAt: 'createdAt'
+} as const
+
+export type GroupInviteScalarFieldEnum = (typeof GroupInviteScalarFieldEnum)[keyof typeof GroupInviteScalarFieldEnum]
+
+
+export const ProfileShareScalarFieldEnum = {
+  id: 'id',
+  profileId: 'profileId',
+  sharerId: 'sharerId',
+  channel: 'channel',
+  groupId: 'groupId',
+  createdAt: 'createdAt'
+} as const
+
+export type ProfileShareScalarFieldEnum = (typeof ProfileShareScalarFieldEnum)[keyof typeof ProfileShareScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2914,6 +3090,8 @@ export type GlobalOmitConfig = {
   session?: Prisma.SessionOmit
   account?: Prisma.AccountOmit
   verificationToken?: Prisma.VerificationTokenOmit
+  groupInvite?: Prisma.GroupInviteOmit
+  profileShare?: Prisma.ProfileShareOmit
 }
 
 /* Types for Logging */
