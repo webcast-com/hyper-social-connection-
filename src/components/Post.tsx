@@ -27,8 +27,10 @@ import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
 import FormattedContent from './FormattedContent';
 import LinkPreviewCard from './LinkPreviewCard';
+import LinkMediaPlayer from './LinkMediaPlayer';
 import SharedProfileCard from './SharedProfileCard';
 import { extractUrls } from '@/lib/link-preview';
+import { resolveLinkMedia } from '@/lib/link-media';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
@@ -65,6 +67,10 @@ export default function Post({
   // pass bare like rows, so fall back to the plain count there.
   const likers = (post.likes || []).map((l: any) => l.user).filter(Boolean);
   const detectedUrls = extractUrls(postContent || '');
+  // A pasted video/audio/image link plays inline; anything else keeps the
+  // existing unfurled link-preview card.
+  const firstUrl = detectedUrls[0];
+  const linkMedia = firstUrl ? resolveLinkMedia(firstUrl) : null;
   const hasAttachedMedia = !!post.imageUrl || !!post.videoUrl;
 
   const handleEmojiSelect = (emoji: string) => {
@@ -277,10 +283,15 @@ export default function Post({
         </div>
       )}
 
-      {/* Rich Link Preview Card (if URL detected and no media attached) */}
-      {!hasAttachedMedia && detectedUrls.length > 0 && (
+      {/* Playable link (video / audio / image) — rendered in-app. Falls back
+          to the rich link preview card for ordinary web pages. */}
+      {!hasAttachedMedia && firstUrl && (
         <div className="px-4">
-          <LinkPreviewCard url={detectedUrls[0]} previewData={post.linkPreview} />
+          {linkMedia ? (
+            <LinkMediaPlayer url={firstUrl} media={linkMedia} />
+          ) : (
+            <LinkPreviewCard url={firstUrl} previewData={post.linkPreview} />
+          )}
         </div>
       )}
 
