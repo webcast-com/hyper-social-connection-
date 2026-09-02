@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { repostPost } from '@/app/actions';
 import { Repeat2, MessageSquareQuote, Check, Copy, X, LoaderCircle } from 'lucide-react';
 
@@ -17,6 +17,14 @@ export default function RepostModal({
   const [mode, setMode] = useState<'options' | 'quote'>('options');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Esc closes the dialog even when the body is scrolled and the close
+  // button is not under the pointer.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const handleQuickRepost = async () => {
     setLoading(true);
@@ -68,22 +76,31 @@ export default function RepostModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700"
+        className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Pinned header — the close button must stay in reach while the
+            body scrolls (quote composer + on-screen keyboard on small
+            screens, tall quoted posts, etc.). */}
+        <div className="relative shrink-0 px-6 pt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-        <h2 id="share-modal-title" className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Repeat2 className="text-blue-600 w-6 h-6" /> Share Post
-        </h2>
+          <h2
+            id="share-modal-title"
+            className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 pr-10"
+          >
+            <Repeat2 className="text-blue-600 w-6 h-6 shrink-0" /> Share Post
+          </h2>
+        </div>
 
+        <div className="overflow-y-auto min-h-0 px-6 pb-6">
         {mode === 'options' ? (
           <div className="space-y-3">
             <button
@@ -194,6 +211,7 @@ export default function RepostModal({
             </div>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

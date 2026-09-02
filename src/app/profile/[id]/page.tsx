@@ -259,8 +259,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 mt-4 md:mt-0 md:mb-2 w-full sm:w-auto">
+            {/* Action Buttons — 2×2 grid on phones so Follow/Message/Share/
+                safety controls never overflow or clip; single row on ≥sm. */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mt-4 md:mt-0 md:mb-2 w-full sm:w-auto sm:items-center">
               {currentUser.id !== profileUser.id ? (
                 <>
                   {!isBlocked && (

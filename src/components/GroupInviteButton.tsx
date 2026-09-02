@@ -51,6 +51,15 @@ export default function GroupInviteButton({
   const groupUrl =
     typeof window !== 'undefined' ? buildGroupUrl(window.location.origin, groupId) : '';
 
+  // Esc closes the dialog even when the body is scrolled and the close
+  // button is not under the pointer.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -147,27 +156,33 @@ export default function GroupInviteButton({
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Close invite dialog"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Pinned header — keeps the close button reachable while the
+                invite lists / pending invites scroll on short viewports. */}
+            <div className="relative shrink-0 px-6 pt-6">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Close invite dialog"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <h2
-              id="group-invite-title"
-              className="text-xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2"
-            >
-              <UserPlus className="text-blue-600 w-6 h-6" /> Invite to {groupName}
-            </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              People you invite get a notification and can accept or decline.
-            </p>
+              <h2
+                id="group-invite-title"
+                className="text-xl font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2 pr-10"
+              >
+                <UserPlus className="text-blue-600 w-6 h-6 shrink-0" /> Invite to {groupName}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                People you invite get a notification and can accept or decline.
+              </p>
+            </div>
+
+            <div className="overflow-y-auto min-h-0 px-6 pb-6">
 
             {/* Share link */}
             <div className="flex items-center gap-2 mb-4">
@@ -303,6 +318,7 @@ export default function GroupInviteButton({
 
             {notice && <p className="mt-4 text-sm text-green-600 dark:text-green-400">{notice}</p>}
             {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
           </div>
         </div>
       )}
