@@ -4,6 +4,8 @@ import { prisma, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
 import CreateGroupButton from '@/components/CreateGroupButton';
 import { Users, Check, Compass } from 'lucide-react';
+import GroupInviteInbox from '@/components/GroupInviteInbox';
+import { getMyGroupInvites } from '@/app/invite-actions';
 
 export const metadata: Metadata = {
   title: 'Communities and Groups',
@@ -40,6 +42,9 @@ export default async function GroupsPage() {
   const joinedIds = new Set(
     viewer ? memberships.filter((m) => m.user?.id === viewer.id).map((m) => m.groupId) : [],
   );
+
+  // Invitations waiting for the viewer, shown at the top of the page.
+  const myInvites = viewer && hasDatabase ? await getMyGroupInvites() : [];
 
   const yourGroups = allGroups.filter((g) => joinedIds.has(g.id));
   const discoverGroups = allGroups.filter((g) => !joinedIds.has(g.id));
@@ -122,6 +127,8 @@ export default async function GroupsPage() {
           </Link>
         )}
       </div>
+
+      {myInvites.length > 0 && <GroupInviteInbox invites={myInvites as any} />}
 
       {allGroups.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">

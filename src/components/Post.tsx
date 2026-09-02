@@ -27,7 +27,10 @@ import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
 import FormattedContent from './FormattedContent';
 import LinkPreviewCard from './LinkPreviewCard';
+import LinkMediaPlayer from './LinkMediaPlayer';
+import SharedProfileCard from './SharedProfileCard';
 import { extractUrls } from '@/lib/link-preview';
+import { resolveLinkMedia } from '@/lib/link-media';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
@@ -64,6 +67,10 @@ export default function Post({
   // pass bare like rows, so fall back to the plain count there.
   const likers = (post.likes || []).map((l: any) => l.user).filter(Boolean);
   const detectedUrls = extractUrls(postContent || '');
+  // A pasted video/audio/image link plays inline; anything else keeps the
+  // existing unfurled link-preview card.
+  const firstUrl = detectedUrls[0];
+  const linkMedia = firstUrl ? resolveLinkMedia(firstUrl) : null;
   const hasAttachedMedia = !!post.imageUrl || !!post.videoUrl;
 
   const handleEmojiSelect = (emoji: string) => {
@@ -103,6 +110,13 @@ export default function Post({
   return (
     <article id={`post-${post.id}`} className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
       {/* If this is a repost, show repost banner */}
+      {post.sharedProfile && !post.repostOf && (
+        <div className="bg-blue-50/70 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800/40 flex items-center space-x-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
+          <Share2 className="w-4 h-4 text-blue-500" />
+          <span>{post.user?.name || 'Someone'} shared a profile</span>
+        </div>
+      )}
+
       {post.repostOf && (
         <div className="bg-blue-50/70 dark:bg-blue-900/20 px-4 py-2 border-b border-blue-100 dark:border-blue-800/40 flex items-center space-x-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
           <Repeat2 className="w-4 h-4 text-blue-500" />
@@ -255,6 +269,13 @@ export default function Post({
         <FormattedContent content={postContent} />
       </div>
 
+      {/* Shared profile card (post created via "share profile") */}
+      {post.sharedProfile && (
+        <div className="px-4 pb-1">
+          <SharedProfileCard profile={post.sharedProfile} />
+        </div>
+      )}
+
       {/* Interactive Poll (if present) */}
       {post.poll && (
         <div className="px-4">
@@ -262,10 +283,15 @@ export default function Post({
         </div>
       )}
 
-      {/* Rich Link Preview Card (if URL detected and no media attached) */}
-      {!hasAttachedMedia && detectedUrls.length > 0 && (
+      {/* Playable link (video / audio / image) — rendered in-app. Falls back
+          to the rich link preview card for ordinary web pages. */}
+      {!hasAttachedMedia && firstUrl && (
         <div className="px-4">
-          <LinkPreviewCard url={detectedUrls[0]} previewData={post.linkPreview} />
+          {linkMedia ? (
+            <LinkMediaPlayer url={firstUrl} media={linkMedia} />
+          ) : (
+            <LinkPreviewCard url={firstUrl} previewData={post.linkPreview} />
+          )}
         </div>
       )}
 

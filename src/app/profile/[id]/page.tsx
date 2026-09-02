@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { canMessageUser, canViewProfileDetails } from '@/lib/profile';
 import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
+import ShareProfileButton from '@/components/ShareProfileButton';
+import { getProfileShareCount } from '@/app/share-actions';
 
 export async function generateMetadata({
   params,
@@ -169,6 +171,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   const enrichedPosts = allPosts.map(post => ({
     ...post,
     user: allUsers.find(u => u.id === post.userId),
+    sharedProfile: post.sharedProfileId
+      ? allUsers.find(u => u.id === post.sharedProfileId) || null
+      : null,
     likes: allLikes.filter(l => l.postId === post.id),
     comments: allComments
       .filter(c => c.postId === post.id)
@@ -184,6 +189,14 @@ export default async function Profile({ params }: { params: Promise<{ id: string
     isFollower: isFollowing,
     visibility: profileUser.profileVisibility,
   });
+  // How many times this profile has been shared (feed, groups, DMs, external).
+  const shareCount = hasDatabase ? await getProfileShareCount(profileUser.id) : 0;
+  const shareProfile = {
+    id: profileUser.id,
+    name: profileUser.name,
+    username: profileUser.username ?? null,
+    avatar: profileUser.avatar ?? null,
+  };
   const showMessage = !!currentUser?.id && canMessageUser({
     isSelf,
     isFollower: isFollowing,
@@ -245,6 +258,13 @@ export default async function Profile({ params }: { params: Promise<{ id: string
                       <MessageCircle className="w-4 h-4 shrink-0" /> Message
                     </Link>
                   )}
+                  {!isBlocked && showDetails && (
+                    <ShareProfileButton
+                      profile={shareProfile}
+                      canShareInternally={!!currentUser.id}
+                      shareCount={shareCount}
+                    />
+                  )}
                   {!!currentUser.id && (
                     <ProfileSafetyMenu
                       targetId={profileId}
@@ -254,9 +274,12 @@ export default async function Profile({ params }: { params: Promise<{ id: string
                   )}
                 </>
               ) : (
-                <Link href="/settings" className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
-                  <Camera className="w-4 h-4 shrink-0" /> Edit Profile
-                </Link>
+                <>
+                  <ShareProfileButton profile={shareProfile} shareCount={shareCount} />
+                  <Link href="/settings" className="flex-1 sm:flex-none justify-center px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-800 flex items-center gap-2">
+                    <Camera className="w-4 h-4 shrink-0" /> Edit Profile
+                  </Link>
+                </>
               )}
             </div>
           </div>

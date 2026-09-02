@@ -10,6 +10,9 @@ import Post from '@/components/Post';
 import GroupMembershipButton from '@/components/GroupMembershipButton';
 import GroupAdminControls from '@/components/GroupAdminControls';
 import GroupEvents from '@/components/GroupEvents';
+import GroupInviteButton from '@/components/GroupInviteButton';
+import GroupInviteInbox from '@/components/GroupInviteInbox';
+import { getMyGroupInvites } from '@/app/invite-actions';
 import { StartCallButton } from '@/components/Call/StartCallButton';
 
 export async function generateMetadata({
@@ -127,6 +130,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         enriched.set(p.id, {
           ...p,
           user: usersById.get(p.userId),
+          sharedProfile: p.sharedProfileId ? usersById.get(p.sharedProfileId) || null : null,
           group: { id: group.id, name: group.name },
           poll: postPoll,
           likes: allLikes.filter((l) => l.postId === p.id).map((l) => ({ ...l, user: usersById.get(l.userId) })),
@@ -155,8 +159,14 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
     members = [];
   }
 
+  // Pending invites addressed to the viewer — surfaced above the group header
+  // so an invited person can join in one click.
+  const myInvites = viewer && hasDatabase ? await getMyGroupInvites() : [];
+  const inviteForThisGroup = myInvites.filter((i: any) => i.group?.id === groupId);
+
   const isMember = !!viewer && members.some((m: any) => m.user?.id === viewer.id);
   const isAdmin = !!viewer && group?.adminId === viewer.id;
+  const memberRole = members.find((m: any) => m.user?.id === viewer?.id)?.role || 'member';
   const isPrivate = (group?.privacy || 'public') === 'private';
   const requiresApproval = isPrivate || group?.requireApproval === 1;
   const canSeeFeed = !isPrivate || isMember || isAdmin;
@@ -210,6 +220,10 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         <ArrowLeft className="w-4 h-4" /> Back to Groups
       </Link>
 
+      {inviteForThisGroup.length > 0 && (
+        <GroupInviteInbox invites={inviteForThisGroup as any} compact />
+      )}
+
       {/* Group header */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden mb-6">
         <div className="h-44 md:h-56 relative">
@@ -248,6 +262,13 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                 <>
                   {(isMember || isAdmin) && (
                     <StartCallButton groupId={groupId} groupName={group.name} viewer={viewer} />
+                  )}
+                  {(isMember || isAdmin) && (
+                    <GroupInviteButton
+                      groupId={groupId}
+                      groupName={group.name}
+                      canManage={isAdmin || memberRole === 'admin' || memberRole === 'moderator'}
+                    />
                   )}
                   <GroupMembershipButton
                     groupId={groupId}

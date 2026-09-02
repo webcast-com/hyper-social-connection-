@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Check, Heart, Mail, MessageCircle, UserPlus } from 'lucide-react';
+import { Bell, Check, Heart, Mail, MessageCircle, Share2, UserPlus, Users } from 'lucide-react';
 import { markNotificationRead } from '@/app/actions';
 
 export type NotificationItemData = {
@@ -27,6 +27,9 @@ const iconMap: Record<string, React.ReactNode> = {
   follow: <UserPlus className="text-green-500 w-5 h-5" />,
   follow_request: <UserPlus className="text-blue-500 w-5 h-5" />,
   message: <Mail className="text-purple-500 w-5 h-5" />,
+  group_invite: <Users className="text-indigo-500 w-5 h-5" />,
+  group_invite_accepted: <Users className="text-green-500 w-5 h-5" />,
+  profile_share: <Share2 className="text-blue-500 w-5 h-5" />,
 };
 
 function notificationText(type: string) {
@@ -41,6 +44,14 @@ function notificationText(type: string) {
       return 'requested to follow you.';
     case 'message':
       return 'sent you a message.';
+    case 'group_invite':
+      return 'invited you to join a group.';
+    case 'group_invite_accepted':
+      return 'accepted your group invite.';
+    case 'profile_share':
+      return 'shared your profile.';
+    case 'repost':
+      return 'shared your post.';
     default:
       return 'sent you an update.';
   }

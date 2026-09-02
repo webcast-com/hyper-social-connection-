@@ -55,6 +55,8 @@ export default async function NotificationsPage() {
                 notification.type === 'message' ? `/messages/${notification.actorId}` :
                 notification.type === 'follow_request' ? '/settings' :
                 notification.type === 'follow' ? `/profile/${notification.actorId}` :
+                notification.type === 'group_invite' ? '/groups' :
+                notification.type === 'group_invite_accepted' ? '/groups' :
                 notification.postId ? `/post/${notification.postId}` : `/profile/${notification.actorId}`;
 
               return (

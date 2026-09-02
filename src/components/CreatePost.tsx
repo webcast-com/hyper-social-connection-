@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createPost, createStory } from '@/app/actions';
 import {
   Image as ImageIcon,
@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 import LinkPreviewCard from './LinkPreviewCard';
+import LinkMediaPlayer from './LinkMediaPlayer';
 import UploadProgress from './UploadProgress';
 import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
 import { extractUrls } from '@/lib/link-preview';
+import { resolveLinkMedia } from '@/lib/link-media';
 
 type Media = { kind: 'image' | 'video'; url: string } | null;
 
@@ -49,6 +51,13 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   const [storyUploading, setStoryUploading] = useState(false);
   const [storyProgress, setStoryProgress] = useState<UploadProgressInfo | null>(null);
   const [storyError, setStoryError] = useState('');
+
+  // First link in the draft, and whether it can be played inline.
+  const composerUrl = useMemo(() => extractUrls(postValue)[0] || null, [postValue]);
+  const composerMedia = useMemo(
+    () => (composerUrl ? resolveLinkMedia(composerUrl) : null),
+    [composerUrl],
+  );
 
   const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -245,12 +254,20 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           )}
 
           {/* Live Link Preview Unfurler */}
-          {!media && !uploading && extractUrls(postValue).length > 0 && extractUrls(postValue)[0] !== dismissedUrl && (
+          {!media && !uploading && composerUrl && composerUrl !== dismissedUrl && (
             <div className="mt-2">
-              <LinkPreviewCard
-                url={extractUrls(postValue)[0]}
-                onRemove={() => setDismissedUrl(extractUrls(postValue)[0])}
-              />
+              {composerMedia ? (
+                <LinkMediaPlayer
+                  url={composerUrl}
+                  media={composerMedia}
+                  onRemove={() => setDismissedUrl(composerUrl)}
+                />
+              ) : (
+                <LinkPreviewCard
+                  url={composerUrl}
+                  onRemove={() => setDismissedUrl(composerUrl)}
+                />
+              )}
             </div>
           )}
 
