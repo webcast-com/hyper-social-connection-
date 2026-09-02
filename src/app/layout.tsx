@@ -38,6 +38,7 @@ function DocumentHead() {
           __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
         }}
       />
+      <meta name="fo-verify" content="14ce23b7-528a-4490-88f7-5f3043e433e6" />
     </head>
   );
 }
