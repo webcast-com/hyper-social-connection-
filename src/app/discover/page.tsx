@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
+import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
 import { Users, Sparkles, Trophy } from 'lucide-react';
 
@@ -91,7 +92,16 @@ export default async function Discover() {
                     )}
                     <div className="min-w-0">
                       <div className="font-bold truncate text-gray-900 dark:text-white">{user.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.bio || 'No bio'}</div>
+                      {/* Bio only when this viewer can view the profile's details. */}
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {canViewProfileDetails({
+                          isSelf: false,
+                          isFollower: followingIdsSet.has(user.id),
+                          visibility: user.profileVisibility,
+                        })
+                          ? user.bio || 'No bio'
+                          : 'No bio'}
+                      </div>
                     </div>
                   </div>
                   <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold shrink-0 ml-3">View Profile</span>

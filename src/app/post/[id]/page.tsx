@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
+import { sharedProfileCardData } from '@/lib/profile';
 import Post from '@/components/Post';
 
 /**
@@ -53,6 +54,9 @@ export default async function PostPage({ params }: Params) {
 
   let post: any = null;
   let dbError = false;
+  // Who the viewer follows — gates details on the shared-profile card and
+  // in the likers list.
+  let viewerFollowIds: number[] = [];
 
   if (postId && hasDatabase) {
     try {
@@ -102,10 +106,30 @@ export default async function PostPage({ params }: Params) {
           if (g) postGroup = { id: g.id, name: g.name };
         }
 
+        if (currentUser?.id) {
+          const followRows = await prisma.follow.findMany({
+            where: { followerId: currentUser.id },
+            select: { followingId: true },
+          });
+          viewerFollowIds = followRows.map((f) => f.followingId);
+        }
+        const viewerFollowSet = new Set(viewerFollowIds);
+
+        // Profile card attached via "share profile" — the same card the home
+        // feed renders, trimmed and gated by the shared profile's visibility.
+        let sharedProfile: any = null;
+        if (row.sharedProfileId) {
+          sharedProfile = sharedProfileCardData(usersById.get(row.sharedProfileId), {
+            viewerId: currentUser?.id ?? null,
+            isFollower: viewerFollowSet.has(row.sharedProfileId),
+          });
+        }
+
         post = {
           ...row,
           user: usersById.get(row.userId),
           group: postGroup,
+          sharedProfile,
           poll: postPoll,
           likes: postLikes.map((l) => ({ ...l, user: usersById.get(l.userId) })),
           comments: postComments
@@ -144,7 +168,12 @@ export default async function PostPage({ params }: Params) {
       </Link>
 
       {post ? (
-        <Post post={post} currentUser={currentUser || { id: 0 }} isBookmarked={bookmarked} />
+        <Post
+          post={post}
+          currentUser={currentUser || { id: 0 }}
+          isBookmarked={bookmarked}
+          viewerFollowIds={viewerFollowIds}
+        />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-10 text-center">
           <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">

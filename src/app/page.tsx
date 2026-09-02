@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
+import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
 import FeedTabs from '@/components/FeedTabs';
@@ -223,6 +224,7 @@ export default async function Home() {
 
   const usersById = new Map(allUsers.map((u) => [u.id, u]));
   const groupsById = new Map(allGroups.map((g) => [g.id, g]));
+  const followingIds = new Set(userFollows.map((f) => f.followingId));
   const viewerGroups = viewerGroupIds
     .map((gid) => groupsById.get(gid))
     .filter(Boolean) as any[];
@@ -262,8 +264,14 @@ export default async function Home() {
       ...post,
       poll: postPoll,
       user: usersById.get(post.userId),
-      // Profile card attached via "share profile to feed/group".
-      sharedProfile: post.sharedProfileId ? usersById.get(post.sharedProfileId) || null : null,
+      // Profile card attached via "share profile to feed/group". Trimmed to
+      // card-safe fields and gated by the shared profile's visibility.
+      sharedProfile: post.sharedProfileId
+        ? sharedProfileCardData(usersById.get(post.sharedProfileId), {
+            viewerId: currentUser.id || null,
+            isFollower: followingIds.has(post.sharedProfileId),
+          })
+        : null,
       group: post.groupId ? groupsById.get(post.groupId) || null : null,
       likes: allLikes
         .filter((l) => l.postId === post.id)
@@ -286,7 +294,6 @@ export default async function Home() {
     return base;
   });
 
-  const followingIds = new Set(userFollows.map((f) => f.followingId));
   const bookmarkedPostIds = userBookmarks.map((b) => b.postId);
   const bookmarkedSet = new Set(bookmarkedPostIds);
 
@@ -316,12 +323,14 @@ export default async function Home() {
     type: 'sports',
     event,
     prediction: findPredictionForEvent(event) || sportsBoard.predictions?.[index] || null,
+    // eslint-disable-next-line react-hooks/purity
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
   const predictionFeedPosts = (sportsBoard.predictions || []).slice(0, 2).map((prediction, index) => ({
     id: `prediction-${prediction.id}`,
     type: 'prediction',
     prediction,
+    // eslint-disable-next-line react-hooks/purity
     createdAt: new Date(Date.now() - (index + 1) * 120_000),
   }));
   const forYouPosts = [...visiblePosts];
@@ -565,6 +574,7 @@ export default async function Home() {
           savedPosts={savedPosts}
           currentUser={currentUser}
           bookmarkedPostIds={bookmarkedPostIds}
+          viewerFollowIds={Array.from(followingIds)}
         />
       </div>
 
@@ -593,7 +603,16 @@ export default async function Home() {
                   )}
                   <div className="min-w-0">
                     <div className="font-semibold text-xs text-gray-900 dark:text-white truncate">{u.name}</div>
-                    <div className="text-[11px] text-gray-400 truncate max-w-[120px]">{u.bio?.slice(0, 30) || 'Hyper user'}</div>
+                    {/* Bio only when this viewer can view the profile's details. */}
+                    <div className="text-[11px] text-gray-400 truncate max-w-[120px]">
+                      {canViewProfileDetails({
+                        isSelf: false,
+                        isFollower: followingIds.has(u.id),
+                        visibility: u.profileVisibility,
+                      })
+                        ? u.bio?.slice(0, 30) || 'Hyper user'
+                        : 'Hyper user'}
+                    </div>
                   </div>
                 </Link>
                 <Link href={`/profile/${u.id}`} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">

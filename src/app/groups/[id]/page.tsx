@@ -13,6 +13,7 @@ import GroupEvents from '@/components/GroupEvents';
 import GroupInviteButton from '@/components/GroupInviteButton';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
 import { getMyGroupInvites } from '@/app/invite-actions';
+import { sharedProfileCardData } from '@/lib/profile';
 import { StartCallButton } from '@/components/Call/StartCallButton';
 
 export async function generateMetadata({
@@ -70,6 +71,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   let members: any[] = [];
   let groupPosts: any[] = [];
   let bookmarkedIds = new Set<number>();
+  let viewerFollowIds = new Set<number>();
 
   if (hasDatabase) {
     try {
@@ -99,6 +101,16 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
       const allPolls = postIds.length ? await prisma.poll.findMany() : [];
       const allPollOptions = postIds.length ? await prisma.pollOption.findMany() : [];
       const allPollVotes = postIds.length ? await prisma.pollVote.findMany() : [];
+
+      // Who the viewer follows — used to gate the details (bio/location)
+      // shown on shared-profile cards per profile visibility.
+      if (viewer?.id) {
+        const followRows = await prisma.follow.findMany({
+          where: { followerId: viewer.id },
+          select: { followingId: true },
+        });
+        viewerFollowIds = new Set(followRows.map((f) => f.followingId));
+      }
 
       if (viewer?.id) {
         const bks = await prisma.bookmark.findMany({ where: { userId: viewer.id } });
@@ -130,7 +142,12 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         enriched.set(p.id, {
           ...p,
           user: usersById.get(p.userId),
-          sharedProfile: p.sharedProfileId ? usersById.get(p.sharedProfileId) || null : null,
+          sharedProfile: p.sharedProfileId
+            ? sharedProfileCardData(usersById.get(p.sharedProfileId), {
+                viewerId: viewer?.id ?? null,
+                isFollower: viewerFollowIds.has(p.sharedProfileId),
+              })
+            : null,
           group: { id: group.id, name: group.name },
           poll: postPoll,
           likes: allLikes.filter((l) => l.postId === p.id).map((l) => ({ ...l, user: usersById.get(l.userId) })),
@@ -362,6 +379,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                 post={post}
                 currentUser={currentUser}
                 isBookmarked={bookmarkedIds.has(post.id)}
+                viewerFollowIds={Array.from(viewerFollowIds)}
               />
             ))
           )}
@@ -377,9 +395,6 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             {(group.location || group.website || group.category) && (
               <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
                 {group.category && <div>Category · {group.category}</div>}
-                {group.location && <div>Based in {group.location}</div>}
-                {group.website && (
- v>Category · {group.category}</div>}
                 {group.location && <div>Based in {group.location}</div>}
                 {group.website && (
                   <a href={group.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all">

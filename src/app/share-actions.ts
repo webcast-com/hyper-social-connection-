@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 import { canViewProfileDetails } from '@/lib/profile';
-import { isShareChannel, type ShareChannel } from '@/lib/share';
+import { buildProfileUrl, isShareChannel, type ShareChannel } from '@/lib/share';
+import { getSiteUrl } from '@/lib/site-url';
 
 async function getUserId(): Promise<number | null> {
   const viewer = await getViewer();
@@ -45,7 +46,7 @@ async function recordShare(
 async function assertShareable(profileId: number, viewerId: number | null) {
   const profile = await prisma.user.findUnique({
     where: { id: profileId },
-    select: { id: true, name: true, profileVisibility: true },
+    select: { id: true, name: true, username: true, profileVisibility: true },
   });
   if (!profile) return { ok: false as const, message: 'Profile not found' };
 
@@ -141,11 +142,14 @@ export async function shareProfileToMessage(profileId: number, receiverId: numbe
     if (!check.ok) return { success: false, message: check.message };
 
     const body = (note || '').trim().slice(0, 400);
+    // Absolute link — chat renders plain text, and the link should stay
+    // valid if the recipient copies it out of the app.
+    const profileLink = buildProfileUrl(getSiteUrl(), profileId, check.profile.username ?? null);
     const message = await prisma.message.create({
       data: {
         senderId: userId,
         receiverId,
-        content: `${body ? `${body}\n` : ''}👤 ${check.profile.name} — /profile/${profileId}`,
+        content: `${body ? `${body}\n` : ''}👤 ${check.profile.name} — ${profileLink}`,
       },
     });
     await recordShare(profileId, userId, 'message');

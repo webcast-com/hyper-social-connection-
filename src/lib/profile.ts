@@ -59,6 +59,55 @@ export function canViewProfileDetails(opts: {
   return true;
 }
 
+export type SharedProfileCardData = {
+  id: number;
+  name: string;
+  username: string | null;
+  avatar: string | null;
+  bio: string | null;
+  location: string | null;
+};
+
+/**
+ * Trims a full user row down to what a shared-profile card may show.
+ *
+ * A profile card attached to a public post is visible to *every* feed viewer,
+ * so it must not carry more than the profile page would show that viewer:
+ * name, username and avatar are always fine, but bio/location only when the
+ * viewer can view the profile's details (public, or a follower of a
+ * followers-only profile, or the profile's own owner). This stops a
+ * followers-only or private profile from leaking details through a shared
+ * post, and also keeps the full user row (email, password, …) out of the
+ * client payload.
+ */
+export function sharedProfileCardData(
+  user: {
+    id: number;
+    name: string;
+    username?: string | null;
+    avatar?: string | null;
+    bio?: string | null;
+    location?: string | null;
+    profileVisibility?: string | null;
+  } | null | undefined,
+  opts: { viewerId: number | null; isFollower: boolean },
+): SharedProfileCardData | null {
+  if (!user) return null;
+  const canViewDetails = canViewProfileDetails({
+    isSelf: opts.viewerId === user.id,
+    isFollower: opts.isFollower,
+    visibility: user.profileVisibility,
+  });
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username ?? null,
+    avatar: user.avatar ?? null,
+    bio: canViewDetails ? user.bio ?? null : null,
+    location: canViewDetails ? user.location ?? null : null,
+  };
+}
+
 export function canMessageUser(opts: {
   isSelf: boolean;
   isFollower: boolean;

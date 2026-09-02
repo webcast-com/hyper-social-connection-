@@ -31,17 +31,23 @@ import LinkMediaPlayer from './LinkMediaPlayer';
 import SharedProfileCard from './SharedProfileCard';
 import { extractUrls } from '@/lib/link-preview';
 import { resolveLinkMedia } from '@/lib/link-media';
+import { canViewProfileDetails } from '@/lib/profile';
 import { toggleLike, createComment, toggleBookmark, deletePost, deleteComment } from '@/app/actions';
 
 export default function Post({
   post,
   currentUser,
   isBookmarked = false,
+  viewerFollowIds = [],
 }: {
   post: any;
   currentUser: any;
   isBookmarked?: boolean;
+  /** People the viewer follows — gates profile details (bio) in the
+      likers list. Defaults to empty so details only show for public profiles. */
+  viewerFollowIds?: number[];
 }) {
+  const viewerFollowSet = new Set(viewerFollowIds);
   const [showComments, setShowComments] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [commentValue, setCommentValue] = useState('');
@@ -619,7 +625,16 @@ export default function Post({
                   )}
                   <div className="min-w-0">
                     <div className="font-semibold text-sm text-gray-900 dark:text-white truncate">{u.name}</div>
-                    <div className="text-[11px] text-gray-400 truncate">{u.bio?.slice(0, 40) || 'Hyper user'}</div>
+                    {/* Bio only when this viewer can view the profile's details. */}
+                    <div className="text-[11px] text-gray-400 truncate">
+                      {canViewProfileDetails({
+                        isSelf: !!currentUser?.id && currentUser.id === u.id,
+                        isFollower: viewerFollowSet.has(u.id),
+                        visibility: u.profileVisibility,
+                      })
+                        ? u.bio?.slice(0, 40) || 'Hyper user'
+                        : 'Hyper user'}
+                    </div>
                   </div>
                 </Link>
               ))}

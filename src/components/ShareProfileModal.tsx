@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -70,10 +70,18 @@ export default function ShareProfileModal({
   const [recipientQuery, setRecipientQuery] = useState('');
   const [loadingList, setLoadingList] = useState(false);
 
-  const shareUrl = useMemo(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return buildProfileUrl(origin, profile.id, profile.username);
-  }, [profile.id, profile.username]);
+  // Read window.location.origin with a browser-only snapshot (server snapshot
+  // is '') so the shared link field renders identically on server and client
+  // without a hydration warning.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => '',
+  );
+  const shareUrl = useMemo(
+    () => buildProfileUrl(origin, profile.id, profile.username),
+    [origin, profile.id, profile.username],
+  );
   const shareText = defaultShareText(profile.name);
 
   useEffect(() => {
@@ -190,10 +198,12 @@ export default function ShareProfileModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 sm:p-6 pb-4">
+        {/* Pinned header — the close button must stay in reach while the
+            body scrolls (long group/recipient lists on small screens). */}
+        <div className="relative shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-6 sm:pb-3">
           <button
             type="button"
             onClick={onClose}
@@ -205,11 +215,13 @@ export default function ShareProfileModal({
 
           <h2
             id="share-profile-title"
-            className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 pr-10"
+            className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 pr-10"
           >
             <Share2 className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6 shrink-0" /> Share profile
           </h2>
+        </div>
 
+        <div className="px-4 pb-4 sm:px-6 overflow-y-auto min-h-0">
           {/* Profile preview card */}
           <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 mb-4 min-w-0">
             {profile.avatar ? (
