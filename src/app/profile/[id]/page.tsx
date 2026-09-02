@@ -8,7 +8,7 @@ import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import EmptyState from '@/components/EmptyState';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
-import { canMessageUser, canViewProfileDetails } from '@/lib/profile';
+import { canMessageUser, canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
 import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
@@ -168,11 +168,30 @@ export default async function Profile({ params }: { params: Promise<{ id: string
     } as any;
   }
 
+  // Who the viewer follows — used to gate the details (bio/location) shown
+  // on shared-profile cards per profile visibility.
+  const viewerFollowsShared = new Set<number>();
+  if (hasDatabase && currentUser.id) {
+    try {
+      const followRows = await prisma.follow.findMany({
+        where: { followerId: currentUser.id },
+        select: { followingId: true },
+      });
+      for (const f of followRows) viewerFollowsShared.add(f.followingId);
+    } catch {
+      // Without follow data, treat profiles as not followed — details fall
+      // back to public-only visibility, which is always safe.
+    }
+  }
+
   const enrichedPosts = allPosts.map(post => ({
     ...post,
     user: allUsers.find(u => u.id === post.userId),
     sharedProfile: post.sharedProfileId
-      ? allUsers.find(u => u.id === post.sharedProfileId) || null
+      ? sharedProfileCardData(allUsers.find(u => u.id === post.sharedProfileId), {
+          viewerId: currentUser.id || null,
+          isFollower: viewerFollowsShared.has(post.sharedProfileId),
+        })
       : null,
     likes: allLikes.filter(l => l.postId === post.id),
     comments: allComments
@@ -370,7 +389,12 @@ export default async function Profile({ params }: { params: Promise<{ id: string
             </EmptyState>
           ) : (
             enrichedPosts.map(post => (
-              <Post key={post.id} post={post} currentUser={currentUser} />
+              <Post
+                key={post.id}
+                post={post}
+                currentUser={currentUser}
+                viewerFollowIds={Array.from(viewerFollowsShared)}
+              />
             ))
           )}
         </div>

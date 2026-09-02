@@ -11,6 +11,7 @@ import {
   GROUP_ROLES,
   MESSAGE_PRIVACY,
   PROFILE_VISIBILITY,
+  canViewProfileDetails,
   sanitizeUsername,
   sanitizeWebsite,
   trimField,
@@ -526,7 +527,32 @@ export async function searchUsers(query: string) {
       },
     });
     if (results.length > 0) {
-      return results.filter((u) => u.id !== userId);
+      const matched = results.filter((u) => u.id !== userId);
+      const ids = matched.map((u) => u.id);
+      const followRows =
+        userId && ids.length
+          ? await prisma.follow.findMany({
+              where: { followerId: userId, followingId: { in: ids } },
+              select: { followingId: true },
+            })
+          : [];
+      const followed = new Set(followRows.map((f) => f.followingId));
+      // Return only what the result card shows, and hide details for
+      // profiles the viewer cannot view (same gating as the profile page).
+      return matched.map((u) => {
+        const canSeeDetails = canViewProfileDetails({
+          isSelf: userId === u.id,
+          isFollower: followed.has(u.id),
+          visibility: u.profileVisibility,
+        });
+        return {
+          id: u.id,
+          name: u.name,
+          username: u.username ?? null,
+          avatar: u.avatar ?? null,
+          bio: canSeeDetails ? u.bio ?? null : null,
+        };
+      });
     }
   } catch (e) {
     console.warn('[action:searchUsers] DB unavailable:', (e as Error)?.message);

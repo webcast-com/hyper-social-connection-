@@ -16,12 +16,15 @@ export default function FeedTabs({
   savedPosts,
   currentUser,
   bookmarkedPostIds,
+  viewerFollowIds = [],
 }: {
   forYouPosts: any[];
   followingPosts: any[];
   savedPosts: any[];
   currentUser: any;
   bookmarkedPostIds: number[];
+  /** People the viewer follows — used to gate profile details in post UI. */
+  viewerFollowIds?: number[];
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('for-you');
 
@@ -115,6 +118,7 @@ export default function FeedTabs({
                 post={post}
                 currentUser={currentUser}
                 isBookmarked={bookmarkedSet.has(post.id)}
+                viewerFollowIds={viewerFollowIds}
               />
             )
           ))
