@@ -286,7 +286,7 @@ export default function Post({
       {/* Playable link (video / audio / image) — rendered in-app. Falls back
           to the rich link preview card for ordinary web pages. */}
       {!hasAttachedMedia && firstUrl && (
-        <div className="px-4">
+        <div className="px-3 sm:px-4 min-w-0 overflow-hidden">
           {linkMedia ? (
             <LinkMediaPlayer url={firstUrl} media={linkMedia} />
           ) : (
@@ -312,13 +312,13 @@ export default function Post({
       )}
 
       {post.videoUrl && (
-        <div className="bg-black">
+        <div className="bg-black w-full min-w-0 overflow-hidden">
           <video
             src={post.videoUrl}
             controls
             playsInline
             preload="metadata"
-            className="w-full max-h-[520px] bg-black"
+            className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
           />
         </div>
       )}

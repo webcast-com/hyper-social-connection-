@@ -149,7 +149,7 @@ export default function ChatStream({
               if (activeReactionMsgId === msg.id) setActiveReactionMsgId(null);
             }}
           >
-            <div className="flex items-end space-x-2 max-w-xs md:max-w-md">
+            <div className="flex items-end space-x-2 max-w-[min(100%,20rem)] sm:max-w-md min-w-0">
               {!isMe && msg.user && (
                 <div className="shrink-0 mb-1">
                   {msg.user.avatar ? (
@@ -162,9 +162,9 @@ export default function ChatStream({
                 </div>
               )}
 
-              <div className="relative">
+              <div className="relative min-w-0 max-w-full">
                 <div
-                  className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm ${
+                  className={`px-3 sm:px-4 py-2.5 rounded-2xl shadow-sm text-sm min-w-0 overflow-hidden ${
                     isMe
                       ? 'bg-blue-600 text-white rounded-br-none'
                       : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-bl-none'

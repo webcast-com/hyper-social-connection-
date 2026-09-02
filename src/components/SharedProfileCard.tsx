@@ -23,16 +23,16 @@ export default function SharedProfileCard({
   return (
     <Link
       href={`/profile/${profile.id}`}
-      className="mt-3 flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+      className="mt-3 flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors min-w-0 w-full"
     >
       {profile.avatar ? (
         <img
           src={profile.avatar}
           alt={profile.name}
-          className="w-14 h-14 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 shrink-0"
+          className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-white dark:ring-gray-800 shrink-0"
         />
       ) : (
-        <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shrink-0">
+        <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
           {profile.name?.charAt(0) || 'U'}
         </div>
       )}
@@ -54,7 +54,8 @@ export default function SharedProfileCard({
         )}
       </div>
       <span className="shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-        <UserRound className="w-4 h-4" /> View
+        <UserRound className="w-4 h-4" />
+        <span className="hidden sm:inline">View</span>
       </span>
     </Link>
   );

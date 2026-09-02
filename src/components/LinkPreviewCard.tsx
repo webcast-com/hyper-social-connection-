@@ -57,7 +57,7 @@ export default function LinkPreviewCard({
 
   if (loading) {
     return (
-      <div className="my-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 animate-pulse">
+      <div className="my-3 w-full min-w-0 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 animate-pulse">
         <div className="flex items-center space-x-2 mb-2">
           <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full" />
           <div className="w-24 h-3 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -71,7 +71,7 @@ export default function LinkPreviewCard({
   if (!data) return null;
 
   return (
-    <div className="relative my-3 group select-none">
+    <div className="relative my-3 group select-none w-full min-w-0 max-w-full">
       {onRemove && (
         <button
           type="button"
@@ -88,11 +88,11 @@ export default function LinkPreviewCard({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="block rounded-2xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100/80 dark:hover:bg-gray-900/80 overflow-hidden transition-all shadow-sm group-hover:border-blue-300 dark:group-hover:border-blue-700"
+        className="block rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700/80 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100/80 dark:hover:bg-gray-900/80 overflow-hidden transition-all shadow-sm group-hover:border-blue-300 dark:group-hover:border-blue-700 min-w-0"
       >
         {/* Cover Preview Image (if available) */}
         {data.image && (
-          <div className="relative w-full h-44 bg-gray-200 dark:bg-gray-800 overflow-hidden">
+          <div className="relative w-full h-36 sm:h-44 bg-gray-200 dark:bg-gray-800 overflow-hidden">
             <img
               src={data.image}
               alt={data.title}
@@ -105,15 +105,15 @@ export default function LinkPreviewCard({
         )}
 
         {/* Card Body */}
-        <div className="p-3.5 space-y-1">
-          <div className="flex items-center space-x-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
+        <div className="p-3 sm:p-3.5 space-y-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium min-w-0">
             {data.favicon ? (
               <img src={data.favicon} alt="" className="w-3.5 h-3.5 rounded shrink-0" />
             ) : (
               <Globe className="w-3.5 h-3.5 text-gray-400 shrink-0" />
             )}
-            <span className="truncate">{data.domain}</span>
-            <ExternalLink className="w-3 h-3 ml-auto text-gray-400 group-hover:text-blue-500 transition-colors" />
+            <span className="truncate min-w-0 flex-1">{data.domain}</span>
+            <ExternalLink className="w-3 h-3 shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors" />
           </div>
 
           <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
