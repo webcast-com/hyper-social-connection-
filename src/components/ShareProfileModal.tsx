@@ -186,18 +186,18 @@ export default function ShareProfileModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="share-profile-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 pb-4">
+        <div className="p-4 sm:p-6 pb-4">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
             aria-label="Close share dialog"
           >
             <X className="w-5 h-5" />
@@ -205,13 +205,13 @@ export default function ShareProfileModal({
 
           <h2
             id="share-profile-title"
-            className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"
+            className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 pr-10"
           >
-            <Share2 className="text-blue-600 w-6 h-6" /> Share profile
+            <Share2 className="text-blue-600 w-5 h-5 sm:w-6 sm:h-6 shrink-0" /> Share profile
           </h2>
 
           {/* Profile preview card */}
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 mb-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 mb-4 min-w-0">
             {profile.avatar ? (
               <img src={profile.avatar} alt={profile.name} className="w-12 h-12 rounded-full object-cover" />
             ) : (
@@ -228,18 +228,18 @@ export default function ShareProfileModal({
           </div>
 
           {/* Copy link row */}
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
             <input
               readOnly
               value={shareUrl}
               aria-label="Profile link"
               onFocus={(e) => e.currentTarget.select()}
-              className="flex-1 min-w-0 text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300"
+              className="flex-1 min-w-0 text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 truncate"
             />
             <button
               type="button"
               onClick={() => copyLink()}
-              className="px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center gap-1.5"
+              className="px-3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold flex items-center justify-center gap-1.5 shrink-0"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied' : 'Copy'}
@@ -247,7 +247,7 @@ export default function ShareProfileModal({
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-900 mb-4">
+          <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-900 mb-4 overflow-x-auto">
             {TABS.filter((t) => canShareInternally || t.id === 'external').map((t) => (
               <button
                 key={t.id}
@@ -257,14 +257,14 @@ export default function ShareProfileModal({
                   setError('');
                   setNotice('');
                 }}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                className={`flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-2 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap ${
                   tab === t.id
                     ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-300 shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
                 }`}
               >
                 {t.icon}
-                <span className="hidden sm:inline">{t.label}</span>
+                <span className="hidden min-[380px]:inline truncate">{t.label}</span>
               </button>
             ))}
           </div>
@@ -383,7 +383,7 @@ export default function ShareProfileModal({
           )}
 
           {tab === 'external' && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 min-w-0">
               {EXTERNAL_NETWORKS.map((n) => (
                 <button
                   key={n.id}

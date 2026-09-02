@@ -214,9 +214,11 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
     }
   }
 
+  const visibleMembers = members.filter((m: any) => m.user);
+
   return (
-    <div className="max-w-5xl mx-auto p-4 md:mt-6">
-      <Link href="/groups" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline mb-4 text-sm font-semibold">
+    <div className="max-w-5xl mx-auto p-3 sm:p-4 md:mt-6 pb-24 md:pb-8">
+      <Link href="/groups" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline mb-3 text-sm font-semibold">
         <ArrowLeft className="w-4 h-4" /> Back to Groups
       </Link>
 
@@ -225,82 +227,112 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
       )}
 
       {/* Group header */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden mb-6">
-        <div className="h-44 md:h-56 relative">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 overflow-hidden mb-4 md:mb-6">
+        <div className="h-28 sm:h-40 md:h-56 relative">
           {group.coverPhoto ? (
             <img src={group.coverPhoto} className="w-full h-full object-cover" alt={group.name} />
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-blue-500 to-indigo-600" />
           )}
         </div>
-        <div className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">{group.name}</h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{group.description}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" /> {members.length} member{members.length !== 1 ? 's' : ''}
+        <div className="p-3 sm:p-4 md:p-6">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">{group.name}</h1>
+            {group.description && (
+              <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm line-clamp-2 md:line-clamp-none">{group.description}</p>
+            )}
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap">
+              <a href="#group-members" className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                <Users className="w-3.5 h-3.5" /> {members.length} member{members.length !== 1 ? 's' : ''}
+              </a>
+              <span className="flex items-center gap-1">
+                <Lock className="w-3.5 h-3.5" /> {isPrivate ? 'Private group' : 'Public group'}
+              </span>
+              {group.category && (
+                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
+                  {group.category}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Lock className="w-3.5 h-3.5" /> {isPrivate ? 'Private group' : 'Public group'}
-                </span>
-                {group.category && (
-                  <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-semibold">
-                    {group.category}
-                  </span>
-                )}
-                {group.createdAt && (
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="w-3.5 h-3.5" /> Created {new Date(group.createdAt).toLocaleDateString()}
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              {viewer ? (
-                <>
-                  {(isMember || isAdmin) && (
-                    <StartCallButton groupId={groupId} groupName={group.name} viewer={viewer} />
-                  )}
-                  {(isMember || isAdmin) && (
-                    <GroupInviteButton
-                      groupId={groupId}
-                      groupName={group.name}
-                      canManage={isAdmin || memberRole === 'admin' || memberRole === 'moderator'}
-                    />
-                  )}
-                  <GroupMembershipButton
-                    groupId={groupId}
-                    isMember={isMember}
-                    isAdmin={isAdmin}
-                    joinPending={joinPending}
-                    requiresApproval={requiresApproval}
-                  />
-                  {isAdmin && (
-                    <GroupAdminControls
-                      group={group}
-                      members={members}
-                      joinRequests={joinRequests}
-                    />
-                  )}
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline"
-                >
-                  Sign in to join
-                </Link>
               )}
-            </div>
+              {group.createdAt && (
+                <span className="hidden sm:flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5" /> Created {new Date(group.createdAt).toLocaleDateString()}
+                </span>
+              )}
+            </p>
+
+            {visibleMembers.length > 0 && (
+              <a href="#group-members" className="mt-2.5 flex items-center gap-2 min-w-0">
+                <span className="flex -space-x-2">
+                  {visibleMembers.slice(0, 7).map(({ user: u }: any) =>
+                    u.avatar ? (
+                      <img
+                        key={u.id}
+                        src={u.avatar}
+                        alt={u.name || 'Member'}
+                        className="w-7 h-7 rounded-full object-cover ring-2 ring-white dark:ring-gray-800"
+                      />
+                    ) : (
+                      <span
+                        key={u.id}
+                        className="w-7 h-7 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-gray-800"
+                      >
+                        {(u.name || 'U').charAt(0)}
+                      </span>
+                    ),
+                  )}
+                </span>
+                {visibleMembers.length > 7 && (
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                    +{visibleMembers.length - 7} more
+                  </span>
+                )}
+              </a>
+            )}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2">
+            {viewer ? (
+              <>
+                {(isMember || isAdmin) && (
+                  <StartCallButton groupId={groupId} groupName={group.name} viewer={viewer} />
+                )}
+                {(isMember || isAdmin) && (
+                  <GroupInviteButton
+                    groupId={groupId}
+                    groupName={group.name}
+                    canManage={isAdmin || memberRole === 'admin' || memberRole === 'moderator'}
+                  />
+                )}
+                <GroupMembershipButton
+                  groupId={groupId}
+                  isMember={isMember}
+                  isAdmin={isAdmin}
+                  joinPending={joinPending}
+                  requiresApproval={requiresApproval}
+                />
+                {isAdmin && (
+                  <GroupAdminControls
+                    group={group}
+                    members={members}
+                    joinRequests={joinRequests}
+                  />
+                )}
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="col-span-2 text-center text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline py-2"
+              >
+                Sign in to join
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Discussion feed */}
-        <div className="md:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        {/* Discussion feed — after info on phones so details stay above the fold */}
+        <div className="md:col-span-2 space-y-4 order-2 md:order-1">
           {!canSeeFeed ? (
             <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 text-sm text-blue-800 dark:text-blue-200">
               <b>This is a private group.</b> Request to join to see posts and take part in the discussion.
@@ -345,6 +377,9 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             {(group.location || group.website || group.category) && (
               <div className="mt-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
                 {group.category && <div>Category · {group.category}</div>}
+                {group.location && <div>Based in {group.location}</div>}
+                {group.website && (
+ v>Category · {group.category}</div>}
                 {group.location && <div>Based in {group.location}</div>}
                 {group.website && (
                   <a href={group.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all">

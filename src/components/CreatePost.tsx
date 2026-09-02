@@ -236,11 +236,11 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           )}
 
           {media && !uploading && (
-            <div className="mt-3 relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="mt-3 relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 w-full min-w-0">
               {media.kind === 'image' ? (
                 <img src={media.url} alt="preview" className="max-h-48 w-full object-cover" />
               ) : (
-                <video src={media.url} controls playsInline preload="metadata" className="max-h-60 w-full bg-black" />
+                <video src={media.url} controls playsInline preload="metadata" className="block max-h-60 w-full object-contain bg-black" />
               )}
               <button
                 type="button"
@@ -255,7 +255,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
 
           {/* Live Link Preview Unfurler */}
           {!media && !uploading && composerUrl && composerUrl !== dismissedUrl && (
-            <div className="mt-2">
+            <div className="mt-2 min-w-0 overflow-hidden">
               {composerMedia ? (
                 <LinkMediaPlayer
                   url={composerUrl}
