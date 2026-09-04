@@ -106,6 +106,37 @@ body.app-page-bg {
   background: rgba(99, 102, 241, 0.28);
 }
 
+/* Smooth modal drawer & overlay animations */
+@keyframes modal-backdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-sheet-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modal-backdrop-fade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-sheet {
+  animation: modal-sheet-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Ensure portal modals and drawers are not clipped by glassmorphism blur filters */
+.modal-portal-root {
+  position: relative;
+  z-index: 9999;
+}
+
 /* ── Dark palette (light mode is untouched — these only apply under .dark) ── */
 .dark { background: #0f172a; color: #f8fafc; }
 .dark body { background: #0f172a; color: #f8fafc; }

@@ -50,16 +50,16 @@ export default async function Discover() {
   const isGuest = !currentUser || currentUser.id === 0;
 
   return (
-    <div className="max-w-5xl mx-auto p-3 sm:p-4 mt-4 sm:mt-6">
-      <h1 className="text-3xl font-bold mb-8 flex items-center gap-2 text-gray-900 dark:text-white">
+    <div className="max-w-5xl mx-auto p-3 sm:p-4 mt-2 sm:mt-6">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-5 sm:mb-8 flex items-center gap-2 text-gray-900 dark:text-white">
         <Sparkles className="text-yellow-500" /> Discover
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-6 text-white shadow-lg mb-6">
-            <h2 className="text-xl font-bold mb-2">Discover People</h2>
-            <p className="text-blue-50">Follow new people to see their posts in your feed.</p>
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl p-4 sm:p-6 text-white shadow-md mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Discover People</h2>
+            <p className="text-blue-50 text-xs sm:text-sm">Follow new people to see their posts in your feed.</p>
           </div>
 
           <Link
@@ -104,7 +104,7 @@ export default async function Discover() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-blue-600 dark:text-blue-400 text-sm font-semibold shrink-0 ml-3">View Profile</span>
+                  <span className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm font-semibold shrink-0 bg-blue-50 dark:bg-blue-900/30 sm:bg-transparent sm:dark:bg-transparent px-2.5 py-1 sm:p-0 rounded-full">View</span>
                 </Link>
               ))}
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Flag, X, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { reportUser } from '@/app/social-actions';
 
@@ -19,6 +20,13 @@ export default function ReportUserModal({
   userId: number;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = orig; };
+  }, []);
   const [reason, setReason] = useState(REASONS[0].id);
   const [details, setDetails] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,9 +41,10 @@ export default function ReportUserModal({
     setTimeout(onClose, 1400);
   };
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="report-user-title"
@@ -95,6 +104,7 @@ export default function ReportUserModal({
         )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

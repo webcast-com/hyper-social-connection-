@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { repostPost } from '@/app/actions';
 import { Repeat2, MessageSquareQuote, Check, Copy, X, LoaderCircle } from 'lucide-react';
 
@@ -13,6 +14,13 @@ export default function RepostModal({
   currentUser: any;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = orig; };
+  }, []);
   const [quoteText, setQuoteText] = useState('');
   const [mode, setMode] = useState<'options' | 'quote'>('options');
   const [loading, setLoading] = useState(false);
@@ -67,7 +75,9 @@ export default function RepostModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+  if (!mounted) return null;
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -213,6 +223,7 @@ export default function RepostModal({
         )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

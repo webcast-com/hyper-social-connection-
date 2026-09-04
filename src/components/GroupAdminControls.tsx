@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   inviteGroupMember,
@@ -33,6 +34,15 @@ export default function GroupAdminControls({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    if (open) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = orig; };
+    }
+  }, [open]);
   const [tab, setTab] = useState<Tab>('general');
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(group.name || '');
@@ -124,7 +134,7 @@ export default function GroupAdminControls({
         )}
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -453,7 +463,8 @@ export default function GroupAdminControls({
             </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

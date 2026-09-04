@@ -71,7 +71,7 @@ export default function SettingsPanel({
 
   return (
     <div>
-      <nav className="flex gap-1 mb-6 overflow-x-auto scrollbar-hide -mx-1 px-1" aria-label="Settings sections">
+      <nav className="flex gap-1.5 mb-6 overflow-x-auto scrollbar-hide -mx-2 px-2 py-1 snap-x snap-mandatory overscroll-x-contain" aria-label="Settings sections">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -80,7 +80,7 @@ export default function SettingsPanel({
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
               tab === id
                 ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60 bg-gray-50 dark:bg-gray-800/40'
             }`}
             aria-current={tab === id ? 'page' : undefined}
           >

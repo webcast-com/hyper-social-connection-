@@ -206,9 +206,16 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
               😊
             </button>
             {showEmoji && (
-              <div className="absolute top-12 left-0 z-30">
-                <EmojiPicker onSelect={handleEmojiSelect} />
-              </div>
+              <>
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setShowEmoji(false)}
+                  aria-hidden="true"
+                />
+                <div className="absolute top-12 left-0 z-30 max-w-[calc(100vw-2rem)] shadow-2xl rounded-2xl">
+                  <EmojiPicker onSelect={handleEmojiSelect} />
+                </div>
+              </>
             )}
           </div>
 
@@ -368,13 +375,13 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
       </div>
 
       {/* Composer Action Buttons Bar */}
-      <div className="border-t border-gray-100 dark:border-gray-700/60 mt-3 pt-3 flex items-center justify-between text-xs">
+      <div className="border-t border-gray-100 dark:border-gray-700/60 mt-3 pt-3 flex items-center justify-between text-xs gap-1 overflow-x-auto sm:overflow-visible scrollbar-hide">
         {/* Photo / Video Button */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <button
             type="button"
             onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className="w-full flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
+            className="w-full min-h-[38px] flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
             aria-haspopup="menu"
             aria-expanded={showAttachMenu}
           >
@@ -383,41 +390,48 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           </button>
 
           {showAttachMenu && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-30 overflow-hidden animate-fade-in">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  fileRef.current?.click();
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
-              >
-                <Upload className="w-4 h-4 text-blue-500" />
-                <span>Upload from device</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  attachImageUrl();
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
-              >
-                <Link2 className="w-4 h-4 text-green-500" />
-                <span>Paste image URL</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  attachVideoUrl();
-                }}
-                className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
-              >
-                <Video className="w-4 h-4 text-red-500" />
-                <span>Paste video URL</span>
-              </button>
-            </div>
+            <>
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => setShowAttachMenu(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute bottom-full left-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-56 sm:w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-30 overflow-hidden animate-fade-in">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    fileRef.current?.click();
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
+                >
+                  <Upload className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span className="truncate">Upload from device</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    attachImageUrl();
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
+                >
+                  <Link2 className="w-4 h-4 text-green-500 shrink-0" />
+                  <span className="truncate">Paste image URL</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    attachVideoUrl();
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 text-left"
+                >
+                  <Video className="w-4 h-4 text-red-500 shrink-0" />
+                  <span className="truncate">Paste video URL</span>
+                </button>
+              </div>
+            </>
           )}
         </div>
 

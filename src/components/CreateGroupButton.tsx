@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createGroup } from '@/app/actions';
 import { Plus, Users, X, LoaderCircle } from 'lucide-react';
@@ -14,6 +15,15 @@ import { GROUP_CATEGORIES } from '@/lib/profile';
 export default function CreateGroupButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    if (open) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = orig; };
+    }
+  }, [open]);
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -57,7 +67,7 @@ export default function CreateGroupButton() {
         <Plus className="w-4 h-4" /> Create Group
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -162,7 +172,8 @@ export default function CreateGroupButton() {
             </button>
             </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -46,11 +46,11 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
 
   return (
     <div>
-      <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide snap-x snap-proximity">
+      <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory overscroll-x-contain">
         {/* Create Story — uploads an image from the device */}
         <div
           onClick={() => fileRef.current?.click()}
-          className="relative h-48 w-28 min-w-[7rem] bg-white dark:bg-gray-800 rounded-xl shadow cursor-pointer overflow-hidden group snap-start"
+          className="relative h-44 w-24 sm:h-48 sm:w-28 min-w-[6rem] sm:min-w-[7rem] bg-white dark:bg-gray-800 rounded-2xl shadow-sm cursor-pointer overflow-hidden group snap-start shrink-0 border border-gray-100 dark:border-gray-700/60 transition-transform active:scale-95"
           role="button"
           tabIndex={0}
           aria-label="Create story"
@@ -75,11 +75,11 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
             {uploading ? (
               <LoaderCircle className="text-white w-5 h-5 animate-spin" />
             ) : (
-              <Plus className="text-white w-5 h-5" />
+              <Plus className="text-white w-4 h-4 sm:w-5 sm:h-5" />
             )}
           </div>
           <div className="h-1/4 flex items-end justify-center pb-1">
-            <span className="text-xs font-bold">{uploading ? 'Uploading…' : 'Create story'}</span>
+            <span className="text-[11px] sm:text-xs font-bold text-gray-800 dark:text-gray-200 truncate px-1">{uploading ? 'Uploading…' : 'Create story'}</span>
           </div>
         </div>
 
@@ -92,7 +92,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
             tabIndex={0}
             aria-label={`View story by ${story.user?.name || 'user'}`}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveStory(idx); } }}
-            className="relative h-48 w-28 min-w-[7rem] rounded-xl shadow cursor-pointer overflow-hidden group snap-start"
+            className="relative h-44 w-24 sm:h-48 sm:w-28 min-w-[6rem] sm:min-w-[7rem] rounded-2xl shadow-sm cursor-pointer overflow-hidden group snap-start shrink-0 border border-gray-100 dark:border-gray-700/60 transition-transform active:scale-95"
           >
             <img
               src={story.imageUrl}
@@ -103,7 +103,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
               <img src={story.user?.avatar || ''} className="w-full h-full object-cover" alt={story.user?.name} />
             </div>
             <div className="absolute bottom-2 left-2 right-2">
-              <span className="text-white text-xs font-bold drop-shadow-md truncate block">{story.user?.name}</span>
+              <span className="text-white text-[11px] sm:text-xs font-bold drop-shadow-md truncate block">{story.user?.name}</span>
             </div>
           </div>
         ))}

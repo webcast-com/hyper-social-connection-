@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { editPost } from '@/app/actions';
 import { Pencil, X, LoaderCircle } from 'lucide-react';
 
@@ -20,6 +21,13 @@ export default function EditPostModal({
   onClose: () => void;
   onSaved: (content: string) => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = orig; };
+  }, []);
   const [value, setValue] = useState<string>(post.content || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +62,8 @@ export default function EditPostModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -123,6 +132,7 @@ export default function EditPostModal({
         </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

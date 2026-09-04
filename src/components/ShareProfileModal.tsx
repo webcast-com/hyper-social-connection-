@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -59,6 +60,13 @@ export default function ShareProfileModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = orig; };
+  }, []);
   const [tab, setTab] = useState<Tab>(canShareInternally ? 'feed' : 'external');
   const [message, setMessage] = useState('');
   const [pending, startTransition] = useTransition();
@@ -189,16 +197,17 @@ export default function ShareProfileModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="share-profile-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-modal-backdrop"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-lg shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[92vh] flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg shadow-2xl relative border border-gray-100 dark:border-gray-700 max-h-[90vh] sm:max-h-[85vh] flex flex-col animate-modal-sheet"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Pinned header — the close button must stay in reach while the
@@ -430,7 +439,8 @@ export default function ShareProfileModal({
           {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
