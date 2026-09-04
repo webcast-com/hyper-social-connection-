@@ -456,7 +456,7 @@ export default async function Home() {
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Groups</h2>
               <Link href="/groups" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
             </div>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {mobileGroups.length > 0 ? mobileGroups.map((g, i) => {
                 const colors = ['from-violet-500 to-fuchsia-500', 'from-blue-500 to-cyan-500', 'from-emerald-500 to-teal-500', 'from-amber-500 to-orange-500'];
                 return (
@@ -484,7 +484,7 @@ export default async function Home() {
                 Explore <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {(trendingTopics.length ? trendingTopics : [
                 { tag: '#NextJS', postsCount: 142 },
                 { tag: '#WebDev', postsCount: 64 },
@@ -502,7 +502,7 @@ export default async function Home() {
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">People you may know</h2>
               <Link href="/discover" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
             </div>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {otherUsers.slice(0, 6).map((u) => (
                 <Link key={u.id} href={`/profile/${u.id}`} className="min-w-[92px] rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
                   {u.avatar ? (
@@ -522,7 +522,7 @@ export default async function Home() {
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Contacts</h2>
               <Link href="/messages" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Inbox</Link>
             </div>
-            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">
+            <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {otherUsers.slice(0, 8).map((u) => (
                 <Link key={u.id} href={`/messages/${u.id}`} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
                   <div className="flex items-center gap-2">

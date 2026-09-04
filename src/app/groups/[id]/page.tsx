@@ -349,7 +349,8 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Discussion feed — after info on phones so details stay above the fold */}
-        <div className="md:col-span-2 space-y-4 order-2 md:order-1">
+        <div className={`md:col-span-2 space-y-4 ${!canSeeFeed ? 'order-2 md:order-1' : 'order-1 md:order-1'}`}>
+
           {!canSeeFeed ? (
             <div className="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 text-sm text-blue-800 dark:text-blue-200">
               <b>This is a private group.</b> Request to join to see posts and take part in the discussion.
@@ -386,7 +387,8 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Sidebar: About + Members */}
-        <div className="space-y-6">
+        <div id="group-members" className={`space-y-4 md:space-y-6 ${!canSeeFeed ? 'order-1 md:order-2' : 'order-2 md:order-2'}`}>
+
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-5">
             <h2 className="font-bold text-base mb-2 text-gray-900 dark:text-white">About this Group</h2>
             <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">

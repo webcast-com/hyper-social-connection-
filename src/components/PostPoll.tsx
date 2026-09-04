@@ -109,18 +109,18 @@ export default function PostPoll({
                   }`}
                 />
 
-                <div className="relative z-10 flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 font-medium text-gray-900 dark:text-gray-100 min-w-0 pr-2">
+                <div className="relative z-10 flex items-center justify-between text-sm gap-2">
+                  <div className="flex items-center space-x-2 font-medium text-gray-900 dark:text-gray-100 min-w-0 flex-1">
                     {isSelected && (
                       <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 stroke-[3]" />
                     )}
                     <span className="truncate">{option.text}</span>
                   </div>
-                  <div className="flex items-center space-x-2 shrink-0 text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 font-mono">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 text-xs">
+                    <span className="hidden min-[380px]:inline text-gray-500 dark:text-gray-400 font-mono text-[11px] sm:text-xs">
                       {option.votesCount || 0} {option.votesCount === 1 ? 'vote' : 'votes'}
                     </span>
-                    <span className="font-bold text-gray-900 dark:text-white font-mono text-sm">
+                    <span className="font-bold text-gray-900 dark:text-white font-mono text-xs sm:text-sm">
                       {percentage}%
                     </span>
                   </div>
@@ -135,12 +135,12 @@ export default function PostPoll({
               type="button"
               onClick={() => handleVote(option.id)}
               disabled={isVoting}
-              className="w-full text-left p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 bg-white dark:bg-gray-800 transition-all flex items-center justify-between group shadow-sm"
+              className="w-full text-left p-3 sm:p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 bg-white dark:bg-gray-800 transition-all flex items-center justify-between gap-2 group shadow-sm active:scale-[0.99]"
             >
-              <span className="font-medium text-sm text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <span className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors break-words min-w-0 flex-1">
                 {option.text}
               </span>
-              <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-blue-500 transition-colors flex items-center justify-center">
+              <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-blue-500 transition-colors flex items-center justify-center shrink-0">
                 <div className="w-2 h-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </button>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { reportPost } from '@/app/actions';
 import { Flag, X, CheckCircle2, LoaderCircle } from 'lucide-react';
 
@@ -19,6 +20,13 @@ export default function ReportModal({
   postId: number;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = orig; };
+  }, []);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0].id);
   const [details, setDetails] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +51,8 @@ export default function ReportModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -146,6 +155,7 @@ export default function ReportModal({
         )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

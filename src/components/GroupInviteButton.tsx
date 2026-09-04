@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -36,6 +37,15 @@ export default function GroupInviteButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    if (open) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = orig; };
+    }
+  }, [open]);
   const [query, setQuery] = useState('');
   const [handle, setHandle] = useState('');
   const [message, setMessage] = useState('');
@@ -147,7 +157,7 @@ export default function GroupInviteButton({
         <UserPlus className="w-4 h-4 shrink-0" /> Invite
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -320,7 +330,8 @@ export default function GroupInviteButton({
             {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
