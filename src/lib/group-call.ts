@@ -7,10 +7,9 @@
  * the same way the chat client already polls /api/messages. No third-party
  * provider (Daily, etc.) or API key is required.
  *
- * These tables are created idempotently by src/lib/migrate.ts on boot and are
- * intentionally *not* modelled in prisma/schema.prisma (they are reachable
- * only via raw SQL), so the generated Prisma client does not need to be
- * regenerated.
+ * The signaling tables and call-state extensions are bootstrapped by
+ * src/lib/migrate.ts. Read calls here, rather than through the base Prisma
+ * GroupCall model, so fields such as call_type are never dropped from the API.
  */
 
 import { prisma } from '@/lib/prisma';
@@ -82,6 +81,30 @@ export async function findCallById(callId: number): Promise<GroupCallRow | null>
   return rows[0] ?? null;
 }
 
+export type GroupCallDetails = GroupCallRow & {
+  creator: { id: number; name: string; avatar: string | null };
+  participantCount: number;
+};
+
+/** The lobby needs the same call type and creator shape as the create response. */
+export async function listGroupCalls(groupId: number, active?: boolean): Promise<GroupCallDetails[]> {
+  return prisma.$queryRawUnsafe<GroupCallDetails[]>(
+    `SELECT c.id, c.group_id AS "groupId", c.creator_id AS "creatorId", c.title,
+            c.description, c.room_url AS "roomUrl", c.call_type AS "callType",
+            c.is_active AS "isActive", c.created_at AS "createdAt", c.ended_at AS "endedAt",
+            json_build_object('id', u.id, 'name', u.name, 'avatar', u.avatar) AS creator,
+            (SELECT COUNT(*)::int FROM group_call_participants p
+              WHERE p.call_id = c.id
+                AND p.last_seen_at > now() - ($3 || ' seconds')::interval) AS "participantCount"
+       FROM group_calls c JOIN users u ON u.id = c.creator_id
+      WHERE c.group_id = $1 AND ($2::boolean IS NULL OR c.is_active = $2)
+      ORDER BY c.created_at DESC, c.id DESC LIMIT 50`,
+    groupId,
+    active ?? null,
+    String(PARTICIPANT_STALE_SECONDS),
+  );
+}
+
 export type GroupAccess = { call: GroupCallRow; isMember: boolean };
 
 /**
@@ -143,24 +166,51 @@ export async function createCall(
   return rows[0];
 }
 
-/** Upsert the viewer as an in-call participant. */
-export async function joinCall(callId: number, userId: number): Promise<void> {
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO group_call_participants (call_id, user_id, last_seen_at)
-     VALUES ($1, $2, now())
-     ON CONFLICT (call_id, user_id)
-     DO UPDATE SET last_seen_at = now(), is_sharing = false, hand_raised_at = NULL`,
-    callId,
-    userId,
-  );
+/** Start a fresh peer session and return the signal cursor from before joining. */
+export async function joinCall(callId: number, userId: number): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRawUnsafe<{ lastId: number }[]>(
+      `SELECT COALESCE(MAX(id), 0)::int AS "lastId" FROM group_call_signals WHERE call_id = $1`,
+      callId,
+    );
+    // A rejoin must not replay SDP/ICE or a bye from this user's previous peer
+    // connection. Other participants' negotiations are left untouched.
+    await tx.$executeRawUnsafe(
+      `DELETE FROM group_call_signals WHERE call_id = $1 AND (from_id = $2 OR to_id = $2)`,
+      callId,
+      userId,
+    );
+    await tx.$executeRawUnsafe(
+      `INSERT INTO group_call_participants (call_id, user_id, last_seen_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (call_id, user_id)
+       DO UPDATE SET joined_at = now(), last_seen_at = now(), is_muted = false,
+                     is_camera_off = false, is_sharing = false, hand_raised_at = NULL`,
+      callId,
+      userId,
+    );
+    return rows[0].lastId;
+  });
 }
 
 export async function leaveCall(callId: number, userId: number): Promise<void> {
-  await prisma.$executeRawUnsafe(
-    `DELETE FROM group_call_participants WHERE call_id = $1 AND user_id = $2`,
-    callId,
-    userId,
-  );
+  await prisma.$transaction(async (tx) => {
+    const removed = await tx.$executeRawUnsafe(
+      `DELETE FROM group_call_participants WHERE call_id = $1 AND user_id = $2`,
+      callId,
+      userId,
+    );
+    // The server sends bye atomically with removal. A browser closing a tab
+    // cannot reliably send a separate signal before its leave request.
+    if (removed) {
+      await tx.$executeRawUnsafe(
+        `INSERT INTO group_call_signals (call_id, from_id, to_id, kind, payload)
+         VALUES ($1, $2, NULL, 'bye', '')`,
+        callId,
+        userId,
+      );
+    }
+  });
 }
 
 export async function listParticipants(callId: number): Promise<GroupCallParticipantRow[]> {
@@ -182,9 +232,12 @@ export async function listParticipants(callId: number): Promise<GroupCallPartici
 
 export async function isParticipant(callId: number, userId: number): Promise<boolean> {
   const rows = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
-    `SELECT COUNT(*)::bigint AS n FROM group_call_participants WHERE call_id = $1 AND user_id = $2`,
+    `SELECT COUNT(*)::bigint AS n FROM group_call_participants
+      WHERE call_id = $1 AND user_id = $2
+        AND last_seen_at > now() - ($3 || ' seconds')::interval`,
     callId,
     userId,
+    String(PARTICIPANT_STALE_SECONDS),
   );
   return Number(rows[0]?.n ?? 0) > 0;
 }
@@ -237,11 +290,10 @@ export async function listSignals(
 }
 
 /** Drop old signals for a call so the table does not grow unbounded. */
-export async function pruneSignals(callId: number, keepAfterId: number): Promise<void> {
+export async function pruneSignals(callId: number): Promise<void> {
   await prisma.$executeRawUnsafe(
-    `DELETE FROM group_call_signals WHERE call_id = $1 AND id < $2`,
+    `DELETE FROM group_call_signals WHERE call_id = $1 AND created_at < now() - interval '5 minutes'`,
     callId,
-    keepAfterId,
   );
 }
 
@@ -265,7 +317,7 @@ export async function updateParticipantState(
   callId: number,
   userId: number,
   state: ParticipantState,
-): Promise<void> {
+): Promise<boolean> {
   const sets: string[] = ['last_seen_at = now()'];
   const values: unknown[] = [callId, userId];
 
@@ -282,10 +334,11 @@ export async function updateParticipantState(
     sets.push(state.handRaised ? 'hand_raised_at = COALESCE(hand_raised_at, now())' : 'hand_raised_at = NULL');
   }
 
-  await prisma.$executeRawUnsafe(
+  const updated = await prisma.$executeRawUnsafe(
     `UPDATE group_call_participants SET ${sets.join(', ')} WHERE call_id = $1 AND user_id = $2`,
     ...values,
   );
+  return updated > 0;
 }
 
 /** Remove participants who stopped sending heartbeats (closed laptop, crashed tab). */

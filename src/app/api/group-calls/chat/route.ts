@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
+import { parsePositiveInt, readCallBody } from '@/lib/group-call-validation';
 import { hasDatabase } from '@/lib/prisma';
 import {
   addCallMessage,
   getCallAccess,
+  isParticipant,
   listCallMessages,
   MAX_CALL_MESSAGE_LENGTH,
 } from '@/lib/group-call';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function parsePositiveInt(value: string | number | null | undefined) {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
 
 /**
  * GET /api/group-calls/chat?callId=<id>&after=<messageId>
@@ -42,6 +39,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'You do not have access to this call.' }, { status: 403 });
     }
 
+    if (!access.call.isActive) {
+      return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+    if (!(await isParticipant(callId, viewer.id))) {
+      return NextResponse.json({ error: 'Join this call before reading its chat.' }, { status: 403 });
+    }
+
     const messages = await listCallMessages(callId, after);
     const lastId = messages.length ? messages[messages.length - 1].id : after;
     return NextResponse.json(
@@ -62,14 +66,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Group calls require a connected database.' }, { status: 503 });
   }
 
-  let body: { callId?: unknown; body?: unknown };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
+  const body = await readCallBody(req);
+  if (!body) return NextResponse.json({ error: 'A JSON object is required.' }, { status: 400 });
 
-  const callId = parsePositiveInt(body.callId as string | number | null);
+  const callId = parsePositiveInt(body.callId);
   if (!callId) {
     return NextResponse.json({ error: 'A valid callId is required.' }, { status: 400 });
   }
@@ -93,6 +93,10 @@ export async function POST(req: NextRequest) {
     }
     if (!access.call.isActive) {
       return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+
+    if (!(await isParticipant(callId, viewer.id))) {
+      return NextResponse.json({ error: 'Join this call before sending a message.' }, { status: 403 });
     }
 
     const id = await addCallMessage(callId, viewer.id, text);

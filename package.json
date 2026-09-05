@@ -15,7 +15,9 @@
     "db:local:stop": "bash scripts/dev-db.sh stop",
     "db:local:status": "bash scripts/dev-db.sh status",
     "db:local:reset": "bash scripts/dev-db.sh reset",
-    "storage:cors": "node scripts/s3-cors.mjs"
+    "storage:cors": "node scripts/s3-cors.mjs",
+    "test:calls": "playwright test --config=playwright.calls.config.ts",
+    "test:call-layout": "playwright test --config=playwright.call-layout.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
@@ -37,11 +39,13 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "4.1.17",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.18.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "esbuild": "^0.28.2",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "postcss": "8.5.8",
