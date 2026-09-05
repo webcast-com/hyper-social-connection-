@@ -18,6 +18,9 @@ import {
   VideoOff,
   X,
 } from 'lucide-react';
+import ParticipantGallery from './ParticipantGallery';
+import { updateAudioActivity, type AudioActivityState } from '@/lib/audio-activity';
+import callChrome from './CallChrome.module.css';
 
 type CallType = 'video' | 'audio';
 type Viewer = { id: number; name: string; avatar: string | null };
@@ -35,6 +38,7 @@ type Participant = {
   userId: number;
   name: string;
   avatar: string | null;
+  joinedAt?: string;
   isMuted?: boolean;
   isCameraOff?: boolean;
   isSharing?: boolean;
@@ -61,6 +65,8 @@ type PeerEntry = {
   candidates: RTCIceCandidateInit[];
   connected: boolean;
   connectionState: RTCPeerConnectionState;
+  joinedAt?: string;
+  stopSpeaking: () => void;
 };
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -73,10 +79,13 @@ const HEARTBEAT_MS = 8000;
 
 /**
  * Speaking detection via WebAudio. Returns a cleanup function.
- * Used for the "who is talking" ring, which is the main thing that makes a
- * multi-person grid readable.
+ * Shared by the "who is talking" ring and the optional speaker view.
+ * The view does not create additional audio contexts or capture tracks.
  */
 function monitorSpeaking(stream: MediaStream, onChange: (speaking: boolean) => void) {
+  // A replaced/rejoined stream must not inherit its predecessor's active flag,
+  // including when the new stream is silent or WebAudio is unavailable.
+  onChange(false);
   let ctx: AudioContext | null = null;
   let raf = 0;
   try {
@@ -87,34 +96,22 @@ function monitorSpeaking(stream: MediaStream, onChange: (speaking: boolean) => v
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
     source.connect(analyser);
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    let speaking = false;
-    let quietFrames = 0;
+    const data = new Float32Array(analyser.fftSize);
+    let activity: AudioActivityState = { speaking: false, quietSince: null };
 
     const tick = () => {
-      analyser.getByteFrequencyData(data);
-      let sum = 0;
-      for (const value of data) sum += value;
-      const average = sum / data.length;
-
-      if (average > 18) {
-        quietFrames = 0;
-        if (!speaking) {
-          speaking = true;
-          onChange(true);
-        }
-      } else if (speaking) {
-        // Require sustained quiet so the ring does not flicker between words.
-        quietFrames += 1;
-        if (quietFrames > 25) {
-          speaking = false;
-          onChange(false);
-        }
-      }
+      // RMS measures signal amplitude instead of averaging logarithmic FFT
+      // bins, which can mistake low-level noise for continuous speech. A timed
+      // release also works when a background tab produces fewer animation frames.
+      analyser.getFloatTimeDomainData(data);
+      const next = updateAudioActivity(activity, data, performance.now());
+      if (next.speaking !== activity.speaking) onChange(next.speaking);
+      activity = next;
       raf = requestAnimationFrame(tick);
     };
     tick();
   } catch {
+    ctx?.close().catch(() => {});
     return () => {};
   }
 
@@ -124,112 +121,12 @@ function monitorSpeaking(stream: MediaStream, onChange: (speaking: boolean) => v
   };
 }
 
-function VideoTile({
-  stream,
-  mirror,
-  muted,
-  label,
-  avatar,
-  speaking,
-  isMuted,
-  isCameraOff,
-  isSharing,
-  handRaised,
-  connectionState,
-  audioOnly,
-}: {
-  stream: MediaStream | null;
-  mirror?: boolean;
-  muted?: boolean;
-  label: string;
-  avatar: string | null;
-  speaking?: boolean;
-  isMuted?: boolean;
-  isCameraOff?: boolean;
-  isSharing?: boolean;
-  handRaised?: boolean;
-  connectionState?: RTCPeerConnectionState;
-  audioOnly?: boolean;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (ref.current && stream) {
-      ref.current.srcObject = stream;
-      ref.current.play().catch(() => {});
-    }
-  }, [stream]);
-
-  const hasVideo = Boolean(stream) && !audioOnly && !isCameraOff;
-  const reconnecting =
-    connectionState === 'disconnected' || connectionState === 'failed' || connectionState === 'connecting';
-
-  return (
-    <div
-      className={`relative overflow-hidden rounded-2xl bg-gray-950 shadow-lg ring-1 transition-all ${
-        speaking ? 'ring-2 ring-emerald-400' : 'ring-gray-800'
-      }`}
-    >
-      {hasVideo ? (
-        <video
-          ref={ref}
-          autoPlay
-          playsInline
-          muted={muted}
-          className={`h-full w-full object-cover ${mirror && !isSharing ? '-scale-x-100' : ''}`}
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          {/* Keep the element mounted so remote audio keeps playing with the camera off. */}
-          {stream && <video ref={ref} autoPlay playsInline muted={muted} className="hidden" />}
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt={label}
-              className={`h-20 w-20 rounded-full object-cover ${speaking ? 'ring-4 ring-emerald-400' : ''}`}
-            />
-          ) : (
-            <div
-              className={`flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-2xl font-bold text-white ${
-                speaking ? 'ring-4 ring-emerald-400' : ''
-              }`}
-            >
-              {label?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {handRaised && (
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-lg bg-amber-400 px-2 py-1 text-xs font-bold text-amber-950 shadow">
-          <Hand className="h-3.5 w-3.5" aria-hidden="true" /> Hand raised
-        </div>
-      )}
-
-      {isSharing && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-indigo-600 px-2 py-1 text-xs font-bold text-white shadow">
-          <MonitorUp className="h-3.5 w-3.5" aria-hidden="true" /> Sharing
-        </div>
-      )}
-
-      {reconnecting && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-950/60 text-xs font-semibold text-white">
-          <LoaderCircle className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
-          {connectionState === 'failed' ? 'Connection lost' : 'Connecting…'}
-        </div>
-      )}
-
-      <div className="absolute bottom-2 left-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded-lg bg-black/55 px-2 py-0.5 text-xs font-semibold text-white">
-        {isMuted ? (
-          <MicOff className="h-3 w-3 shrink-0 text-red-400" aria-label="Muted" />
-        ) : (
-          <Mic className="h-3 w-3 shrink-0 text-emerald-400" aria-hidden="true" />
-        )}
-        <span className="truncate">{label}</span>
-      </div>
-    </div>
-  );
+function closePeer(entry: PeerEntry) {
+  entry.stopSpeaking();
+  entry.pc.ontrack = null;
+  entry.pc.onicecandidate = null;
+  entry.pc.onconnectionstatechange = null;
+  entry.pc.close();
 }
 
 export default function WebRTCRoom({
@@ -256,7 +153,12 @@ export default function WebRTCRoom({
   const lastSignalIdRef = useRef(0);
   const lastChatIdRef = useRef(0);
   const leavingRef = useRef(false);
+  const joinedRef = useRef(false);
+  const disconnectPromiseRef = useRef<Promise<void> | null>(null);
+  const localSpeakingStopRef = useRef<() => void>(() => {});
+  const localStateRef = useRef({ isMuted: false, isCameraOff: isAudioCall, isSharing: false, handRaised: false });
 
+  const [joined, setJoined] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [localReady, setLocalReady] = useState(false);
   const [error, setError] = useState('');
@@ -289,35 +191,103 @@ export default function WebRTCRoom({
     });
   }, []);
 
+  /** Release devices immediately, even if the leave request cannot reach the server. */
+  const releaseResources = useCallback(() => {
+    localSpeakingStopRef.current();
+    localSpeakingStopRef.current = () => {};
+    for (const entry of peersMapRef.current.values()) closePeer(entry);
+    peersMapRef.current.clear();
+    screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    // During screen sharing the camera is not in localStream, but is still open.
+    cameraTrackRef.current?.stop();
+    screenStreamRef.current = null;
+    localStreamRef.current = null;
+    cameraTrackRef.current = null;
+  }, []);
+
+  const disconnect = useCallback(() => {
+    if (disconnectPromiseRef.current) return disconnectPromiseRef.current;
+    leavingRef.current = true;
+    const wasJoined = joinedRef.current;
+    joinedRef.current = false;
+    releaseResources();
+    disconnectPromiseRef.current = wasJoined
+      ? fetch(`/api/group-calls/participants?callId=${call.id}`, { method: 'DELETE', keepalive: true })
+          .then(() => {}).catch(() => {})
+      : Promise.resolve();
+    return disconnectPromiseRef.current;
+  }, [call.id, releaseResources]);
+
+  // X, Escape, backdrop, footer, navigation and React unmount all take this
+  // path, not just the room's own Leave button. Safe under Strict Mode replay.
+  useEffect(() => {
+    leavingRef.current = false;
+    disconnectPromiseRef.current = null;
+    return () => { void disconnect(); };
+  }, [disconnect]);
+
+  const checkCallStatus = useCallback((response: Response, message?: string) => {
+    if (response.status === 410) {
+      void disconnect();
+      setEnded(true);
+      return true;
+    }
+    if (response.status === 401 || response.status === 403) {
+      void disconnect();
+      setLocalReady(false);
+      setError(message || 'Your call session expired or access was removed. Leave and rejoin to try again.');
+      return true;
+    }
+    return false;
+  }, [disconnect]);
+
   const sendSignal = useCallback(
     async (toId: number | null, kind: string, payload: string) => {
-      try {
-        await fetch('/api/group-calls/signal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callId: call.id, toId, kind, payload }),
-        });
-      } catch {
-        // Signaling failures are non-fatal; the poll loop retries.
+      let failure = 'Could not send call connection data.';
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        if (leavingRef.current || !joinedRef.current) return;
+        try {
+          const response = await fetch('/api/group-calls/signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: call.id, toId, kind, payload }),
+            signal: AbortSignal.timeout(8000),
+          });
+          if (response.ok || checkCallStatus(response)) return;
+          const data = await response.json().catch(() => null);
+          failure = data?.error || failure;
+          if (response.status < 500 && response.status !== 429) break;
+        } catch {
+          // Retry transient failures; polling receives signals but cannot
+          // recover a lost outgoing offer, answer or ICE candidate.
+        }
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
       }
+      if (!leavingRef.current) setNotice(`${failure} Leave and rejoin if the connection does not recover.`);
+      throw new Error(failure);
     },
-    [call.id],
+    [call.id, checkCallStatus],
   );
 
-  /** Push local mute/camera/share/hand state (and heartbeat) to the server. */
+  /** Heartbeats resend the full latest state, recovering a failed toggle PATCH. */
   const pushState = useCallback(
     async (state: Record<string, boolean>) => {
+      Object.assign(localStateRef.current, state);
+      if (!joinedRef.current || leavingRef.current) return;
       try {
-        await fetch(`/api/group-calls/participants?callId=${call.id}`, {
+        const response = await fetch(`/api/group-calls/participants?callId=${call.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(state),
+          body: JSON.stringify(localStateRef.current),
+          signal: AbortSignal.timeout(8000),
         });
+        checkCallStatus(response);
       } catch {
-        // Non-fatal — the next heartbeat will carry the state.
+        // The next heartbeat resends the latest state.
       }
     },
-    [call.id],
+    [call.id, checkCallStatus],
   );
 
   const refreshPeers = useCallback(() => {
@@ -349,6 +319,7 @@ export default function WebRTCRoom({
 
   const createPeer = useCallback(
     async (participant: Participant, asInitiator: boolean) => {
+      if (leavingRef.current || !joinedRef.current || !localStreamRef.current) return;
       if (participant.userId === viewer.id) return;
       if (peersMapRef.current.has(participant.userId)) return;
 
@@ -362,6 +333,8 @@ export default function WebRTCRoom({
         candidates: [],
         connected: false,
         connectionState: 'new',
+        joinedAt: participant.joinedAt,
+        stopSpeaking: () => {},
       };
       peersMapRef.current.set(participant.userId, entry);
 
@@ -380,7 +353,8 @@ export default function WebRTCRoom({
         const remote = event.streams[0];
         if (remote) {
           entry.stream = remote;
-          monitorSpeaking(remote, (speaking) => setSpeaking(participant.userId, speaking));
+          entry.stopSpeaking();
+          entry.stopSpeaking = monitorSpeaking(remote, (speaking) => setSpeaking(participant.userId, speaking));
           refreshPeers();
         }
       };
@@ -408,6 +382,7 @@ export default function WebRTCRoom({
   // ── Signal handling ───────────────────────────────────────────────────────
   const handleSignal = useCallback(
     async (signal: Signal) => {
+      if (leavingRef.current || !joinedRef.current || signal.kind === 'join') return;
       const fromId = signal.fromId;
       let payload: any;
       try {
@@ -419,11 +394,7 @@ export default function WebRTCRoom({
       if (signal.kind === 'bye') {
         const entry = peersMapRef.current.get(fromId);
         if (entry) {
-          try {
-            entry.pc.close();
-          } catch {
-            // ignore
-          }
+          closePeer(entry);
           peersMapRef.current.delete(fromId);
           setSpeaking(fromId, false);
           refreshPeers();
@@ -459,7 +430,9 @@ export default function WebRTCRoom({
         }
       } else if (signal.kind === 'ice') {
         if (payload?.candidate) {
-          await addCandidate(entry, payload.candidate);
+          // toJSON() sends the complete RTCIceCandidateInit, not a wrapper.
+          // Passing only .candidate loses sdpMid/sdpMLineIndex and is invalid.
+          await addCandidate(entry, payload as RTCIceCandidateInit);
         }
       }
     },
@@ -469,8 +442,9 @@ export default function WebRTCRoom({
   // ── Participant sync ─────────────────────────────────────────────────────
   const syncParticipants = useCallback(async () => {
     try {
-      const res = await fetch(`/api/group-calls/participants?callId=${call.id}`, { cache: 'no-store' });
+      const res = await fetch(`/api/group-calls/participants?callId=${call.id}`, { cache: 'no-store', signal: AbortSignal.timeout(10_000) });
       const data = (await res.json().catch(() => null)) as { participants?: Participant[] } | null;
+      if (leavingRef.current || !joinedRef.current || checkCallStatus(res)) return;
       if (!res.ok || !data?.participants) return;
       setParticipants(data.participants);
 
@@ -481,6 +455,11 @@ export default function WebRTCRoom({
         // We initiate only when we have the lower id; otherwise the remote
         // (lower id) peer sends us an offer which we answer.
         const asInitiator = viewer.id < participant.userId;
+        const previous = peersMapRef.current.get(participant.userId);
+        if (previous?.joinedAt && previous.joinedAt !== participant.joinedAt) {
+          closePeer(previous);
+          peersMapRef.current.delete(participant.userId);
+        }
         if (!peersMapRef.current.has(participant.userId)) {
           await createPeer(participant, asInitiator);
         } else {
@@ -488,83 +467,79 @@ export default function WebRTCRoom({
           const entry = peersMapRef.current.get(participant.userId)!;
           entry.name = participant.name;
           entry.avatar = participant.avatar;
+          entry.joinedAt = participant.joinedAt;
         }
       }
 
       // Tear down peers the server no longer lists (left or went stale).
-      let removed = false;
       for (const [userId, entry] of peersMapRef.current) {
         if (!liveIds.has(userId)) {
-          try {
-            entry.pc.close();
-          } catch {
-            // ignore
-          }
+          closePeer(entry);
           peersMapRef.current.delete(userId);
           setSpeaking(userId, false);
-          removed = true;
         }
       }
-      if (removed) refreshPeers();
+      refreshPeers();
     } catch {
       // ignore transient failures
     }
-  }, [call.id, viewer.id, createPeer, refreshPeers, setSpeaking]);
+  }, [call.id, viewer.id, createPeer, refreshPeers, setSpeaking, checkCallStatus]);
 
-  // ── Poll loop: signals + participants + chat ─────────────────────────────
+  // ── Poll loop: serial requests, only after media and registration are ready ──
   useEffect(() => {
+    if (!joined) return;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
 
     const poll = async () => {
       if (cancelled || leavingRef.current) return;
       try {
+        await syncParticipants();
+        if (cancelled || leavingRef.current) return;
         const res = await fetch(
           `/api/group-calls/signal?callId=${call.id}&after=${lastSignalIdRef.current}`,
-          { cache: 'no-store' },
+          { cache: 'no-store', signal: AbortSignal.timeout(10_000) },
         );
+        if (cancelled || leavingRef.current || checkCallStatus(res)) return;
         const data = (await res.json().catch(() => null)) as { signals?: Signal[]; lastId?: number } | null;
         if (res.ok && data?.signals) {
           for (const signal of data.signals) {
-            if (cancelled) return;
+            if (cancelled || leavingRef.current) return;
             await handleSignal(signal);
           }
           if (data.lastId) lastSignalIdRef.current = data.lastId;
         }
-      } catch {
-        // ignore
-      }
 
-      // Chat
-      try {
-        const res = await fetch(
+        const chatRes = await fetch(
           `/api/group-calls/chat?callId=${call.id}&after=${lastChatIdRef.current}`,
-          { cache: 'no-store' },
+          { cache: 'no-store', signal: AbortSignal.timeout(10_000) },
         );
-        const data = (await res.json().catch(() => null)) as
+        if (cancelled || leavingRef.current || checkCallStatus(chatRes)) return;
+        const chat = (await chatRes.json().catch(() => null)) as
           | { messages?: ChatMessage[]; lastId?: number }
           | null;
-        if (res.ok && data?.messages?.length) {
-          setMessages((prev) => [...prev, ...data.messages!]);
+        if (chatRes.ok && chat?.messages?.length) {
+          setMessages((prev) => [...prev, ...chat.messages!]);
           if (!chatOpenRef.current) {
-            const incoming = data.messages.filter((m) => m.userId !== viewer.id).length;
+            const incoming = chat.messages.filter((m) => m.userId !== viewer.id).length;
             if (incoming) setUnreadChat((n) => n + incoming);
           }
-          if (data.lastId) lastChatIdRef.current = data.lastId;
+          if (chat.lastId) lastChatIdRef.current = chat.lastId;
         }
       } catch {
-        // ignore
+        // The next poll resumes from the last successfully processed cursor.
+      } finally {
+        // setInterval used to overlap slow polls, replaying offers and chat.
+        if (!cancelled && !leavingRef.current) timer = setTimeout(poll, 1500);
       }
-
-      await syncParticipants();
     };
 
-    poll();
-    const timer = setInterval(poll, 1500);
+    void poll();
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      clearTimeout(timer);
     };
-  }, [call.id, handleSignal, syncParticipants, viewer.id]);
+  }, [joined, call.id, handleSignal, syncParticipants, viewer.id, checkCallStatus]);
 
   useEffect(() => {
     if (chatOpen && chatScrollRef.current) {
@@ -574,22 +549,24 @@ export default function WebRTCRoom({
 
   // ── Heartbeat so peers can detect a crashed tab ──────────────────────────
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!leavingRef.current) pushState({});
-    }, HEARTBEAT_MS);
+    if (!joined) return;
+    const timer = setInterval(() => { void pushState({}); }, HEARTBEAT_MS);
     return () => clearInterval(timer);
-  }, [pushState]);
+  }, [joined, pushState]);
 
   // ── Acquire local media ──────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     const acquire = async () => {
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera and microphone access requires HTTPS and a supported browser.');
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: !isAudioCall,
           audio: true,
         });
-        if (cancelled) {
+        if (cancelled || leavingRef.current) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
@@ -597,19 +574,21 @@ export default function WebRTCRoom({
         cameraTrackRef.current = stream.getVideoTracks()[0] ?? null;
         setLocalStream(stream);
         setLocalReady(true);
-        monitorSpeaking(stream, (speaking) => setSpeaking(viewer.id, speaking));
+        localSpeakingStopRef.current();
+        localSpeakingStopRef.current = monitorSpeaking(stream, (speaking) => setSpeaking(viewer.id, speaking));
 
         navigator.mediaDevices
           .enumerateDevices()
           .then((list) => !cancelled && setDevices(list))
           .catch(() => {});
       } catch (err: any) {
+        if (cancelled || leavingRef.current) return;
         setError(
           err?.name === 'NotAllowedError'
             ? 'Microphone/camera permission was denied. Allow access and try again.'
             : err?.name === 'NotFoundError'
               ? 'No camera/microphone was found on this device.'
-              : 'Could not access your camera or microphone.',
+              : err?.message || 'Could not access your camera or microphone.',
         );
       }
     };
@@ -619,112 +598,90 @@ export default function WebRTCRoom({
     };
   }, [isAudioCall, viewer.id, setSpeaking]);
 
-  // ── Join the call ────────────────────────────────────────────────────────
+  // ── Join only AFTER local media is available; offers must contain tracks ──
   useEffect(() => {
+    if (!localReady) return;
     let cancelled = false;
     (async () => {
       try {
-        await fetch(`/api/group-calls/participants?callId=${call.id}`, {
+        const response = await fetch(`/api/group-calls/participants?callId=${call.id}`, {
           method: 'POST',
           cache: 'no-store',
+          signal: AbortSignal.timeout(10_000),
         });
-        if (!cancelled) await syncParticipants();
-      } catch {
-        // ignore
+        const data = await response.json().catch(() => null);
+        if (cancelled || leavingRef.current) {
+          if (response.ok) {
+            void fetch(`/api/group-calls/participants?callId=${call.id}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+          }
+          return;
+        }
+        if (checkCallStatus(response, data?.error)) return;
+        if (!response.ok || !data?.joined) throw new Error(data?.error || 'Could not join the call.');
+        lastSignalIdRef.current = data.lastSignalId ?? 0;
+        joinedRef.current = true;
+        setJoined(true);
+        void pushState({});
+      } catch (err) {
+        if (cancelled || leavingRef.current) return;
+        releaseResources();
+        setLocalStream(null);
+        setLocalReady(false);
+        setError((err as Error).message || 'Could not join the call.');
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [call.id, syncParticipants]);
+    return () => { cancelled = true; };
+  }, [localReady, call.id, checkCallStatus, pushState, releaseResources]);
 
-  const leave = useCallback(async () => {
-    if (leavingRef.current) return;
-    leavingRef.current = true;
-
-    for (const entry of peersMapRef.current.values()) {
-      try {
-        await sendSignal(entry.userId, 'bye', 'leave');
-      } catch {
-        // ignore
-      }
-      try {
-        entry.pc.close();
-      } catch {
-        // ignore
-      }
-    }
-    peersMapRef.current.clear();
-    refreshPeers();
-
-    try {
-      await fetch(`/api/group-calls/participants?callId=${call.id}`, { method: 'DELETE' });
-    } catch {
-      // ignore
-    }
-
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
-    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+  const leave = useCallback(() => {
+    void disconnect();
     onLeave();
-  }, [call.id, sendSignal, refreshPeers, onLeave]);
+  }, [disconnect, onLeave]);
 
-  // Best-effort leave when the tab closes, so others do not wait for the reaper.
   useEffect(() => {
     const onUnload = () => {
-      navigator.sendBeacon?.(`/api/group-calls/participants?callId=${call.id}&beacon=leave`);
+      if (joinedRef.current) {
+        navigator.sendBeacon?.(`/api/group-calls/participants?callId=${call.id}&beacon=leave`);
+      }
+      void disconnect();
     };
     window.addEventListener('pagehide', onUnload);
     return () => window.removeEventListener('pagehide', onUnload);
-  }, [call.id]);
+  }, [call.id, disconnect]);
 
   const endForEveryone = useCallback(async () => {
     if (!isHost) return;
     try {
-      await fetch(`/api/group-calls?callId=${call.id}`, { method: 'DELETE' });
-    } catch {
-      // ignore
+      const response = await fetch(`/api/group-calls?callId=${call.id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Could not end the call.');
+      }
+      leave();
+    } catch (err) {
+      setNotice((err as Error).message || 'Could not end the call.');
     }
-    await leave();
   }, [isHost, call.id, leave]);
 
-  // Detect the host ending the call: the room disappears from the active list.
-  useEffect(() => {
-    if (isHost) return;
-    const timer = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/group-calls/participants?callId=${call.id}`, { cache: 'no-store' });
-        if (res.status === 410) setEnded(true);
-      } catch {
-        // ignore
-      }
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [isHost, call.id]);
-
   const toggleMute = () => {
-    setMuted((m) => {
-      const next = !m;
-      localStreamRef.current?.getAudioTracks().forEach((t) => (t.enabled = !next));
-      pushState({ isMuted: next });
-      return next;
-    });
+    const next = !localStateRef.current.isMuted;
+    localStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
+    setMuted(next);
+    void pushState({ isMuted: next });
   };
 
   const toggleCam = () => {
-    setCamOff((c) => {
-      const next = !c;
-      localStreamRef.current?.getVideoTracks().forEach((t) => (t.enabled = !next));
-      pushState({ isCameraOff: next });
-      return next;
-    });
+    const next = !localStateRef.current.isCameraOff;
+    // Camera controls must not disable an outgoing screen-share track.
+    if (cameraTrackRef.current) cameraTrackRef.current.enabled = !next;
+    setCamOff(next);
+    void pushState({ isCameraOff: next });
   };
 
   const toggleHand = () => {
-    setHandRaised((h) => {
-      const next = !h;
-      pushState({ handRaised: next });
-      return next;
-    });
+    const next = !localStateRef.current.handRaised;
+    setHandRaised(next);
+    void pushState({ handRaised: next });
   };
 
   /** Replace the outgoing video track on every peer connection. */
@@ -742,7 +699,8 @@ export default function WebRTCRoom({
   }, []);
 
   const stopSharing = useCallback(async () => {
-    screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+    if (leavingRef.current) return;
+    screenStreamRef.current?.getTracks().forEach((t) => { t.onended = null; t.stop(); });
     screenStreamRef.current = null;
 
     const camera = cameraTrackRef.current;
@@ -764,9 +722,16 @@ export default function WebRTCRoom({
   const startSharing = useCallback(async () => {
     try {
       const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      if (leavingRef.current) {
+        display.getTracks().forEach((track) => track.stop());
+        return;
+      }
       screenStreamRef.current = display;
       const track = display.getVideoTracks()[0];
-      if (!track) return;
+      if (!track) {
+        display.getTracks().forEach((item) => item.stop());
+        return;
+      }
 
       // The browser's own "Stop sharing" bar ends the track directly.
       track.onended = () => {
@@ -794,59 +759,74 @@ export default function WebRTCRoom({
 
   const switchDevice = useCallback(
     async (deviceId: string, kind: 'audioinput' | 'videoinput') => {
+      let fresh: MediaStream | null = null;
       try {
         const constraints: MediaStreamConstraints =
           kind === 'videoinput'
             ? { video: { deviceId: { exact: deviceId } }, audio: false }
             : { audio: { deviceId: { exact: deviceId } }, video: false };
-        const fresh = await navigator.mediaDevices.getUserMedia(constraints);
+        fresh = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = localStreamRef.current;
+        if (leavingRef.current || !stream) {
+          fresh.getTracks().forEach((track) => track.stop());
+          return;
+        }
         const newTrack = kind === 'videoinput' ? fresh.getVideoTracks()[0] : fresh.getAudioTracks()[0];
         if (!newTrack) return;
-
-        const stream = localStreamRef.current;
-        if (stream) {
-          const old = kind === 'videoinput' ? stream.getVideoTracks()[0] : stream.getAudioTracks()[0];
-          if (old) {
-            stream.removeTrack(old);
-            old.stop();
-          }
-          stream.addTrack(newTrack);
-          setLocalStream(new MediaStream(stream.getTracks()));
-        }
-
+        // Set enabled before publishing, so device switches cannot briefly
+        // unmute a microphone or turn on a camera the user deliberately hid.
+        newTrack.enabled = kind === 'videoinput' ? !localStateRef.current.isCameraOff : !localStateRef.current.isMuted;
         if (kind === 'videoinput') {
+          const oldCamera = cameraTrackRef.current;
           cameraTrackRef.current = newTrack;
-          if (!sharing) await replaceVideoTrack(newTrack);
-        } else {
-          for (const entry of peersMapRef.current.values()) {
-            const sender = entry.pc.getSenders().find((s) => s.track?.kind === 'audio');
-            if (sender) await sender.replaceTrack(newTrack).catch(() => {});
+          if (!screenStreamRef.current) {
+            await replaceVideoTrack(newTrack);
+            stream.getVideoTracks().forEach((track) => stream.removeTrack(track));
+            stream.addTrack(newTrack);
           }
-          newTrack.enabled = !muted;
+          // During sharing, replace only the parked camera, not the display.
+          oldCamera?.stop();
+        } else {
+          const old = stream.getAudioTracks()[0];
+          for (const entry of peersMapRef.current.values()) {
+            const sender = entry.pc.getSenders().find((item) => item.track?.kind === 'audio');
+            if (sender) await sender.replaceTrack(newTrack);
+          }
+          if (leavingRef.current) { fresh.getTracks().forEach((track) => track.stop()); return; }
+          if (old) { stream.removeTrack(old); old.stop(); }
+          stream.addTrack(newTrack);
+          localSpeakingStopRef.current();
+          localSpeakingStopRef.current = monitorSpeaking(stream, (speaking) => setSpeaking(viewer.id, speaking));
         }
+        if (leavingRef.current) { fresh.getTracks().forEach((track) => track.stop()); return; }
+        setLocalStream(new MediaStream(stream.getTracks()));
         setShowDevices(false);
       } catch {
-        setNotice('Could not switch device.');
-        setTimeout(() => setNotice(''), 4000);
+        fresh?.getTracks().forEach((track) => track.stop());
+        if (!leavingRef.current) setNotice('Could not switch device.');
       }
     },
-    [sharing, muted, replaceVideoTrack],
+    [replaceVideoTrack, setSpeaking, viewer.id],
   );
 
   const sendChat = async (event: FormEvent) => {
     event.preventDefault();
     const body = chatDraft.trim();
-    if (!body) return;
+    if (!body || !joinedRef.current) return;
     setChatDraft('');
     try {
-      await fetch('/api/group-calls/chat', {
+      const response = await fetch('/api/group-calls/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callId: call.id, body }),
       });
-    } catch {
-      setNotice('Message could not be sent.');
-      setTimeout(() => setNotice(''), 4000);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || 'Message could not be sent.');
+      }
+    } catch (err) {
+      setChatDraft((draft) => draft || body);
+      setNotice((err as Error).message || 'Message could not be sent.');
     }
   };
 
@@ -862,15 +842,12 @@ export default function WebRTCRoom({
   );
 
   const participantCount = Math.max(participants.length, peers.length + 1);
-  const tileCount = peers.length + 1;
-  const gridCols =
-    tileCount <= 1 ? 'grid-cols-1' : tileCount <= 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3';
 
   if (ended) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
         <PhoneOff className="h-10 w-10 text-red-500" aria-hidden="true" />
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">The host ended this call</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">This call has ended</h2>
         <button
           type="button"
           onClick={leave}
@@ -883,14 +860,14 @@ export default function WebRTCRoom({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-4 border-b border-indigo-100 bg-indigo-50 px-4 py-3 dark:border-indigo-400/30 dark:bg-gray-900 sm:px-5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className={`${callChrome.summaryHeader} flex items-center justify-between gap-4 border-b border-indigo-100 bg-indigo-50 px-4 py-3 dark:border-indigo-400/30 dark:bg-gray-900 sm:px-5`}>
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+          <div className={`${callChrome.liveLabel} flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300`}>
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
             Live {isAudioCall ? 'audio' : 'video'} call
           </div>
-          <h2 id="group-call-title" className="truncate text-base font-bold text-indigo-950 dark:text-white">
+          <h2 className="truncate text-base font-bold text-indigo-950 dark:text-white">
             {call.title}
           </h2>
           <div className="flex items-center gap-1.5 text-xs text-indigo-800/80 dark:text-indigo-200/80">
@@ -908,10 +885,11 @@ export default function WebRTCRoom({
             <button
               type="button"
               onClick={endForEveryone}
+              aria-label="End call for everyone"
               className="inline-flex items-center gap-2 rounded-xl border border-red-600 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
             >
               <PhoneOff className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">End for all</span>
+              <span className={`${callChrome.controlLabel} hidden sm:inline`}>End for all</span>
             </button>
           )}
           <button
@@ -921,7 +899,7 @@ export default function WebRTCRoom({
             className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
           >
             <PhoneCall className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Leave</span>
+            <span className={`${callChrome.controlLabel} hidden sm:inline`}>Leave</span>
           </button>
         </div>
       </div>
@@ -937,54 +915,51 @@ export default function WebRTCRoom({
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 flex-1 flex-col p-4">
+      <div className="relative flex min-h-0 flex-1">
+        <div className={`${callChrome.mediaPane} flex min-h-0 min-w-0 flex-1 flex-col p-4`}>
           {!localReady && !error ? (
             <div className="flex flex-1 items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
               Requesting {isAudioCall ? 'microphone' : 'camera & microphone'}…
             </div>
           ) : (
-            <div className={`grid min-h-0 flex-1 grid-cols-1 gap-4 ${gridCols}`}>
-              <div className="aspect-video sm:aspect-auto">
-                <VideoTile
-                  stream={localStream}
-                  mirror
-                  muted
-                  label={`${viewer.name} (you)`}
-                  avatar={viewer.avatar}
-                  speaking={speakingIds.has(viewer.id) && !muted}
-                  isMuted={muted}
-                  isCameraOff={camOff}
-                  isSharing={sharing}
-                  handRaised={handRaised}
-                  audioOnly={isAudioCall}
-                />
-              </div>
-              {peers.map((entry) => {
+            <ParticipantGallery participants={[
+              {
+                id: viewer.id,
+                isLocal: true,
+                stream: localStream,
+                mirror: true,
+                muted: true,
+                label: `${viewer.name} (you)`,
+                avatar: viewer.avatar,
+                speaking: speakingIds.has(viewer.id) && !muted,
+                isMuted: muted,
+                isCameraOff: camOff,
+                isSharing: sharing,
+                handRaised,
+                audioOnly: isAudioCall,
+              },
+              ...peers.map((entry) => {
                 const state = stateByUser.get(entry.userId);
-                return (
-                  <div key={entry.userId} className="aspect-video sm:aspect-auto">
-                    <VideoTile
-                      stream={entry.stream}
-                      label={entry.name}
-                      avatar={entry.avatar}
-                      speaking={speakingIds.has(entry.userId)}
-                      isMuted={state?.isMuted}
-                      isCameraOff={state?.isCameraOff}
-                      isSharing={state?.isSharing}
-                      handRaised={Boolean(state?.handRaisedAt)}
-                      connectionState={entry.connectionState}
-                      audioOnly={isAudioCall}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+                return {
+                  id: entry.userId,
+                  stream: entry.stream,
+                  label: entry.name,
+                  avatar: entry.avatar,
+                  speaking: speakingIds.has(entry.userId),
+                  isMuted: state?.isMuted,
+                  isCameraOff: state?.isCameraOff,
+                  isSharing: state?.isSharing,
+                  handRaised: Boolean(state?.handRaisedAt),
+                  connectionState: entry.connectionState,
+                  audioOnly: isAudioCall,
+                };
+              }),
+            ]} />
           )}
 
-          {localReady && (
-            <div className="relative mt-4 flex flex-wrap items-center justify-center gap-2">
+          {localReady && joined && (
+            <div className={`${callChrome.controls} relative mt-4 flex flex-wrap items-center justify-center gap-2`}>
               <button
                 type="button"
                 onClick={toggleMute}
@@ -993,7 +968,7 @@ export default function WebRTCRoom({
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white ${muted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-700'}`}
               >
                 {muted ? <MicOff className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-4 w-4" aria-hidden="true" />}
-                <span className="hidden sm:inline">{muted ? 'Unmute' : 'Mute'}</span>
+                <span className={`${callChrome.controlLabel} hidden sm:inline`}>{muted ? 'Unmute' : 'Mute'}</span>
               </button>
 
               {!isAudioCall && (
@@ -1005,7 +980,7 @@ export default function WebRTCRoom({
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white ${camOff ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-700'}`}
                 >
                   {camOff ? <VideoOff className="h-4 w-4" aria-hidden="true" /> : <Video className="h-4 w-4" aria-hidden="true" />}
-                  <span className="hidden sm:inline">{camOff ? 'Camera on' : 'Camera off'}</span>
+                  <span className={`${callChrome.controlLabel} hidden sm:inline`}>{camOff ? 'Camera on' : 'Camera off'}</span>
                 </button>
               )}
 
@@ -1018,7 +993,7 @@ export default function WebRTCRoom({
                   className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white ${sharing ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-800 hover:bg-gray-700'}`}
                 >
                   {sharing ? <MonitorX className="h-4 w-4" aria-hidden="true" /> : <MonitorUp className="h-4 w-4" aria-hidden="true" />}
-                  <span className="hidden sm:inline">{sharing ? 'Stop share' : 'Share'}</span>
+                  <span className={`${callChrome.controlLabel} hidden sm:inline`}>{sharing ? 'Stop share' : 'Share'}</span>
                 </button>
               )}
 
@@ -1030,7 +1005,7 @@ export default function WebRTCRoom({
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ${handRaised ? 'bg-amber-400 text-amber-950 hover:bg-amber-300' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
               >
                 <Hand className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{handRaised ? 'Lower' : 'Raise'}</span>
+                <span className={`${callChrome.controlLabel} hidden sm:inline`}>{handRaised ? 'Lower' : 'Raise'}</span>
               </button>
 
               <button
@@ -1048,7 +1023,7 @@ export default function WebRTCRoom({
                 className="relative inline-flex items-center gap-2 rounded-xl bg-gray-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700"
               >
                 <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Chat</span>
+                <span className={`${callChrome.controlLabel} hidden sm:inline`}>Chat</span>
                 {unreadChat > 0 && !chatOpen && (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
                     {unreadChat > 9 ? '9+' : unreadChat}
@@ -1114,7 +1089,7 @@ export default function WebRTCRoom({
         </div>
 
         {chatOpen && (
-          <aside className="flex w-full max-w-xs shrink-0 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <aside className="absolute inset-0 z-10 flex w-full flex-col sm:static sm:max-w-xs sm:shrink-0 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
             <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5 dark:border-gray-700">
               <span className="text-sm font-bold text-gray-900 dark:text-white">In-call chat</span>
               <button

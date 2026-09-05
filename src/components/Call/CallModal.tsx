@@ -1,8 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Copy, Check, LoaderCircle, Mic, PhoneOff, Radio, Video, X } from 'lucide-react';
 import WebRTCRoom from './WebRTCRoom';
+import callChrome from './CallChrome.module.css';
+
+function hasOpenNamePopover() {
+  return 'showPopover' in HTMLElement.prototype && Boolean(document.querySelector('[data-call-name-popover]:popover-open'));
+}
 
 type CallType = 'video' | 'audio';
 type Viewer = { id: number; name: string; avatar: string | null } | null;
@@ -85,6 +91,8 @@ export function CallModal({
     document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // Dismiss a full-name popover, not the entire live call.
+        if (hasOpenNamePopover()) return;
         setIsOpen(false);
         setRoomCall(null);
         setError('');
@@ -139,27 +147,29 @@ export function CallModal({
     void loadLiveCalls();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const liveCall = liveCalls?.[0];
 
-  return (
+  // The group header has backdrop-filter and overflow:hidden. Portal outside
+  // it so fixed positioning and hit targets stay relative to the viewport.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/75 p-3 backdrop-blur-sm sm:p-6"
+      className={`${roomCall ? callChrome.roomBackdrop : ''} fixed inset-0 z-[100] flex items-center justify-center bg-gray-950/75 p-3 backdrop-blur-sm sm:p-6`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="group-call-title"
       onMouseDown={(event) => {
-        if (event.currentTarget === event.target) setIsOpen(false);
+        if (event.currentTarget === event.target && !hasOpenNamePopover()) setIsOpen(false);
       }}
     >
       <div
-        className={`relative w-full overflow-hidden border border-indigo-200 bg-white shadow-2xl dark:border-indigo-400/40 dark:bg-gray-900 ${
-          roomCall ? 'h-[min(92vh,860px)] max-w-6xl rounded-2xl' : 'max-w-xl rounded-3xl'
+        className={`${roomCall ? callChrome.roomShell : ''} relative w-full overflow-hidden border border-indigo-200 bg-white shadow-2xl dark:border-indigo-400/40 dark:bg-gray-900 ${
+          roomCall ? 'flex h-[min(92dvh,860px)] max-w-6xl flex-col rounded-2xl' : 'max-w-xl rounded-3xl'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-3 dark:border-gray-700">
+        <div className={`${roomCall ? callChrome.shellHeader : ''} flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3 dark:border-gray-700`}>
           <h2
             id="group-call-title"
             className="flex items-center gap-2 truncate text-base font-extrabold text-gray-900 dark:text-white"
@@ -284,7 +294,7 @@ export function CallModal({
 
         {/* Footer: invite + leave (ours) */}
         {roomCall && (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-5 py-3 dark:border-gray-700">
+          <div className={`${callChrome.shellFooter} flex shrink-0 items-center justify-between gap-3 border-t border-gray-200 px-5 py-3 dark:border-gray-700`}>
             <button
               type="button"
               onClick={copyInvite}
@@ -303,7 +313,8 @@ export function CallModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

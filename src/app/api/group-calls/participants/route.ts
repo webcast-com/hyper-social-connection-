@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
+import { parsePositiveInt, readCallBody } from '@/lib/group-call-validation';
 import { hasDatabase } from '@/lib/prisma';
 import {
   getCallAccess,
@@ -13,11 +14,6 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-function parsePositiveInt(value: string | null | undefined) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
 
 /**
  * GET /api/group-calls/participants?callId=<id>
@@ -44,6 +40,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'You do not have access to this call.' }, { status: 403 });
     }
 
+    if (!access.call.isActive) {
+      return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+
     // Drop peers whose heartbeat stopped (closed tab / lost network) so the
     // grid does not keep a frozen tile for someone who is long gone.
     await reapStaleParticipants(callId).catch(() => {});
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
  * POST /api/group-calls/participants?callId=<id>
  *
  * Registers the signed-in user as a participant so other peers can discover
- * and connect to them. Idempotent — joining an already-joined call is a no-op.
+ * and connect to them. Rejoining resets the user's peer session and state.
  */
 export async function POST(req: NextRequest) {
   const viewer = await getViewer();
@@ -98,11 +98,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
     }
 
-    await joinCall(callId, viewer.id);
+    const lastSignalId = await joinCall(callId, viewer.id);
     const participants = await listParticipants(callId);
 
     return NextResponse.json(
-      { participants, joined: true, callType: access.call.callType },
+      { participants, joined: true, lastSignalId, callType: access.call.callType },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
@@ -159,12 +159,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'A valid callId query parameter is required.' }, { status: 400 });
   }
 
-  let body: Record<string, unknown> = {};
-  try {
-    body = ((await req.json()) as Record<string, unknown>) ?? {};
-  } catch {
-    body = {}; // bare heartbeat
-  }
+  const body = await readCallBody(req, true);
+  if (!body) return NextResponse.json({ error: 'A JSON object is required.' }, { status: 400 });
 
   const state: ParticipantState = {};
   if (typeof body.isMuted === 'boolean') state.isMuted = body.isMuted;
@@ -179,7 +175,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'You do not have access to this call.' }, { status: 403 });
     }
 
-    await updateParticipantState(callId, viewer.id, state);
+    if (!access.call.isActive) {
+      return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+    const updated = await updateParticipantState(callId, viewer.id, state);
+    if (!updated) {
+      return NextResponse.json({ error: 'Join this call before updating your state.' }, { status: 403 });
+    }
     return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     console.warn('[api/group-calls/participants] state update failed:', (error as Error)?.message);

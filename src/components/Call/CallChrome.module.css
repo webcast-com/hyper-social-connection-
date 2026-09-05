@@ -1,0 +1,35 @@
+/* Keep call chrome from squeezing participant cards out of a short viewport.
+   These classes are applied only to an active room, not to the lobby. */
+.roomBackdrop { min-width: 0; }
+.roomShell { min-width: 0; }
+.shellHeader { min-width: 0; }
+.shellFooter { min-width: 0; }
+.summaryHeader { flex-shrink: 0; }
+.liveLabel { min-width: 0; }
+.mediaPane { min-width: 0; }
+.controls { flex-shrink: 0; }
+.controls > button { min-width: 44px; min-height: 44px; }
+
+@media (max-width: 639px), (max-height: 500px) {
+  .roomBackdrop { padding: 0; }
+  .roomShell {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .controls { gap: 4px; }
+  .controls > button { padding-right: 12px; padding-left: 12px; }
+  .shellFooter { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-height: 500px) {
+  .shellHeader { padding-top: 4px; padding-bottom: 4px; }
+  .shellFooter { padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+  .summaryHeader { padding: 6px 12px; }
+  .liveLabel { display: none; }
+  .mediaPane { padding: 8px 12px; }
+  .controls { margin-top: 8px; }
+  .controlLabel { display: none; }
+}

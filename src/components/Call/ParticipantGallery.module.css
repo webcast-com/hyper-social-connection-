@@ -1,0 +1,134 @@
+.gallery {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.viewport {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.cards {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+}
+
+/* No intrinsic minimum from videos or avatars. The measured layout owns both
+   dimensions. Flat, keyed slots also keep React/media identity across rows. */
+.slot { flex: none; min-width: 0; min-height: 0; }
+.slot[hidden] { display: none; }
+
+.pagination {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 8px;
+  box-sizing: border-box;
+  color: #475569;
+}
+
+.pagination > span { min-width: 96px; font-size: 13px; line-height: 20px; text-align: center; }
+.pagination button {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+}
+.pagination button:hover:not(:disabled) { background: #e2e8f0; }
+.pagination button:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.pagination button:disabled { opacity: .4; cursor: default; }
+.pagination svg { width: 18px; height: 18px; }
+
+:global(.dark) .pagination { color: #cbd5e1; }
+:global(.dark) .pagination button { background: #1e293b; border-color: #475569; color: #f1f5f9; }
+:global(.dark) .pagination button:hover:not(:disabled) { background: #334155; }
+
+/* A side rail protects media height on short landscape stages. */
+.sidePager { flex-direction: row; }
+.sidePager .pagination { flex-direction: column; gap: 4px; padding: 0 0 0 12px; }
+.sidePager .pagination > span { min-width: 0; width: 44px; font-size: 12px; line-height: 16px; white-space: nowrap; }
+.screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.focusControls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 8px;
+  box-sizing: border-box;
+  min-width: 0;
+  color: #475569;
+}
+.focusControls > button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.focusControls > button:hover { background: #e2e8f0; }
+.focusControls svg { width: 18px; height: 18px; flex: none; }
+.focusChoice { display: flex; flex: 0 1 320px; min-width: 0; align-items: center; gap: 8px; }
+.focusMode { flex: none; font-size: 12px; line-height: 16px; white-space: nowrap; }
+.focusChoice select {
+  flex: 1 1 0;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  font: inherit;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.focusControls > button:focus-visible, .focusChoice select:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.compactFocus .focusMode { display: none; }
+.sideFocus { flex-direction: row; }
+.sideFocus .focusControls { flex-direction: column; gap: 4px; padding: 0 0 0 12px; align-items: stretch; }
+.sideFocus .focusChoice { flex: none; flex-direction: column; gap: 4px; }
+.sideFocus .focusChoice select { flex: none; }
+:global(.dark) .focusControls { color: #cbd5e1; }
+:global(.dark) .focusControls > button, :global(.dark) .focusChoice select { background: #1e293b; border-color: #475569; color: #f1f5f9; }
+:global(.dark) .focusControls > button:hover { background: #334155; }

@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
+import { parsePositiveInt, readCallBody } from '@/lib/group-call-validation';
 import { hasDatabase, prisma } from '@/lib/prisma';
-import { buildRoomUrl, createCall, deactivateGroupCalls, endCall, findCallById, getCallAccess, listParticipants } from '@/lib/group-call';
+import { buildRoomUrl, createCall, deactivateGroupCalls, endCall, getCallAccess, listGroupCalls } from '@/lib/group-call';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,11 +12,6 @@ type GroupAccess = {
   group: { id: number; name: string; adminId: number };
   isMember: boolean;
 };
-
-function parsePositiveInt(value: string | number | null | undefined) {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
 
 async function getGroupAccess(groupId: number, userId: number): Promise<GroupAccess | null> {
   const group = await prisma.group.findUnique({
@@ -77,27 +73,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'You must join this group to view its calls.' }, { status: 403 });
     }
 
-    const calls = await prisma.groupCall.findMany({
-      where: { groupId, ...(active === undefined ? {} : { isActive: active }) },
-      include: {
-        creator: { select: { id: true, name: true, avatar: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-
-    // Attach the number of current participants to each call.
-    const callsWithCounts = await Promise.all(
-      calls.map(async (call) => ({
-        ...call,
-        participantCount: (await listParticipants(call.id)).length,
-        // Signal that this is a native WebRTC call (no third-party URL).
-        native: true,
-      })),
-    );
+    const calls = await listGroupCalls(groupId, active);
 
     return NextResponse.json(
-      { calls: callsWithCounts },
+      { calls: calls.map((call) => ({ ...call, native: true })) },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
@@ -122,14 +101,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Group calls require a connected database.' }, { status: 503 });
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
+  const body = await readCallBody(req);
+  if (!body) return NextResponse.json({ error: 'A JSON object is required.' }, { status: 400 });
 
-  const groupId = parsePositiveInt(body.groupId as string | number | null);
+  const groupId = parsePositiveInt(body.groupId);
   if (!groupId) {
     return NextResponse.json({ error: 'A valid groupId is required.' }, { status: 400 });
   }
@@ -161,7 +136,14 @@ export async function POST(req: NextRequest) {
     await deactivateGroupCalls(groupId);
     const call = await createCall(groupId, viewer.id, title, description || null, roomUrl, callType);
 
-    return NextResponse.json({ call }, { status: 201 });
+    return NextResponse.json({
+      call: {
+        ...call,
+        creator: { id: viewer.id, name: viewer.name, avatar: viewer.avatar },
+        participantCount: 0,
+        native: true,
+      },
+    }, { status: 201 });
   } catch (error) {
     console.warn('[api/group-calls] create failed:', (error as Error)?.message);
     return NextResponse.json({ error: 'Could not start the group call.' }, { status: 500 });

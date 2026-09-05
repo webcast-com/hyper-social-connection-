@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
+import { parsePositiveInt, readCallBody, isJsonObject } from '@/lib/group-call-validation';
 import { hasDatabase } from '@/lib/prisma';
 import { addSignal, getCallAccess, isParticipant, listSignals, pruneSignals } from '@/lib/group-call';
 
@@ -7,11 +8,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const VALID_KINDS = new Set(['offer', 'answer', 'ice', 'join', 'bye']);
-
-function parsePositiveInt(value: string | null | undefined) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-}
 
 /**
  * GET /api/group-calls/signal?callId=<id>&after=<signalId>
@@ -40,11 +36,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'You do not have access to this call.' }, { status: 403 });
     }
 
+    if (!access.call.isActive) {
+      return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+    if (!(await isParticipant(callId, viewer.id))) {
+      return NextResponse.json({ error: 'Join this call before receiving signals.' }, { status: 403 });
+    }
+
     const signals = await listSignals(callId, viewer.id, after);
     const lastId = signals.length ? signals[signals.length - 1].id : after;
-    if (lastId > 500) {
-      await pruneSignals(callId, lastId - 500).catch(() => {});
-    }
+    await pruneSignals(callId).catch(() => {});
 
     return NextResponse.json(
       { signals, lastId },
@@ -69,14 +70,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Group calls require a connected database.' }, { status: 503 });
   }
 
-  let body: { callId?: unknown; toId?: unknown; kind?: unknown; payload?: unknown };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
+  const body = await readCallBody(req);
+  if (!body) return NextResponse.json({ error: 'A JSON object is required.' }, { status: 400 });
 
-  const callId = parsePositiveInt(typeof body.callId === 'number' ? String(body.callId) : (body.callId as string | null));
+  const callId = parsePositiveInt(body.callId);
   if (!callId) {
     return NextResponse.json({ error: 'A valid callId is required.' }, { status: 400 });
   }
@@ -96,8 +93,18 @@ export async function POST(req: NextRequest) {
   if (payload.length > 100_000) {
     return NextResponse.json({ error: 'Signaling payload is too large.' }, { status: 413 });
   }
-  // toId is optional — null broadcasts to everyone in the call.
-  const toId = parsePositiveInt(typeof body.toId === 'number' ? String(body.toId) : (body.toId as string | null)) ?? null;
+  const toId = body.toId == null ? null : parsePositiveInt(body.toId);
+  if ((body.toId != null && !toId) || (!PAYLOAD_OPTIONAL.has(kind) && !toId) || toId === viewer.id) {
+    return NextResponse.json({ error: 'A valid target peer is required for this signal.' }, { status: 400 });
+  }
+  if (!PAYLOAD_OPTIONAL.has(kind)) {
+    let decoded: unknown;
+    try { decoded = JSON.parse(payload); } catch { decoded = null; }
+    const valid = isJsonObject(decoded) && (kind === 'ice'
+      ? typeof decoded.candidate === 'string' && (typeof decoded.sdpMid === 'string' || Number.isInteger(decoded.sdpMLineIndex))
+      : decoded.type === kind && typeof decoded.sdp === 'string');
+    if (!valid) return NextResponse.json({ error: 'Invalid signaling payload.' }, { status: 400 });
+  }
 
   try {
     const access = await getCallAccess(callId, viewer.id);
@@ -107,6 +114,9 @@ export async function POST(req: NextRequest) {
     }
     if (!access.call.isActive) {
       return NextResponse.json({ error: 'This call is no longer active.' }, { status: 410 });
+    }
+    if (!(await isParticipant(callId, viewer.id))) {
+      return NextResponse.json({ error: 'Join this call before sending signals.' }, { status: 403 });
     }
     if (toId !== null) {
       const targetOk = await isParticipant(callId, toId);
