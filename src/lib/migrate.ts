@@ -20,10 +20,13 @@ let migrated = false;
 let migrationPromise: Promise<void> | null = null;
 
 export async function ensureMigrated() {
-  if (migrated) return;
   // Multiple server components can probe the database at once during a
   // cold start. Share one migration promise so queries never race the DDL.
+  // NOTE: check the in-flight promise BEFORE the `migrated` flag — runMigration
+  // sets `migrated` synchronously at its start, so checking the flag first
+  // would let a concurrent caller return early before the DDL finishes.
   if (migrationPromise) return migrationPromise;
+  if (migrated) return;
 
   migrationPromise = runMigration();
 

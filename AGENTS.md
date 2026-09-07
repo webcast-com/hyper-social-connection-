@@ -24,9 +24,10 @@ PostgreSQL via Prisma 7 (`@prisma/adapter-pg`). Prisma client is generated into
 The app auto-migrates and auto-seeds lazily on the first request
 (`getViewer` → `ensureSeeded` → `ensureMigrated`, all `CREATE TABLE IF NOT EXISTS` /
 `ADD COLUMN IF NOT EXISTS`). Because `NODE_ENV=development`, an empty DB is auto-seeded
-with demo users (login `alex@example.com` / `changeme123`). The first request after a
-fresh DB may log a seed error (a column added by a later patch); the next request
-succeeds — this is expected, not a bug.
+with demo users (login `alex@example.com` / `changeme123`). `ensureMigrated` checks the
+in-flight `migrationPromise` before the `migrated` flag so concurrent cold-start
+callers await the DDL instead of racing it (a previous race let seed run before
+`ALTER TABLE ... ADD COLUMN age` finished).
 
 ## Verifying it works
 - `curl -sf -H "Host: external-preview.example.com" http://localhost:3000/` → 200 with the app HTML.
