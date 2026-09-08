@@ -35,9 +35,8 @@ export async function ensureMigrated() {
 }
 
 async function runMigration() {
-  migrated = true;
-
   if (!hasDatabase) {
+    migrated = true;
     console.warn('[migrate] DATABASE_URL not set — skipping schema bootstrap (pages will use fallback/mock data)');
     return;
   }
@@ -452,9 +451,8 @@ async function runMigration() {
     }
   }
 
-  // When every statement failed (e.g. a cold-start connection blip), allow the
-  // next request to retry instead of marking this process as done forever.
-  if (anyFailed) {
-    migrated = false;
-  }
+  // Mark migration complete only after every statement has run, so concurrent
+  // cold-start requests sharing the migration promise don't race ahead and
+  // seed/query before all columns exist.
+  migrated = !anyFailed;
 }
