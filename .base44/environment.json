@@ -1,0 +1,12 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "RAPIDAPI_KEY",
+      "description": "Optional. RapidAPI key for live sports scores and predictions (ESPN + TheSportsDB via RapidAPI). Without it the /sports page shows fallback/demo data. Obtain from https://rapidapi.com/.",
+      "requiredAtBoot": false
+    }
+  ]
+}
