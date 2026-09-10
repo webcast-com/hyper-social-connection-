@@ -71,7 +71,7 @@ type PeerEntry = {
   stopSpeaking: () => void;
 };
 
-const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
@@ -159,7 +159,6 @@ export default function WebRTCRoom({
   const disconnectPromiseRef = useRef<Promise<void> | null>(null);
   const localSpeakingStopRef = useRef<() => void>(() => {});
   const localStateRef = useRef({ isMuted: false, isCameraOff: isAudioCall, isSharing: false, handRaised: false });
-  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
 
   const [joined, setJoined] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -349,7 +348,7 @@ export default function WebRTCRoom({
       if (participant.userId === viewer.id) return;
       if (peersMapRef.current.has(participant.userId)) return;
 
-      const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       const entry: PeerEntry = {
         userId: participant.userId,
         name: participant.name,
@@ -656,7 +655,6 @@ export default function WebRTCRoom({
         }
         if (checkCallStatus(response, data?.error)) return;
         if (!response.ok || !data?.joined) throw new Error(data?.error || 'Could not join the call.');
-        iceServersRef.current = (data.iceServers as RTCIceServer[]) ?? FALLBACK_ICE_SERVERS;
         lastSignalIdRef.current = data.lastSignalId ?? 0;
         joinedRef.current = true;
         setJoined(true);
