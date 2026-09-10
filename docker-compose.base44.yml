@@ -1,0 +1,48 @@
+# Base44 development environment for "hyper" (Next.js 16 + Prisma + PostgreSQL).
+# Runs the app FROM THE CLONED SOURCE with a live-reload dev server.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hyper
+      POSTGRES_PASSWORD: hyperpass
+      POSTGRES_DB: hyper
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "hyper", "-d", "hyper"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Not exposed publicly — only the app talks to it.
+    expose: ["5432"]
+
+  web:
+    image: node:22
+    working_dir: /app
+    volumes:
+      # Bind-mount the cloned source so edits are reflected live.
+      - ./:/app
+      # Keep installed deps out of the bind mount so they persist across restarts.
+      - web_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      # Local Postgres — overrides any DATABASE_URL committed in .env/.env.local.
+      DATABASE_URL: postgres://hyper:hyperpass@postgres:5432/hyper
+      NODE_ENV: development
+      # Handed in by the platform so Next.js allows the preview origin for dev assets/HMR.
+      BASE44_PUBLIC_HOST_SUFFIX: ${BASE44_PUBLIC_HOST_SUFFIX}
+      # Optional external services are read from the committed .env/.env.local
+      # (S3_*, RAPIDAPI_KEY). They are not required to boot — the app degrades
+      # gracefully (local-disk uploads, offline sports) when absent.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+      npm ci --no-audit --no-fund &&
+      npx prisma generate &&
+      exec npx next dev --webpack --hostname 0.0.0.0 --port 3000
+      "
+
+volumes:
+  web_node_modules:

@@ -65,6 +65,8 @@ type PeerEntry = {
   candidates: RTCIceCandidateInit[];
   connected: boolean;
   connectionState: RTCPeerConnectionState;
+  iceConnectionState: RTCIceConnectionState;
+  restartAttempted: boolean;
   joinedAt?: string;
   stopSpeaking: () => void;
 };
@@ -317,6 +319,29 @@ export default function WebRTCRoom({
     entry.candidates = [];
   }, []);
 
+  /**
+   * Restart ICE for a peer whose connection failed (e.g. network change,
+   * firewall dropped the path). Only the lower-id peer initiates to avoid
+   * glare — both sides restarting would collide. The new offer carries
+   * `iceRestart: true` which forces the browser to gather fresh candidates,
+   * potentially through the TURN server if direct P2P is no longer possible.
+   */
+  const restartIce = useCallback(
+    async (entry: PeerEntry) => {
+      if (leavingRef.current || !joinedRef.current || entry.restartAttempted) return;
+      if (viewer.id >= entry.userId) return;
+      entry.restartAttempted = true;
+      try {
+        const offer = await entry.pc.createOffer({ iceRestart: true });
+        await entry.pc.setLocalDescription(offer);
+        await sendSignal(entry.userId, 'offer', JSON.stringify(entry.pc.localDescription));
+      } catch {
+        // ignore — the peer will time out and be reaped by the server
+      }
+    },
+    [viewer.id, sendSignal],
+  );
+
   const createPeer = useCallback(
     async (participant: Participant, asInitiator: boolean) => {
       if (leavingRef.current || !joinedRef.current || !localStreamRef.current) return;
@@ -333,6 +358,8 @@ export default function WebRTCRoom({
         candidates: [],
         connected: false,
         connectionState: 'new',
+        iceConnectionState: 'new',
+        restartAttempted: false,
         joinedAt: participant.joinedAt,
         stopSpeaking: () => {},
       };
@@ -365,6 +392,16 @@ export default function WebRTCRoom({
         refreshPeers();
       };
 
+      pc.oniceconnectionstatechange = () => {
+        entry.iceConnectionState = pc.iceConnectionState;
+        if (pc.iceConnectionState === 'failed') {
+          void restartIce(entry);
+        } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          entry.restartAttempted = false;
+        }
+        refreshPeers();
+      };
+
       if (asInitiator) {
         try {
           const offer = await pc.createOffer();
@@ -376,7 +413,7 @@ export default function WebRTCRoom({
       }
       refreshPeers();
     },
-    [viewer.id, sendSignal, refreshPeers, setSpeaking],
+    [viewer.id, sendSignal, refreshPeers, setSpeaking, restartIce],
   );
 
   // ── Signal handling ───────────────────────────────────────────────────────

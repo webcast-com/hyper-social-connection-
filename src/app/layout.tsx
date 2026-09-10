@@ -46,23 +46,8 @@ function DocumentHead() {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();
 
-  // No authenticated user: render without the main app shell.
-  // This prevents Navbar crashes and allows /login and /signup to render cleanly.
-  // Protected pages should redirect to /login themselves (or use middleware).
-  if (!user) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <DocumentHead />
-        <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
-          <div className="app-surface">{children}</div>
-          <Analytics />
-        </body>
-      </html>
-    );
-  }
-
   let unread: { id: number }[] = [];
-  if (hasDatabase) {
+  if (user && hasDatabase) {
     try {
       unread = await prisma.notification.findMany({
         where: { userId: user.id, isRead: 0 },
