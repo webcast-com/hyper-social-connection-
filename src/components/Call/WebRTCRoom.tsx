@@ -65,11 +65,13 @@ type PeerEntry = {
   candidates: RTCIceCandidateInit[];
   connected: boolean;
   connectionState: RTCPeerConnectionState;
+  iceConnectionState: RTCIceConnectionState;
+  restartAttempted: boolean;
   joinedAt?: string;
   stopSpeaking: () => void;
 };
 
-const ICE_SERVERS: RTCIceServer[] = [
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
@@ -157,6 +159,7 @@ export default function WebRTCRoom({
   const disconnectPromiseRef = useRef<Promise<void> | null>(null);
   const localSpeakingStopRef = useRef<() => void>(() => {});
   const localStateRef = useRef({ isMuted: false, isCameraOff: isAudioCall, isSharing: false, handRaised: false });
+  const iceServersRef = useRef<RTCIceServer[]>(FALLBACK_ICE_SERVERS);
 
   const [joined, setJoined] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -317,13 +320,36 @@ export default function WebRTCRoom({
     entry.candidates = [];
   }, []);
 
+  /**
+   * Restart ICE for a peer whose connection failed (e.g. network change,
+   * firewall dropped the path). Only the lower-id peer initiates to avoid
+   * glare — both sides restarting would collide. The new offer carries
+   * `iceRestart: true` which forces the browser to gather fresh candidates,
+   * potentially through the TURN server if direct P2P is no longer possible.
+   */
+  const restartIce = useCallback(
+    async (entry: PeerEntry) => {
+      if (leavingRef.current || !joinedRef.current || entry.restartAttempted) return;
+      if (viewer.id >= entry.userId) return;
+      entry.restartAttempted = true;
+      try {
+        const offer = await entry.pc.createOffer({ iceRestart: true });
+        await entry.pc.setLocalDescription(offer);
+        await sendSignal(entry.userId, 'offer', JSON.stringify(entry.pc.localDescription));
+      } catch {
+        // ignore — the peer will time out and be reaped by the server
+      }
+    },
+    [viewer.id, sendSignal],
+  );
+
   const createPeer = useCallback(
     async (participant: Participant, asInitiator: boolean) => {
       if (leavingRef.current || !joinedRef.current || !localStreamRef.current) return;
       if (participant.userId === viewer.id) return;
       if (peersMapRef.current.has(participant.userId)) return;
 
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
       const entry: PeerEntry = {
         userId: participant.userId,
         name: participant.name,
@@ -333,6 +359,8 @@ export default function WebRTCRoom({
         candidates: [],
         connected: false,
         connectionState: 'new',
+        iceConnectionState: 'new',
+        restartAttempted: false,
         joinedAt: participant.joinedAt,
         stopSpeaking: () => {},
       };
@@ -365,6 +393,16 @@ export default function WebRTCRoom({
         refreshPeers();
       };
 
+      pc.oniceconnectionstatechange = () => {
+        entry.iceConnectionState = pc.iceConnectionState;
+        if (pc.iceConnectionState === 'failed') {
+          void restartIce(entry);
+        } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          entry.restartAttempted = false;
+        }
+        refreshPeers();
+      };
+
       if (asInitiator) {
         try {
           const offer = await pc.createOffer();
@@ -376,7 +414,7 @@ export default function WebRTCRoom({
       }
       refreshPeers();
     },
-    [viewer.id, sendSignal, refreshPeers, setSpeaking],
+    [viewer.id, sendSignal, refreshPeers, setSpeaking, restartIce],
   );
 
   // ── Signal handling ───────────────────────────────────────────────────────
@@ -618,6 +656,7 @@ export default function WebRTCRoom({
         }
         if (checkCallStatus(response, data?.error)) return;
         if (!response.ok || !data?.joined) throw new Error(data?.error || 'Could not join the call.');
+        iceServersRef.current = (data.iceServers as RTCIceServer[]) ?? FALLBACK_ICE_SERVERS;
         lastSignalIdRef.current = data.lastSignalId ?? 0;
         joinedRef.current = true;
         setJoined(true);

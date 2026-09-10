@@ -11,6 +11,7 @@ import {
   updateParticipantState,
   type ParticipantState,
 } from '@/lib/group-call';
+import { getIceServers } from '@/lib/ice-servers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
     const participants = await listParticipants(callId);
 
     return NextResponse.json(
-      { participants, joined: true, lastSignalId, callType: access.call.callType },
+      { participants, joined: true, lastSignalId, callType: access.call.callType, iceServers: getIceServers() },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
