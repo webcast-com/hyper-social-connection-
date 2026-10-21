@@ -18,7 +18,9 @@
     "storage:cors": "node scripts/s3-cors.mjs",
     "test:calls": "playwright test --config=playwright.calls.config.ts",
     "test:call-layout": "playwright test --config=playwright.call-layout.config.ts",
-    "test:uploads": "playwright test --config=playwright.uploads.config.ts"
+    "test:uploads": "playwright test --config=playwright.uploads.config.ts",
+    "test:sports": "tsx --test tests/sports/data.test.ts",
+    "test:sports-layout": "playwright test --config=playwright.sports.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

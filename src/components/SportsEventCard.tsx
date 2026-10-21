@@ -59,7 +59,9 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide truncate">
           {event.leagueName}
         </span>
-        {event.status === 'live' ? (
+        {event.source === 'demo' ? (
+          <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Sample fixture</span>
+        ) : event.status === 'live' ? (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 dark:text-red-400">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             LIVE{event.detail ? ` · ${event.detail}` : ''}
