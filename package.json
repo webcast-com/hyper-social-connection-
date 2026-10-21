@@ -17,7 +17,8 @@
     "db:local:reset": "bash scripts/dev-db.sh reset",
     "storage:cors": "node scripts/s3-cors.mjs",
     "test:calls": "playwright test --config=playwright.calls.config.ts",
-    "test:call-layout": "playwright test --config=playwright.call-layout.config.ts"
+    "test:call-layout": "playwright test --config=playwright.call-layout.config.ts",
+    "test:uploads": "playwright test --config=playwright.uploads.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

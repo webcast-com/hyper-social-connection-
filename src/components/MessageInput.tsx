@@ -26,7 +26,7 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
 
     setError('');
     setUploading(true);
@@ -61,7 +61,7 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
       className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
     >
       {error && (
-        <div className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2">
+        <div role="alert" className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2">
           {error}
         </div>
       )}
@@ -69,16 +69,16 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
       {uploading && progress && (
         <UploadProgress
           info={progress}
-          label={progress.total > 5 * 1024 * 1024 ? 'Uploading video…' : 'Uploading attachment…'}
+          label="Uploading attachment…"
         />
       )}
 
       {media && !uploading && (
-        <div className="mb-2 relative inline-block max-w-xs">
+        <div className="mb-2 relative inline-block max-w-full">
           {media.kind === 'image' ? (
-            <img src={media.url} alt="attachment preview" className="max-h-36 rounded-xl object-cover border border-gray-200 dark:border-gray-700" />
+            <img src={media.url} alt="attachment preview" className="max-w-full max-h-36 rounded-xl object-cover border border-gray-200 dark:border-gray-700" />
           ) : (
-            <video src={media.url} controls playsInline preload="metadata" className="max-h-40 rounded-xl bg-black" />
+            <video src={media.url} controls playsInline preload="metadata" className="max-w-full max-h-40 rounded-xl bg-black" />
           )}
           <button
             type="button"
@@ -110,7 +110,7 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
         >
           {uploading ? <LoaderCircle className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
         </button>
-        <div className="flex-1 flex items-center gap-1 relative">
+        <div className="min-w-0 flex-1 flex items-center gap-1 relative">
           <input
             type="hidden"
             name="content"
@@ -121,7 +121,7 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
             value={messageValue}
             onChange={(e) => setMessageValue(e.target.value)}
             placeholder={media ? 'Add a caption…' : 'Type a message... 😎'}
-            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+            className="min-w-0 w-full flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
           />
           <button
             type="button"
@@ -140,10 +140,10 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
         <button
           type="submit"
           disabled={!canSend}
-          className="bg-blue-600 text-white rounded-full p-3 w-11 h-11 flex items-center justify-center hover:bg-blue-700 transition-colors disabled:opacity-40"
+          className="shrink-0 bg-blue-600 text-white rounded-full p-3 w-11 h-11 flex items-center justify-center hover:bg-blue-700 transition-colors disabled:opacity-40"
           aria-label="Send message"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
             <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.517 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 60.517 0 003.478 2.405z" />
           </svg>
         </button>

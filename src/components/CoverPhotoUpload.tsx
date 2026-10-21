@@ -30,7 +30,7 @@ export default function CoverPhotoUpload({
     const file = e.target.files?.[0];
     // Reset so picking the same file again still fires onChange.
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file for your cover photo.');
       return;
@@ -42,8 +42,8 @@ export default function CoverPhotoUpload({
     try {
       const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Cover photo must be an image.');
-      setCover(media.url); // optimistic preview
-      await updateCoverPhoto(media.url); // persist + revalidate
+      await updateCoverPhoto(media.url); // persist before replacing the current cover
+      setCover(media.url);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
@@ -53,9 +53,17 @@ export default function CoverPhotoUpload({
   };
 
   const handleRemove = async () => {
+    if (uploading) return;
     setError('');
-    setCover('');
-    await updateCoverPhoto('');
+    setUploading(true);
+    try {
+      await updateCoverPhoto('');
+      setCover('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not remove cover photo.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -76,14 +84,14 @@ export default function CoverPhotoUpload({
             onChange={handleFileChange}
             aria-label="Upload cover photo"
           />
-          <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+          <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
             {cover && !uploading && (
               <button
                 type="button"
                 onClick={handleRemove}
                 title="Remove cover photo"
                 aria-label="Remove cover photo"
-                className="w-10 h-10 bg-gray-800/70 hover:bg-gray-800 text-white rounded-full border-2 border-white/60 shadow flex items-center justify-center transition-colors backdrop-blur-sm"
+                className="w-11 h-11 bg-gray-800/70 hover:bg-gray-800 text-white rounded-full border-2 border-white/60 shadow flex items-center justify-center transition-colors backdrop-blur-sm"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -94,7 +102,7 @@ export default function CoverPhotoUpload({
               disabled={uploading}
               title="Change cover photo"
               aria-label="Change cover photo"
-              className="w-10 h-10 bg-gray-200/90 hover:bg-gray-300 rounded-full border-2 border-white shadow flex items-center justify-center text-gray-700 transition-colors disabled:opacity-70 backdrop-blur-sm"
+              className="w-11 h-11 bg-gray-200/90 hover:bg-gray-300 rounded-full border-2 border-white shadow flex items-center justify-center text-gray-700 transition-colors disabled:opacity-70 backdrop-blur-sm"
             >
               {uploading ? (
                 <LoaderCircle className="w-5 h-5 animate-spin" />
@@ -104,12 +112,12 @@ export default function CoverPhotoUpload({
             </button>
           </div>
           {uploading && progress && (
-            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-72 z-20">
+            <div className="absolute top-16 left-3 right-3 sm:left-auto sm:w-72 z-20">
               <UploadProgress info={progress} label="Uploading cover…" />
             </div>
           )}
           {error && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-64 text-center text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 z-20">
+            <div role="alert" className="absolute top-16 left-3 right-3 sm:left-auto sm:w-64 text-center text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2 py-1 z-20">
               {error}
             </div>
           )}
