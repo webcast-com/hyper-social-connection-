@@ -16,7 +16,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 - **Movies API** — searchable, paginated demo catalog at `/api/movies`
 - **Profiles** — cover photo, avatar, bio, photo grid, followers
 - **Search** — people and posts, with trending topics computed from real hashtag usage
-- **Sports** — live scores and fixtures from ESPN (`/sports`); the predictions page (`/sports/predictions`) remains available with an empty state and no external prediction provider
+- **Sports** — live scores and fixtures from ESPN (`/sports`); upcoming ESPN-reported bookmaker odds on the predictions page (`/sports/predictions`), with sport/date-query filters and manual refresh; no RapidAPI integration or API key required (see [odds checks](ESPN_ODDS_CHECKS.md))
 - **Notifications** — likes, comments, follows, messages, reposts with unread badges
 - **Dark mode** — fully themed, respects system preference, no flash on load
 - **PWA** — installable via `manifest.webmanifest`

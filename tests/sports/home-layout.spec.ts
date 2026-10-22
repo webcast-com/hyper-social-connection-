@@ -16,14 +16,15 @@ test.beforeAll(async () => {
     plugins: [{ name: 'homepage-server-boundaries', setup(builder) {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
-      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
+      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
       builder.onResolve({ filter: /^@\/app\/actions$/ }, () => ({ path: 'actions', namespace: 'home-data' }));
       builder.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'router', namespace: 'home-data' }));
       builder.onLoad({ filter: /.*/, namespace: 'home-data' }, (args) => ({ contents:
-        args.path.endsWith('viewer') ? 'export const getViewer = async () => window.homeReviewUser;'
+        args.path.endsWith('espn-odds-feed') ? 'export const getEspnOdds = async () => window.oddsReviewBoard;'
+          : args.path.endsWith('viewer') ? 'export const getViewer = async () => window.homeReviewUser;'
           : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const prisma = {};'
             : args.path === 'router' ? 'const router = {refresh(){},push(){},replace(){}}; export const useRouter = () => router; export const usePathname = () => "/";'
-              : names.map((name) => `export const ${name} = async () => {};`).join('\n'),
+              : names.map((name) => name === 'createPost' ? 'export const createPost = async (data) => { window.predictionPosts.push(Object.fromEntries(data.entries())); };' : `export const ${name} = async () => {};`).join('\n'),
       }));
       builder.onLoad({ filter: /src\/lib\/sports\.ts$/ }, async (args) => ({
         contents: (await fs.readFile(args.path, 'utf8')).replace('export async function getSportsBoard(', 'async function unusedServerSportsBoard(')
@@ -131,14 +132,14 @@ test('unreported scores in the feed remain unknown instead of showing 0–0', as
 });
 
 for (const width of [320, 768, 1440]) {
-  test(`predictions route remains accessible without provider branding or invented picks at ${width}px`, async ({ page }) => {
+  test(`predictions route shows an honest ESPN odds empty state at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate(() => window.renderPredictionsReview());
     await expect(page.getByRole('heading', { name: 'Match predictions', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'No predictions available', exact: true })).toBeVisible();
-    await expect(page.getByText('No prediction provider is connected.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No upcoming matches with odds', exact: true })).toBeVisible();
+    await expect(page.getByText('Only scheduled home/away fixtures', { exact: false })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Back to sports scores' })).toHaveAttribute('href', '/sports');
-    await expect(page.getByText('0 picks', { exact: true })).toBeVisible();
+    await expect(page.getByText('0 matches', { exact: false })).toBeVisible();
     await expect(page.getByRole('article')).toHaveCount(0);
     await expect(page.getByText(/RapidAPI|RAPIDAPI_KEY/)).toHaveCount(0);
     await expect(page.getByRole('banner')).toBeVisible();
@@ -146,12 +147,74 @@ for (const width of [320, 768, 1440]) {
   });
 }
 
-test('predictions route does not fetch or poll sports providers', async ({ page }) => {
+test('predictions route does not poll in the background', async ({ page }) => {
   await page.clock.install();
   let sportsRequests = 0;
   page.on('request', (request) => { if (request.url().includes('/api/sports')) sportsRequests++; });
   await page.evaluate(() => window.renderPredictionsReview());
-  await expect(page.getByRole('heading', { name: 'No predictions available', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No upcoming matches with odds', exact: true })).toBeVisible();
   await page.clock.fastForward(180_000);
   expect(sportsRequests).toBe(0);
+});
+
+for (const width of [320, 768, 1440]) {
+  test(`ESPN odds, premium flags and full team names fit at ${width}px without invented predictions`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.renderPredictionsReview('ready'));
+    const cards = page.getByRole('article');
+    await expect(cards).toHaveCount(8);
+    await expect(cards.getByText('Free', { exact: true })).toHaveCount(6);
+    await expect(cards.getByText('Premium', { exact: true })).toHaveCount(2);
+    await expect(cards.first().getByText('1.80', { exact: true })).toBeVisible();
+    await expect(cards.first().getByRole('heading')).toContainText('Very Long International Home Club Name');
+    await expect(page.getByText('Upcoming fixtures and bookmaker odds—not model predictions or guaranteed outcomes.')).toBeVisible();
+    await expect(cards.getByRole('button', { name: 'Share', exact: true })).toHaveCount(0);
+    await expect(cards.first().getByRole('link', { name: 'Log in to share or create a poll' })).toHaveAttribute('href', '/login');
+    await assertFit(page);
+  });
+}
+
+test('odds filters POST the supplied contract and refresh with loading and retryable errors', async ({ page }) => {
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  let body: unknown;
+  await page.route('**/api/sports/predictions?refresh=1', async (route) => {
+    body = route.request().postDataJSON();
+    await route.fulfill({ status: 503, json: { error: 'Unavailable' } });
+  });
+  await page.getByRole('combobox', { name: 'Sport', exact: true }).selectOption('basketball');
+  await page.getByRole('spinbutton', { name: 'Per league (0 = no cap)', exact: true }).fill('2');
+  await page.getByRole('spinbutton', { name: 'Days ahead', exact: true }).fill('3');
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Keeping the previous results');
+  expect(body).toEqual({ sports: ['basketball'], perLeague: 2, days: 3 });
+  await expect(page.getByRole('article')).toHaveCount(8);
+  const next = await page.evaluate(() => ({ ...window.oddsReviewBoard, status: 'empty', matches: [] }));
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json: next }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('article')).toHaveCount(0);
+});
+
+test('signed-in match sharing and polls use reported odds, not a fabricated prediction', async ({ page }) => {
+  await page.evaluate(() => window.renderPredictionsReview('ready', true));
+  const first = page.getByRole('article').first();
+  await first.getByRole('textbox').fill('My match discussion');
+  await first.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.predictionPosts.length)).toBe(1);
+  const post = await page.evaluate(() => window.predictionPosts[0]);
+  expect(post.content).toContain('ESPN-reported decimal odds: Home 1.8');
+  expect(post.content).toContain('My match discussion');
+  expect(post.content).not.toContain('Pick:');
+  await first.getByRole('button', { name: 'Poll this', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.predictionPosts.length)).toBe(2);
+  expect(await page.evaluate(() => window.predictionPosts[1].pollOption2)).toBe('Draw');
+});
+
+test('odds outages are not disguised as an empty schedule or sample prices', async ({ page }) => {
+  await page.evaluate(() => window.renderPredictionsReview('unavailable'));
+  await expect(page.getByRole('status')).toContainText('ESPN odds could not be reached');
+  await expect(page.getByRole('article')).toHaveCount(0);
+  await page.evaluate(() => window.renderPredictionsReview('partial'));
+  await expect(page.getByRole('status')).toContainText('Some ESPN feeds are unavailable');
+  await expect(page.getByRole('article')).toHaveCount(8);
 });

@@ -2,11 +2,14 @@ import { createRoot } from 'react-dom/client';
 import Home from '../../src/app/page';
 import PredictionsPage from '../../src/app/sports/predictions/page';
 import Navbar from '../../src/components/Navbar';
+import type { OddsBoard } from '../../src/lib/espn-odds';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
-    renderPredictionsReview: () => void;
+    renderPredictionsReview: (status?: OddsBoard['status'], signedIn?: boolean) => Promise<void>;
+    oddsReviewBoard: OddsBoard;
+    predictionPosts: Record<string, FormDataEntryValue>[];
     homeReviewBoard: SportsBoard;
     homeReviewUser: { id: number; name: string; avatar: null } | null;
     renderHomeReview: (signedIn: boolean, demo?: boolean, scenario?: 'match' | 'race' | 'missing-score') => Promise<void>;
@@ -46,8 +49,23 @@ window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => 
   </div>);
 };
 
-// Render the actual preserved route without asking any sports provider for data.
-window.renderPredictionsReview = () => root.render(<div key={++key}>
-  <Navbar user={null} />
-  <main className="app-main app-surface max-w-7xl mx-auto"><PredictionsPage /></main>
-</div>);
+// Provider HTTP and viewer boundaries are mocked; render the actual async route.
+window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
+  window.homeReviewUser = signedIn ? { id: 1, name: 'Review User', avatar: null } : null;
+  window.predictionPosts = [];
+  window.oddsReviewBoard = {
+    status, fetchedAt: '2026-10-22T00:00:00Z', truncated: false,
+    sources: [{ path: 'soccer/eng.1', date: null, ok: status !== 'unavailable', count: 8 }],
+    matches: status === 'ready' || status === 'partial' ? Array.from({ length: 8 }, (_, i) => ({
+      id: `odds-${i}`, sport: 'football', league: 'Premier League', path: 'soccer/eng.1',
+      home_team: 'Very Long International Home Club Name', away_team: 'Very Long International Away Club Name',
+      home_logo: null, away_logo: null, kickoff: '2030-10-22T18:00:00Z', venue: 'Review Stadium',
+      is_premium: i >= 6, odds: { home: 1.8, away: 3.2, draw: 3.5, over_under: 2.5, spread: null, provider: 'Review bookmaker' },
+    })) : [],
+  };
+  const content = await PredictionsPage();
+  root.render(<div key={++key}>
+    <Navbar user={window.homeReviewUser} />
+    <main className="app-main app-surface max-w-7xl mx-auto">{content}</main>
+  </div>);
+};
