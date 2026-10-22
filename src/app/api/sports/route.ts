@@ -14,6 +14,6 @@ export async function GET(req: NextRequest) {
   const refresh = req.nextUrl.searchParams.get('refresh') === '1';
   const board = await getSportsBoard({ bypassCache: refresh });
   return NextResponse.json(board, {
-    headers: { 'Cache-Control': 'public, max-age=20, stale-while-revalidate=40' },
+    headers: { 'Cache-Control': refresh ? 'no-store' : 'public, max-age=20, stale-while-revalidate=40' },
   });
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPost, createStory } from '@/app/actions';
 import {
   Image as ImageIcon,
@@ -29,6 +29,8 @@ type Media = { kind: 'image' | 'video'; url: string } | null;
 export default function CreatePost({ user, groupId }: { user: any; groupId?: number }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const attachButtonRef = useRef<HTMLButtonElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
   const [media, setMedia] = useState<Media>(null);
   const [postValue, setPostValue] = useState('');
   const [dismissedUrl, setDismissedUrl] = useState<string | null>(null);
@@ -59,10 +61,22 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
     [composerUrl],
   );
 
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    attachMenuRef.current?.querySelector('button')?.focus();
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowAttachMenu(false);
+      attachButtonRef.current?.focus();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showAttachMenu]);
+
   const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || storyUploading) return;
     if (!file.type.startsWith('image/')) {
       setStoryError('Please choose an image file for your story.');
       return;
@@ -91,7 +105,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
 
     setError('');
     setUploading(true);
@@ -186,7 +200,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             setScheduledAt('');
             setError('');
           }}
-          className="flex-1 flex flex-col"
+          className="min-w-0 flex-1 flex flex-col"
         >
           <div className="relative">
             <input name="content" type="hidden" value={postValue} />
@@ -230,7 +244,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           />
 
           {error && (
-            <div className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2">
+            <div role="alert" className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2">
               {error}
             </div>
           )}
@@ -375,14 +389,17 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
       </div>
 
       {/* Composer Action Buttons Bar */}
-      <div className="border-t border-gray-100 dark:border-gray-700/60 mt-3 pt-3 flex items-center justify-between text-xs gap-1 overflow-x-auto sm:overflow-visible scrollbar-hide">
+      <div className="border-t border-gray-100 dark:border-gray-700/60 mt-3 pt-3 flex items-center justify-between text-xs gap-1">
         {/* Photo / Video Button */}
         <div className="flex-1 relative min-w-0">
           <button
             type="button"
+            ref={attachButtonRef}
             onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className="w-full min-h-[38px] flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
-            aria-haspopup="menu"
+            disabled={uploading}
+            aria-label="Attach photo or video"
+            className="w-full min-h-11 disabled:opacity-60 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
+            aria-haspopup="dialog"
             aria-expanded={showAttachMenu}
           >
             <ImageIcon className="text-green-500 w-4 h-4 shrink-0" />
@@ -396,7 +413,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
                 onClick={() => setShowAttachMenu(false)}
                 aria-hidden="true"
               />
-              <div className="absolute bottom-full left-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-56 sm:w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-30 overflow-hidden animate-fade-in">
+              <div ref={attachMenuRef} role="dialog" aria-label="Attachment options" className="absolute bottom-full left-0 mb-2 w-56 sm:w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-30 overflow-hidden animate-fade-in">
                 <button
                   type="button"
                   onClick={() => {
@@ -435,11 +452,12 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
           )}
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <button
             type="button"
             onClick={() => setShowPoll(!showPoll)}
-            className={`w-full flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl font-semibold transition-colors ${
+            aria-label="Create poll"
+            className={`w-full min-h-11 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl font-semibold transition-colors ${
               showPoll ? 'text-blue-600 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-900/30' : 'text-gray-600 dark:text-gray-300'
             }`}
           >
@@ -449,7 +467,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
         </div>
 
         {/* Story Upload Button */}
-        <div className="flex-1 relative">
+        <div className="flex-1 min-w-0 relative">
           <input
             ref={storyFileRef}
             type="file"
@@ -462,7 +480,8 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
             type="button"
             onClick={() => storyFileRef.current?.click()}
             disabled={storyUploading}
-            className="w-full flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold disabled:opacity-60 transition-colors"
+            aria-label="Create story"
+            className="w-full min-h-11 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold disabled:opacity-60 transition-colors"
           >
             {storyUploading ? (
               <LoaderCircle className="w-4 h-4 text-purple-500 animate-spin shrink-0" />
@@ -477,7 +496,8 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
         <button
           type="button"
           onClick={() => { setShowSchedule(!showSchedule); }}
-          className={`flex-1 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl font-semibold transition-colors ${
+          aria-label="Schedule post"
+          className={`flex-1 min-w-0 min-h-11 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl font-semibold transition-colors ${
             showSchedule ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
           }`}
         >
@@ -488,7 +508,8 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
         <button
           type="button"
           onClick={() => setShowEmoji(!showEmoji)}
-          className="flex-1 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
+          aria-label="Add feeling or emoji"
+          className="flex-1 min-w-0 min-h-11 flex items-center justify-center space-x-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/60 p-2 rounded-xl text-gray-600 dark:text-gray-300 font-semibold transition-colors"
         >
           <Smile className="text-yellow-500 w-4 h-4 shrink-0" />
           <span className="truncate hidden min-[420px]:inline">Feeling</span>
@@ -500,7 +521,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
       )}
 
       {storyError && (
-        <p className="text-xs text-red-600 text-center mt-2">{storyError}</p>
+        <p role="alert" className="text-xs text-red-600 text-center mt-2">{storyError}</p>
       )}
     </div>
   );

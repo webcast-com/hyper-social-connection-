@@ -46,23 +46,10 @@ function DocumentHead() {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getViewer();
 
-  // No authenticated user: render without the main app shell.
-  // This prevents Navbar crashes and allows /login and /signup to render cleanly.
-  // Protected pages should redirect to /login themselves (or use middleware).
-  if (!user) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <DocumentHead />
-        <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
-          <div className="app-surface">{children}</div>
-          <Analytics />
-        </body>
-      </html>
-    );
-  }
-
+  // Navigation is public. Each protected page/action still enforces its own
+  // authentication; guests see sign-in/sign-up controls instead of an identity.
   let unread: { id: number }[] = [];
-  if (hasDatabase) {
+  if (user && hasDatabase) {
     try {
       unread = await prisma.notification.findMany({
         where: { userId: user.id, isRead: 0 },
@@ -79,8 +66,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <DocumentHead />
       <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
-        {/* pb-20 on mobile leaves room for the bottom tab bar */}
-        <main className="app-surface pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
+        {/* Shared safe-area-aware spacing keeps content above the mobile tabs. */}
+        <main className="app-main app-surface max-w-7xl mx-auto">{children}</main>
         <Analytics />
       </body>
     </html>

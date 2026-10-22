@@ -25,7 +25,7 @@ export default function GroupCoverField({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file for the group cover.');
       return;
@@ -65,12 +65,12 @@ export default function GroupCoverField({
         aria-label="Upload group cover photo"
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-100 transition-colors disabled:opacity-70"
+          className="inline-flex min-h-11 items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-100 transition-colors disabled:opacity-70"
         >
           {uploading ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
           {uploading ? 'Uploading…' : value ? 'Change cover' : 'Upload cover'}
@@ -78,8 +78,9 @@ export default function GroupCoverField({
         {value && (
           <button
             type="button"
+            disabled={uploading}
             onClick={() => { onChange(''); setError(''); }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 dark:bg-gray-700 dark:hover:bg-red-900/30 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-100 transition-colors"
+            className="inline-flex min-h-11 disabled:opacity-70 items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 dark:bg-gray-700 dark:hover:bg-red-900/30 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-100 transition-colors"
           >
             <X className="w-4 h-4" /> Remove
           </button>
@@ -87,7 +88,7 @@ export default function GroupCoverField({
       </div>
 
       {uploading && progress && <UploadProgress info={progress} label="Uploading cover photo…" />}
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

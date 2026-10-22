@@ -28,7 +28,7 @@ export default function CoverPhotoField({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file for your cover photo.');
       return;
@@ -36,14 +36,16 @@ export default function CoverPhotoField({
 
     setError('');
     setUploading(true);
+    setProgress({ percent: 0, loaded: 0, total: file.size });
     try {
-      const media = await uploadMediaFile(file);
+      const media = await uploadMediaFile(file, { onProgress: setProgress });
       if (media.kind !== 'image') throw new Error('Cover photo must be an image.');
       setUrl(media.url);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -57,7 +59,7 @@ export default function CoverPhotoField({
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           ref={fileRef}
           type="file"
@@ -70,7 +72,7 @@ export default function CoverPhotoField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors disabled:opacity-70"
+          className="inline-flex min-h-11 items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors disabled:opacity-70"
         >
           {uploading ? (
             <LoaderCircle className="w-4 h-4 animate-spin" />
@@ -82,8 +84,9 @@ export default function CoverPhotoField({
         {url && (
           <button
             type="button"
+            disabled={uploading}
             onClick={() => { setUrl(''); setError(''); }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm font-semibold text-gray-700 transition-colors"
+            className="inline-flex min-h-11 disabled:opacity-70 items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm font-semibold text-gray-700 transition-colors"
           >
             <X className="w-4 h-4" /> Remove
           </button>
@@ -92,7 +95,7 @@ export default function CoverPhotoField({
 
       <input name={fieldName} type="hidden" value={url} />
       {uploading && progress && <UploadProgress info={progress} label="Uploading cover…" />}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

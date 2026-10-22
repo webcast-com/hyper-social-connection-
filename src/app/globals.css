@@ -171,3 +171,27 @@ body.app-page-bg {
 .dark .bg-red-50 { background-color: #450a0a; }
 .dark .bg-green-100 { background-color: #14532d; }
 .dark .text-green-700 { color: #4ade80; }
+
+
+/* One bottom-bar measurement for page spacing and conversation height. */
+:root {
+  --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-nav-height: 60px;
+  --mobile-nav-space: calc(var(--mobile-nav-height) + 1px + var(--app-safe-area-bottom));
+}
+.mobile-bottom-nav {
+  padding-bottom: var(--app-safe-area-bottom);
+  padding-left: max(4px, env(safe-area-inset-left, 0px));
+  padding-right: max(4px, env(safe-area-inset-right, 0px));
+}
+.app-main {
+  padding-top: 4rem;
+  padding-bottom: calc(var(--mobile-nav-space) + 1rem);
+}
+.chat-page {
+  height: calc(100dvh - 4rem - var(--mobile-nav-space) - 0.5rem);
+}
+@media (min-width: 768px) {
+  .app-main { padding-bottom: 2rem; }
+  .chat-page { height: calc(100dvh - 8rem); }
+}

@@ -13,9 +13,9 @@ export default function UploadProgress({
 
   return (
     <div className="mt-2 rounded-xl bg-gray-50 dark:bg-gray-900/40 px-3 py-2.5 space-y-1.5">
-      <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
         <span className="font-semibold truncate">{label}</span>
-        <span className="tabular-nums shrink-0 font-medium">
+        <span className="tabular-nums min-w-0 font-medium">
           {pct}%
           {info.total > 0 && (
             <span className="text-gray-400 dark:text-gray-500 font-normal">

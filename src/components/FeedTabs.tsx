@@ -41,7 +41,7 @@ export default function FeedTabs({
         <button
           type="button"
           onClick={() => setActiveTab('for-you')}
-          className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold flex items-center justify-center space-x-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'for-you'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -54,7 +54,7 @@ export default function FeedTabs({
         <button
           type="button"
           onClick={() => setActiveTab('following')}
-          className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold flex items-center justify-center space-x-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'following'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -67,7 +67,7 @@ export default function FeedTabs({
         <button
           type="button"
           onClick={() => setActiveTab('saved')}
-          className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-bold flex items-center justify-center space-x-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'saved'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'

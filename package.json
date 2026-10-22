@@ -17,7 +17,12 @@
     "db:local:reset": "bash scripts/dev-db.sh reset",
     "storage:cors": "node scripts/s3-cors.mjs",
     "test:calls": "playwright test --config=playwright.calls.config.ts",
-    "test:call-layout": "playwright test --config=playwright.call-layout.config.ts"
+    "test:call-layout": "playwright test --config=playwright.call-layout.config.ts",
+    "test:uploads": "playwright test --config=playwright.uploads.config.ts",
+    "test:sports": "tsx --test tests/sports/*.test.ts",
+    "test:sports-layout": "playwright test --config=playwright.sports.config.ts",
+    "test:mobile-navigation": "playwright test --config=playwright.mobile-navigation.config.ts",
+    "check:espn": "tsx scripts/check-espn.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

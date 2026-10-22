@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, Trophy } from 'lucide-react';
+import { RefreshCw, Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import SportsEventCard from '@/components/SportsEventCard';
 import {
-  SPORT_FILTERS,
   filterSportsEvents,
   groupEventsByLeague,
   type EventStatus,
@@ -14,38 +13,74 @@ import {
   type SportsBoard,
 } from '@/lib/sports';
 
-type FilterId = (typeof SPORT_FILTERS)[number]['id'];
+import {
+  AVAILABLE_SPORTS, SPORT_LABELS, SPORTS_COMPETITIONS, SPORTS_REGIONS,
+  competitionRegion, type SportsRegion,
+} from '@/lib/sports-catalog';
 
 export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
   const [board, setBoard] = useState(initial);
-  const [filter, setFilter] = useState<FilterId>('all');
+  const [sport, setSport] = useState<SportKind | 'all'>('all');
+  const [status, setStatus] = useState<EventStatus | 'all'>('all');
+  const [region, setRegion] = useState<SportsRegion | 'all'>('all');
+  const [league, setLeague] = useState('all');
+  const [query, setQuery] = useState('');
+  const resetFilters = () => {
+    setSport('all'); setStatus('all'); setRegion('all'); setLeague('all'); setQuery('');
+  };
+  const leagueOptions = SPORTS_COMPETITIONS.filter((competition) =>
+    (sport === 'all' || competition.kind === sport) && (region === 'all' || competition.region === region),
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      if (document.visibilityState === 'hidden') return;
-      try {
-        const res = await fetch('/api/sports', { cache: 'no-store' });
-        if (!res.ok) return;
-        const next = (await res.json()) as SportsBoard;
-        if (!cancelled) setBoard(next);
-      } catch {
-        /* keep last good board */
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const mounted = useRef(false);
+  const request = useRef<AbortController | null>(null);
+  const refreshScores = useCallback(async (force = false) => {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setRefreshing(true);
+    if (force) setRefreshError('');
+    try {
+      const res = await fetch(force ? '/api/sports?refresh=1' : '/api/sports', {
+        cache: 'no-store', signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const next = (await res.json()) as SportsBoard;
+      if (!Array.isArray(next.events) || !Array.isArray(next.sources) || !['live', 'partial', 'demo'].includes(next.mode)) {
+        throw new Error('Invalid scoreboard');
       }
-    };
-    const id = setInterval(tick, 45_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+      if (mounted.current && !controller.signal.aborted) { setBoard(next); setRefreshError(''); }
+    } catch {
+      if (mounted.current && !controller.signal.aborted && force) {
+        setRefreshError('Could not refresh scores. Showing the previous update. Please try again.');
+      }
+    } finally {
+      if (request.current === controller) request.current = null;
+      if (mounted.current && !controller.signal.aborted) setRefreshing(false);
+    }
   }, []);
 
+  useEffect(() => {
+    mounted.current = true;
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'hidden') void refreshScores();
+    }, 45_000);
+    return () => {
+      mounted.current = false;
+      request.current?.abort();
+      request.current = null;
+      clearInterval(id);
+    };
+  }, [refreshScores]);
+
   const filtered = useMemo(
-    () => filterSportsEvents(board.events, filter as EventStatus | SportKind | 'all'),
-    [board.events, filter],
+    () => filterSportsEvents(board.events, 'all', { sport, status, region, league, query }),
+    [board.events, sport, status, region, league, query],
   );
   const groups = useMemo(() => groupEventsByLeague(filtered), [filtered]);
-  const liveCount = board.events.filter((e) => e.status === 'live').length;
+  const liveCount = board.events.filter((e) => e.status === 'live' && e.source !== 'demo').length;
 
   return (
     <div className="max-w-5xl mx-auto p-3 sm:p-4 mt-4 sm:mt-6">
@@ -55,7 +90,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             <Trophy className="text-amber-500" /> Sports
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Scores and fixtures from ESPN and TheSportsDB
+            Worldwide scores and fixtures from ESPN and TheSportsDB
             {liveCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -78,7 +113,12 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
         </span>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void refreshScores(true)} disabled={refreshing}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing scores…' : 'Refresh scores'}
+        </button>
         <Link
           href="/sports/predictions"
           className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-700"
@@ -91,29 +131,68 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
         </Link>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
-        {SPORT_FILTERS.map((chip) => {
-          const active = filter === chip.id;
-          return (
-            <button
-              key={chip.id}
-              type="button"
-              onClick={() => setFilter(chip.id)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                active
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
+      {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
+      <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+        {SPORTS_COMPETITIONS.length} competitions across {AVAILABLE_SPORTS.length} sports. Availability varies by season and provider.
+      </p>
+      {board.mode !== 'live' && (
+        <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          {board.mode === 'demo'
+            ? 'Sample fixtures only — live providers are unavailable. These are not current scores or schedules.'
+            : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
+        </p>
+      )}
+      <div role="group" aria-label="Filter by sport" className="flex min-w-0 gap-2 overflow-x-auto pb-2 mb-3 sm:flex-wrap">
+        {(['all', ...AVAILABLE_SPORTS] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={sport === id}
+            onClick={() => { setSport(id); setLeague('all'); }}
+            className={`shrink-0 min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+              sport === id
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            {id === 'all' ? 'All sports' : SPORT_LABELS[id]}
+          </button>
+        ))}
+      </div>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <label className="min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          Match status
+          <select value={status} onChange={(e) => setStatus(e.target.value as EventStatus | 'all')} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800">
+            <option value="all">All statuses</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="final">Results</option>
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          Region
+          <select value={region} onChange={(e) => { setRegion(e.target.value as SportsRegion | 'all'); setLeague('all'); }} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800">
+            <option value="all">All regions</option>
+            {SPORTS_REGIONS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          League or competition
+          <select value={league} onChange={(e) => setLeague(e.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800">
+            <option value="all">All competitions</option>
+            {leagueOptions.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+          </select>
+        </label>
+        <label className="min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          Search teams or leagues
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Team or competition…" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800" />
+        </label>
+      </div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <p aria-live="polite">{filtered.length} events in {groups.length} competitions</p>
+        <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
       </div>
 
       {groups.length === 0 ? (
         <EmptyState variant="search" title="No events in this view">
-          Try another filter — live games appear here as soon as a feed reports them.
+          Try another region, sport or competition, or reset the filters. Fixtures appear when reported by a provider; some competitions may be out of season.
         </EmptyState>
       ) : (
         <div className="space-y-7">
@@ -121,6 +200,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             <section key={group.league}>
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
                 {group.leagueName}
+                <span className="ml-2 font-normal normal-case tracking-normal">{SPORTS_REGIONS.find((item) => item.id === competitionRegion(group.league))?.name}</span>
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {group.events.map((ev) => (

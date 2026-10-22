@@ -15,6 +15,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
+import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent, SportsPrediction } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
@@ -27,15 +28,17 @@ function statusStyles(status: SportsEvent['status']) {
 }
 
 function statusLabel(event: SportsEvent) {
+  if (event.source === 'demo') return 'Sample fixture';
   if (event.status === 'live') return `LIVE ${event.detail || ''}`.trim();
   if (event.status === 'final') return event.detail || 'Final';
   return event.detail || 'Upcoming';
 }
 
 function matchLine(event: SportsEvent) {
+  if (event.race) return event.race.title;
   const score = event.status === 'upcoming'
     ? 'vs'
-    : `${event.away.score ?? 0}–${event.home.score ?? 0}`;
+    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
   return `${event.away.short || event.away.name} ${score} ${event.home.short || event.home.name}`;
 }
 
@@ -53,20 +56,15 @@ function matchPostText(event: SportsEvent, note?: string, prediction?: SportsPre
 
 function TeamBadge({ team, align = 'left' }: { team: SportsEvent['home']; align?: 'left' | 'right' }) {
   return (
-    <div className={`flex min-w-0 flex-1 items-center gap-2 ${align === 'right' ? 'justify-end text-right' : ''}`}>
-      {align === 'right' && (
-        <span className="truncate text-sm font-black text-gray-900 dark:text-white">{team.short || team.name}</span>
-      )}
+    <div className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 sm:flex-row sm:gap-2 ${align === 'right' ? 'sm:flex-row-reverse sm:text-right' : ''}`}>
       {team.logo ? (
-        <img src={team.logo} alt="" className="h-9 w-9 rounded-full bg-white object-contain p-1 ring-1 ring-gray-200 dark:bg-slate-900 dark:ring-slate-700" />
+        <img src={team.logo} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white object-contain p-1 ring-1 ring-gray-200 dark:bg-slate-900 dark:ring-slate-700" />
       ) : (
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-black text-white shadow-sm">
           {(team.short || team.name).slice(0, 2).toUpperCase()}
         </div>
       )}
-      {align === 'left' && (
-        <span className="truncate text-sm font-black text-gray-900 dark:text-white">{team.short || team.name}</span>
-      )}
+      <span title={team.name} className="min-w-0 break-words text-center text-xs font-black text-gray-900 sm:text-sm dark:text-white">{team.short || team.name}</span>
     </div>
   );
 }
@@ -99,7 +97,7 @@ export default function SportsFeedCard({
   const isSignedIn = !!currentUser?.id;
   const score = event.status === 'upcoming'
     ? 'vs'
-    : `${event.away.score ?? 0}–${event.home.score ?? 0}`;
+    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
   const predictionLabel = prediction
     ? `${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`
     : null;
@@ -115,7 +113,9 @@ export default function SportsFeedCard({
     setError('');
     if (nextMode === 'poll' && !text.trim()) {
       setText(`Who wins: ${matchLine(event)}?`);
-      setPollOptions([event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
+      setPollOptions(event.race
+        ? [...event.race.entries.slice(0, 3).map((entry) => entry.name), 'Other'].concat(event.race.entries.length ? [] : ['My pick']).slice(0, 4)
+        : [event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
     } else if (nextMode !== 'poll') {
       setText('');
     }
@@ -153,7 +153,7 @@ export default function SportsFeedCard({
   return (
     <article className="overflow-hidden rounded-xl border border-amber-100 bg-white shadow transition-all dark:border-amber-900/50 dark:bg-gray-800">
       <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-blue-50 px-4 py-2 dark:border-amber-900/50 dark:from-amber-950/40 dark:via-slate-900 dark:to-blue-950/30">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-white shadow-sm">
               <Trophy className="h-5 w-5" />
@@ -170,27 +170,27 @@ export default function SportsFeedCard({
               </div>
             </div>
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyles(event.status)}`}>
-            {event.status === 'live' && <Radio className="mr-1 inline h-3 w-3 animate-pulse" />}
+          <span className={`max-w-full break-words rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyles(event.source === 'demo' ? 'upcoming' : event.status)}`}>
+            {event.status === 'live' && event.source !== 'demo' && <Radio className="mr-1 inline h-3 w-3 animate-pulse" />}
             {statusLabel(event)}
           </span>
         </div>
       </div>
 
       <Link href="/sports" className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40">
-        <div className="mb-3 flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          <span className="truncate">{event.leagueName}</span>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          <span className="min-w-0 break-words">{event.leagueName}</span>
           <span suppressHydrationWarning>{new Date(event.startAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
         </div>
 
         <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-slate-900/60 dark:ring-slate-700/70">
-          <div className="flex items-center gap-3">
+          {event.race ? <SportsRaceSummary race={event.race} /> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
             <TeamBadge team={event.away} />
             <div className="rounded-2xl bg-white px-3 py-2 text-center text-lg font-black tabular-nums text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
               {score}
             </div>
             <TeamBadge team={event.home} align="right" />
-          </div>
+          </div>}
         </div>
 
         {predictionLabel && (
@@ -219,7 +219,7 @@ export default function SportsFeedCard({
           type="button"
           onClick={() => openMode('comment')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <MessageCircle className="h-4 w-4" />
           <span>Comment</span>
@@ -228,7 +228,7 @@ export default function SportsFeedCard({
           type="button"
           onClick={() => openMode('poll')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <BarChart2 className="h-4 w-4" />
           <span>Poll</span>
@@ -237,7 +237,7 @@ export default function SportsFeedCard({
           type="button"
           onClick={() => openMode('share')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <Share2 className="h-4 w-4" />
           <span>Share</span>
@@ -284,13 +284,13 @@ export default function SportsFeedCard({
                       setPollOptions(next);
                     }}
                     placeholder={`Option ${index + 1}`}
-                    className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="min-w-0 w-full flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                   {pollOptions.length > 2 && (
                     <button
                       type="button"
                       onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== index))}
-                      className="rounded-xl p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+                      className="shrink-0 min-h-11 min-w-11 rounded-xl p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
                       aria-label="Remove poll option"
                     >
                       <Trash2 className="h-4 w-4" />

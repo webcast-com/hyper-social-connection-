@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Plus, LoaderCircle } from 'lucide-react';
 import { createStory } from '@/app/actions';
 import { uploadMediaFile, type UploadProgressInfo } from '@/lib/upload';
+import UploadProgress from './UploadProgress';
 import StoryViewer from '@/components/StoryViewer';
 
 /**
@@ -23,7 +24,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
     const file = e.target.files?.[0];
     // Reset so picking the same file again still fires onChange.
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file for your story.');
       return;
@@ -48,22 +49,22 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
     <div>
       <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory overscroll-x-contain">
         {/* Create Story — uploads an image from the device */}
-        <div
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          aria-label="Upload story image"
+        />
+        <button
+          type="button"
           onClick={() => fileRef.current?.click()}
-          className="relative h-44 w-24 sm:h-48 sm:w-28 min-w-[6rem] sm:min-w-[7rem] bg-white dark:bg-gray-800 rounded-2xl shadow-sm cursor-pointer overflow-hidden group snap-start shrink-0 border border-gray-100 dark:border-gray-700/60 transition-transform active:scale-95"
-          role="button"
-          tabIndex={0}
+          disabled={uploading}
+          aria-busy={uploading}
           aria-label="Create story"
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click(); }}
+          className="relative h-44 w-24 sm:h-48 sm:w-28 min-w-[6rem] sm:min-w-[7rem] bg-white dark:bg-gray-800 rounded-2xl shadow-sm cursor-pointer overflow-hidden group snap-start shrink-0 border border-gray-100 dark:border-gray-700/60 transition-transform active:scale-95 disabled:opacity-70 disabled:cursor-wait"
         >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-            aria-label="Upload story image"
-          />
           <div className="h-3/4 overflow-hidden">
             <img
               src={user.avatar || 'https://images.unsplash.com/photo-1511367461989-f85a21fda167'}
@@ -81,7 +82,7 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
           <div className="h-1/4 flex items-end justify-center pb-1">
             <span className="text-[11px] sm:text-xs font-bold text-gray-800 dark:text-gray-200 truncate px-1">{uploading ? 'Uploading…' : 'Create story'}</span>
           </div>
-        </div>
+        </button>
 
         {/* Actual Stories — click opens the full-screen preview */}
         {stories.map((story, idx) => (
@@ -108,8 +109,9 @@ export default function Stories({ user, stories = [] }: { user: any; stories?: a
           </div>
         ))}
       </div>
+      {uploading && progress && <UploadProgress info={progress} label="Uploading story…" />}
       {error && (
-        <p className="text-sm text-red-600 mb-2 -mt-1">{error}</p>
+        <p role="alert" className="text-sm text-red-600 mb-2 -mt-1">{error}</p>
       )}
 
       {/* Full-screen story preview */}

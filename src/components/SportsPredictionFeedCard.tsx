@@ -61,7 +61,7 @@ export default function SportsPredictionFeedCard({
   return (
     <article className="overflow-hidden rounded-xl border border-violet-100 bg-white shadow transition-all dark:border-violet-900/50 dark:bg-gray-800">
       <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 px-4 py-2 dark:border-violet-900/50 dark:from-violet-950/40 dark:via-slate-900 dark:to-fuchsia-950/30">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-sm">
               <Sparkles className="h-5 w-5" />
@@ -87,7 +87,7 @@ export default function SportsPredictionFeedCard({
       <Link href="/sports/predictions" className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40">
         <div className="mb-3 flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           <span className="truncate">{prediction.competition || prediction.federation}</span>
-          <span>RapidAPI</span>
+          <span>{prediction.source === 'demo' ? 'Sample prediction' : 'RapidAPI'}</span>
         </div>
 
         <div className="rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
@@ -124,7 +124,7 @@ export default function SportsPredictionFeedCard({
           type="button"
           onClick={() => setMode('comment')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <MessageCircle className="h-4 w-4" />
           <span>Comment</span>
@@ -133,7 +133,7 @@ export default function SportsPredictionFeedCard({
           type="button"
           onClick={() => setMode('poll')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <BarChart2 className="h-4 w-4" />
           <span>Poll</span>
@@ -142,7 +142,7 @@ export default function SportsPredictionFeedCard({
           type="button"
           onClick={() => setMode('share')}
           disabled={!isSignedIn}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <Share2 className="h-4 w-4" />
           <span>Share</span>

@@ -5,7 +5,7 @@ import { getSportsBoard } from '@/lib/sports';
 export const metadata: Metadata = {
   title: 'Sports — Live scores and fixtures',
   description:
-    'Follow live scores and upcoming fixtures across the Premier League, Champions League, NBA, NFL and F1.',
+    'Follow worldwide football, basketball, cricket, rugby, baseball, ice hockey, American football and motorsport scores and fixtures.',
   alternates: { canonical: '/sports' },
   openGraph: {
     title: 'Sports | Hyper',

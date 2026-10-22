@@ -28,7 +28,7 @@ export default function AvatarField({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploading) return;
     if (!file.type.startsWith('image/')) {
       setError('Please choose an image file for your profile picture.');
       return;
@@ -51,7 +51,7 @@ export default function AvatarField({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-gray-100 shrink-0">
           {url ? (
             <img src={url} alt={userName} className="w-full h-full object-cover" />
@@ -73,7 +73,7 @@ export default function AvatarField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors disabled:opacity-70"
+          className="inline-flex min-h-11 items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 transition-colors disabled:opacity-70"
         >
           {uploading ? (
             <LoaderCircle className="w-4 h-4 animate-spin" />
@@ -85,8 +85,9 @@ export default function AvatarField({
         {url && (
           <button
             type="button"
+            disabled={uploading}
             onClick={() => { setUrl(''); setError(''); }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm font-semibold text-gray-700 transition-colors"
+            className="inline-flex min-h-11 disabled:opacity-70 items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-lg text-sm font-semibold text-gray-700 transition-colors"
           >
             <X className="w-4 h-4" /> Remove
           </button>
@@ -94,7 +95,7 @@ export default function AvatarField({
       </div>
       <input name={fieldName} type="hidden" value={url} />
       {uploading && progress && <UploadProgress info={progress} label="Uploading photo…" />}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }
