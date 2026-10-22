@@ -4,12 +4,16 @@ import PredictionsPage from '../../src/app/sports/predictions/page';
 import MatchDetailsPage from '../../src/app/sports/matches/[league]/[eventId]/page';
 import { parseMatchDetails, resolveMatch, type MatchBoard } from '../../src/lib/espn-match';
 import { summaryFixture } from './match-fixture';
+import AboutPage from '../../src/app/about/page';
+import PrivacyPage from '../../src/app/privacy/page';
+import SiteFooter from '../../src/components/SiteFooter';
 import Navbar from '../../src/components/Navbar';
 import type { OddsBoard } from '../../src/lib/espn-odds';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
+    renderInformationReview: (page: 'about' | 'privacy') => void;
     matchReviewBoard: MatchBoard;
     renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball') => Promise<void>;
     renderPredictionsReview: (status?: OddsBoard['status'], signedIn?: boolean) => Promise<void>;
@@ -85,4 +89,8 @@ window.renderMatchDetailsReview = async (mode = 'ready') => {
       ...(match ? {} : { error: 'ESPN HTTP 403', errorKind: 'http' as const, responseMetadata: { server: 'example-edge' } }) } };
   const content = await MatchDetailsPage({ params: Promise.resolve(reference) });
   root.render(<div key={++key}><Navbar user={null} /><main className="app-main app-surface max-w-7xl mx-auto">{content}</main></div>);
+};
+
+window.renderInformationReview = (page) => {
+  root.render(<div key={++key}><Navbar user={null} /><main className="app-main app-surface max-w-7xl mx-auto">{page === 'about' ? <AboutPage /> : <PrivacyPage />}</main><SiteFooter /></div>);
 };

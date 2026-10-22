@@ -364,3 +364,23 @@ test('real feed and odds cards link to match details while sample cards never do
   const link = page.getByRole('link', { name: 'View match details', exact: true }).first();
   await expect(link).toHaveAttribute('href', '/sports/matches/epl/401234567');
 });
+
+for (const width of [320, 768, 1440]) {
+  for (const route of ['about', 'privacy'] as const) {
+    test(`public ${route} content and footer fit at ${width}px without signing in`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((name) => window.renderInformationReview(name), route);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(route === 'about' ? 'About Hyper' : 'Privacy notice');
+      await expect(page.getByRole('banner')).toBeVisible();
+      const footer = page.getByRole('contentinfo');
+      await expect(footer.getByRole('link', { name: 'About Hyper', exact: true })).toHaveAttribute('href', '/about');
+      await expect(footer.getByRole('link', { name: 'Privacy notice', exact: true })).toHaveAttribute('href', '/privacy');
+      await footer.getByRole('link', { name: 'Privacy notice', exact: true }).scrollIntoViewIfNeeded();
+      await expect(footer.getByRole('link', { name: 'Privacy notice', exact: true })).toBeInViewport();
+      if (route === 'privacy') await expect(page.getByText('The site operator has not yet published', { exact: false })).toBeVisible();
+      await assertFit(page);
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await assertFit(page);
+    });
+  }
+}

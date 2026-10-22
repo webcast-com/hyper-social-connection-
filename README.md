@@ -98,6 +98,7 @@ Works anywhere Next.js runs. On **Vercel**:
 | Variable | Notes |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string. Authentication sessions live in Prisma's `sessions` table. |
+| `PRIVACY_CONTACT_EMAIL` | Optional monitored privacy-request address published on `/privacy`. The notice explicitly says when no address has been supplied. |
 | `NEXT_PUBLIC_SITE_URL` | Set to `https://hyper.co.ke` (also the default). Never use a preview hostname for production SEO. |
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Object store for media (`PRISMA_BUCKET_*` aliases are accepted). |
 | `S3_REGION`, `S3_FORCE_PATH_STYLE` | Usually `auto` and `true` for S3-compatible providers. |

@@ -7,6 +7,9 @@ import { getPageMetadata } from '../../src/lib/seo';
 import { getSiteMetadata } from '../../src/components/SEO/SEOMeta';
 import robots from '../../src/app/robots';
 import nextConfig from '../../next.config';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { getPrivacyContact } from '../../src/lib/privacy-contact';
 
 async function withEnv(values: Record<string, string | undefined>, run: () => void | Promise<void>) {
   const original = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]));
@@ -97,7 +100,7 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', { hasDatabase: false });
     const rows = await loaded.default();
-    assert.deepEqual(rows.map((row) => row.url), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions']);
+    assert.deepEqual(rows.map((row) => row.url), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/about', 'https://hyper.co.ke/privacy', 'https://hyper.co.ke/login', 'https://hyper.co.ke/signup', 'https://hyper.co.ke/search']);
     assert.ok(rows.every((row) => row.lastModified === undefined));
   });
 });
@@ -113,7 +116,7 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     assert.match(JSON.stringify(queries.post), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
-    assert.ok(!rows.some((row) => row.url.endsWith('/search')));
+    assert.ok(rows.some((row) => row.url.endsWith('/search')));
   });
 });
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
@@ -157,5 +160,54 @@ test('match metadata uses the event canonical and title; upstream outages are no
     fixture.board = { status: 'unavailable', match: null };
     const unavailable = await loaded.generateMetadata(input);
     assert.equal(typeof unavailable.robots === 'object' && unavailable.robots?.index, false);
+  });
+});
+
+test('every public entry page allows indexing, has a self-canonical and is not blocked by robots', async () => {
+  await withEnv(publicEnv, async () => {
+    const pages = [
+      ['/about', await import('../../src/app/about/page')],
+      ['/privacy', await import('../../src/app/privacy/page')],
+      ['/login', await import('../../src/app/login/layout')],
+      ['/signup', await import('../../src/app/signup/layout')],
+      ['/search', await import('../../src/app/search/layout')],
+    ] as const;
+    const rules = robots().rules;
+    assert.ok(!Array.isArray(rules));
+    for (const [path, page] of pages) {
+      const metadata = page.metadata;
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true);
+      assert.equal(metadata.alternates?.canonical, `https://hyper.co.ke${path}`);
+      assert.ok(!JSON.stringify(rules).includes(`"${path}"`));
+    }
+    for (const path of ['/settings', '/messages', '/notifications', '/api/']) assert.ok(JSON.stringify(rules).includes(path));
+  });
+});
+
+test('About and Privacy render readable guest content and shared footer links without an account', async () => {
+  await withEnv({ PRIVACY_CONTACT_EMAIL: undefined }, async () => {
+    const about = await import('../../src/app/about/page');
+    const privacy = await import('../../src/app/privacy/page');
+    const footer = await import('../../src/components/SiteFooter');
+    const aboutHtml = renderToStaticMarkup(createElement(about.default));
+    const privacyHtml = renderToStaticMarkup(createElement(privacy.default));
+    assert.match(aboutHtml, /<h1[^>]*>About Hyper<\/h1>/);
+    assert.match(privacyHtml, /<h1[^>]*>Privacy notice<\/h1>/);
+    assert.match(privacyHtml, /has not yet published a dedicated privacy contact/);
+    assert.ok(!privacyHtml.includes('mailto:'));
+    const footerHtml = renderToStaticMarkup(createElement(footer.default));
+    assert.ok(footerHtml.includes('href="/about"'));
+    assert.ok(footerHtml.includes('href="/privacy"'));
+  });
+});
+
+test('privacy contact only publishes a valid operator-supplied address, never an invented inbox', async () => {
+  for (const email of [undefined, '', 'not-an-address', 'private@example.test?subject=x', 'one@example.test\nother@example.test']) {
+    await withEnv({ PRIVACY_CONTACT_EMAIL: email }, () => assert.equal(getPrivacyContact(), null));
+  }
+  await withEnv({ PRIVACY_CONTACT_EMAIL: 'privacy@example.test' }, async () => {
+    assert.equal(getPrivacyContact(), 'privacy@example.test');
+    const privacy = await import('../../src/app/privacy/page');
+    assert.ok(renderToStaticMarkup(createElement(privacy.default)).includes('href="mailto:privacy@example.test"'));
   });
 });

@@ -40,6 +40,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.6,
     },
+    ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
+      url: `${baseUrl}${path}`,
+      changeFrequency: 'monthly' as const,
+      priority: path === '/about' ? 0.6 : 0.4,
+    })),
   ];
 
   let profileRows: { id: number; createdAt: Date }[] = [];
