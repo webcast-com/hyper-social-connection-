@@ -41,13 +41,13 @@ export default function SportsScoresWidget({ board, compact = false }: { board: 
                 {event.source === 'demo' ? 'Sample' : event.status === 'live' ? 'LIVE' : event.status === 'final' ? 'Final' : 'Upcoming'}
               </span>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center text-xs font-semibold text-gray-900 dark:text-white gap-2">
+            {event.race ? <p className="break-words text-xs font-semibold text-gray-900 dark:text-white">{event.race.title}</p> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center text-xs font-semibold text-gray-900 dark:text-white gap-2">
               <span title={event.away.name} className="truncate">{event.away.short || event.away.name}</span>
               <span className="tabular-nums whitespace-nowrap">
                 {event.status === 'upcoming' ? 'vs' : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`}
               </span>
               <span title={event.home.name} className="truncate text-right">{event.home.short || event.home.name}</span>
-            </div>
+            </div>}
           </Link>
         ))}
       </div>

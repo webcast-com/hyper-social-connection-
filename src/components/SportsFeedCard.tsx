@@ -15,6 +15,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
+import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent, SportsPrediction } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
@@ -34,9 +35,10 @@ function statusLabel(event: SportsEvent) {
 }
 
 function matchLine(event: SportsEvent) {
+  if (event.race) return event.race.title;
   const score = event.status === 'upcoming'
     ? 'vs'
-    : `${event.away.score ?? 0}–${event.home.score ?? 0}`;
+    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
   return `${event.away.short || event.away.name} ${score} ${event.home.short || event.home.name}`;
 }
 
@@ -95,7 +97,7 @@ export default function SportsFeedCard({
   const isSignedIn = !!currentUser?.id;
   const score = event.status === 'upcoming'
     ? 'vs'
-    : `${event.away.score ?? 0}–${event.home.score ?? 0}`;
+    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
   const predictionLabel = prediction
     ? `${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`
     : null;
@@ -111,7 +113,9 @@ export default function SportsFeedCard({
     setError('');
     if (nextMode === 'poll' && !text.trim()) {
       setText(`Who wins: ${matchLine(event)}?`);
-      setPollOptions([event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
+      setPollOptions(event.race
+        ? [...event.race.entries.slice(0, 3).map((entry) => entry.name), 'Other'].concat(event.race.entries.length ? [] : ['My pick']).slice(0, 4)
+        : [event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
     } else if (nextMode !== 'poll') {
       setText('');
     }
@@ -180,13 +184,13 @@ export default function SportsFeedCard({
         </div>
 
         <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-slate-900/60 dark:ring-slate-700/70">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+          {event.race ? <SportsRaceSummary race={event.race} /> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
             <TeamBadge team={event.away} />
             <div className="rounded-2xl bg-white px-3 py-2 text-center text-lg font-black tabular-nums text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
               {score}
             </div>
             <TeamBadge team={event.home} align="right" />
-          </div>
+          </div>}
         </div>
 
         {predictionLabel && (

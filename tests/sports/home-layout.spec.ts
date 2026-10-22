@@ -105,3 +105,27 @@ test('dark mobile homepage retains accessible sports and community links', async
   await expect(page.getByRole('link', { name: 'All competitions' }).filter({ visible: true })).toHaveAttribute('href', '/sports');
   await assertFit(page);
 });
+
+
+test('homepage renders race titles and driver polls, never fictional team scores or Draw', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => window.renderHomeReview(true, false, 'race'));
+  const card = page.getByRole('article').filter({ hasText: 'Hyper Sports' }).first();
+  await expect(card.getByText('Review Grand Prix', { exact: true })).toBeVisible();
+  const summary = page.getByRole('region', { name: 'Sports scores' }).filter({ visible: true });
+  await expect(summary.getByText('Review Grand Prix', { exact: true })).toBeVisible();
+  await expect(card.getByText('vs', { exact: true })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Poll', exact: true }).click();
+  await expect(card.locator('input[value="Leading Driver"]')).toBeVisible();
+  await expect(card.locator('input[value="Other"]')).toBeVisible();
+  await expect(card.locator('input[value="Draw"]')).toHaveCount(0);
+  await assertFit(page);
+});
+test('unreported scores in the feed remain unknown instead of showing 0–0', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => window.renderHomeReview(false, false, 'missing-score'));
+  const card = page.getByRole('article').filter({ hasText: 'Hyper Sports' }).first();
+  await expect(card.getByText('–––', { exact: true })).toBeVisible();
+  await expect(card.getByText('0–0', { exact: true })).toHaveCount(0);
+  await assertFit(page);
+});

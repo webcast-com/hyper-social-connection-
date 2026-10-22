@@ -107,3 +107,28 @@ test('total provider failure produces explicitly marked samples spanning the new
     for (const slug of ['jleague', 'south-africa', 'brasileirao', 'ipl', 'mlb', 'nhl', 'super-rugby']) assert.ok(board.events.some((event) => event.league === slug));
   }, async () => { throw new Error('offline'); });
 });
+
+
+test('invalid ESPN payloads are reported as failed feeds, not successful empty schedules', async () => {
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    assert.equal(board.mode, 'partial');
+    const source = board.sources.find((source) => source.id === 'espn:epl');
+    assert.equal(source?.ok, false);
+    assert.match(source?.error || '', /Invalid ESPN scoreboard/);
+    assert.ok(board.events.every((event) => event.source !== 'demo'));
+  }, async (input) => Response.json(String(input).includes('/soccer/eng.1/') ? { error: 'unavailable' } : { events: [] }));
+});
+test('same-day F1 sessions survive aggregation and can be searched by race title or any driver', async () => {
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    assert.equal(board.events.length, 2);
+    assert.equal(new Set(board.events.map((event) => event.id)).size, 2);
+    assert.equal(filterSportsEvents(board.events, 'all', { query: 'Review Grand Prix' }).length, 2);
+    assert.equal(filterSportsEvents(board.events, 'all', { query: 'Third Driver' }).length, 2);
+  }, async (input) => Response.json(String(input).includes('/racing/f1/') ? { events: [{
+    id: 'gp', name: 'Review Grand Prix', competitions: ['practice', 'race'].map((id) => ({
+      id, date: '2026-10-22T18:00:00Z', competitors: ['First Driver', 'Second Driver', 'Third Driver'].map((displayName, i) => ({ athlete: { displayName }, order: i + 1 })),
+    })),
+  }] } : { events: [] }));
+});

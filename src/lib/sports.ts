@@ -12,8 +12,9 @@
 
 import {
   ESPN_LEAGUES, SPORTSDB_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
-  type EspnLeague, type SportKind, type SportsRegion,
+  type SportKind, type SportsRegion,
 } from './sports-catalog';
+import { parseEspnEvents } from './espn';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -25,9 +26,12 @@ export type SportsTeam = {
   score?: number | null;
 };
 
+export type SportsRace = { title: string; entries: { name: string; position: number | null }[] };
+
 export type SportsEvent = {
   id: string;
   source: 'espn' | 'thesportsdb' | 'demo';
+  race?: SportsRace;
   sport: SportKind;
   league: string;
   leagueName: string;
@@ -111,60 +115,10 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-function espnState(state?: string): EventStatus {
-  if (state === 'in') return 'live';
-  if (state === 'post') return 'final';
-  return 'upcoming';
-}
-
 function parseScore(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
-}
-
-function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
-  const events = Array.isArray(payload?.events) ? payload.events : [];
-  const out: SportsEvent[] = [];
-  for (const ev of events) {
-    const comp = ev?.competitions?.[0];
-    if (!comp) continue;
-    const competitors = Array.isArray(comp.competitors) ? comp.competitors : [];
-    const homeRaw = competitors.find((c: any) => c.homeAway === 'home') || competitors[0];
-    const awayRaw = competitors.find((c: any) => c.homeAway === 'away') || competitors[1];
-    if (!homeRaw || !awayRaw) continue;
-    const status = espnState(comp.status?.type?.state);
-    const detail =
-      comp.status?.type?.shortDetail ||
-      comp.status?.displayClock ||
-      comp.status?.type?.detail ||
-      null;
-    out.push({
-      id: `espn-${meta.slug}-${ev.id}`,
-      source: 'espn',
-      sport: meta.kind,
-      league: meta.slug,
-      leagueName: payload?.leagues?.[0]?.name || meta.name,
-      status,
-      startAt: ev.date || new Date().toISOString(),
-      venue: comp.venue?.fullName || null,
-      detail,
-      home: {
-        name: homeRaw.team?.displayName || homeRaw.team?.name || 'Home',
-        short: homeRaw.team?.abbreviation,
-        logo: homeRaw.team?.logo || null,
-        score: parseScore(homeRaw.score),
-      },
-      away: {
-        name: awayRaw.team?.displayName || awayRaw.team?.name || 'Away',
-        short: awayRaw.team?.abbreviation,
-        logo: awayRaw.team?.logo || null,
-        score: parseScore(awayRaw.score),
-      },
-      url: ev.links?.[0]?.href || null,
-    });
-  }
-  return out;
 }
 
 function sportsDbStatus(row: any): EventStatus {
@@ -320,6 +274,7 @@ async function fetchJsonWithHeaders(url: string, headers: Record<string, string>
 }
 
 function eventKey(ev: SportsEvent) {
+  if (ev.race) return `${ev.league}:race:${ev.id}`;
   const day = ev.startAt.slice(0, 10);
   return `${ev.league}:${ev.home.name.toLowerCase()}:${ev.away.name.toLowerCase()}:${day}`;
 }
@@ -418,6 +373,7 @@ function demoBoard(): SportsBoard {
       startAt: iso(48 * 60 * 60_000),
       venue: 'Monza',
       detail: 'Italian Grand Prix',
+      race: { title: 'Italian Grand Prix', entries: [] },
       home: { name: 'Race start', short: 'F1', score: null },
       away: { name: 'Monza', short: 'ITA', score: null },
     },
@@ -620,7 +576,7 @@ export function filterSportsEvents(
       (!options.status || options.status === 'all' || event.status === options.status) &&
       (!options.region || options.region === 'all' || competitionRegion(event.league) === options.region) &&
       (!options.league || options.league === 'all' || event.league === options.league) &&
-      (!query || `${event.home.name} ${event.away.name} ${event.leagueName}`.toLowerCase().includes(query)),
+      (!query || `${event.home.name} ${event.away.name} ${event.leagueName} ${event.race?.title || ''} ${event.race?.entries.map((entry) => entry.name).join(' ') || ''}`.toLowerCase().includes(query)),
     );
   }
   if (filter === 'all') return events;

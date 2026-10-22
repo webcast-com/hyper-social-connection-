@@ -7,12 +7,12 @@ declare global {
   interface Window {
     homeReviewBoard: SportsBoard;
     homeReviewUser: { id: number; name: string; avatar: null } | null;
-    renderHomeReview: (signedIn: boolean, demo?: boolean) => Promise<void>;
+    renderHomeReview: (signedIn: boolean, demo?: boolean, scenario?: 'match' | 'race' | 'missing-score') => Promise<void>;
   }
 }
 const root = createRoot(document.getElementById('root')!);
 let key = 0;
-window.renderHomeReview = async (signedIn, demo = false) => {
+window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => {
   window.homeReviewUser = signedIn ? { id: 1, name: 'Review User', avatar: null } : null;
   window.homeReviewBoard = {
     mode: demo ? 'demo' : 'live', sources: [], fetchedAt: new Date().toISOString(),
@@ -27,9 +27,19 @@ window.renderHomeReview = async (signedIn, demo = false) => {
     predictions: [{ id: 'unrelated', source: demo ? 'demo' : 'rapidapi', federation: 'UEFA', market: '1X2', startAt: '2026-10-22T18:00:00Z',
       homeTeam: 'Real Madrid', awayTeam: 'Bayern Munich', prediction: '1X', competition: 'Champions League' }],
   };
+  if (scenario === 'race') window.homeReviewBoard.events.unshift({
+    id: 'review-f1', source: 'espn', sport: 'motorsport', league: 'f1', leagueName: 'Formula 1',
+    status: 'live', startAt: '2026-10-22T18:00:00Z',
+    home: { name: 'Leading Driver' }, away: { name: 'Second Driver' },
+    race: { title: 'Review Grand Prix', entries: [{ name: 'Leading Driver', position: 1 }, { name: 'Second Driver', position: 2 }] },
+  });
+  if (scenario === 'missing-score') {
+    window.homeReviewBoard.events[0].home.score = null;
+    window.homeReviewBoard.events[0].away.score = null;
+  }
   const home = await Home();
   root.render(<div key={++key}>
-    {signedIn && <Navbar user={window.homeReviewUser} unreadCount={2} />}
-    <main className={signedIn ? 'app-main app-surface max-w-7xl mx-auto' : 'app-surface'}>{home}</main>
+    <Navbar user={window.homeReviewUser} unreadCount={signedIn ? 2 : 0} />
+    <main className="app-main app-surface max-w-7xl mx-auto">{home}</main>
   </div>);
 };

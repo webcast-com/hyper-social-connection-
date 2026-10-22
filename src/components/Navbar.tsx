@@ -32,32 +32,6 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
   const pathname = usePathname();
   const [navSearch, setNavSearch] = useState('');
 
-  // Gracefully handle unauthenticated state
-  if (!user) {
-    return (
-      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
-        <div className="flex items-center space-x-2 min-w-0">
-          <BrandLogo />
-        </div>
-        <div className="flex items-center gap-2">
-          <DarkModeToggle />
-          <Link
-            href="/login"
-            className="text-sm px-3.5 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition-colors"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/signup"
-            className="text-sm px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            Sign up
-          </Link>
-        </div>
-      </header>
-    );
-  }
-
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
@@ -79,13 +53,13 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
   return (
     <>
-      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
+      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-3 sm:px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
         {/* Left: Brand logo + Integrated Search Bar */}
         <div className="flex items-center space-x-3 min-w-0">
           <BrandLogo ariaLabel="Hyper Home" />
 
           {/* Desktop Search Input */}
-          <form onSubmit={handleSearchSubmit} className="hidden sm:flex items-center relative max-w-xs">
+          <form onSubmit={handleSearchSubmit} className="hidden xl:flex items-center relative max-w-xs">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
             <input
               type="text"
@@ -96,10 +70,10 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
             />
           </form>
 
-          {/* Mobile Search Icon button */}
+          {/* Compact search link below xl */}
           <Link
             href="/search"
-            className="sm:hidden p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+            className="xl:hidden p-2 bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
             aria-label="Search"
           >
             <Search className="h-4 w-4 text-gray-600 dark:text-gray-300" />
@@ -107,10 +81,10 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
         </div>
 
         {/* Center: Desktop Navigation Bar with Active Highlights */}
-        <nav aria-label="Primary navigation" className="hidden md:flex items-center space-x-4 lg:space-x-6">
+        <nav aria-label="Primary navigation" className="hidden md:flex items-center space-x-1 lg:space-x-2">
           <Link
             href="/"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -125,7 +99,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
           <Link
             href="/discover"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/discover')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -139,8 +113,8 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
 
           <Link
-            href={`/profile/${user.id}`}
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            href={user ? `/profile/${user.id}` : '/login'}
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/profile')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -155,7 +129,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
           <Link
             href="/messages"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/messages')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -170,7 +144,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
           <Link
             href="/groups"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/groups')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -185,7 +159,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
           <Link
             href="/sports"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/sports')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -200,7 +174,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
           <Link
             href="/notifications"
-            className={`transition-all relative py-1 px-2.5 rounded-xl flex flex-col items-center group ${
+            className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/notifications')
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -208,7 +182,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           >
             <div className="relative">
               <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              {unreadCount && unreadCount > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-md animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
@@ -225,51 +199,60 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
         <div className="flex items-center space-x-2 shrink-0">
           <DarkModeToggle />
 
-          <Link
-            href="/settings"
-            className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
-            aria-label="Settings"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
+          {user ? (
+            <>
+              <Link
+                href="/settings"
+                className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
+                aria-label="Settings"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
 
-          {isDemo ? (
-            <span
-              className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wide border border-amber-200 dark:border-amber-800"
-              title="Demo mode — no database connected. Set DATABASE_URL in .env.local to enable accounts and persistence."
-            >
-              Demo
-            </span>
+              {isDemo ? (
+                <span
+                  className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wide border border-amber-200 dark:border-amber-800"
+                  title="Demo mode — no database connected. Set DATABASE_URL in .env.local to enable accounts and persistence."
+                >
+                  Demo
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
+                  aria-label="Log out"
+                  title="Log out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+
+              <Link
+                href={user ? `/profile/${user.id}` : '/login'}
+                aria-label="Your profile"
+                className="hover:scale-105 transition-transform ml-1"
+              >
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-800 ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm"
+                  />
+                ) : (
+                  <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm">
+                    {user.name?.charAt(0) || 'U'}
+                  </div>
+                )}
+              </Link>
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full transition-colors hover:scale-105"
-              aria-label="Log out"
-              title="Log out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <>
+              <Link href="/login" className="inline-flex min-h-11 items-center rounded-xl border border-gray-300 px-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Log in</Link>
+              <Link href="/signup" className="inline-flex min-h-11 items-center rounded-xl bg-blue-600 px-2 text-xs font-semibold text-white hover:bg-blue-700">Sign up</Link>
+            </>
           )}
-
-          <Link
-            href={`/profile/${user.id}`}
-            aria-label="Your profile"
-            className="hover:scale-105 transition-transform ml-1"
-          >
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-800 ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm"
-              />
-            ) : (
-              <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm">
-                {user.name?.charAt(0) || 'U'}
-              </div>
-            )}
-          </Link>
         </div>
       </header>
 

@@ -7,7 +7,9 @@ import tailwind from '@tailwindcss/postcss';
 
 let javascript = '';
 let css = '';
+let logo = '';
 test.beforeAll(async () => {
+  logo = await fs.readFile('public/logo-wordmark.svg', 'utf8');
   const actions = await fs.readFile('src/app/actions.ts', 'utf8');
   const names = [...actions.matchAll(/export async function (\w+)/g)].map((match) => match[1]);
   const result = await build({
@@ -37,6 +39,7 @@ test.beforeEach(async ({ page }) => {
     const pathname = new URL(request.url()).pathname;
     if (pathname === '/fixture.js') return route.fulfill({ contentType: 'text/javascript', body: javascript });
     if (pathname === '/fixture.css') return route.fulfill({ contentType: 'text/css', body: css });
+    if (pathname === '/logo-wordmark.svg') return route.fulfill({ contentType: 'image/svg+xml', body: logo });
     if (pathname.startsWith('/api/')) return route.fulfill({ json: [] });
     if (request.resourceType() === 'image') return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>' });
     return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="/fixture.css"></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>' });
@@ -137,3 +140,42 @@ test('desktop uses the top navigation instead of duplicate bottom tabs', async (
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden();
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
 });
+
+
+for (const width of [320, 375, 768, 1024, 1440]) {
+  test(`guests have the header and responsive navigation at ${width}px without a fake account`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.renderMobileNavigation('/', 0, false));
+    const header = page.getByRole('banner');
+    await expect(header).toBeVisible();
+    await expect(header.getByRole('link', { name: 'Log in', exact: true })).toHaveAttribute('href', '/login');
+    await expect(header.getByRole('link', { name: 'Sign up', exact: true })).toHaveAttribute('href', '/signup');
+    await expect(header.getByRole('button', { name: 'Log out' })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Your profile' })).toHaveCount(0);
+    const nav = page.getByRole('navigation', { name: width < 768 ? 'Mobile navigation' : 'Primary navigation' });
+    await expect(nav).toBeVisible();
+    if (width < 768) await checkBar(page);
+    else {
+      await expect(nav.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+      await expect(nav.getByRole('link', { name: 'Messages', exact: true })).toHaveAttribute('href', '/messages');
+      await expect(nav.locator('a[href="/login"]')).toHaveCount(1);
+    }
+    for (const control of await header.locator('a:visible, button:visible, input:visible').all()) {
+      const box = (await control.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
+for (const pathname of ['/login', '/signup']) {
+  test(`guest navigation stays visible on ${pathname}, including after scrolling`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 812 });
+    await page.evaluate((pathname) => window.renderMobileNavigation(pathname, 0, false), pathname);
+    await expect(page.getByRole('banner')).toBeVisible();
+    await checkBar(page);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await checkBar(page);
+    await expect(page.getByRole('banner')).toBeInViewport();
+  });
+}

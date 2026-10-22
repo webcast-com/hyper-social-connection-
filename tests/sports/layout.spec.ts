@@ -129,3 +129,15 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.screenshot({ path: `test-results/sports/competitions-${width}.png` });
   });
 }
+
+test('F1 uses race positions instead of a fictitious two-team scoreboard', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
+  const card = page.getByRole('article');
+  await expect(card).toHaveCount(1);
+  await expect(card.getByText('Review Grand Prix', { exact: true })).toBeVisible();
+  await expect(card.getByRole('list', { name: 'Reported race positions' })).toBeVisible();
+  await expect(card.getByText('Leading Driver', { exact: true })).toBeVisible();
+  await expect(card.getByText('VS', { exact: true })).toHaveCount(0);
+  await expect(card.getByText('2–1', { exact: true })).toHaveCount(0);
+});

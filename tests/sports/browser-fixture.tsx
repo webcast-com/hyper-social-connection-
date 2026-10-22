@@ -14,6 +14,7 @@ window.renderSports = (mode, stress = false) => root.render(<SportsBoardView key
   mode: mode === 'empty' ? 'live' : mode,
   fetchedAt: new Date().toISOString(), predictions: [], sources: [],
   events: mode === 'empty' ? [] : SPORTS_COMPETITIONS.map((league) => ({
+    race: league.slug === 'f1' && !stress ? { title: 'Review Grand Prix', entries: [{ name: 'Leading Driver', position: 1 }, { name: 'Second Driver', position: 2 }] } : undefined,
     id: league.slug, source: mode === 'demo' ? 'demo' : 'espn',
     sport: league.kind, league: league.slug, leagueName: league.name,
     status: stress ? 'final' : league.slug === 'epl' ? 'live' : league.slug === 'mlb' ? 'final' : 'upcoming',

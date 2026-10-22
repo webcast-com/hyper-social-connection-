@@ -1,5 +1,6 @@
 'use client';
 
+import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent } from '@/lib/sports';
 
 function formatKickoff(iso: string) {
@@ -24,7 +25,7 @@ function TeamLogo({ team }: { team: SportsEvent['home'] }) {
 
 export default function SportsEventCard({ event }: { event: SportsEvent }) {
   const showScore = event.status !== 'upcoming';
-  const shareLine =
+  const shareLine = event.race ? `${event.race.title} — ${event.leagueName}` :
     event.status === 'upcoming'
       ? `${event.away.name} vs ${event.home.name} — ${event.leagueName}`
       : `${event.away.name} ${event.away.score ?? ''}–${event.home.score ?? ''} ${event.home.name} (${event.detail || event.status})`;
@@ -49,7 +50,7 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
         )}
       </div>
 
-      <div>
+      {event.race ? <SportsRaceSummary race={event.race} /> : <div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <TeamLogo team={event.away} />
           <span className={showScore
@@ -63,7 +64,7 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
           <span title={event.away.name} className="min-w-0 break-words">{event.away.name}</span>
           <span title={event.home.name} className="min-w-0 break-words">{event.home.name}</span>
         </div>
-      </div>
+      </div>}
 
       {(event.venue || event.status === 'upcoming') && (
         <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-gray-400">

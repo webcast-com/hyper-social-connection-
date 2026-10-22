@@ -30,8 +30,8 @@ npm run typecheck
 
 Install Playwright Chromium with `npx playwright install chromium` before running the browser suite, or use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for an existing compatible browser.
 
-- Seven data tests cover catalog integrity, combined filters, request coverage, concurrency bounds, in-flight coalescing, caching, partial outages, empty scoreboards, cricket results, and total failure.
-- Twenty-one browser tests exercise filters, empty/sample/partial states, dark mode, competition card sizes, and the actual homepage composition at 320, 375, 768, 1024, and 1440 pixels.
+- Sixteen data tests cover catalog integrity, combined filters, request coverage, concurrency bounds, in-flight coalescing, caching, partial outages, empty scoreboards, cricket results, total failure, ESPN parsing, and F1 sessions.
+- Twenty-four browser tests exercise filters, empty/sample/partial states, dark mode, competition card sizes, the actual homepage composition at 320/375/768/1024/1440px, F1 driver positions/polls, and unknown scores.
 - Tests use deterministic provider payloads and real components; they do **not** verify current upstream schedules or endpoint availability. This sandbox cannot reach the live ESPN/TheSportsDB hosts. Verify provider responses from the deployment environment, including off-season empty feeds and any provider access/rate limits.
 
 
@@ -60,6 +60,26 @@ Running-page measurements with the existing outer page padding (CSS pixels):
 | 1024 | 488 | Two columns, approximately 490px cards |
 | 1440 | 616 | Two columns, approximately 490px cards |
 
-No document-level horizontal overflow was found at these widths. Horizontal sports-chip and discovery rails scroll within their own containers. The mobile navigation remains fixed and the signed-in page retains its bottom padding.
+No document-level horizontal overflow was found at these widths. Horizontal sports-chip and discovery rails scroll within their own containers. The mobile navigation remains fixed and the shared guest/member page retains its bottom padding.
 
-Final regression run: **21 sports/homepage layout tests + 7 sports-data tests + 30 upload tests passed**. TypeScript and `git diff --check` passed. Changed-file ESLint has no errors; seven existing image-optimization warnings remain. Browser screenshots are generated under ignored `test-results/`, not committed.
+## ESPN functionality review
+
+- Extracted scoreboard normalization into `src/lib/espn.ts` for direct fixture testing. Home/away ordering, numeric/string/object scores, live/upcoming/completed states, event-level status, logo arrays, invalid dates/teams, and multiple competitions are covered.
+- Missing or invalid `events` arrays count as failed sources rather than successful empty schedules. A valid `events: []` remains empty, never fabricated. Unknown scores stay unknown, including on homepage feed cards.
+- F1 is a race with a title and reported athlete positions, not two invented Home/Away teams. Multiple same-day sessions survive aggregation; search includes race titles and all reported drivers. Race-aware competition cards, summaries, shares and polls avoid fake match scores and Draw options. Upcoming races without a line-up remain visible without invented drivers.
+- Tests use synthetic provider fixtures; these validate application behavior, not the current ESPN response schema or schedules.
+
+### Live deployment diagnostic
+
+```sh
+# All configured ESPN scoreboards:
+npm run check:espn
+# Or selected competitions:
+npm run check:espn -- epl nba f1
+```
+
+The diagnostic uses the same parser as the app, prints per-feed request/parse status and normalized event/live counts, limits concurrency to eight, times out each request after five seconds, and exits nonzero if any selected feed fails. Zero events with `ok: true` means a valid empty schedule, not necessarily an outage. It needs no API key.
+
+In this sandbox, `npm run check:espn -- epl nba f1` reported **fetch failed for all three**; an independent ESPN HTTPS request also failed its TLS connection. Live availability could not be verified. Run the diagnostic from the deployment network before considering live ESPN functionality confirmed.
+
+Final regression run: **24 sports/homepage layout + 16 sports-data + 22 navigation + 30 upload tests passed (92 total)**. TypeScript and `git diff --check` passed. Changed-file ESLint has no errors; three existing image-optimization warnings remain. Browser screenshots are under ignored `test-results/`, not committed.
