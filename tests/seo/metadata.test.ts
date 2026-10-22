@@ -211,3 +211,7 @@ test('privacy contact only publishes a valid operator-supplied address, never an
     assert.ok(renderToStaticMarkup(createElement(privacy.default)).includes('href="mailto:privacy@example.test"'));
   });
 });
+
+test('root metadata emits the exact owner-supplied Google Search Console verification token', () => {
+  assert.equal(getSiteMetadata('https://hyper.co.ke').verification?.google, '0_cko3izuhuWqNHJ2touhJTuXeoA2Kuxtbe4A8vXIwc');
+});

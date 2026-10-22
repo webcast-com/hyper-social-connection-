@@ -12,6 +12,9 @@ export const SITE_DESCRIPTION =
 export function getSiteMetadata(siteUrl: string): Metadata {
   return {
     metadataBase: new URL(siteUrl),
+    verification: {
+      google: '0_cko3izuhuWqNHJ2touhJTuXeoA2Kuxtbe4A8vXIwc',
+    },
     title: {
       default: 'Hyper — Connect with the world',
       template: '%s | Hyper',
