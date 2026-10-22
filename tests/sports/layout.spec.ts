@@ -33,7 +33,7 @@ test.beforeEach(async ({ page }) => {
 
 async function assertFit(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => innerWidth));
-  for (const input of await page.locator('input, select, [role="group"] button').all()) {
+  for (const input of await page.locator('input, select').all()) {
     const bounds = await input.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(await page.evaluate(() => innerWidth));
@@ -44,6 +44,7 @@ for (const width of [320, 375, 768, 1440]) {
   test(`worldwide sport and competition controls fit at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await assertFit(page);
+    for (const button of await page.getByRole('group', { name: 'Filter by sport' }).getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await page.getByRole('button', { name: 'Cricket', exact: true }).click();
     await expect(page.getByRole('article')).toHaveCount(1);
     await expect(page.getByRole('heading', { name: 'Indian Premier League' })).toBeVisible();
@@ -99,3 +100,32 @@ test('dark mode keeps the global filters operable', async ({ page }) => {
   await expect(page.getByRole('article')).toHaveCount(1);
   await assertFit(page);
 });
+
+
+test('mobile competitions start within the first screen instead of below all the filters', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const firstCard = await page.getByRole('article').first().boundingBox();
+  expect(firstCard!.y).toBeLessThan(700);
+  const filters = page.getByRole('group', { name: 'Filter by sport' });
+  expect((await filters.boundingBox())!.height).toBeLessThan(65);
+});
+
+
+for (const width of [320, 375, 768, 1024, 1440]) {
+  test(`competition cards keep full three-digit scores and long names inside their bounds at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.renderSports('live', true));
+    const first = page.getByRole('article').first();
+    await expect(first.getByText('183–184', { exact: true })).toBeVisible();
+    for (const card of await page.getByRole('article').all()) {
+      const dimensions = await card.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
+      expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width);
+    }
+    for (const score of await first.getByText('183–184', { exact: true }).all()) {
+      const dimensions = await score.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
+      expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width);
+    }
+    await first.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `test-results/sports/competitions-${width}.png` });
+  });
+}

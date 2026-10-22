@@ -10,6 +10,7 @@ import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
 import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } from 'lucide-react';
 import SportsLiveWidget from '@/components/SportsLiveWidget';
+import SportsScoresWidget from '@/components/SportsScoresWidget';
 import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = {
@@ -314,7 +315,7 @@ export default async function Home() {
     return (sportsBoard.predictions || []).find((prediction) => {
       const pHome = normalizeTeam(prediction.homeTeam);
       const pAway = normalizeTeam(prediction.awayTeam);
-      return (pHome.includes(home) || home.includes(pHome)) && (pAway.includes(away) || away.includes(pAway));
+      return !!home && !!away && !!pHome && !!pAway && (pHome.includes(home) || home.includes(pHome)) && (pAway.includes(away) || away.includes(pAway));
     }) || null;
   };
 
@@ -322,7 +323,7 @@ export default async function Home() {
     id: `sports-${event.id}`,
     type: 'sports',
     event,
-    prediction: findPredictionForEvent(event) || sportsBoard.predictions?.[index] || null,
+    prediction: findPredictionForEvent(event),
     // eslint-disable-next-line react-hooks/purity
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
@@ -352,7 +353,7 @@ export default async function Home() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
       {/* Left Sidebar — desktop shortcuts */}
-      <aside className="hidden lg:flex order-2 lg:order-none flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+      <aside className="hidden lg:flex order-2 lg:order-none min-w-0 flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         <Link href={`/profile/${currentUser.id}`} className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
           {currentUser.avatar ? (
             <img src={currentUser.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/30" />
@@ -413,17 +414,17 @@ export default async function Home() {
       </aside>
 
       {/* Main Feed — first on mobile */}
-      <div className="order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+      <div className="min-w-0 order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
         <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
           <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-fuchsia-600 px-4 py-4 text-white">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-100">Quick access</p>
-            <div className="mt-1 flex items-end justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-black tracking-tight">Catch up fast</h1>
-                <p className="text-xs text-blue-100">Sports, trends, contacts and new people are now at the top.</p>
+            <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-[12rem] flex-1">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight">Catch up fast</h1>
+                <p className="text-xs text-blue-100">Scores, trends and your community.</p>
               </div>
               <Link href="/sports" className="shrink-0 rounded-2xl bg-white/20 px-3 py-2 text-xs font-bold backdrop-blur hover:bg-white/30">
-                Live scores
+                Sports scores
               </Link>
             </div>
           </div>
@@ -451,6 +452,8 @@ export default async function Home() {
             </a>
           </div>
 
+          <SportsScoresWidget board={sportsBoard} compact />
+
           <div id="groups" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Groups</h2>
@@ -460,7 +463,7 @@ export default async function Home() {
               {mobileGroups.length > 0 ? mobileGroups.map((g, i) => {
                 const colors = ['from-violet-500 to-fuchsia-500', 'from-blue-500 to-cyan-500', 'from-emerald-500 to-teal-500', 'from-amber-500 to-orange-500'];
                 return (
-                  <Link key={g.id} href={`/groups/${g.id}`} className="min-w-[132px] rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
+                  <Link key={g.id} href={`/groups/${g.id}`} className="w-[132px] shrink-0 snap-start rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
                     <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${colors[i % colors.length]} text-sm font-black text-white shadow-sm`}>
                       {g.name?.charAt(0) || 'G'}
                     </div>
@@ -504,7 +507,7 @@ export default async function Home() {
             </div>
             <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {otherUsers.slice(0, 6).map((u) => (
-                <Link key={u.id} href={`/profile/${u.id}`} className="min-w-[92px] rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
+                <Link key={u.id} href={`/profile/${u.id}`} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
                   ) : (
@@ -579,7 +582,7 @@ export default async function Home() {
       </div>
 
       {/* Right Sidebar — desktop discovery rail */}
-      <aside className="hidden lg:flex order-3 lg:order-none flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+      <aside className="hidden lg:flex order-3 lg:order-none min-w-0 flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
 

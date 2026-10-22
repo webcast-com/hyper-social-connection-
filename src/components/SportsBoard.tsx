@@ -113,14 +113,14 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
         </p>
       )}
-      <div role="group" aria-label="Filter by sport" className="flex flex-wrap gap-2 mb-4">
+      <div role="group" aria-label="Filter by sport" className="flex min-w-0 gap-2 overflow-x-auto pb-2 mb-3 sm:flex-wrap">
         {(['all', ...AVAILABLE_SPORTS] as const).map((id) => (
           <button
             key={id}
             type="button"
             aria-pressed={sport === id}
             onClick={() => { setSport(id); setLeague('all'); }}
-            className={`min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+            className={`shrink-0 min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
               sport === id
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -130,7 +130,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
           </button>
         ))}
       </div>
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <label className="min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300">
           Match status
           <select value={status} onChange={(e) => setStatus(e.target.value as EventStatus | 'all')} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800">
