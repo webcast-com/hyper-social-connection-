@@ -218,3 +218,33 @@ test('odds outages are not disguised as an empty schedule or sample prices', asy
   await expect(page.getByRole('status')).toContainText('Some ESPN feeds are unavailable');
   await expect(page.getByRole('article')).toHaveCount(8);
 });
+
+test('a missing app odds API gives a deployment warning and retains the previous matches', async ({ page }) => {
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ status: 404, body: 'Not found' }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('app endpoint /api/sports/predictions returned HTTP 404');
+  await expect(page.getByRole('alert')).toContainText('deployment');
+  await expect(page.getByRole('article')).toHaveCount(8);
+});
+
+test('upstream odds 404s stay distinct from app-route 404s and network resets', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  const url = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates=20261023&limit=100';
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json: {
+    matches: [], status: 'unavailable', truncated: false, fetchedAt: new Date().toISOString(),
+    sources: [
+      { path: 'basketball/mens-college-basketball', date: '20261023', ok: false, count: 0, httpStatus: 404, errorKind: 'http', url, error: 'ESPN HTTP 404' },
+      { path: 'basketball/nba', date: null, ok: false, count: 0, httpStatus: null, errorKind: 'network', url: url.replace('mens-college-basketball', 'nba'), error: 'fetch failed: ECONNRESET' },
+    ],
+  } }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('status')).toContainText('ESPN odds could not be reached');
+  await page.getByText('Feed details (0/2 responding)', { exact: true }).click();
+  await expect(page.getByText('HTTP 404 · http', { exact: true })).toBeVisible();
+  await expect(page.getByText('No HTTP response · network', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: url, exact: true })).toHaveAttribute('href', url);
+  await assertFit(page);
+});

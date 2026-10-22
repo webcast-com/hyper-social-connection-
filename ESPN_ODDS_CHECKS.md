@@ -49,8 +49,13 @@ npm run test:sports
 npm run test:sports-layout
 ```
 
-Validated: **52 unit/API/transport tests + 40 sports/homepage browser fixture tests (92 total)**, changed-file ESLint (two standard unoptimized-logo `<img>` warnings, no errors), and whitespace checks. Browser fixtures exercise the actual async route/component with the server odds/viewer boundaries mocked, at 320/768/1440px, plus filtering, retry, guest access, free/premium flags and share/poll form data. They do not prove upstream schema availability, database persistence or deployment behavior.
+Validated: **67 unit/API/transport tests + 44 sports/homepage browser fixture tests (111 total)**, changed-file ESLint (two standard unoptimized-logo `<img>` warnings, no errors), and whitespace checks. Browser fixtures exercise the actual async route/component with the server odds/viewer boundaries mocked, at 320/768/1440px, plus filtering, retry, guest access, free/premium flags and share/poll form data. They do not prove upstream schema availability, database persistence or deployment behavior.
 
 A running Next server in database-offline mode returned HTTP 400 for invalid filters and HTTP 200 for the actual API/page. The API reported `unavailable`, zero matches and ten source failures (`ECONNRESET`), and the page rendered the honest outage message/header. The full Next browser hydration/refresh smoke was inconclusive; the independent browser-fixture refresh tests passed. The temporary server was stopped.
 
 This sandbox does not allow outbound access to `site.api.espn.com`. No live bookmaker prices were verified here. Test from the deployment network, with normal TLS verification, before considering upstream access/current schema confirmed. A valid empty schedule is different from an outage. API source reports make that distinction; do not add sample prices to hide a failure.
+
+
+## All-sports endpoint / HTTP 404 audit
+
+See [ESPN_ENDPOINT_AUDIT.md](ESPN_ENDPOINT_AUDIT.md) for the complete 38-route inventory, corrected Premiership/Super Rugby IDs, exact upstream URL/status diagnostics, and the distinction between a missing app route and an upstream ESPN 404. `npm run check:espn -- --sport rugby` filters checks by sport; `npm run --silent check:espn -- --json` produces a machine-readable all-sport report. Null HTTP status means no HTTP response, not 404.

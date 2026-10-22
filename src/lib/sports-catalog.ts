@@ -54,8 +54,8 @@ export const ESPN_LEAGUES: EspnLeague[] = [
   { sport: 'football', league: 'nfl', kind: 'american-football', slug: 'nfl', name: 'NFL', region: 'americas' },
   { sport: 'baseball', league: 'mlb', kind: 'baseball', slug: 'mlb', name: 'Major League Baseball', region: 'americas' },
   { sport: 'hockey', league: 'nhl', kind: 'ice-hockey', slug: 'nhl', name: 'NHL', region: 'americas' },
-  { sport: 'rugby', league: '180659', kind: 'rugby', slug: 'prem-rugby', name: 'Premiership Rugby', region: 'europe' },
-  { sport: 'rugby', league: '164205', kind: 'rugby', slug: 'super-rugby', name: 'Super Rugby Pacific', region: 'oceania' },
+  { sport: 'rugby', league: '267979', kind: 'rugby', slug: 'prem-rugby', name: 'Premiership Rugby', region: 'europe' },
+  { sport: 'rugby', league: '242041', kind: 'rugby', slug: 'super-rugby', name: 'Super Rugby Pacific', region: 'oceania' },
   { sport: 'racing', league: 'f1', kind: 'motorsport', slug: 'f1', name: 'Formula 1', region: 'global' },
 ];
 

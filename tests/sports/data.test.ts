@@ -181,3 +181,24 @@ test('legacy prediction credentials never trigger requests or affect ESPN feed s
     else process.env.RAPIDAPI_KEY = previous;
   }
 });
+
+test('score source reports retain exact upstream URLs and distinguish 404 from network failures', async () => {
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    const missing = board.sources.find((source) => source.id === 'espn:epl')!;
+    assert.equal(missing.httpStatus, 404);
+    assert.equal(missing.errorKind, 'http');
+    assert.equal(missing.url, 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard');
+    const reset = board.sources.find((source) => source.id === 'espn:nba')!;
+    assert.equal(reset.httpStatus, null);
+    assert.equal(reset.errorKind, 'network');
+    const healthy = board.sources.find((source) => source.id === 'espn:mlb')!;
+    assert.equal(healthy.httpStatus, 200);
+    assert.equal(healthy.count, 0);
+    assert.equal(board.mode, 'partial');
+  }, async (input) => {
+    if (String(input).includes('/soccer/eng.1/')) return new Response('', { status: 404 });
+    if (String(input).includes('/basketball/nba/')) throw new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } });
+    return Response.json({ events: [] });
+  });
+});

@@ -8,7 +8,8 @@ import {
   ESPN_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
   type SportKind, type SportsRegion,
 } from './sports-catalog';
-import { fetchEspnEvents } from './espn-client';
+import { fetchEspnScoreboard } from './espn-client';
+import { espnFailureDetails, espnScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -51,7 +52,7 @@ export type SportsPrediction = {
   competition?: string | null;
 };
 
-export type SportsSourceReport = {
+export type SportsSourceReport = Partial<EspnEndpointDetails> & {
   id: string;
   ok: boolean;
   count: number;
@@ -283,16 +284,17 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
   const groups: SportsEvent[][] = [];
 
   const espnJobs = ESPN_LEAGUES.map((meta) => async () => {
-    const events = await fetchEspnEvents(meta);
-    sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length });
+    const { events, url, httpStatus } = await fetchEspnScoreboard(meta);
+    sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length, url, httpStatus });
     groups.push(events);
   });
 
   const settled = await settleJobs(espnJobs);
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return;
-    const message = result.reason instanceof Error ? result.reason.message : 'fetch failed';
-    sources.push({ id: `espn:${ESPN_LEAGUES[i].slug}`, ok: false, count: 0, error: message });
+    const meta = ESPN_LEAGUES[i];
+    sources.push({ id: `espn:${meta.slug}`, ok: false, count: 0,
+      ...espnFailureDetails(result.reason, espnScoreboardUrl(meta)) });
   });
 
   const events = mergeEvents(groups);

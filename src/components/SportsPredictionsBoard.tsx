@@ -95,17 +95,21 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
     const controller = new AbortController();
     request.current = controller;
     setLoading(true); setError('');
+    let routeMissing = false;
     try {
       const response = await fetch('/api/sports/predictions?refresh=1', {
         method: 'POST', cache: 'no-store', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sports: sport ? [sport] : [], perLeague, days }),
       });
+      routeMissing = response.status === 404;
       if (!response.ok) throw new Error('Request failed');
       const next = await response.json() as OddsBoard;
       if (!Array.isArray(next.matches) || !Array.isArray(next.sources) || !['ready', 'partial', 'empty', 'unavailable'].includes(next.status)) throw new Error('Invalid response');
       if (!controller.signal.aborted) setBoard(next);
     } catch {
-      if (!controller.signal.aborted) setError('Could not refresh ESPN odds. Keeping the previous results; please try again.');
+      if (!controller.signal.aborted) setError(routeMissing
+        ? 'The app endpoint /api/sports/predictions returned HTTP 404. Check this deployment includes the odds API. Keeping the previous results.'
+        : 'Could not refresh ESPN odds. Keeping the previous results; please try again.');
     } finally {
       if (request.current === controller) request.current = null;
       if (!controller.signal.aborted) setLoading(false);
@@ -143,7 +147,11 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
         : <EmptyState variant="search" title="No upcoming matches with odds">Only scheduled home/away fixtures with reported ESPN odds appear here. Markets may be unavailable for some leagues or dates.</EmptyState>}
       {board.sources.length > 0 && <details className="mt-4 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
         <summary className="min-h-11 cursor-pointer font-semibold">Feed details ({board.sources.filter((source) => source.ok).length}/{board.sources.length} responding)</summary>
-        <ul className="mt-2 space-y-1">{board.sources.slice(0, 50).map((source, index) => <li key={index} className="break-words">{source.path}{source.date ? ` · ${source.date}` : ''}: {source.ok ? `${source.count} qualifying fixtures` : source.error || 'Unavailable'}</li>)}</ul>
+        <ul className="mt-2 space-y-3">{board.sources.slice(0, 50).map((source, index) => <li key={index} className="min-w-0 break-words">
+          <p>{source.path}{source.date ? ` · ${source.date}` : ''}: {source.ok ? `${source.count} qualifying fixtures` : source.error || 'Unavailable'}</p>
+          {source.httpStatus !== undefined && <p>{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`}{source.errorKind ? ` · ${source.errorKind}` : ''}</p>}
+          {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
+        </li>)}</ul>
       </details>}
     </div>
   );

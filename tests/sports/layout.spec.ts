@@ -214,3 +214,31 @@ test('the board advertises ESPN-only coverage without removed provider competiti
   await expect(leagues.locator('option[value="ipl"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Cricket', exact: true })).toHaveCount(0);
 });
+
+test('a missing app scores API is identified as deployment HTTP 404, not an ESPN outage', async ({ page }) => {
+  const before = await page.getByRole('article').count();
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ status: 404, body: 'Not found' }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('app endpoint /api/sports returned HTTP 404');
+  await expect(page.getByRole('alert')).toContainText('deployment');
+  await expect(page.getByRole('article')).toHaveCount(before);
+});
+
+test('scores expose upstream 404 and network failures separately, with usable source URLs on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const url = 'https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard';
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: {
+    mode: 'partial', fetchedAt: new Date().toISOString(), predictions: [], events: [],
+    sources: [
+      { id: 'espn:ucl', ok: false, count: 0, httpStatus: 404, errorKind: 'http', url, error: 'ESPN HTTP 404' },
+      { id: 'espn:nba', ok: false, count: 0, httpStatus: null, errorKind: 'network', url: url.replace('soccer/uefa.champions', 'basketball/nba'), error: 'fetch failed: ECONNRESET' },
+    ],
+  } }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByText('Unavailable ESPN feed details', { exact: true }).click();
+  await expect(page.getByText('HTTP 404 · http', { exact: true })).toBeVisible();
+  await expect(page.getByText('No HTTP response · network', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: url, exact: true })).toHaveAttribute('href', url);
+  await assertFit(page);
+});

@@ -1,29 +1,41 @@
-import { ESPN_LEAGUES } from '../src/lib/sports-catalog';
-import { fetchEspnEvents, espnScoreboardUrl } from '../src/lib/espn-client';
+import { ESPN_LEAGUES, AVAILABLE_SPORTS } from '../src/lib/sports-catalog';
+import { auditEspnScoreboards } from '../src/lib/espn-audit';
 
-// Run from the deployment network: npm run check:espn -- epl nba f1
+// Run from the deployment network; ESPN is outside this sandbox's outbound allowlist.
 async function main() {
-  const slugs = process.argv.slice(2);
-  const leagues = ESPN_LEAGUES.filter((league) => !slugs.length || slugs.includes(league.slug));
-  if (!leagues.length || slugs.some((slug) => !ESPN_LEAGUES.some((league) => league.slug === slug))) {
-    console.error('Unknown competition. Use configured slugs, for example: epl nba f1');
-    process.exitCode = 1;
+  const args = process.argv.slice(2);
+  if (args.includes('--help')) {
+    console.log('Usage: npm run check:espn -- [league slugs] [--sport <sport>] [--json]\nExamples: epl nba f1 | --sport rugby | --json\nSports: ' + AVAILABLE_SPORTS.join(', '));
     return;
   }
-  const results: { league: string; ok: boolean; events: number; live: number; url: string; error?: string }[] = [];
-  let next = 0;
-  await Promise.all(Array.from({ length: Math.min(8, leagues.length) }, async () => {
-    while (next < leagues.length) {
-      const league = leagues[next++];
-      try {
-        const events = await fetchEspnEvents(league);
-        results.push({ league: league.slug, url: espnScoreboardUrl(league), ok: true, events: events.length, live: events.filter((event) => event.status === 'live').length });
-      } catch (error) {
-        results.push({ league: league.slug, url: espnScoreboardUrl(league), ok: false, events: 0, live: 0, error: error instanceof Error ? error.message : 'Request failed' });
-      }
-    }
-  }));
-  console.table(results.sort((a, b) => a.league.localeCompare(b.league)));
-  if (results.some((result) => !result.ok)) process.exitCode = 1;
+  let json = false;
+  let sport: string | undefined;
+  const slugs: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg === '--json') json = true;
+    else if (arg === '--sport') {
+      sport = args[++index];
+      if (!sport || !AVAILABLE_SPORTS.some((id) => id === sport)) throw new Error(`Unknown sport. Use: ${AVAILABLE_SPORTS.join(', ')}`);
+    } else if (arg.startsWith('--')) throw new Error(`Unknown option: ${arg}`);
+    else slugs.push(arg);
+  }
+  if (slugs.some((slug) => !ESPN_LEAGUES.some((league) => league.slug === slug))) {
+    throw new Error('Unknown competition. Use configured slugs, for example: epl nba f1');
+  }
+  const leagues = ESPN_LEAGUES.filter((league) => (!slugs.length || slugs.includes(league.slug)) && (!sport || league.kind === sport));
+  if (!leagues.length) throw new Error('No competitions match the supplied sport and league filters');
+  const report = await auditEspnScoreboards(leagues);
+  if (json) console.log(JSON.stringify(report, null, 2));
+  else {
+    console.table(report.results);
+    console.table(report.sports);
+    console.log(JSON.stringify(report.summary));
+    if (report.results.some((row) => row.httpStatus === null)) console.log('No HTTP response is a network/timeout failure, not a 404 or an empty schedule.');
+  }
+  if (report.results.some((result) => !result.ok)) process.exitCode = 1;
 }
-void main();
+void main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : 'Audit failed');
+  process.exitCode = 1;
+});

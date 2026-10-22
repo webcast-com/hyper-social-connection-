@@ -1,3 +1,4 @@
+import type { EspnEndpointDetails } from './espn-endpoints';
 import { ESPN_LEAGUES, type SportKind } from './sports-catalog';
 
 export const FREE_MATCHES = 6;
@@ -21,7 +22,7 @@ export type OddsMatch = {
   home_team: string; away_team: string; home_logo: string | null; away_logo: string | null;
   kickoff: string; venue: string | null; odds: MatchOdds; is_premium: boolean;
 };
-export type OddsSource = { path: string; date: string | null; ok: boolean; count: number; error?: string };
+export type OddsSource = Partial<EspnEndpointDetails> & { path: string; date: string | null; ok: boolean; count: number; error?: string };
 export type OddsBoard = {
   matches: OddsMatch[]; sources: OddsSource[]; fetchedAt: string;
   status: 'ready' | 'partial' | 'empty' | 'unavailable'; truncated: boolean;

@@ -1,3 +1,4 @@
+import { EspnEndpointError, espnErrorMessage, espnFailureDetails, espnScoreboardUrl } from './espn-endpoints';
 import {
   BATCH_SIZE, FREE_MATCHES, MAX_MATCHES, ODDS_LEAGUES, dayStamp, field,
   mapOddsEvent, normalizeOddsRequest, text, type OddsBoard, type OddsMatch, type OddsRequest,
@@ -27,29 +28,39 @@ async function fetchBoard(request: OddsRequest): Promise<OddsBoard> {
       const batch = pending.slice(i, i + BATCH_SIZE);
       const date = offset === 0 ? null : dayStamp(offset, now);
       const results = await Promise.allSettled(batch.map(async (league) => {
-        const query = date ? `?dates=${date}&limit=100` : '';
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${league.path}/scoreboard${query}`, {
-          signal: AbortSignal.timeout(Math.max(1, Math.min(REQUEST_MS, deadline - Date.now()))),
-          cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'HyperSports/1.0 (+https://hyper.social)' },
-        });
-        if (!response.ok) { await response.body?.cancel(); throw new Error(`ESPN HTTP ${response.status}`); }
-        const json: unknown = await response.json();
-        const events = field(json, 'events');
-        if (!Array.isArray(events)) throw new Error('Invalid ESPN scoreboard: events array missing');
-        const name = field(json, 'leagues');
-        const leagueName = Array.isArray(name) ? text(field(name[0], 'name')) : null;
-        return events.map((event) => mapOddsEvent(event, { ...league, name: leagueName || league.name }, now)).filter((event): event is OddsMatch => !!event);
+        const url = espnScoreboardUrl(league, date ?? undefined);
+        const signal = AbortSignal.timeout(Math.max(1, Math.min(REQUEST_MS, deadline - Date.now())));
+        let httpStatus: number | null = null;
+        try {
+          const response = await fetch(url, {
+            signal, cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'HyperSports/1.0 (+https://hyper.social)' },
+          });
+          httpStatus = response.status;
+          if (!response.ok) {
+            await response.body?.cancel();
+            throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status);
+          }
+          const json: unknown = await response.json();
+          const events = field(json, 'events');
+          if (!Array.isArray(events)) throw new EspnEndpointError('Invalid ESPN scoreboard: events array missing', url, 'invalid-response', httpStatus);
+          const name = field(json, 'leagues');
+          const leagueName = Array.isArray(name) ? text(field(name[0], 'name')) : null;
+          return { httpStatus, matches: events.map((event) => mapOddsEvent(event, { ...league, name: leagueName || league.name }, now)).filter((event): event is OddsMatch => !!event) };
+        } catch (error) {
+          if (error instanceof EspnEndpointError) throw error;
+          throw new EspnEndpointError(espnErrorMessage(error), url, signal.aborted ? 'timeout' : httpStatus !== null ? 'invalid-response' : 'network', httpStatus);
+        }
       }));
       for (const [index, result] of results.entries()) {
         const league = batch[index];
         if (result.status === 'rejected') {
-          const error = result.reason as Error & { cause?: { code?: string } };
           sources.push({ path: league.path, date, ok: false, count: 0,
-            error: [error?.message || 'Request failed', error?.cause?.code].filter(Boolean).join(': ') });
+            ...espnFailureDetails(result.reason, espnScoreboardUrl(league, date ?? undefined)) });
           continue;
         }
-        sources.push({ path: league.path, date, ok: true, count: result.value.length });
-        for (const match of result.value) {
+        sources.push({ path: league.path, date, ok: true, count: result.value.matches.length,
+          url: espnScoreboardUrl(league, date ?? undefined), httpStatus: result.value.httpStatus });
+        for (const match of result.value.matches) {
           if (seen.has(match.id) || (request.perLeague && (counts.get(league.path) || 0) >= request.perLeague)) continue;
           counts.set(league.path, (counts.get(league.path) || 0) + 1);
           seen.add(match.id);

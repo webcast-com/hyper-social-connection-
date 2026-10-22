@@ -138,3 +138,20 @@ test('the same ESPN event appearing in multiple league feeds is shown only once'
     assert.equal(board.matches[0].id, 'espn-odds:globally-shared');
   });
 });
+
+for (const sport of ['football', 'basketball', 'american-football', 'baseball', 'ice-hockey', 'rugby']) {
+  test(`${sport} odds report exact today/future scoreboard URLs and true HTTP 404 failures`, async () => {
+    await withFetch(async () => new Response('', { status: 404 }), async () => {
+      const board = await getEspnOdds({ sports: [sport], perLeague: 1, days: 2 }, { bypassCache: true });
+      assert.equal(board.status, 'unavailable');
+      assert.deepEqual(board.matches, []);
+      const leagues = ODDS_LEAGUES.filter((league) => league.sport === sport);
+      assert.equal(board.sources.length, leagues.length * 2);
+      assert.ok(board.sources.every((source) => source.httpStatus === 404 && source.errorKind === 'http'));
+      for (const source of board.sources) {
+        const base = `https://site.api.espn.com/apis/site/v2/sports/${source.path}/scoreboard`;
+        assert.equal(source.url, base + (source.date ? `?dates=${source.date}&limit=100` : ''));
+      }
+    });
+  });
+}
