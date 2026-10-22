@@ -2,11 +2,24 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import SportsMatchDetails from '@/components/SportsMatchDetails';
 import { getMatchDetails } from '@/lib/espn-match-feed';
-import { MatchInputError, resolveMatch, type MatchBoard } from '@/lib/espn-match';
+import { getPageMetadata } from '@/lib/seo';
+import { matchHref, MatchInputError, resolveMatch, type MatchBoard } from '@/lib/espn-match';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-export const metadata: Metadata = { title: 'Match details', description: 'ESPN-reported match statistics, lineups, player stats and match events.' };
+export async function generateMetadata({ params }: { params: Promise<{ league: string; eventId: string }> }): Promise<Metadata> {
+  const { league, eventId } = await params;
+  let resolved;
+  try { resolved = resolveMatch(league, eventId); }
+  catch { notFound(); }
+  // Shares the page's bounded cache/in-flight work; no additional provider feed.
+  const board = await getMatchDetails(league, eventId).catch(() => null);
+  return getPageMetadata({
+    title: board?.match ? `${board.match.title} — ${resolved.meta.name}` : `${resolved.meta.name} match details`,
+    description: 'ESPN-reported match statistics, lineups, player stats and match events on Hyper.',
+    path: matchHref(resolved.reference), index: board?.status === 'ready',
+  });
+}
 export default async function MatchDetailsPage({ params }: { params: Promise<{ league: string; eventId: string }> }) {
   const { league, eventId } = await params;
   let resolved;

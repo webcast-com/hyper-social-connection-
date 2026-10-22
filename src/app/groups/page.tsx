@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
@@ -7,17 +8,11 @@ import { Users, Check, Compass } from 'lucide-react';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
 import { getMyGroupInvites } from '@/app/invite-actions';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
   title: 'Communities and Groups',
   description: 'Explore Hyper communities and find a group for the things you care about.',
-  alternates: { canonical: '/groups' },
-  openGraph: {
-    title: 'Communities and Groups | Hyper',
-    description: 'Explore Hyper communities and find a group for the things you care about.',
-    url: '/groups',
-    images: ['/og-image.png'],
-  },
-};
+  path: '/groups',
+});
 
 export default async function GroupsPage() {
   const viewer = await getViewer();

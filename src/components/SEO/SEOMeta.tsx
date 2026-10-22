@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { isPreviewDeployment } from '@/lib/site-url';
 
 export const SITE_NAME = 'Hyper';
 export const SITE_DESCRIPTION =
@@ -28,9 +29,6 @@ export function getSiteMetadata(siteUrl: string): Metadata {
     creator: SITE_NAME,
     publisher: SITE_NAME,
     category: 'social networking',
-    alternates: {
-      canonical: '/',
-    },
     openGraph: {
       type: 'website',
       locale: 'en_US',
@@ -54,10 +52,10 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       images: ['/og-image.png'],
     },
     robots: {
-      index: true,
+      index: !isPreviewDeployment(),
       follow: true,
       googleBot: {
-        index: true,
+        index: !isPreviewDeployment(),
         follow: true,
         'max-image-preview': 'large',
         'max-snippet': -1,

@@ -22,7 +22,8 @@
     "test:sports": "tsx --test tests/sports/*.test.ts",
     "test:sports-layout": "playwright test --config=playwright.sports.config.ts",
     "test:mobile-navigation": "playwright test --config=playwright.mobile-navigation.config.ts",
-    "check:espn": "tsx scripts/check-espn.ts"
+    "check:espn": "tsx scripts/check-espn.ts",
+    "test:seo": "tsx --test tests/seo/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

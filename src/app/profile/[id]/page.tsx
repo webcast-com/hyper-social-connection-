@@ -21,13 +21,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const profileId = Number.parseInt(id, 10);
-  let profile: { name: string; bio: string | null; avatar: string | null } | null = null;
+  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string } | null = null;
 
   if (hasDatabase && Number.isInteger(profileId)) {
     try {
       profile = await prisma.user.findUnique({
         where: { id: profileId },
-        select: { name: true, bio: true, avatar: true },
+        select: { name: true, bio: true, avatar: true, profileVisibility: true },
       });
     } catch (err) {
       console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
@@ -35,13 +35,14 @@ export async function generateMetadata({
   }
 
   const title = profile?.name ? `${profile.name} on Hyper` : 'Profile on Hyper';
-  const description = profile?.bio || 'View this Hyper profile and connect with the community.';
+  const isPublic = profile?.profileVisibility === 'public';
+  const description = (isPublic ? profile?.bio : null) || 'View this Hyper profile and connect with the community.';
 
   return {
     title,
     description,
     alternates: { canonical: `/profile/${id}` },
-    robots: profile ? { index: true, follow: true } : { index: false, follow: true },
+    robots: isPublic ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'profile',
       title: `${title} | Hyper`,

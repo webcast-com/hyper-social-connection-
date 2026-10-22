@@ -1,19 +1,13 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 import SportsBoardView from '@/components/SportsBoard';
 import { getSportsBoard } from '@/lib/sports';
 
-export const metadata: Metadata = {
-  title: 'Sports — Live scores and fixtures',
-  description:
-    'Follow worldwide football, basketball, rugby, baseball, ice hockey, American football and motorsport scores and fixtures.',
-  alternates: { canonical: '/sports' },
-  openGraph: {
-    title: 'Sports | Hyper',
-    description: 'Live scores and fixtures from ESPN.',
-    url: '/sports',
-    images: ['/og-image.png'],
-  },
-};
+export const metadata: Metadata = getPageMetadata({
+  title: 'Sports',
+  description: 'Follow worldwide football, basketball, rugby, baseball, ice hockey, American football and motorsport scores and fixtures.',
+  path: '/sports',
+});
 
 export const dynamic = 'force-dynamic';
 

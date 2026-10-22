@@ -14,7 +14,7 @@ import SportsScoresWidget from '@/components/SportsScoresWidget';
 import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = {
-  title: 'Hyper — Connect with the world',
+  title: { absolute: 'Hyper — Connect with the world' },
   description: 'See what your Hyper community is sharing, discover new friends, and join the conversation.',
   alternates: { canonical: '/' },
   openGraph: {
