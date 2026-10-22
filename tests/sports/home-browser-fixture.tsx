@@ -30,6 +30,6 @@ window.renderHomeReview = async (signedIn, demo = false) => {
   const home = await Home();
   root.render(<div key={++key}>
     {signedIn && <Navbar user={window.homeReviewUser} unreadCount={2} />}
-    <main className={signedIn ? 'app-surface pt-16 pb-20 md:pb-8 max-w-7xl mx-auto' : 'app-surface'}>{home}</main>
+    <main className={signedIn ? 'app-main app-surface max-w-7xl mx-auto' : 'app-surface'}>{home}</main>
   </div>);
 };

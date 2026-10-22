@@ -58,7 +58,7 @@ export default function MessageInput({ receiverId }: { receiverId: number }) {
         setMedia(null);
         setError('');
       }}
-      className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+      className="shrink-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
     >
       {error && (
         <div role="alert" className="mb-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2">

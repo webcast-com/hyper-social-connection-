@@ -79,8 +79,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <DocumentHead />
       <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
-        {/* pb-20 on mobile leaves room for the bottom tab bar */}
-        <main className="app-surface pt-16 pb-20 md:pb-8 max-w-7xl mx-auto">{children}</main>
+        {/* Shared safe-area-aware spacing keeps content above the mobile tabs. */}
+        <main className="app-main app-surface max-w-7xl mx-auto">{children}</main>
         <Analytics />
       </body>
     </html>

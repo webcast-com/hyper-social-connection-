@@ -62,7 +62,7 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
   }));
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))] md:h-[calc(100vh-3.5rem)] bg-white max-w-6xl mx-auto md:mt-4 rounded-lg shadow overflow-hidden">
+    <div className="chat-page flex min-h-0 bg-white max-w-6xl mx-auto md:mt-4 rounded-lg shadow overflow-hidden">
       <div className="w-1/3 border-r border-gray-200 overflow-y-auto hidden md:block">
         <div className="p-4 border-b border-gray-200 font-bold text-xl">Chats</div>
         <div className="p-2 space-y-1">
@@ -83,7 +83,7 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
         </div>
       </div>
       
-      <div className="flex-1 flex flex-col">
+      <div className="min-h-0 min-w-0 flex-1 flex flex-col">
         <div className="p-4 border-b border-gray-200 flex items-center space-x-3">
           <Link
             href="/messages"

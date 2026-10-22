@@ -120,7 +120,7 @@ export default function ChatStream({
   const otherUser = usersById[otherId];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/60 flex flex-col">
+    <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/60 flex flex-col">
       {/* Active status indicator banner */}
       <div className="text-center my-1">
         <span className="inline-flex items-center space-x-1.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
