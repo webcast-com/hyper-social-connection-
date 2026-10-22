@@ -71,7 +71,7 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     const summary = page.getByRole('region', { name: 'Sports scores' }).filter({ visible: true });
     await expect(summary).toHaveCount(1);
     await expect(summary.getByText('Premier League', { exact: true })).toBeVisible();
-    await expect(summary.getByText('Indian Premier League', { exact: true })).toBeVisible();
+    await expect(summary.getByText('NBA', { exact: true })).toBeVisible();
     if (mobile) expect((await summary.boundingBox())!.y).toBeLessThan(400);
     const match = page.getByRole('article').filter({ hasText: 'Hyper Sports' }).first();
     await match.scrollIntoViewIfNeeded();

@@ -16,7 +16,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 - **Movies API** — searchable, paginated demo catalog at `/api/movies`
 - **Profiles** — cover photo, avatar, bio, photo grid, followers
 - **Search** — people and posts, with trending topics computed from real hashtag usage
-- **Sports** — live scores and fixtures aggregated from ESPN + TheSportsDB (`/sports`)
+- **Sports** — live scores and fixtures from ESPN (`/sports`)
 - **Notifications** — likes, comments, follows, messages, reposts with unread badges
 - **Dark mode** — fully themed, respects system preference, no flash on load
 - **PWA** — installable via `manifest.webmanifest`

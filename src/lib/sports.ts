@@ -1,17 +1,11 @@
 /**
- * Sports board — fetch live / upcoming / finished events from several
- * public endpoints, then normalize them into one card shape.
- *
- * Sources (no API key required):
- *   1. ESPN scoreboard JSON  — live clock, scores, team logos
- *   2. TheSportsDB           — extra fixtures, cricket results + venues
- *
- * When every source is unreachable (restricted networks, this sandbox),
- * a small demo board is returned so the page still works.
+ * ESPN scores and fixtures, normalized into a shared board.
+ * Predictions are a separate, optional RapidAPI feature.
+ * If all upstream sources fail, return clearly labeled sample content.
  */
 
 import {
-  ESPN_LEAGUES, SPORTSDB_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
+  ESPN_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
   type SportKind, type SportsRegion,
 } from './sports-catalog';
 import { fetchEspnEvents } from './espn-client';
@@ -30,7 +24,7 @@ export type SportsRace = { title: string; entries: { name: string; position: num
 
 export type SportsEvent = {
   id: string;
-  source: 'espn' | 'thesportsdb' | 'demo';
+  source: 'espn' | 'demo';
   race?: SportsRace;
   sport: SportKind;
   league: string;
@@ -83,84 +77,6 @@ const FETCH_MS = 4_000;
 const CACHE_MS = 45_000;
 
 let cache: { at: number; board: SportsBoard } | null = null;
-
-function sportsDbNextUrl(leagueId: string) {
-  return `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
-}
-
-function sportsDbPastUrl(leagueId: string) {
-  return `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
-}
-
-async function fetchJson(url: string): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_MS);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HyperSports/1.0 (+https://hyper.social)',
-      },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function parseScore(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-function sportsDbStatus(row: any): EventStatus {
-  const raw = String(row?.strStatus || '').toLowerCase();
-  if (raw.includes('live') || raw === '1h' || raw === '2h' || raw === 'ht') return 'live';
-  if (raw === 'ft' || raw === 'aet' || raw === 'pen' || raw === 'match finished') return 'final';
-  if (row?.intHomeScore != null && row?.intAwayScore != null && raw) return 'final';
-  return 'upcoming';
-}
-
-function parseSportsDbEvents(
-  payload: any,
-  meta: (typeof SPORTSDB_LEAGUES)[number],
-  fallbackStatus?: EventStatus,
-): SportsEvent[] {
-  const rows = Array.isArray(payload?.events) ? payload.events : [];
-  return rows.slice(0, 8).map((row: any) => {
-    const date = row.dateEvent || '';
-    const time = (row.strTime || '00:00:00').slice(0, 8);
-    const startAt = date ? new Date(`${date}T${time}Z`).toISOString() : new Date().toISOString();
-    const status = fallbackStatus || sportsDbStatus(row);
-    return {
-      id: `tsdb-${meta.slug}-${row.idEvent}`,
-      source: 'thesportsdb' as const,
-      sport: meta.kind,
-      league: meta.slug,
-      leagueName: row.strLeague || meta.name,
-      status,
-      startAt,
-      venue: row.strVenue || null,
-      detail: row.strResult || row.strStatus || (status === 'upcoming' ? row.strTime : null),
-      home: {
-        name: row.strHomeTeam || 'Home',
-        logo: row.strHomeTeamBadge || null,
-        score: parseScore(row.intHomeScore),
-      },
-      away: {
-        name: row.strAwayTeam || 'Away',
-        logo: row.strAwayTeamBadge || null,
-        score: parseScore(row.intAwayScore),
-      },
-      url: row.strVideo || null,
-    };
-  });
-}
-
 
 function dateInTimeZone(offsetDays: number, timeZone: string) {
   const date = new Date(Date.now() + offsetDays * 86400000);
@@ -269,20 +185,12 @@ async function fetchJsonWithHeaders(url: string, headers: Record<string, string>
   }
 }
 
-function eventKey(ev: SportsEvent) {
-  if (ev.race) return `${ev.league}:race:${ev.id}`;
-  const day = ev.startAt.slice(0, 10);
-  return `${ev.league}:${ev.home.name.toLowerCase()}:${ev.away.name.toLowerCase()}:${day}`;
-}
-
 function mergeEvents(groups: SportsEvent[][]) {
   const seen = new Map<string, SportsEvent>();
-  const rank = { espn: 0, thesportsdb: 1, demo: 2 } as const;
   for (const group of groups) {
     for (const ev of group) {
-      const key = eventKey(ev);
-      const prev = seen.get(key);
-      if (!prev || rank[ev.source] < rank[prev.source]) seen.set(key, ev);
+      // ESPN event IDs distinguish same-day doubleheaders and race sessions.
+      if (!seen.has(ev.id)) seen.set(ev.id, ev);
     }
   }
   return [...seen.values()].sort((a, b) => {
@@ -409,7 +317,6 @@ function demoBoard(): SportsBoard {
     { league: 'south-africa', home: 'Mamelodi Sundowns', away: 'Orlando Pirates' },
     { league: 'aleague', home: 'Melbourne Victory', away: 'Sydney FC' },
     { league: 'wnba', home: 'Las Vegas Aces', away: 'New York Liberty' },
-    { league: 'ipl', home: 'Mumbai Indians', away: 'Chennai Super Kings' },
     { league: 'super-rugby', home: 'Blues', away: 'Crusaders' },
     { league: 'mlb', home: 'Los Angeles Dodgers', away: 'New York Yankees' },
     { league: 'nhl', home: 'Toronto Maple Leafs', away: 'Edmonton Oilers' },
@@ -489,19 +396,6 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
     groups.push(events);
   });
 
-  const dbJobs = SPORTSDB_LEAGUES.flatMap((meta) => [
-    (async () => {
-      const events = parseSportsDbEvents(await fetchJson(sportsDbNextUrl(meta.id)), meta, 'upcoming');
-      sources.push({ id: `thesportsdb:next:${meta.slug}`, ok: true, count: events.length });
-      groups.push(events);
-    }),
-    (async () => {
-      const events = parseSportsDbEvents(await fetchJson(sportsDbPastUrl(meta.id)), meta, 'final');
-      sources.push({ id: `thesportsdb:past:${meta.slug}`, ok: true, count: events.length });
-      groups.push(events);
-    }),
-  ]);
-
   const predictionJobs = [
     (async () => {
       predictions = await fetchRapidApiPredictions();
@@ -511,12 +405,11 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
     }),
   ];
 
-  const settled = await settleJobs([...espnJobs, ...dbJobs, ...predictionJobs]);
+  const settled = await settleJobs([...espnJobs, ...predictionJobs]);
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return;
     const ids = [
       ...ESPN_LEAGUES.map((l) => `espn:${l.slug}`),
-      ...SPORTSDB_LEAGUES.flatMap((l) => [`thesportsdb:next:${l.slug}`, `thesportsdb:past:${l.slug}`]),
       'rapidapi:predictions',
     ];
     const message = result.reason instanceof Error ? result.reason.message : 'fetch failed';
@@ -554,7 +447,6 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
   { id: 'basketball', label: 'Basketball' },
   { id: 'american-football', label: 'American football' },
   { id: 'motorsport', label: 'Motorsport' },
-  { id: 'cricket', label: 'Cricket' },
   { id: 'rugby', label: 'Rugby' },
   { id: 'baseball', label: 'Baseball' },
   { id: 'ice-hockey', label: 'Ice hockey' },

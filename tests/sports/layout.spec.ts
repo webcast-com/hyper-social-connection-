@@ -45,9 +45,9 @@ for (const width of [320, 375, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await assertFit(page);
     for (const button of await page.getByRole('group', { name: 'Filter by sport' }).getByRole('button').all()) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await page.getByRole('button', { name: 'Cricket', exact: true }).click();
+    await page.getByRole('button', { name: 'Baseball', exact: true }).click();
     await expect(page.getByRole('article')).toHaveCount(1);
-    await expect(page.getByRole('heading', { name: 'Indian Premier League' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Major League Baseball' })).toBeVisible();
     await assertFit(page);
   });
 }
@@ -195,7 +195,7 @@ test('automatic polling still updates the board after 45 seconds', async ({ page
   await page.clock.install();
   // Remount after clock installation so the component schedules a controlled timer.
   await page.evaluate(() => window.renderSports('live'));
-  await expect(page.getByRole('article')).toHaveCount(39);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
   let requests = 0;
   await page.route('**/api/sports', async (route) => {
     requests++;
@@ -204,4 +204,13 @@ test('automatic polling still updates the board after 45 seconds', async ({ page
   await page.clock.fastForward(45_000);
   await expect(page.getByRole('article')).toHaveCount(0);
   expect(requests).toBe(1);
+});
+
+test('the board advertises ESPN-only coverage without removed provider competitions', async ({ page }) => {
+  await expect(page.getByText('Worldwide scores and fixtures from ESPN', { exact: false })).toBeVisible();
+  await expect(page.getByText('TheSportsDB', { exact: false })).toHaveCount(0);
+  const leagues = page.getByRole('combobox', { name: 'League or competition', exact: true });
+  await expect(leagues.locator('option')).toHaveCount(SPORTS_COMPETITIONS.length + 1);
+  await expect(leagues.locator('option[value="ipl"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Cricket', exact: true })).toHaveCount(0);
 });

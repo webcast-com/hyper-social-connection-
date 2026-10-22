@@ -45,7 +45,6 @@ globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     return new Response(JSON.stringify(rapidApiPayload), { status: 200 });
   }
   if (href.includes('espn.com')) return new Response(JSON.stringify({ events: [] }), { status: 200 });
-  if (href.includes('thesportsdb.com')) return new Response(JSON.stringify({ events: null }), { status: 200 });
   throw new Error(`unexpected url ${href}`);
 }) as typeof fetch;
 

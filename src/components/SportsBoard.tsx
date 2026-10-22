@@ -90,7 +90,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             <Trophy className="text-amber-500" /> Sports
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Worldwide scores and fixtures from ESPN and TheSportsDB
+            Worldwide scores and fixtures from ESPN
             {liveCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
