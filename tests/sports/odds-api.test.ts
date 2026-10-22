@@ -33,3 +33,19 @@ test('invalid JSON and unsupported sports return 400 without making upstream req
     assert.equal(calls, 0);
   } finally { globalThis.fetch = original; }
 });
+
+test('odds API serializes safe HTTP 403 source metadata, not raw denial content', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response('test-private-body', { status: 403, headers: { server: 'example-edge', 'set-cookie': 'test-private-cookie' } });
+  try {
+    const response = await POST(new NextRequest('https://hyper.test/api/sports/predictions?refresh=1', {
+      method: 'POST', body: JSON.stringify({ sports: ['baseball'] }),
+    }));
+    assert.equal(response.status, 200);
+    const board = await response.json();
+    assert.equal(board.status, 'unavailable');
+    assert.equal(board.sources[0].httpStatus, 403);
+    assert.equal(board.sources[0].responseMetadata.server, 'example-edge');
+    assert.ok(!JSON.stringify(board).includes('test-private'));
+  } finally { globalThis.fetch = original; }
+});

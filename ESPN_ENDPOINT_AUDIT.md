@@ -80,11 +80,13 @@ A running Next server in database-offline mode also returned **HTTP 200** for `G
 - [Recorded live probes](https://github.com/pseudo-r/Public-ESPN-API/blob/3796c6a7c0b0c496c1f62408b0792e23254cd930/docs/data/live-probes.json): on 2026-09-30 the reference recorded HTTP 200 for Site v2 EPL, NBA, NFL, MLB and NHL scoreboards; it recorded HTTP 404 for Site v3 NFL scoreboard. Those five historical successes do not verify all 38 routes or current availability.
 - [Core endpoint catalog](https://github.com/pseudo-r/Public-ESPN-API/blob/3796c6a7c0b0c496c1f62408b0792e23254cd930/docs/core-endpoints.md): explicitly warns that advertised routes may be internal, obsolete or sport-specific.
 
-## Deployment versus upstream 404
+## Deployment versus upstream 404 (historical pre-merge findings)
 
-At the time of this audit, GitHub `main` is `b323553d4d1e1e7712f945a1adf80005eb7219e9`; PR #34 is open, with head `ef05195afed192e226caaa197de2fc35b7951a0d` before this audit. The `main` tree contains `/api/sports` but **does not contain `/api/sports/predictions`**. The PR has a successful Vercel preview check, which is not evidence that production runs that commit or that ESPN responds successfully.
+**Update:** PR #34 was subsequently merged into `main` as `4fd1834`. The missing-route discussion below describes the pre-merge snapshot, not current `main`. The new reports are upstream HTTP 403; see [the access-denial investigation](ESPN_ACCESS_DENIED.md).
 
-- If the browser request to `/api/sports/predictions` itself is HTTP 404, confirm the deployment contains the PR's route. It is absent from current `main`. No merge or deployment was performed by this audit.
+At the time of the original audit, GitHub `main` is `b323553d4d1e1e7712f945a1adf80005eb7219e9`; PR #34 is open, with head `ef05195afed192e226caaa197de2fc35b7951a0d` before this audit. The `main` tree contains `/api/sports` but **does not contain `/api/sports/predictions`**. The PR has a successful Vercel preview check, which is not evidence that production runs that commit or that ESPN responds successfully.
+
+- If the browser request to `/api/sports/predictions` itself is HTTP 404, confirm the deployment contains the PR's route. It was absent from the pre-merge `main` snapshot described above. No merge or deployment was performed by this audit.
 - If `/api/sports?refresh=1` or `/api/sports/predictions?refresh=1` returns HTTP 200, inspect `sources` for the failing ESPN `url` and `httpStatus`. A source 404 is an upstream problem, not a missing Next.js route.
 - `httpStatus: null` with `network`/`timeout` requires network/TLS/egress investigation; changing version numbers or disabling TLS is not a fix.
 - HTTP 200 with no fixtures or no usable odds can be valid. Do not replace it with fake live matches/prices.

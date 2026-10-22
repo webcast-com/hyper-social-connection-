@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from 'reac
 import Link from 'next/link';
 import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { ODDS_SPORTS, type OddsBoard, type OddsMatch } from '@/lib/espn-odds';
 import { SPORT_LABELS, type SportKind } from '@/lib/sports-catalog';
 import { formatPredictionKickoff } from '@/lib/sports';
@@ -87,6 +88,7 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
   const [days, setDays] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const deniedCount = board.sources.filter((source) => source.httpStatus === 403).length;
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => { request.current?.abort(); }, []);
   const refresh = async (event: FormEvent) => {
@@ -141,7 +143,10 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
       </form>
       <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Up to 48 matches. The first six are flagged Free; Premium is feed metadata only, not a payment gate. Multi-day searches require a per-league cap.</p>
       {error && <p role="alert" className="mb-4 text-sm text-red-700 dark:text-red-300">{error}</p>}
-      {board.status === 'unavailable' && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">ESPN odds could not be reached. No sample odds are shown.</p>}
+      {deniedCount > 0 && <p role="note" aria-label="ESPN access restriction" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        Access to ESPN was refused (HTTP 403) for {deniedCount} feeds. Check the hosting network’s outbound-access policy and ESPN access permissions. The status alone does not identify who blocked the request; see response metadata below.
+      </p>}
+      {board.status === 'unavailable' && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{deniedCount ? 'Access to ESPN odds was refused. No sample odds are shown.' : 'ESPN odds could not be reached. No sample odds are shown.'}</p>}
       {board.status === 'partial' && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">Some ESPN feeds are unavailable or the search time limit was reached. {board.matches.length ? 'Showing matches from responding feeds.' : 'No qualifying matches were found in responding feeds.'}</p>}
       {board.matches.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{board.matches.map((match) => <MatchCard key={match.id} match={match} currentUserId={currentUserId} />)}</div>
         : <EmptyState variant="search" title="No upcoming matches with odds">Only scheduled home/away fixtures with reported ESPN odds appear here. Markets may be unavailable for some leagues or dates.</EmptyState>}
@@ -150,6 +155,7 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
         <ul className="mt-2 space-y-3">{board.sources.slice(0, 50).map((source, index) => <li key={index} className="min-w-0 break-words">
           <p>{source.path}{source.date ? ` · ${source.date}` : ''}: {source.ok ? `${source.count} qualifying fixtures` : source.error || 'Unavailable'}</p>
           {source.httpStatus !== undefined && <p>{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`}{source.errorKind ? ` · ${source.errorKind}` : ''}</p>}
+          <EspnResponseDetails metadata={source.responseMetadata} />
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
         </li>)}</ul>
       </details>}

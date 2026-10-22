@@ -155,3 +155,23 @@ for (const sport of ['football', 'basketball', 'american-football', 'baseball', 
     });
   });
 }
+
+test('odds propagate HTTP 403 metadata, with no sample prices and no same-request retry', async () => {
+  let calls = 0;
+  await withFetch(async () => {
+    calls++; return new Response('test-private-body', { status: 403, headers: {
+      server: 'example-proxy', via: '1.1 example-proxy', 'content-type': 'text/plain',
+      'x-mitmproxy-blocked-reason': 'OUTBOUND_HOST_DENIED', 'set-cookie': 'test-private-cookie',
+    } });
+  }, async () => {
+    const board = await getEspnOdds({ sports: ['baseball'] }, { bypassCache: true });
+    assert.equal(calls, 1);
+    assert.equal(board.status, 'unavailable');
+    assert.deepEqual(board.matches, []);
+    const source = board.sources[0];
+    assert.equal(source.httpStatus, 403);
+    assert.equal(source.responseMetadata?.server, 'example-proxy');
+    assert.equal(source.responseMetadata?.proxyBlockReason, 'OUTBOUND_HOST_DENIED');
+    assert.ok(!JSON.stringify(board).includes('test-private'));
+  });
+});

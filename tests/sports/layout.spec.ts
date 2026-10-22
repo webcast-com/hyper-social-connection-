@@ -242,3 +242,20 @@ test('scores expose upstream 404 and network failures separately, with usable so
   await expect(page.getByRole('link', { name: url, exact: true })).toHaveAttribute('href', url);
   await assertFit(page);
 });
+
+test('HTTP 403 shows an access restriction and safe response metadata without claiming a missing route', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: {
+    mode: 'partial', fetchedAt: new Date().toISOString(), predictions: [], events: [],
+    sources: [{ id: 'espn:epl', ok: false, count: 0, httpStatus: 403, errorKind: 'http', error: 'ESPN HTTP 403',
+      responseMetadata: { server: 'example-edge', contentType: 'text/plain', proxyBlockReason: 'OUTBOUND_HOST_DENIED' } }],
+  } }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('note', { name: 'ESPN access restriction' })).toContainText('Access to ESPN was refused (HTTP 403)');
+  await expect(page.getByRole('note')).toContainText('does not identify who blocked');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByText('Unavailable ESPN feed details', { exact: true }).click();
+  await expect(page.getByText('example-edge', { exact: true })).toBeVisible();
+  await expect(page.getByText('OUTBOUND_HOST_DENIED', { exact: true })).toBeVisible();
+  await assertFit(page);
+});

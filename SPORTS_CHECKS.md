@@ -47,8 +47,8 @@ npm run typecheck
 
 Install compatible Playwright Chromium first, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to an installed browser.
 
-- **67 data/API/transport/odds tests:** ESPN-only catalog/request coverage, bounded concurrency, caching/coalescing, outages, empty schedules, three-digit ESPN scores, samples, normalization, F1 sessions, retries, Retry-After, shared deadlines and API cache headers. Request assertions reject non-ESPN score hosts and assert exactly one request per configured scoreboard on success even when a legacy prediction credential is configured. Prediction arrays stay empty on both real and sample boards; kickoff formatting remains provider-independent. Odds tests cover money-line conversion, modern/legacy schemas, supported filters, per-league/day limits, batching, cache/coalescing, deduplication, sorting, free/premium flags, aborts, total budgets and API validation.
-- **44 browser tests:** filters, provider labels, removed competition controls, empty/sample/partial states, dark mode, competition/homepage sizing at 320/375/768/1024/1440px, race positions/polls, unknown scores, manual refresh/retry/loading and automatic score polling. The preserved predictions route is checked at 320/768/1440px for its empty state, responsive odds cards, free/premium metadata, guest sharing links, signed-in share/poll form payloads, filtered refresh/retry and source-outage states. There is no automatic odds polling.
+- **72 data/API/transport/odds tests:** ESPN-only catalog/request coverage, bounded concurrency, caching/coalescing, outages, empty schedules, three-digit ESPN scores, samples, normalization, F1 sessions, retries, Retry-After, shared deadlines and API cache headers. Request assertions reject non-ESPN score hosts and assert exactly one request per configured scoreboard on success even when a legacy prediction credential is configured. Prediction arrays stay empty on both real and sample boards; kickoff formatting remains provider-independent. Odds tests cover money-line conversion, modern/legacy schemas, supported filters, per-league/day limits, batching, cache/coalescing, deduplication, sorting, free/premium flags, aborts, total budgets and API validation.
+- **46 browser tests:** filters, provider labels, removed competition controls, empty/sample/partial states, dark mode, competition/homepage sizing at 320/375/768/1024/1440px, race positions/polls, unknown scores, manual refresh/retry/loading and automatic score polling. The preserved predictions route is checked at 320/768/1440px for its empty state, responsive odds cards, free/premium metadata, guest sharing links, signed-in share/poll form payloads, filtered refresh/retry and source-outage states. There is no automatic odds polling.
 - Fixtures use real components with controlled HTTP/server data. They do not prove current ESPN availability, upstream schema compatibility, successful authentication or database persistence.
 
 ### Live deployment diagnostic
@@ -64,7 +64,7 @@ The diagnostic shares the exact app transport/parser, prints endpoint URLs, requ
 
 This sandbox's outbound allowlist excludes `site.api.espn.com`. Prior direct checks resolved DNS but failed TLS with ECONNRESET, before any ESPN HTTP response. Removing another provider does not remove this network restriction. Run the diagnostic from the deployment network before considering live scores confirmed. Do not disable TLS certificate verification to work around connectivity failures.
 
-Latest ESPN-only verification: **67 data/API/transport/odds + 44 sports/homepage browser tests passed (111 total)**. TypeScript and diff whitespace checks passed. Screenshots/traces live under ignored `test-results/`, not in Git.
+Latest ESPN-only verification: **72 data/API/transport/odds + 46 sports/homepage browser tests passed (118 total)**. TypeScript and diff whitespace checks passed. Screenshots/traces live under ignored `test-results/`, not in Git.
 
 
 ## Predictions page and removed integration
@@ -79,3 +79,8 @@ The obsolete integration script was replaced with regressions covering legacy-ke
 ## All-sports endpoint / HTTP 404 audit
 
 See [ESPN_ENDPOINT_AUDIT.md](ESPN_ENDPOINT_AUDIT.md) for the complete 38-route inventory, corrected Premiership/Super Rugby IDs, exact upstream URL/status diagnostics, and the distinction between a missing app route and an upstream ESPN 404. `npm run check:espn -- --sport rugby` filters checks by sport; `npm run --silent check:espn -- --json` produces a machine-readable all-sport report. Null HTTP status means no HTTP response, not 404.
+
+
+## HTTP 403 access denials
+
+See [ESPN_ACCESS_DENIED.md](ESPN_ACCESS_DENIED.md). The user reports HTTP 403 in both preview and deployment; origin/cause is not proven by status alone. Source reports now include bounded, allowlisted `responseMetadata` on HTTP errors, and the diagnostic counts 403 separately. No headers are spoofed, no access restriction is bypassed, and no successful live-data fix is claimed.
