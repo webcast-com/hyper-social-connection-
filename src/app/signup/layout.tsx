@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
   title: 'Create an account',
   description: 'Join Hyper to connect with friends and discover communities.',
-  alternates: { canonical: '/signup' },
-  robots: { index: false, follow: false },
-};
+  path: '/signup',
+});
 
 export default function SignupLayout({ children }: { children: React.ReactNode }) {
   return children;

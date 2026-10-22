@@ -23,13 +23,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const groupId = Number.parseInt(id, 10);
-  let group: { name: string; description: string | null; coverPhoto: string | null } | null = null;
+  let group: { name: string; description: string | null; coverPhoto: string | null; privacy: string } | null = null;
 
   if (hasDatabase && Number.isInteger(groupId)) {
     try {
       group = await prisma.group.findUnique({
         where: { id: groupId },
-        select: { name: true, description: true, coverPhoto: true },
+        select: { name: true, description: true, coverPhoto: true, privacy: true },
       });
     } catch (err) {
       console.warn('[group metadata] DB query failed:', (err as Error)?.message);
@@ -37,25 +37,26 @@ export async function generateMetadata({
   }
 
   const title = group?.name ? `${group.name} Community` : 'Community Group';
-  const description = group?.description || 'Join a Hyper community and connect with people who share your interests.';
+  const isPublic = group?.privacy === 'public';
+  const description = (isPublic ? group?.description : null) || 'Join a Hyper community and connect with people who share your interests.';
 
   return {
     title,
     description,
     alternates: { canonical: `/groups/${id}` },
-    robots: group ? { index: true, follow: true } : { index: false, follow: true },
+    robots: isPublic ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'website',
       title: `${title} | Hyper`,
       description,
       url: `/groups/${id}`,
-      images: [group?.coverPhoto || '/og-image.png'],
+      images: [(isPublic ? group?.coverPhoto : null) || '/og-image.png'],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${title} | Hyper`,
       description,
-      images: [group?.coverPhoto || '/og-image.png'],
+      images: [(isPublic ? group?.coverPhoto : null) || '/og-image.png'],
     },
   };
 }

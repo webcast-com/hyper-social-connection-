@@ -1,3 +1,4 @@
+import { matchReference, type MatchReference } from './espn-match';
 import type { EspnEndpointDetails } from './espn-endpoints';
 import { ESPN_LEAGUES, type SportKind } from './sports-catalog';
 
@@ -8,7 +9,7 @@ export const BATCH_SIZE = 20;
 const primary = new Set(['epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'ucl', 'nba', 'nfl', 'mlb', 'nhl']);
 // Motorsport has athlete fields, not the home/away markets this feed requires.
 export const ODDS_LEAGUES = ESPN_LEAGUES.filter((league) => league.kind !== 'motorsport').map((league) => ({
-  sport: league.kind, path: `${league.sport}/${league.league}`, name: league.name,
+  slug: league.slug, sport: league.kind, path: `${league.sport}/${league.league}`, name: league.name,
   secondary: !primary.has(league.slug),
 }));
 export type OddsLeague = typeof ODDS_LEAGUES[number];
@@ -18,6 +19,7 @@ export type MatchOdds = {
   over_under: number | null; spread: number | null; provider: string | null;
 };
 export type OddsMatch = {
+  details?: MatchReference;
   id: string; sport: SportKind; league: string; path: string;
   home_team: string; away_team: string; home_logo: string | null; away_logo: string | null;
   kickoff: string; venue: string | null; odds: MatchOdds; is_premium: boolean;
@@ -131,6 +133,7 @@ export function mapOddsEvent(event: unknown, league: OddsLeague, now = new Date(
   const odds = mapOdds(competition);
   if (odds.home === null && odds.away === null && odds.over_under === null) return null;
   return {
+    details: matchReference(league.slug, id),
     id: `espn-odds:${id}`, sport: league.sport, path: league.path,
     league: league.name, home_team: homeName, away_team: awayName,
     home_logo: logo(field(home, 'team', 'logo')), away_logo: logo(field(away, 'team', 'logo')),

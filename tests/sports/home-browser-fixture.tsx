@@ -1,12 +1,21 @@
 import { createRoot } from 'react-dom/client';
 import Home from '../../src/app/page';
 import PredictionsPage from '../../src/app/sports/predictions/page';
+import MatchDetailsPage from '../../src/app/sports/matches/[league]/[eventId]/page';
+import { parseMatchDetails, resolveMatch, type MatchBoard } from '../../src/lib/espn-match';
+import { summaryFixture } from './match-fixture';
+import AboutPage from '../../src/app/about/page';
+import PrivacyPage from '../../src/app/privacy/page';
+import SiteFooter from '../../src/components/SiteFooter';
 import Navbar from '../../src/components/Navbar';
 import type { OddsBoard } from '../../src/lib/espn-odds';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
+    renderInformationReview: (page: 'about' | 'privacy') => void;
+    matchReviewBoard: MatchBoard;
+    renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball') => Promise<void>;
     renderPredictionsReview: (status?: OddsBoard['status'], signedIn?: boolean) => Promise<void>;
     oddsReviewBoard: OddsBoard;
     predictionPosts: Record<string, FormDataEntryValue>[];
@@ -22,7 +31,7 @@ window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => 
   window.homeReviewBoard = {
     mode: demo ? 'demo' : 'live', sources: [], fetchedAt: new Date().toISOString(),
     events: [
-      { id: 'review-epl', source: demo ? 'demo' : 'espn', sport: 'football', league: 'epl', leagueName: 'Premier League',
+      { details: { league: 'epl', eventId: '401234567' }, id: 'review-epl', source: demo ? 'demo' : 'espn', sport: 'football', league: 'epl', leagueName: 'Premier League',
         status: 'live', startAt: '2026-10-22T18:00:00Z', detail: 'Extra time — second half of an extended match',
         home: { name: 'Very Long International Home Club Name', score: 12, logo: '/team.svg' }, away: { name: 'Very Long International Away Club Name', score: 10, logo: '/team.svg' } },
       { id: 'review-nba', source: demo ? 'demo' : 'espn', sport: 'basketball', league: 'nba', leagueName: 'NBA',
@@ -57,7 +66,7 @@ window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
     status, fetchedAt: '2026-10-22T00:00:00Z', truncated: false,
     sources: [{ path: 'soccer/eng.1', date: null, ok: status !== 'unavailable', count: 8 }],
     matches: status === 'ready' || status === 'partial' ? Array.from({ length: 8 }, (_, i) => ({
-      id: `odds-${i}`, sport: 'football', league: 'Premier League', path: 'soccer/eng.1',
+      details: { league: 'epl', eventId: String(401234567 + i) }, id: `odds-${i}`, sport: 'football', league: 'Premier League', path: 'soccer/eng.1',
       home_team: 'Very Long International Home Club Name', away_team: 'Very Long International Away Club Name',
       home_logo: null, away_logo: null, kickoff: '2030-10-22T18:00:00Z', venue: 'Review Stadium',
       is_premium: i >= 6, odds: { home: 1.8, away: 3.2, draw: 3.5, over_under: 2.5, spread: null, provider: 'Review bookmaker' },
@@ -68,4 +77,20 @@ window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
     <Navbar user={window.homeReviewUser} />
     <main className="app-main app-surface max-w-7xl mx-auto">{content}</main>
   </div>);
+};
+
+window.renderMatchDetailsReview = async (mode = 'ready') => {
+  window.homeReviewUser = null;
+  const reference = { league: mode === 'basketball' ? 'nba' : 'epl', eventId: '401234567' };
+  const fixture = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
+  const match = mode === 'unavailable' ? null : parseMatchDetails(mode === 'empty' ? { header: fixture.header } : fixture, reference);
+  window.matchReviewBoard = { match, status: match ? 'ready' : 'unavailable', fetchedAt: '2026-10-23T18:00:00Z',
+    source: { url: resolveMatch(reference.league, reference.eventId).url, ok: !!match, httpStatus: match ? 200 : 403,
+      ...(match ? {} : { error: 'ESPN HTTP 403', errorKind: 'http' as const, responseMetadata: { server: 'example-edge' } }) } };
+  const content = await MatchDetailsPage({ params: Promise.resolve(reference) });
+  root.render(<div key={++key}><Navbar user={null} /><main className="app-main app-surface max-w-7xl mx-auto">{content}</main></div>);
+};
+
+window.renderInformationReview = (page) => {
+  root.render(<div key={++key}><Navbar user={null} /><main className="app-main app-surface max-w-7xl mx-auto">{page === 'about' ? <AboutPage /> : <PrivacyPage />}</main><SiteFooter /></div>);
 };

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
@@ -26,7 +27,7 @@ function parsePostId(raw: string): number | null {
 async function loadPost(postId: number) {
   if (!hasDatabase) return null;
   try {
-    return await prisma.post.findUnique({ where: { id: postId } });
+    return await prisma.post.findUnique({ where: { id: postId }, include: { user: { select: { profileVisibility: true } }, group: { select: { privacy: true } } } });
   } catch (err) {
     console.warn('[post] DB query failed:', (err as Error)?.message);
     return null;
@@ -36,14 +37,16 @@ async function loadPost(postId: number) {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const postId = parsePostId(id);
-  if (!postId) return { title: 'Post — Hyper' };
-  const post = await loadPost(postId);
-  if (!post) return { title: 'Post — Hyper' };
-  const snippet = (post.content || '').replace(/\s+/g, ' ').slice(0, 60);
-  return {
-    title: `${snippet}${(post.content || '').length > 60 ? '…' : ''} — Hyper`,
-    description: post.content?.slice(0, 160) || 'See this post on Hyper.',
-  };
+  const post = postId ? await loadPost(postId) : null;
+  const isPublic = !!post && post.privacy === 'public' && post.user.profileVisibility === 'public'
+    && (!post.group || post.group.privacy === 'public') && (!post.scheduledAt || post.scheduledAt <= new Date());
+  const content = isPublic ? post.content.replace(/\s+/g, ' ').trim() : '';
+  const snippet = content.slice(0, 60);
+  return getPageMetadata({
+    title: snippet ? `${snippet}${content.length > 60 ? '…' : ''}` : 'Post',
+    description: content.slice(0, 160) || 'View a post on Hyper.',
+    path: `/post/${encodeURIComponent(id)}`, type: 'article', index: isPublic,
+  });
 }
 
 export default async function PostPage({ params }: Params) {

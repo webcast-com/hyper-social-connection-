@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "250mb",
     },
   },
+  // Canonical tags consolidate previews; this also prevents any preview route
+  // (including pages overriding their robots metadata) from being indexed.
+  async headers() {
+    return process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development'
+      ? [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
+      : [];
+  },
   // Files present in public/uploads are served statically first. Missing
   // names (Prisma bucket / S3 objects) fall through to /api/media, which
   // 302s to a short-lived presigned GET. Stored URLs stay `/uploads/…`.

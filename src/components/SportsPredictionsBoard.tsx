@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
 import Link from 'next/link';
+import { matchHref } from '@/lib/espn-match';
 import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
@@ -68,6 +69,7 @@ function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?:
         {match.odds.spread !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Spread</dt><dd className="font-bold text-gray-900 dark:text-white">{match.odds.spread}</dd></div>}
       </dl>
       <p className="mt-2 break-words text-[11px] text-gray-500 dark:text-gray-400">Decimal odds · {match.odds.provider || 'Provider not specified'} · via ESPN</p>
+      {match.details && <Link href={matchHref(match.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
       {currentUserId ? <>
         <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} aria-label={`Your take on ${match.home_team} vs ${match.away_team}`}
           placeholder="Add your take before sharing…" className="mt-3 w-full min-w-0 rounded-xl border border-gray-200 bg-transparent p-3 text-sm text-gray-900 dark:border-gray-700 dark:text-white" />

@@ -16,14 +16,15 @@ test.beforeAll(async () => {
     plugins: [{ name: 'homepage-server-boundaries', setup(builder) {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
-      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
+      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed|espn-match-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
       builder.onResolve({ filter: /^@\/app\/actions$/ }, () => ({ path: 'actions', namespace: 'home-data' }));
       builder.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'router', namespace: 'home-data' }));
       builder.onLoad({ filter: /.*/, namespace: 'home-data' }, (args) => ({ contents:
-        args.path.endsWith('espn-odds-feed') ? 'export const getEspnOdds = async () => window.oddsReviewBoard;'
+        args.path.endsWith('espn-match-feed') ? 'export const getMatchDetails = async () => window.matchReviewBoard;'
+          : args.path.endsWith('espn-odds-feed') ? 'export const getEspnOdds = async () => window.oddsReviewBoard;'
           : args.path.endsWith('viewer') ? 'export const getViewer = async () => window.homeReviewUser;'
           : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const prisma = {};'
-            : args.path === 'router' ? 'const router = {refresh(){},push(){},replace(){}}; export const useRouter = () => router; export const usePathname = () => "/";'
+            : args.path === 'router' ? 'const router = {refresh(){},push(){},replace(){}}; export const useRouter = () => router; export const usePathname = () => "/"; export const notFound = () => { throw new Error("Not found"); };'
               : names.map((name) => name === 'createPost' ? 'export const createPost = async (data) => { window.predictionPosts.push(Object.fromEntries(data.entries())); };' : `export const ${name} = async () => {};`).join('\n'),
       }));
       builder.onLoad({ filter: /src\/lib\/sports\.ts$/ }, async (args) => ({
@@ -266,3 +267,120 @@ test('odds distinguish HTTP 403 access refusal from network unreachability and d
   await expect(page.getByText('1.1 example-proxy', { exact: true })).toBeVisible();
   await assertFit(page);
 });
+
+for (const width of [320, 768, 1440]) {
+  test(`guest match statistics, lineups, player tables and events fit at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.renderMatchDetailsReview());
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Very Long International Away Club Name');
+    await expect(page.getByRole('banner')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to sports scores', exact: true })).toHaveAttribute('href', '/sports');
+    const statistics = page.getByRole('table');
+    await expect(statistics).toContainText('Possession');
+    await expect(statistics.getByRole('cell', { name: '0', exact: true })).toBeVisible();
+    await assertFit(page);
+    await page.getByRole('button', { name: 'Lineups & rosters', exact: true }).click();
+    await expect(page.getByText('Reported formation: 4-3-3', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Listed players', exact: true })).toBeVisible();
+    await expect(page.getByText('No roster reported for this team.', { exact: true })).toBeVisible();
+    await assertFit(page);
+    await page.getByRole('button', { name: 'Player stats', exact: true }).click();
+    await expect(page.getByRole('table')).toContainText('Reported Starter');
+    await expect(page.getByRole('region', { name: /game statistics/ })).toHaveAttribute('tabindex', '0');
+    await assertFit(page);
+    await page.getByRole('button', { name: 'Match events', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Key events', exact: true })).toBeVisible();
+    await expect(page.getByText('Reported goal from Away Club', { exact: true })).toHaveCount(1);
+    await expect(page.getByText('Reported basket by Starter', { exact: true })).toHaveCount(0);
+    await assertFit(page);
+  });
+}
+
+test('sparse match details and dark mode retain honest empty sections', async ({ page }) => {
+  await page.evaluate(() => { document.documentElement.classList.add('dark'); return window.renderMatchDetailsReview('empty'); });
+  await expect(page.getByText('Team statistics have not been provided', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Lineups & rosters', exact: true }).click();
+  await expect(page.getByText('Lineups and rosters have not been provided', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Player stats', exact: true }).click();
+  await expect(page.getByText('Individual player statistics have not been provided', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Match events', exact: true }).click();
+  await expect(page.getByText('Match events and play-by-play updates have not been provided', { exact: false })).toBeVisible();
+  await assertFit(page);
+});
+
+test('basketball match details use reported starters and plays without football formations', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview('basketball'));
+  await page.getByRole('button', { name: 'Lineups & rosters', exact: true }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Reported Starter' })).toBeVisible();
+  await expect(page.getByText('Reported formation:', { exact: false })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Match events', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Play by play', exact: true })).toBeVisible();
+  await expect(page.getByText('Reported basket by Starter', { exact: true })).toBeVisible();
+});
+
+test('match refresh requests only the selected match, prevents duplicate clicks and replaces data', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview());
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  let requests = 0;
+  const next = await page.evaluate(() => ({ ...window.matchReviewBoard, match: { ...window.matchReviewBoard.match!, title: 'Refreshed match title' } }));
+  await page.route('**/api/sports/matches/epl/401234567?refresh=1', async (route) => { requests++; await gate; await route.fulfill({ json: next }); });
+  await page.getByRole('button', { name: 'Refresh details', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refreshing…', exact: true })).toBeDisabled();
+  expect(requests).toBe(1);
+  release();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Refreshed match title');
+  await expect(page.getByRole('button', { name: 'Refresh details', exact: true })).toBeEnabled();
+});
+
+test('failed, malformed and unavailable match refreshes retain the last match and allow retry', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview());
+  const heading = await page.getByRole('heading', { level: 1 }).textContent();
+  for (const response of [{ status: 503, json: { error: 'Busy' } }, { json: { status: 'ready', source: { ok: true }, match: {} } },
+    { json: { status: 'unavailable', match: null, source: { ok: false, url: 'https://site.api.espn.com/summary', httpStatus: 403, error: 'ESPN HTTP 403' } } }]) {
+    await page.route('**/api/sports/matches/epl/401234567?refresh=1', (route) => route.fulfill(response));
+    await page.getByRole('button', { name: 'Refresh details', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Keeping the previous data');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading!);
+    await expect(page.getByRole('table')).toContainText('Possession');
+  }
+});
+
+test('match outages preserve source diagnostics without fake lineups or statistics', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview('unavailable'));
+  await expect(page.getByRole('status')).toContainText('HTTP 403');
+  await expect(page.getByRole('table')).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Match detail sections' })).toHaveCount(0);
+  await page.getByText('ESPN match feed details', { exact: true }).click();
+  await expect(page.getByText('example-edge', { exact: true })).toBeVisible();
+});
+
+test('real feed and odds cards link to match details while sample cards never do', async ({ page }) => {
+  await page.evaluate(() => window.renderHomeReview(false));
+  await expect(page.getByRole('link', { name: 'View match details', exact: true }).first()).toHaveAttribute('href', '/sports/matches/epl/401234567');
+  await page.evaluate(() => window.renderHomeReview(false, true));
+  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  const link = page.getByRole('link', { name: 'View match details', exact: true }).first();
+  await expect(link).toHaveAttribute('href', '/sports/matches/epl/401234567');
+});
+
+for (const width of [320, 768, 1440]) {
+  for (const route of ['about', 'privacy'] as const) {
+    test(`public ${route} content and footer fit at ${width}px without signing in`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate((name) => window.renderInformationReview(name), route);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(route === 'about' ? 'About Hyper' : 'Privacy notice');
+      await expect(page.getByRole('banner')).toBeVisible();
+      const footer = page.getByRole('contentinfo');
+      await expect(footer.getByRole('link', { name: 'About Hyper', exact: true })).toHaveAttribute('href', '/about');
+      await expect(footer.getByRole('link', { name: 'Privacy notice', exact: true })).toHaveAttribute('href', '/privacy');
+      await footer.getByRole('link', { name: 'Privacy notice', exact: true }).scrollIntoViewIfNeeded();
+      await expect(footer.getByRole('link', { name: 'Privacy notice', exact: true })).toBeInViewport();
+      if (route === 'privacy') await expect(page.getByText('The site operator has not yet published', { exact: false })).toBeVisible();
+      await assertFit(page);
+      await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await assertFit(page);
+    });
+  }
+}

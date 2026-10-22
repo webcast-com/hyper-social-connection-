@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import SiteFooter from '@/components/SiteFooter';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
         {/* Shared safe-area-aware spacing keeps content above the mobile tabs. */}
         <main className="app-main app-surface max-w-7xl mx-auto">{children}</main>
+        <SiteFooter />
         <Analytics />
       </body>
     </html>

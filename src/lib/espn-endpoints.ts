@@ -1,5 +1,9 @@
 import type { EspnLeague } from './sports-catalog';
 
+// Let fetch identify its actual runtime. Do not override it with a made-up
+// contact domain, browser identity, cookies, Origin or Referer.
+export const ESPN_REQUEST_HEADERS = Object.freeze({ Accept: 'application/json' });
+
 export type EspnResponseMetadata = { server?: string; via?: string; contentType?: string; proxyBlockReason?: string };
 
 // Deliberate allowlist: never expose cookies, auth, arbitrary headers or response bodies.

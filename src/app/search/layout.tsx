@@ -1,14 +1,11 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
   title: 'Search',
   description: 'Search Hyper profiles and posts to find people and conversations.',
-  alternates: { canonical: '/search' },
-  robots: {
-    index: false,
-    follow: true,
-  },
-};
+  path: '/search',
+});
 
 export default function SearchLayout({ children }: { children: React.ReactNode }) {
   return children;

@@ -17,34 +17,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/`,
-      lastModified: new Date(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
       url: `${baseUrl}/discover`,
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${baseUrl}/groups`,
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
       url: `${baseUrl}/sports`,
-      lastModified: new Date(),
       changeFrequency: "hourly",
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/search`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.4,
+      url: `${baseUrl}/sports/predictions`,
+      changeFrequency: "hourly",
+      priority: 0.6,
     },
+    ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
+      url: `${baseUrl}${path}`,
+      changeFrequency: 'monthly' as const,
+      priority: path === '/about' ? 0.6 : 0.4,
+    })),
   ];
 
   let profileRows: { id: number; createdAt: Date }[] = [];
@@ -53,20 +53,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (hasDatabase) {
     try {
       profileRows = await prisma.user.findMany({
+        where: { profileVisibility: "public" },
+        take: 1000,
         orderBy: { createdAt: "desc" },
         select: { id: true, createdAt: true },
       });
       groupRows = await prisma.group.findMany({
+        where: { privacy: "public" },
+        take: 1000,
         orderBy: { createdAt: "desc" },
         select: { id: true, createdAt: true },
       });
       // Recent public posts get permalinks in the sitemap (capped).
       postRows = await prisma.post.findMany({
+        where: {
+          privacy: "public", user: { profileVisibility: "public" },
+          AND: [
+            { OR: [{ groupId: null }, { group: { privacy: "public" } }] },
+            { OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] },
+          ],
+        },
         orderBy: { createdAt: "desc" },
         select: { id: true, createdAt: true },
         take: 200,
       });
     } catch (err) {
+      profileRows = []; groupRows = []; postRows = [];
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);
     }

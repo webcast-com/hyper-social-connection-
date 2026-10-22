@@ -1,4 +1,4 @@
-import { EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnFailureDetails, espnScoreboardUrl } from './espn-endpoints';
+import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnFailureDetails, espnScoreboardUrl } from './espn-endpoints';
 import {
   BATCH_SIZE, FREE_MATCHES, MAX_MATCHES, ODDS_LEAGUES, dayStamp, field,
   mapOddsEvent, normalizeOddsRequest, text, type OddsBoard, type OddsMatch, type OddsRequest,
@@ -33,7 +33,7 @@ async function fetchBoard(request: OddsRequest): Promise<OddsBoard> {
         let httpStatus: number | null = null;
         try {
           const response = await fetch(url, {
-            signal, cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'HyperSports/1.0 (+https://hyper.social)' },
+            signal, cache: 'no-store', headers: ESPN_REQUEST_HEADERS,
           });
           httpStatus = response.status;
           if (!response.ok) {

@@ -1,20 +1,15 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 import { getEspnOdds } from '@/lib/espn-odds-feed';
 import { getViewer } from '@/lib/viewer';
 import type { OddsBoard } from '@/lib/espn-odds';
 import SportsPredictionsBoard from '@/components/SportsPredictionsBoard';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
   title: 'Sports Predictions',
   description: 'Upcoming ESPN fixtures and reported bookmaker odds for match discussions and polls.',
-  alternates: { canonical: '/sports/predictions' },
-  openGraph: {
-    title: 'Sports Predictions | Hyper',
-    description: 'Upcoming ESPN fixtures and reported bookmaker odds for match discussions and polls.',
-    url: '/sports/predictions',
-    images: ['/og-image.png'],
-  },
-};
+  path: '/sports/predictions',
+});
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;

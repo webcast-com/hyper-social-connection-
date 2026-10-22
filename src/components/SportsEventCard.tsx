@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { matchHref } from '@/lib/espn-match';
 import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent } from '@/lib/sports';
 
@@ -65,6 +67,8 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
           <span title={event.home.name} className="min-w-0 break-words">{event.home.name}</span>
         </div>
       </div>}
+
+      {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
 
       {(event.venue || event.status === 'upcoming') && (
         <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-gray-400">

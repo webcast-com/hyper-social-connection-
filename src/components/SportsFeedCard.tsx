@@ -15,6 +15,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
+import { matchHref } from '@/lib/espn-match';
 import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent, SportsPrediction } from '@/lib/sports';
 import { createPost } from '@/app/actions';
@@ -192,6 +193,8 @@ export default function SportsFeedCard({
             <TeamBadge team={event.home} align="right" />
           </div>}
         </div>
+
+        {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="my-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
 
         {predictionLabel && (
           <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300">

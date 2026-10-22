@@ -1,21 +1,16 @@
 import type { Metadata } from 'next';
+import { getPageMetadata } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
 import { Users, Sparkles, Trophy } from 'lucide-react';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = getPageMetadata({
   title: 'Discover People and Communities',
   description: 'Find interesting people, communities, and conversations to follow on Hyper.',
-  alternates: { canonical: '/discover' },
-  openGraph: {
-    title: 'Discover People and Communities | Hyper',
-    description: 'Find interesting people, communities, and conversations to follow on Hyper.',
-    url: '/discover',
-    images: ['/og-image.png'],
-  },
-};
+  path: '/discover',
+});
 
 export default async function Discover() {
   const currentUser = await getViewer() || { id: 0 } as any;

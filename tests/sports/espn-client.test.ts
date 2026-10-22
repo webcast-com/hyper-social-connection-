@@ -13,7 +13,9 @@ async function withFetch(respond: typeof fetch, run: () => Promise<void>) {
 test('ESPN transport uses the configured HTTPS scoreboard, JSON headers and no-store', async () => {
   await withFetch(async (input, init) => {
     assert.equal(String(input), 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard');
-    assert.equal(new Headers(init?.headers).get('Accept'), 'application/json');
+    // Only the JSON Accept header is supplied by the app. fetch keeps its
+    // genuine runtime identity; no browser/cookie/origin impersonation.
+    assert.deepEqual(Object.fromEntries(new Headers(init?.headers)), { accept: 'application/json' });
     assert.equal(init?.cache, 'no-store');
     assert.ok(init?.signal);
     return Response.json({ events: [] });

@@ -1,6 +1,6 @@
 import { parseEspnEvents } from './espn';
 import type { EspnLeague } from './sports-catalog';
-import { EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
+import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
 export { espnScoreboardUrl } from './espn-endpoints';
 
 type TransportOptions = { timeoutMs?: number; retryDelayMs?: number };
@@ -24,7 +24,7 @@ export async function fetchEspnScoreboard(league: EspnLeague, options: Transport
       try {
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: { Accept: 'application/json', 'User-Agent': 'HyperSports/1.0 (+https://hyper.social)' },
+          headers: ESPN_REQUEST_HEADERS,
           cache: 'no-store',
         });
         httpStatus = response.status;
