@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, Trophy } from 'lucide-react';
+import { RefreshCw, Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import SportsEventCard from '@/components/SportsEventCard';
 import {
@@ -32,25 +32,48 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
     (sport === 'all' || competition.kind === sport) && (region === 'all' || competition.region === region),
   ).sort((a, b) => a.name.localeCompare(b.name));
 
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      if (document.visibilityState === 'hidden') return;
-      try {
-        const res = await fetch('/api/sports', { cache: 'no-store' });
-        if (!res.ok) return;
-        const next = (await res.json()) as SportsBoard;
-        if (!cancelled) setBoard(next);
-      } catch {
-        /* keep last good board */
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const mounted = useRef(false);
+  const request = useRef<AbortController | null>(null);
+  const refreshScores = useCallback(async (force = false) => {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setRefreshing(true);
+    if (force) setRefreshError('');
+    try {
+      const res = await fetch(force ? '/api/sports?refresh=1' : '/api/sports', {
+        cache: 'no-store', signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const next = (await res.json()) as SportsBoard;
+      if (!Array.isArray(next.events) || !Array.isArray(next.sources) || !['live', 'partial', 'demo'].includes(next.mode)) {
+        throw new Error('Invalid scoreboard');
       }
-    };
-    const id = setInterval(tick, 45_000);
+      if (mounted.current && !controller.signal.aborted) { setBoard(next); setRefreshError(''); }
+    } catch {
+      if (mounted.current && !controller.signal.aborted && force) {
+        setRefreshError('Could not refresh scores. Showing the previous update. Please try again.');
+      }
+    } finally {
+      if (request.current === controller) request.current = null;
+      if (mounted.current && !controller.signal.aborted) setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    const id = setInterval(() => {
+      if (document.visibilityState !== 'hidden') void refreshScores();
+    }, 45_000);
     return () => {
-      cancelled = true;
+      mounted.current = false;
+      request.current?.abort();
+      request.current = null;
       clearInterval(id);
     };
-  }, []);
+  }, [refreshScores]);
 
   const filtered = useMemo(
     () => filterSportsEvents(board.events, 'all', { sport, status, region, league, query }),
@@ -90,7 +113,12 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
         </span>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void refreshScores(true)} disabled={refreshing}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing scores…' : 'Refresh scores'}
+        </button>
         <Link
           href="/sports/predictions"
           className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-700"
@@ -103,6 +131,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
         </Link>
       </div>
 
+      {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
       <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
         {SPORTS_COMPETITIONS.length} competitions across {AVAILABLE_SPORTS.length} sports. Availability varies by season and provider.
       </p>

@@ -14,7 +14,7 @@ import {
   ESPN_LEAGUES, SPORTSDB_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
   type SportKind, type SportsRegion,
 } from './sports-catalog';
-import { parseEspnEvents } from './espn';
+import { fetchEspnEvents } from './espn-client';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -83,10 +83,6 @@ const FETCH_MS = 4_000;
 const CACHE_MS = 45_000;
 
 let cache: { at: number; board: SportsBoard } | null = null;
-
-function espnUrl(sport: string, league: string) {
-  return `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`;
-}
 
 function sportsDbNextUrl(leagueId: string) {
   return `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
@@ -488,7 +484,7 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
   let predictions: SportsPrediction[] = [];
 
   const espnJobs = ESPN_LEAGUES.map((meta) => async () => {
-    const events = parseEspnEvents(await fetchJson(espnUrl(meta.sport, meta.league)), meta);
+    const events = await fetchEspnEvents(meta);
     sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length });
     groups.push(events);
   });

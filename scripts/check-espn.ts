@@ -1,5 +1,5 @@
 import { ESPN_LEAGUES } from '../src/lib/sports-catalog';
-import { parseEspnEvents } from '../src/lib/espn';
+import { fetchEspnEvents, espnScoreboardUrl } from '../src/lib/espn-client';
 
 // Run from the deployment network: npm run check:espn -- epl nba f1
 async function main() {
@@ -10,20 +10,16 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const results: { league: string; ok: boolean; events: number; live: number; error?: string }[] = [];
+  const results: { league: string; ok: boolean; events: number; live: number; url: string; error?: string }[] = [];
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(8, leagues.length) }, async () => {
     while (next < leagues.length) {
       const league = leagues[next++];
       try {
-        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${league.sport}/${league.league}/scoreboard`, {
-          signal: AbortSignal.timeout(5_000), headers: { Accept: 'application/json' },
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const events = parseEspnEvents(await response.json(), league);
-        results.push({ league: league.slug, ok: true, events: events.length, live: events.filter((event) => event.status === 'live').length });
+        const events = await fetchEspnEvents(league);
+        results.push({ league: league.slug, url: espnScoreboardUrl(league), ok: true, events: events.length, live: events.filter((event) => event.status === 'live').length });
       } catch (error) {
-        results.push({ league: league.slug, ok: false, events: 0, live: 0, error: error instanceof Error ? error.message : 'Request failed' });
+        results.push({ league: league.slug, url: espnScoreboardUrl(league), ok: false, events: 0, live: 0, error: error instanceof Error ? error.message : 'Request failed' });
       }
     }
   }));

@@ -45,4 +45,4 @@ The fixture uses the real Navbar, login/signup, message pages, MessageInput, Cha
 
 Checked the unmocked local Next.js app at 320px: `/`, `/sports`, `/login`, `/signup`, `/groups` and `/discover` all retain the guest header and bottom tabs. `/messages` and `/notifications` redirect to `/login`, where navigation stays visible. No document overflow or browser page errors were found. Third-party assets were blocked for this network-limited check; the app's pages, routing and APIs were not mocked. This checks anonymous routing, not successful authentication or database persistence.
 
-Final regression run: **22 navigation + 24 sports/homepage layout + 30 upload + 16 sports-data tests passed (92 total)**. Typecheck and diff whitespace checks passed. Changed-file lint has no errors; three existing image-optimization warnings remain.
+Final regression run: **22 navigation + 29 sports/homepage layout + 30 upload + 32 sports-data/API/transport tests passed (113 total)**. Typecheck and diff whitespace checks passed. Changed-file lint has no errors; three existing image-optimization warnings remain.

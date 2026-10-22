@@ -141,3 +141,67 @@ test('F1 uses race positions instead of a fictitious two-team scoreboard', async
   await expect(card.getByText('VS', { exact: true })).toHaveCount(0);
   await expect(card.getByText('2–1', { exact: true })).toHaveCount(0);
 });
+
+test('manual refresh requests fresh server data and replaces the board', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/api/sports?refresh=1', async (route) => {
+    requests++;
+    await route.fulfill({ json: { mode: 'live', fetchedAt: new Date().toISOString(), sources: [], predictions: [], events: [] } });
+  });
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('article')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toBeEnabled();
+  expect(requests).toBe(1);
+});
+
+test('failed refresh retains current scores and gives a retryable error', async ({ page }) => {
+  const before = await page.getByRole('article').count();
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ status: 503, body: 'Unavailable' }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText(/Could not refresh scores/);
+  await expect(page.getByRole('article')).toHaveCount(before);
+  await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toBeEnabled();
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: { mode: 'live', sources: [], events: [], predictions: [], fetchedAt: new Date().toISOString() } }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('article')).toHaveCount(0);
+});
+
+test('refresh rejects malformed responses without discarding the last board', async ({ page }) => {
+  const before = await page.getByRole('article').count();
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: { events: [] } }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('article')).toHaveCount(before);
+});
+
+test('manual refresh displays loading and prevents duplicate requests', async ({ page }) => {
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  let requests = 0;
+  await page.route('**/api/sports?refresh=1', async (route) => {
+    requests++;
+    await pending;
+    await route.fulfill({ json: { mode: 'live', events: [], sources: [], predictions: [], fetchedAt: new Date().toISOString() } });
+  });
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refreshing scores…', exact: true })).toBeDisabled();
+  expect(requests).toBe(1);
+  release();
+  await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toBeEnabled();
+});
+
+test('automatic polling still updates the board after 45 seconds', async ({ page }) => {
+  await page.clock.install();
+  // Remount after clock installation so the component schedules a controlled timer.
+  await page.evaluate(() => window.renderSports('live'));
+  await expect(page.getByRole('article')).toHaveCount(39);
+  let requests = 0;
+  await page.route('**/api/sports', async (route) => {
+    requests++;
+    await route.fulfill({ json: { mode: 'live', events: [], sources: [], predictions: [], fetchedAt: new Date().toISOString() } });
+  });
+  await page.clock.fastForward(45_000);
+  await expect(page.getByRole('article')).toHaveCount(0);
+  expect(requests).toBe(1);
+});

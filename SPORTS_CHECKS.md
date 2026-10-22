@@ -30,8 +30,8 @@ npm run typecheck
 
 Install Playwright Chromium with `npx playwright install chromium` before running the browser suite, or use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for an existing compatible browser.
 
-- Sixteen data tests cover catalog integrity, combined filters, request coverage, concurrency bounds, in-flight coalescing, caching, partial outages, empty scoreboards, cricket results, total failure, ESPN parsing, and F1 sessions.
-- Twenty-four browser tests exercise filters, empty/sample/partial states, dark mode, competition card sizes, the actual homepage composition at 320/375/768/1024/1440px, F1 driver positions/polls, and unknown scores.
+- Thirty-two data/API/transport tests cover catalog integrity, combined filters, request coverage, concurrency bounds, in-flight coalescing, caching, partial outages, empty scoreboards, cricket results, total failure, ESPN parsing, and F1 sessions.
+- Twenty-nine browser tests exercise filters, empty/sample/partial states, dark mode, competition card sizes, the actual homepage composition at 320/375/768/1024/1440px, F1 driver positions/polls, and unknown scores.
 - Tests use deterministic provider payloads and real components; they do **not** verify current upstream schedules or endpoint availability. This sandbox cannot reach the live ESPN/TheSportsDB hosts. Verify provider responses from the deployment environment, including off-season empty feeds and any provider access/rate limits.
 
 
@@ -78,8 +78,21 @@ npm run check:espn
 npm run check:espn -- epl nba f1
 ```
 
-The diagnostic uses the same parser as the app, prints per-feed request/parse status and normalized event/live counts, limits concurrency to eight, times out each request after five seconds, and exits nonzero if any selected feed fails. Zero events with `ok: true` means a valid empty schedule, not necessarily an outage. It needs no API key.
+The diagnostic uses the same parser as the app, prints exact endpoint URLs, per-feed request/parse status, network error codes and normalized event/live counts, limits concurrency to eight, and uses the app’s ESPN transport with a four-second shared deadline across at most two attempts, and exits nonzero if any selected feed fails. Zero events with `ok: true` means a valid empty schedule, not necessarily an outage. It needs no API key.
 
 In this sandbox, `npm run check:espn -- epl nba f1` reported **fetch failed for all three**; an independent ESPN HTTPS request also failed its TLS connection. Live availability could not be verified. Run the diagnostic from the deployment network before considering live ESPN functionality confirmed.
 
-Final regression run: **24 sports/homepage layout + 16 sports-data + 22 navigation + 30 upload tests passed (92 total)**. TypeScript and `git diff --check` passed. Changed-file ESLint has no errors; three existing image-optimization warnings remain. Browser screenshots are under ignored `test-results/`, not committed.
+## ESPN reconnection and refresh
+
+- Added `src/lib/espn-client.ts`, shared by the aggregator and deployment diagnostic. Requests stay server-side, use HTTPS/JSON headers and disable fetch caching; the browser calls the relative `/api/sports` route, not ESPN directly.
+- Temporary HTTP 429/500/502/503/504 responses and connection failures get at most one retry. Both attempts share a four-second abort deadline. Retry-After is respected; a wait beyond the deadline fails rather than retrying early. Unsupported/unauthorized feeds and malformed JSON/schema responses are not retried.
+- Network causes such as ECONNRESET and timeout messages now reach source reports, rather than an unhelpful generic fetch failure.
+- Added a **Refresh scores** button with loading/duplicate-request protection, error/retry messaging and response-shape validation. Failed HTTP/invalid refresh responses retain the previous board. Automatic 45-second polling and hidden-tab checks remain.
+- Manual requests use `/api/sports?refresh=1` and receive `Cache-Control: no-store`, bypassing the in-process board cache and intermediary response caching. Normal requests retain the existing short cache.
+- New tests cover successful requests, transient recovery, non-retryable errors, malformed payloads, Retry-After, shared abort deadlines, API cache behavior, manual refresh/retry/loading, and automatic polling.
+
+### Running-app / upstream verification
+
+The unmocked local Next API returned **HTTP 200 / Cache-Control: no-store** for `/api/sports?refresh=1`. Its 38 ESPN source reports were all unsuccessful; the Premier League source reported `fetch failed: ECONNRESET`, and the board remained explicitly sample/demo. Independent shared-transport CLI checks for EPL/NBA/F1 likewise failed with ECONNRESET. No successful live ESPN integration is claimed. Browser refresh behavior is verified in real-component fixtures with mocked HTTP, not a deployed end-to-end session.
+
+Latest regression run: **29 sports/homepage layout + 32 sports-data/API/transport + 22 navigation + 30 upload tests passed (113 total)**. TypeScript and `git diff --check` passed; changed-file ESLint has no errors. Browser screenshots are under ignored `test-results/`, not committed.
