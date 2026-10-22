@@ -259,3 +259,13 @@ test('HTTP 403 shows an access restriction and safe response metadata without cl
   await expect(page.getByText('OUTBOUND_HOST_DENIED', { exact: true })).toBeVisible();
   await assertFit(page);
 });
+
+test('score cards link to real match details, excluding samples and motorsport', async ({ page }) => {
+  await page.evaluate(() => window.renderSports('live'));
+  const first = page.getByRole('link', { name: 'View match details', exact: true }).first();
+  await expect(first).toHaveAttribute('href', /^\/sports\/matches\/[^/]+\/401234567$/);
+  await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+  await page.evaluate(() => window.renderSports('demo'));
+  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+});

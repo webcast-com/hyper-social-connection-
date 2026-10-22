@@ -1,6 +1,8 @@
 # ESPN HTTP 403: access-denial diagnosis
 
-## Current evidence
+**Latest update (2026-10-23):** After the minimal-header change in PR36, the user confirmed that ESPN is responding correctly in their tested environment. The earlier denial evidence below is historical. The exact filtering mechanism and access from other deployments remain unproven.
+
+## Initial evidence (before the minimal-header change)
 
 The user supplied `errorKind: http`, `httpStatus: 403` source reports for multiple unrelated soccer, basketball, NFL and MLB scoreboards and confirmed this occurs in **both the Arena preview and the deployed website**.
 
@@ -74,6 +76,6 @@ The user confirms that the exact ESPN URL returns JSON when opened directly in t
 
 Both score and odds fetches now share a minimal application-supplied header set: `Accept: application/json`. The custom `HyperSports` User-Agent/contact-domain override was removed. Fetch still sends its genuine default runtime User-Agent where applicable; this does not make the request look like Chrome or reproduce the user's browser session. No cookies, Origin, Referer, proxy, alternate host, browser impersonation, or TLS workaround is added. HTTP 403 still is not retried.
 
-**This is a compatibility change to test, not a verified fix or a proven cause.** Deploy it to a preview first, refresh once, and check one real source for HTTP 200 with a valid scoreboard. If 403 remains, the hosting/provider access investigation remains necessary; do not keep changing headers to evade a denial. This sandbox still cannot verify live ESPN access because outbound access to ESPN is restricted.
+**User-confirmed outcome:** The user subsequently reported that ESPN is responding correctly after this change in their tested environment. This confirms their observed recovery, not the precise reason for the original denial or access from every hosting environment. This sandbox still cannot independently verify live ESPN access because its outbound allowlist excludes ESPN. If another deployment receives 403, investigate authorized hosting/provider access rather than changing headers to evade a denial.
 
 The existing score and odds request tests now assert that the full app-supplied header set is exactly the JSON Accept header. Existing denial/no-retry and safe metadata tests remain in place.

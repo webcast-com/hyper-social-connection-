@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { matchHref } from '@/lib/espn-match';
 import { Trophy } from 'lucide-react';
 import type { SportsBoard } from '@/lib/sports';
 
@@ -34,7 +35,7 @@ export default function SportsScoresWidget({ board, compact = false }: { board: 
       </div>
       <div className="space-y-1">
         {rows.map((event) => (
-          <Link key={event.id} href="/sports" className="block min-w-0 rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <Link key={event.id} prefetch={false} href={event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : '/sports'} className="block min-w-0 rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
             <div className="flex min-w-0 items-start justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400 mb-1">
               <span title={event.leagueName} className="min-w-0 flex-1 break-words">{event.leagueName}</span>
               <span className="max-w-[45%] break-words text-right text-[10px] font-semibold">

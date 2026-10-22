@@ -10,6 +10,7 @@ import {
 } from './sports-catalog';
 import { fetchEspnScoreboard } from './espn-client';
 import { espnFailureDetails, espnScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
+import type { MatchReference } from './espn-match';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -26,6 +27,7 @@ export type SportsRace = { title: string; entries: { name: string; position: num
 export type SportsEvent = {
   id: string;
   source: 'espn' | 'demo';
+  details?: MatchReference;
   race?: SportsRace;
   sport: SportKind;
   league: string;

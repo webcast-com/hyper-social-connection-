@@ -1,3 +1,4 @@
+import { matchReference } from './espn-match';
 import type { EspnLeague } from './sports-catalog';
 import type { EventStatus, SportsEvent, SportsTeam } from './sports';
 
@@ -37,7 +38,9 @@ export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
       const status: EventStatus = statusData?.type?.completed || state === 'post' ? 'final' : state === 'in' ? 'live' : 'upcoming';
       const detail = statusData?.type?.shortDetail || statusData?.displayClock || statusData?.type?.detail || null;
       const competitors = Array.isArray(competition.competitors) ? competition.competitors : [];
+      const details = meta.kind !== 'motorsport' ? matchReference(meta.slug, id) : undefined;
       const common = {
+        ...(details ? { details } : {}),
         id: `espn-${meta.slug}-${id}${competitions.length > 1 ? `-${competition.id || index}` : ''}`,
         source: 'espn' as const, sport: meta.kind, league: meta.slug,
         leagueName: payload.leagues?.[0]?.name || meta.name,
