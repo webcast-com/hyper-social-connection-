@@ -34,12 +34,9 @@ test('sport, region, status, league and search filters combine without changing 
 
 async function withFetch(run: () => Promise<void>, respond: typeof fetch) {
   const original = globalThis.fetch;
-  const key = process.env.RAPIDAPI_KEY;
   globalThis.fetch = respond;
-  delete process.env.RAPIDAPI_KEY;
   try { await run(); } finally {
     globalThis.fetch = original;
-    if (key === undefined) delete process.env.RAPIDAPI_KEY; else process.env.RAPIDAPI_KEY = key;
   }
 }
 const scoreboard = (name: string) => ({ events: [{ id: '1', date: '2026-10-22T18:00:00Z', competitions: [{ status: { type: { state: 'in', shortDetail: 'Live' } }, competitors: [
@@ -55,6 +52,7 @@ test('all configured endpoints are requested, concurrency is bounded, and concur
     const [first, second] = await Promise.all([getSportsBoard({ bypassCache: true }), getSportsBoard({ bypassCache: true })]);
     assert.equal(first, second);
     assert.equal(first.mode, 'live');
+    assert.deepEqual(first.predictions, []);
     assert.equal(first.events.length, ESPN_LEAGUES.length);
     assert.equal(urls.length, ESPN_LEAGUES.length);
     assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
@@ -117,6 +115,7 @@ test('total provider failure produces explicitly marked samples spanning the new
   await withFetch(async () => {
     const board = await getSportsBoard({ bypassCache: true });
     assert.equal(board.mode, 'demo');
+    assert.deepEqual(board.predictions, []);
     assert.ok(board.events.every((event) => event.source === 'demo'));
     assert.ok(board.events.every((event) => SPORTS_COMPETITIONS.some((league) => league.slug === event.league)));
     assert.equal(board.sources.filter((source) => !source.ok).length, ESPN_LEAGUES.length);
@@ -162,4 +161,23 @@ test('ESPN-only aggregation preserves same-day doubleheaders between the same te
       { ...first, id: 'first-game' }, { ...first, id: 'second-game' },
     ] } : { events: [] });
   });
+});
+
+test('legacy prediction credentials never trigger requests or affect ESPN feed status', async () => {
+  const previous = process.env.RAPIDAPI_KEY;
+  process.env.RAPIDAPI_KEY = 'unused-legacy-test-key';
+  const urls: string[] = [];
+  try {
+    await withFetch(async () => {
+      const board = await getSportsBoard({ bypassCache: true });
+      assert.equal(board.mode, 'live');
+      assert.deepEqual(board.predictions, []);
+      assert.equal(urls.length, ESPN_LEAGUES.length);
+      assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
+      assert.ok(board.sources.every((source) => source.id.startsWith('espn:')));
+    }, async (input) => { urls.push(String(input)); return Response.json({ events: [] }); });
+  } finally {
+    if (previous === undefined) delete process.env.RAPIDAPI_KEY;
+    else process.env.RAPIDAPI_KEY = previous;
+  }
 });

@@ -1,7 +1,7 @@
 /**
  * ESPN scores and fixtures, normalized into a shared board.
- * Predictions are a separate, optional RapidAPI feature.
- * If all upstream sources fail, return clearly labeled sample content.
+ * No external prediction provider is connected.
+ * If ESPN is unreachable, return clearly labeled sample fixtures.
  */
 
 import {
@@ -40,7 +40,7 @@ export type SportsEvent = {
 
 export type SportsPrediction = {
   id: string;
-  source: 'rapidapi' | 'demo';
+  source: 'manual' | 'demo';
   federation: string;
   market: string;
   startAt: string;
@@ -66,45 +66,12 @@ export type SportsBoard = {
   mode: 'live' | 'partial' | 'demo';
 };
 
-const PREDICTION_ENDPOINT = 'https://football-prediction-api.p.rapidapi.com/api/v2/predictions';
-const PREDICTION_HOST = 'football-prediction-api.p.rapidapi.com';
-// Day boundary the API uses for the iso_date query parameter.
-const API_TZ = 'Europe/London';
 // Kickoff times are shown to users in Kenyan time (EAT, UTC+3 — no DST).
 export const PREDICTION_DISPLAY_TZ = 'Africa/Nairobi';
 
-const FETCH_MS = 4_000;
 const CACHE_MS = 45_000;
 
 let cache: { at: number; board: SportsBoard } | null = null;
-
-function dateInTimeZone(offsetDays: number, timeZone: string) {
-  const date = new Date(Date.now() + offsetDays * 86400000);
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const get = (type: string) => parts.find((p) => p.type === type)?.value || '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-}
-
-function parsePredictionStart(value: unknown) {
-  const raw = String(value || '').trim();
-  if (!raw) return new Date().toISOString();
-  // RapidAPI returns a naive timestamp like "2018-12-06T19:00:00" (also seen
-  // space-separated). Cross-checked against the provider's documented sample —
-  // Feyenoord vs VVV-Venlo, a 20:00 CET Eredivisie evening kickoff, is listed
-  // as 19:00 — so the value is UTC. Tag it as such and convert to ISO.
-  if (raw.endsWith('Z') || raw.includes('+') || /-\d{2}:\d{2}$/.test(raw)) {
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-  }
-  const normalized = `${raw.replace(' ', 'T')}Z`;
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-}
 
 /**
  * Kickoff label in Nairobi time, e.g. "Sep 2, 22:00 EAT". Explicit locale +
@@ -123,66 +90,6 @@ export function formatPredictionKickoff(iso: string) {
     hourCycle: 'h23',
   }).format(date);
   return `${label} EAT`;
-}
-
-async function fetchRapidApiPredictions(): Promise<SportsPrediction[]> {
-  const key = process.env.RAPIDAPI_KEY;
-  if (!key) return [];
-
-  // Today's board: the API day starts at 00:00 London time, so ask for the
-  // current London date to get today's fixtures (was +1 / tomorrow).
-  const isoDate = dateInTimeZone(0, API_TZ);
-  const url = new URL(PREDICTION_ENDPOINT);
-  url.searchParams.set('federation', 'UEFA');
-  url.searchParams.set('market', 'classic');
-  url.searchParams.set('iso_date', isoDate);
-
-  const payload = await fetchJsonWithHeaders(url.toString(), {
-    'X-RapidAPI-Key': key,
-    'X-RapidAPI-Host': PREDICTION_HOST,
-  });
-  const rows = Array.isArray((payload as any)?.data) ? (payload as any).data : [];
-
-  return rows
-    .map((match: any, index: number) => {
-      const prediction = String(match?.prediction || '').trim();
-      const odds = match?.odds && typeof match.odds === 'object' ? match.odds : null;
-      const oddValue = odds && prediction ? Number(odds[prediction]) : 0;
-      return {
-        id: `rapidapi-${match?.id || match?.home_team || 'match'}-${index}`,
-        source: 'rapidapi' as const,
-        federation: String(match?.federation || 'UEFA'),
-        market: 'classic',
-        startAt: parsePredictionStart(match?.start_date),
-        homeTeam: String(match?.home_team || 'Home'),
-        awayTeam: String(match?.away_team || 'Away'),
-        prediction: prediction || 'n/a',
-        winOdds: oddValue > 1 ? String(oddValue) : null,
-        competition: match?.competition_name || match?.competition || match?.league || null,
-      };
-    })
-    .sort((a: SportsPrediction, b: SportsPrediction) => a.startAt.localeCompare(b.startAt))
-    .slice(0, 12);
-}
-
-async function fetchJsonWithHeaders(url: string, headers: Record<string, string>): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_MS);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HyperSports/1.0 (+https://hyper.social)',
-        ...headers,
-      },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 function mergeEvents(groups: SportsEvent[][]) {
@@ -330,24 +237,10 @@ function demoBoard(): SportsBoard {
       home: { name: sample.home }, away: { name: sample.away },
     });
   }
-  const predictions: SportsPrediction[] = [
-    {
-      id: 'demo-prediction-epl',
-      source: 'demo',
-      federation: 'UEFA',
-      market: 'classic',
-      startAt: iso(3 * 60 * 60_000),
-      homeTeam: 'Real Madrid',
-      awayTeam: 'Bayern Munich',
-      prediction: '1X',
-      winOdds: '1.64',
-      competition: 'Champions League',
-    },
-  ];
   return {
     events,
-    predictions,
-    sources: [{ id: 'demo', ok: true, count: events.length + predictions.length }],
+    predictions: [],
+    sources: [{ id: 'demo', ok: true, count: events.length }],
     fetchedAt: new Date().toISOString(),
     mode: 'demo',
   };
@@ -388,7 +281,6 @@ async function settleJobs(jobs: (() => Promise<void>)[]) {
 async function fetchSportsBoard(): Promise<SportsBoard> {
   const sources: SportsSourceReport[] = [];
   const groups: SportsEvent[][] = [];
-  let predictions: SportsPrediction[] = [];
 
   const espnJobs = ESPN_LEAGUES.map((meta) => async () => {
     const events = await fetchEspnEvents(meta);
@@ -396,34 +288,21 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
     groups.push(events);
   });
 
-  const predictionJobs = [
-    (async () => {
-      predictions = await fetchRapidApiPredictions();
-      if (process.env.RAPIDAPI_KEY) {
-        sources.push({ id: 'rapidapi:predictions', ok: true, count: predictions.length });
-      }
-    }),
-  ];
-
-  const settled = await settleJobs([...espnJobs, ...predictionJobs]);
+  const settled = await settleJobs(espnJobs);
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return;
-    const ids = [
-      ...ESPN_LEAGUES.map((l) => `espn:${l.slug}`),
-      'rapidapi:predictions',
-    ];
     const message = result.reason instanceof Error ? result.reason.message : 'fetch failed';
-    sources.push({ id: ids[i] || `source-${i}`, ok: false, count: 0, error: message });
+    sources.push({ id: `espn:${ESPN_LEAGUES[i].slug}`, ok: false, count: 0, error: message });
   });
 
   const events = mergeEvents(groups);
-  const anyOk = sources.some((s) => s.ok) || predictions.length > 0;
+  const anyOk = sources.some((s) => s.ok);
   const allOk = sources.length > 0 && sources.every((s) => s.ok);
 
   const board: SportsBoard = anyOk
     ? {
         events,
-        predictions,
+        predictions: [],
         sources,
         fetchedAt: new Date().toISOString(),
         mode: allOk ? 'live' : 'partial',

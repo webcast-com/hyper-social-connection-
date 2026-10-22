@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
 import SportsPredictionsBoard from '@/components/SportsPredictionsBoard';
-import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = {
-  title: 'Sports Predictions — Football picks and odds',
-  description: 'View football match predictions, odds, and shareable picks for upcoming UEFA fixtures.',
+  title: 'Sports Predictions',
+  description: 'Match predictions on Hyper. Live predictions are currently unavailable.',
   alternates: { canonical: '/sports/predictions' },
   openGraph: {
     title: 'Sports Predictions | Hyper',
-    description: 'Football match predictions and odds powered by the RapidAPI prediction feed.',
+    description: 'Match predictions on Hyper. Live predictions are currently unavailable.',
     url: '/sports/predictions',
     images: ['/og-image.png'],
   },
@@ -16,7 +15,7 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function SportsPredictionsPage() {
-  const board = await getSportsBoard({ bypassCache: true });
-  return <SportsPredictionsBoard initial={board} />;
+export default function SportsPredictionsPage() {
+  // Keep this route independent of score-provider availability. No provider is connected.
+  return <SportsPredictionsBoard />;
 }

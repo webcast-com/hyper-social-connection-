@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BarChart2, CalendarClock, Send, Share2, Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
-import type { SportsBoard, SportsPrediction } from '@/lib/sports';
+import type { SportsPrediction } from '@/lib/sports';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { createPost } from '@/app/actions';
 
@@ -105,31 +105,7 @@ function PredictionCard({ prediction }: { prediction: SportsPrediction }) {
   );
 }
 
-export default function SportsPredictionsBoard({ initial }: { initial: SportsBoard }) {
-  const [board, setBoard] = useState(initial);
-
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      if (document.visibilityState === 'hidden') return;
-      try {
-        const res = await fetch('/api/sports?refresh=1', { cache: 'no-store' });
-        if (!res.ok) return;
-        const next = (await res.json()) as SportsBoard;
-        if (!cancelled) setBoard(next);
-      } catch {
-        /* keep last good predictions */
-      }
-    };
-    const id = setInterval(tick, 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  const predictions = board.predictions || [];
-
+export default function SportsPredictionsBoard({ predictions = [] }: { predictions?: SportsPrediction[] }) {
   return (
     <div className="mx-auto mt-4 max-w-5xl p-3 sm:mt-6 sm:p-4">
       <Link href="/sports" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:underline dark:text-blue-400">
@@ -139,12 +115,12 @@ export default function SportsPredictionsBoard({ initial }: { initial: SportsBoa
       <div className="mb-5 overflow-hidden rounded-[2rem] border border-violet-100 bg-gradient-to-br from-violet-600 via-fuchsia-600 to-blue-600 p-5 text-white shadow-lg dark:border-violet-900/60">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-100">RapidAPI football</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-100">Football predictions</p>
             <h1 className="mt-1 flex items-center gap-2 text-3xl font-black tracking-tight">
               <Trophy className="h-7 w-7 text-amber-300" /> Match predictions
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-violet-100">
-              UEFA classic market predictions, odds, and quick actions to share or poll your followers.
+              A space for match picks and discussion. Live predictions are currently unavailable.
             </p>
           </div>
           <span className="rounded-full bg-white/18 px-3 py-1.5 text-xs font-black uppercase tracking-wide backdrop-blur">
@@ -155,7 +131,7 @@ export default function SportsPredictionsBoard({ initial }: { initial: SportsBoa
 
       {predictions.length === 0 ? (
         <EmptyState variant="search" title="No predictions available">
-          Add RAPIDAPI_KEY in your environment, or try refreshing later when the prediction feed has matches.
+          No prediction provider is connected. You can still follow fixtures and scores on the sports page.
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

@@ -1,10 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import Home from '../../src/app/page';
+import PredictionsPage from '../../src/app/sports/predictions/page';
 import Navbar from '../../src/components/Navbar';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
+    renderPredictionsReview: () => void;
     homeReviewBoard: SportsBoard;
     homeReviewUser: { id: number; name: string; avatar: null } | null;
     renderHomeReview: (signedIn: boolean, demo?: boolean, scenario?: 'match' | 'race' | 'missing-score') => Promise<void>;
@@ -24,7 +26,7 @@ window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => 
         status: 'final', startAt: '2026-10-22T18:00:00Z', detail: 'Final after overtime',
         home: { name: 'Golden State Warriors', score: 184 }, away: { name: 'Denver Nuggets', score: 183 } },
     ],
-    predictions: [{ id: 'unrelated', source: demo ? 'demo' : 'rapidapi', federation: 'UEFA', market: '1X2', startAt: '2026-10-22T18:00:00Z',
+    predictions: [{ id: 'unrelated', source: demo ? 'demo' : 'manual', federation: 'UEFA', market: '1X2', startAt: '2026-10-22T18:00:00Z',
       homeTeam: 'Real Madrid', awayTeam: 'Bayern Munich', prediction: '1X', competition: 'Champions League' }],
   };
   if (scenario === 'race') window.homeReviewBoard.events.unshift({
@@ -43,3 +45,9 @@ window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => 
     <main className="app-main app-surface max-w-7xl mx-auto">{home}</main>
   </div>);
 };
+
+// Render the actual preserved route without asking any sports provider for data.
+window.renderPredictionsReview = () => root.render(<div key={++key}>
+  <Navbar user={null} />
+  <main className="app-main app-surface max-w-7xl mx-auto"><PredictionsPage /></main>
+</div>);

@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * ESPN sports board (with optional, separate predictions).
+ * ESPN sports board. The predictions array is retained for UI compatibility but is empty.
  *
  * Pulls configured ESPN scoreboards on the server (avoids browser CORS),
  * caches ~45s, and falls back to demo fixtures when every source is down.

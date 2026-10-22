@@ -80,7 +80,7 @@ To avoid hot reload interrupting test calls, the latest full run used a producti
 ```bash
 export DATABASE_URL='postgres://postgres@127.0.0.1:55432/postgres'
 export DATABASE_SSL=false DB_MODE=postgres FORCE_OFFLINE_MODE=false ALLOW_DEMO_SEED=true
-export S3_BUCKET='' RAPIDAPI_KEY=''
+export S3_BUCKET=''
 npm run build
 npm run start -- --hostname 0.0.0.0 --port 3100
 ```

@@ -129,3 +129,29 @@ test('unreported scores in the feed remain unknown instead of showing 0–0', as
   await expect(card.getByText('0–0', { exact: true })).toHaveCount(0);
   await assertFit(page);
 });
+
+for (const width of [320, 768, 1440]) {
+  test(`predictions route remains accessible without provider branding or invented picks at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => window.renderPredictionsReview());
+    await expect(page.getByRole('heading', { name: 'Match predictions', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No predictions available', exact: true })).toBeVisible();
+    await expect(page.getByText('No prediction provider is connected.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to sports scores' })).toHaveAttribute('href', '/sports');
+    await expect(page.getByText('0 picks', { exact: true })).toBeVisible();
+    await expect(page.getByRole('article')).toHaveCount(0);
+    await expect(page.getByText(/RapidAPI|RAPIDAPI_KEY/)).toHaveCount(0);
+    await expect(page.getByRole('banner')).toBeVisible();
+    await assertFit(page);
+  });
+}
+
+test('predictions route does not fetch or poll sports providers', async ({ page }) => {
+  await page.clock.install();
+  let sportsRequests = 0;
+  page.on('request', (request) => { if (request.url().includes('/api/sports')) sportsRequests++; });
+  await page.evaluate(() => window.renderPredictionsReview());
+  await expect(page.getByRole('heading', { name: 'No predictions available', exact: true })).toBeVisible();
+  await page.clock.fastForward(180_000);
+  expect(sportsRequests).toBe(0);
+});
