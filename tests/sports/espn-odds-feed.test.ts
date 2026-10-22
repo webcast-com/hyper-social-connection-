@@ -14,6 +14,7 @@ test('default odds requests use primary ESPN leagues, share work and cache norma
   const urls: string[] = [];
   await withFetch(async (input, init) => {
     urls.push(String(input));
+    assert.deepEqual(Object.fromEntries(new Headers(init?.headers)), { accept: 'application/json' });
     assert.equal(init?.cache, 'no-store');
     assert.ok(init?.signal);
     return Response.json({ events: [oddsEvent(`event-${urls.length}`)] });

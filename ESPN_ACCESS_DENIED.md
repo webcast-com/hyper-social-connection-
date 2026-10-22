@@ -21,7 +21,7 @@ A fresh direct EPL check from this sandbox, using the current app headers and no
 - The all-sport diagnostic now counts `http403` separately from `http404`, network failures and timeouts, in both the summary and per-sport groups.
 - No same-request retry is made for 403. Existing cache/poll intervals, score samples (explicitly labeled), and the no-sample-odds policy are unchanged.
 
-The endpoint paths and existing app User-Agent are unchanged: there is no evidence yet that a particular request header caused the denial. No browser impersonation, cookie copying, arbitrary API key, proxy rotation, alternate-host fallback or TLS disabling was added. These changes improve evidence and presentation; **they do not grant network access or claim to resolve the denial**.
+The endpoint paths are unchanged. The original diagnostic-only change left request identity unchanged; the subsequent minimal-header change below removes the custom application User-Agent as an unverified request-compatibility adjustment. No browser impersonation, cookie copying, arbitrary API key, proxy rotation, alternate-host fallback or TLS disabling was added. These changes improve evidence and presentation; **they do not grant network access or claim to resolve the denial**.
 
 ## Next deployment check
 
@@ -66,3 +66,14 @@ Please share one source's `httpStatus`, `errorKind` and `responseMetadata`, alon
 **72 unit/API/transport/audit tests + 46 sports/homepage browser fixture tests pass (118 total).** New cases verify safe metadata serialization, field allowlisting/bounds, HTTP 403 no-retry behavior, all-sport 403 counts, and narrow-screen score/odds presentation. Existing deadline, retry, 404, no-HTTP, guest navigation and odds-filter/share regressions still pass. TypeScript, changed-file ESLint and whitespace checks pass (two pre-existing team-logo optimization warnings).
 
 These tests use controlled denial responses. No successful live ESPN access, production response provenance, authenticated persistence or production fix is claimed.
+
+
+## Follow-up: browser succeeds, server denied (2026-10-23)
+
+The user confirms that the exact ESPN URL returns JSON when opened directly in their browser. This narrows the difference to the requests/environments; it does not identify whether the server IP/network, location, TLS/client characteristics, headers, or some other delivery policy is responsible. A browser success is not proof of permitted server-to-server access.
+
+Both score and odds fetches now share a minimal application-supplied header set: `Accept: application/json`. The custom `HyperSports` User-Agent/contact-domain override was removed. Fetch still sends its genuine default runtime User-Agent where applicable; this does not make the request look like Chrome or reproduce the user's browser session. No cookies, Origin, Referer, proxy, alternate host, browser impersonation, or TLS workaround is added. HTTP 403 still is not retried.
+
+**This is a compatibility change to test, not a verified fix or a proven cause.** Deploy it to a preview first, refresh once, and check one real source for HTTP 200 with a valid scoreboard. If 403 remains, the hosting/provider access investigation remains necessary; do not keep changing headers to evade a denial. This sandbox still cannot verify live ESPN access because outbound access to ESPN is restricted.
+
+The existing score and odds request tests now assert that the full app-supplied header set is exactly the JSON Accept header. Existing denial/no-retry and safe metadata tests remain in place.
