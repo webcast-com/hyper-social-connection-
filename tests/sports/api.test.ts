@@ -5,8 +5,6 @@ import { GET } from '../../src/app/api/sports/route';
 
 test('manual sports refresh bypasses provider and response caches, normal responses retain short caching', async () => {
   const original = globalThis.fetch;
-  const key = process.env.RAPIDAPI_KEY;
-  delete process.env.RAPIDAPI_KEY;
   let requests = 0;
   globalThis.fetch = async () => { requests++; return Response.json({ events: [] }); };
   try {
@@ -23,6 +21,5 @@ test('manual sports refresh bypasses provider and response caches, normal respon
     assert.equal(requests, 2 * afterFresh);
   } finally {
     globalThis.fetch = original;
-    if (key === undefined) delete process.env.RAPIDAPI_KEY; else process.env.RAPIDAPI_KEY = key;
   }
 });

@@ -7,14 +7,16 @@ const fixture = (league: string, sport: SportsEvent['sport'], status: SportsEven
   id: league, source: 'espn', league, leagueName: SPORTS_COMPETITIONS.find((item) => item.slug === league)!.name,
   sport, status, startAt: '2026-10-22T18:00:00Z', home: { name: 'Home Club' }, away: { name: 'Away Club' },
 });
-const events = [fixture('epl', 'football', 'live'), fixture('jleague', 'football'), fixture('ipl', 'cricket'), fixture('mlb', 'baseball', 'final'), fixture('south-africa', 'football')];
+const events = [fixture('epl', 'football', 'live'), fixture('jleague', 'football'), fixture('nba', 'basketball'), fixture('mlb', 'baseball', 'final'), fixture('south-africa', 'football')];
 
 test('the catalog expands worldwide coverage with unique provider IDs and all regions', () => {
+  assert.equal(SPORTS_COMPETITIONS.length, ESPN_LEAGUES.length);
   assert.ok(SPORTS_COMPETITIONS.length > 35);
+  assert.ok(!SPORTS_COMPETITIONS.some((league) => league.slug === 'ipl'));
   assert.equal(new Set(SPORTS_COMPETITIONS.map((league) => league.slug)).size, SPORTS_COMPETITIONS.length);
   assert.equal(new Set(ESPN_LEAGUES.map((league) => `${league.sport}/${league.league}`)).size, ESPN_LEAGUES.length);
   for (const region of SPORTS_REGIONS) assert.ok(SPORTS_COMPETITIONS.some((league) => league.region === region.id));
-  for (const sport of ['football', 'basketball', 'cricket', 'rugby', 'baseball', 'ice-hockey']) assert.ok(AVAILABLE_SPORTS.includes(sport as typeof AVAILABLE_SPORTS[number]));
+  for (const sport of ['football', 'basketball', 'rugby', 'baseball', 'ice-hockey']) assert.ok(AVAILABLE_SPORTS.includes(sport as typeof AVAILABLE_SPORTS[number]));
   assert.ok(SPORTS_COMPETITIONS.some((league) => league.slug === 'wsl'));
   assert.ok(SPORTS_COMPETITIONS.some((league) => league.slug === 'wnba'));
 });
@@ -22,7 +24,7 @@ test('the catalog expands worldwide coverage with unique provider IDs and all re
 test('sport, region, status, league and search filters combine without changing the input', () => {
   assert.equal(filterSportsEvents(events, 'all', { sport: 'football', region: 'asia', status: 'upcoming', league: 'jleague', query: ' HOME ' })[0]?.league, 'jleague');
   assert.equal(filterSportsEvents(events, 'all', { sport: 'football', region: 'asia', status: 'live' }).length, 0);
-  assert.equal(filterSportsEvents(events, 'all', { query: 'indian premier' })[0]?.league, 'ipl');
+  assert.equal(filterSportsEvents(events, 'all', { query: 'NBA' })[0]?.league, 'nba');
   assert.equal(filterSportsEvents(events, 'all', { region: 'africa' })[0]?.league, 'south-africa');
   assert.equal(filterSportsEvents(events, 'live').length, 1);
   assert.equal(filterSportsEvents(events, 'baseball').length, 1);
@@ -32,12 +34,9 @@ test('sport, region, status, league and search filters combine without changing 
 
 async function withFetch(run: () => Promise<void>, respond: typeof fetch) {
   const original = globalThis.fetch;
-  const key = process.env.RAPIDAPI_KEY;
   globalThis.fetch = respond;
-  delete process.env.RAPIDAPI_KEY;
   try { await run(); } finally {
     globalThis.fetch = original;
-    if (key === undefined) delete process.env.RAPIDAPI_KEY; else process.env.RAPIDAPI_KEY = key;
   }
 }
 const scoreboard = (name: string) => ({ events: [{ id: '1', date: '2026-10-22T18:00:00Z', competitions: [{ status: { type: { state: 'in', shortDetail: 'Live' } }, competitors: [
@@ -53,8 +52,12 @@ test('all configured endpoints are requested, concurrency is bounded, and concur
     const [first, second] = await Promise.all([getSportsBoard({ bypassCache: true }), getSportsBoard({ bypassCache: true })]);
     assert.equal(first, second);
     assert.equal(first.mode, 'live');
+    assert.deepEqual(first.predictions, []);
     assert.equal(first.events.length, ESPN_LEAGUES.length);
-    assert.equal(urls.length, ESPN_LEAGUES.length + 10);
+    assert.equal(urls.length, ESPN_LEAGUES.length);
+    assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
+    assert.equal(first.sources.length, ESPN_LEAGUES.length);
+    assert.ok(first.sources.every((source) => source.id.startsWith('espn:')));
     assert.ok(maximum <= 12);
     assert.ok(maximum > 1);
     for (const competition of ESPN_LEAGUES) assert.ok(urls.some((url) => url.includes(`/${competition.sport}/${competition.league}/scoreboard`)));
@@ -67,7 +70,7 @@ test('all configured endpoints are requested, concurrency is bounded, and concur
     urls.push(url); active++; maximum = Math.max(maximum, active);
     await new Promise((resolve) => setTimeout(resolve, 2));
     active--;
-    return Response.json(url.includes('espn') ? scoreboard('Home') : { events: null });
+    return Response.json(scoreboard('Home'));
   });
 });
 
@@ -89,22 +92,34 @@ test('successful empty scoreboards stay empty rather than substituting fabricate
   }, async () => Response.json({ events: [] }));
 });
 
-test('IPL fixtures retain cricket results and team scores from the secondary provider', async () => {
+test('ESPN NBA results preserve three-digit scores and final status without a secondary provider', async () => {
   await withFetch(async () => {
     const board = await getSportsBoard({ bypassCache: true });
-    const cricket = board.events.find((event) => event.league === 'ipl');
-    assert.equal(cricket?.sport, 'cricket');
-    assert.equal(cricket?.detail, 'Home won by 4 wickets');
-    assert.equal(cricket?.home.score, 184);
-  }, async (input) => Response.json(String(input).includes('eventspastleague.php?id=4460') ? { events: [{ idEvent: 'ipl1', dateEvent: '2026-10-22', strTime: '12:00:00', strHomeTeam: 'Home', strAwayTeam: 'Away', intHomeScore: '184', intAwayScore: '183', strResult: 'Home won by 4 wickets' }] } : { events: [] }));
+    const basketball = board.events.find((event) => event.league === 'nba');
+    assert.equal(basketball?.source, 'espn');
+    assert.equal(basketball?.sport, 'basketball');
+    assert.equal(basketball?.status, 'final');
+    assert.equal(basketball?.home.score, 184);
+    assert.equal(basketball?.away.score, 183);
+  }, async (input) => {
+    const payload = scoreboard('Home');
+    const competition = payload.events[0].competitions[0];
+    competition.status.type.state = 'post';
+    competition.competitors[0].score = '184';
+    competition.competitors[1].score = '183';
+    return Response.json(String(input).includes('/basketball/nba/') ? payload : { events: [] });
+  });
 });
 
 test('total provider failure produces explicitly marked samples spanning the new sports and regions', async () => {
   await withFetch(async () => {
     const board = await getSportsBoard({ bypassCache: true });
     assert.equal(board.mode, 'demo');
+    assert.deepEqual(board.predictions, []);
     assert.ok(board.events.every((event) => event.source === 'demo'));
-    for (const slug of ['jleague', 'south-africa', 'brasileirao', 'ipl', 'mlb', 'nhl', 'super-rugby']) assert.ok(board.events.some((event) => event.league === slug));
+    assert.ok(board.events.every((event) => SPORTS_COMPETITIONS.some((league) => league.slug === event.league)));
+    assert.equal(board.sources.filter((source) => !source.ok).length, ESPN_LEAGUES.length);
+    for (const slug of ['jleague', 'south-africa', 'brasileirao', 'mlb', 'nhl', 'super-rugby']) assert.ok(board.events.some((event) => event.league === slug));
   }, async () => { throw new Error('offline'); });
 });
 
@@ -131,4 +146,59 @@ test('same-day F1 sessions survive aggregation and can be searched by race title
       id, date: '2026-10-22T18:00:00Z', competitors: ['First Driver', 'Second Driver', 'Third Driver'].map((displayName, i) => ({ athlete: { displayName }, order: i + 1 })),
     })),
   }] } : { events: [] }));
+});
+
+
+test('ESPN-only aggregation preserves same-day doubleheaders between the same teams', async () => {
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    assert.equal(board.events.length, 2);
+    assert.equal(new Set(board.events.map((event) => event.id)).size, 2);
+    assert.ok(board.events.every((event) => event.source === 'espn'));
+  }, async (input) => {
+    const first = scoreboard('Home').events[0];
+    return Response.json(String(input).includes('/baseball/mlb/') ? { events: [
+      { ...first, id: 'first-game' }, { ...first, id: 'second-game' },
+    ] } : { events: [] });
+  });
+});
+
+test('legacy prediction credentials never trigger requests or affect ESPN feed status', async () => {
+  const previous = process.env.RAPIDAPI_KEY;
+  process.env.RAPIDAPI_KEY = 'unused-legacy-test-key';
+  const urls: string[] = [];
+  try {
+    await withFetch(async () => {
+      const board = await getSportsBoard({ bypassCache: true });
+      assert.equal(board.mode, 'live');
+      assert.deepEqual(board.predictions, []);
+      assert.equal(urls.length, ESPN_LEAGUES.length);
+      assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
+      assert.ok(board.sources.every((source) => source.id.startsWith('espn:')));
+    }, async (input) => { urls.push(String(input)); return Response.json({ events: [] }); });
+  } finally {
+    if (previous === undefined) delete process.env.RAPIDAPI_KEY;
+    else process.env.RAPIDAPI_KEY = previous;
+  }
+});
+
+test('score source reports retain exact upstream URLs and distinguish 404 from network failures', async () => {
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    const missing = board.sources.find((source) => source.id === 'espn:epl')!;
+    assert.equal(missing.httpStatus, 404);
+    assert.equal(missing.errorKind, 'http');
+    assert.equal(missing.url, 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard');
+    const reset = board.sources.find((source) => source.id === 'espn:nba')!;
+    assert.equal(reset.httpStatus, null);
+    assert.equal(reset.errorKind, 'network');
+    const healthy = board.sources.find((source) => source.id === 'espn:mlb')!;
+    assert.equal(healthy.httpStatus, 200);
+    assert.equal(healthy.count, 0);
+    assert.equal(board.mode, 'partial');
+  }, async (input) => {
+    if (String(input).includes('/soccer/eng.1/')) return new Response('', { status: 404 });
+    if (String(input).includes('/basketball/nba/')) throw new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } });
+    return Response.json({ events: [] });
+  });
 });

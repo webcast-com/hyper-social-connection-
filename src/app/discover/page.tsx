@@ -70,7 +70,7 @@ export default async function Discover() {
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Trophy className="w-5 h-5" /> Live sports
               </h2>
-              <p className="text-amber-50 text-sm mt-1">Premier League, UCL, NBA, NFL and F1 from multiple feeds.</p>
+              <p className="text-amber-50 text-sm mt-1">Premier League, UCL, NBA, NFL and F1 from ESPN.</p>
             </div>
             <span className="text-sm font-semibold shrink-0">Open →</span>
           </Link>

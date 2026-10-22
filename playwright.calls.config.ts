@@ -38,7 +38,6 @@ export default defineConfig({
       FORCE_OFFLINE_MODE: 'false',
       DB_MODE: 'postgres',
       S3_BUCKET: '',
-      RAPIDAPI_KEY: '',
     },
   },
 });

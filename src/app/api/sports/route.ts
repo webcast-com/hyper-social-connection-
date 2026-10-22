@@ -5,9 +5,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Aggregated sports board.
+ * ESPN sports board. The predictions array is retained for UI compatibility but is empty.
  *
- * Pulls ESPN + TheSportsDB in parallel on the server (avoids browser CORS),
+ * Pulls configured ESPN scoreboards on the server (avoids browser CORS),
  * caches ~45s, and falls back to demo fixtures when every source is down.
  */
 export async function GET(req: NextRequest) {

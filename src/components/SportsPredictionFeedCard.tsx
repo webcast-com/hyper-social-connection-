@@ -87,7 +87,7 @@ export default function SportsPredictionFeedCard({
       <Link href="/sports/predictions" className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40">
         <div className="mb-3 flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           <span className="truncate">{prediction.competition || prediction.federation}</span>
-          <span>{prediction.source === 'demo' ? 'Sample prediction' : 'RapidAPI'}</span>
+          <span>{prediction.source === 'demo' ? 'Sample prediction' : 'Match prediction'}</span>
         </div>
 
         <div className="rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">

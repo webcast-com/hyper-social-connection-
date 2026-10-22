@@ -42,10 +42,12 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
     request.current = controller;
     setRefreshing(true);
     if (force) setRefreshError('');
+    let routeMissing = false;
     try {
       const res = await fetch(force ? '/api/sports?refresh=1' : '/api/sports', {
         cache: 'no-store', signal: controller.signal,
       });
+      routeMissing = res.status === 404;
       if (!res.ok) throw new Error('Refresh failed');
       const next = (await res.json()) as SportsBoard;
       if (!Array.isArray(next.events) || !Array.isArray(next.sources) || !['live', 'partial', 'demo'].includes(next.mode)) {
@@ -54,7 +56,9 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
       if (mounted.current && !controller.signal.aborted) { setBoard(next); setRefreshError(''); }
     } catch {
       if (mounted.current && !controller.signal.aborted && force) {
-        setRefreshError('Could not refresh scores. Showing the previous update. Please try again.');
+        setRefreshError(routeMissing
+          ? 'The app endpoint /api/sports returned HTTP 404. Check this deployment includes the sports API. Showing the previous update.'
+          : 'Could not refresh scores. Showing the previous update. Please try again.');
       }
     } finally {
       if (request.current === controller) request.current = null;
@@ -90,7 +94,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             <Trophy className="text-amber-500" /> Sports
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Worldwide scores and fixtures from ESPN and TheSportsDB
+            Worldwide scores and fixtures from ESPN
             {liveCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -142,6 +146,14 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
         </p>
       )}
+      {board.sources.some((source) => !source.ok) && <details className="mb-4 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
+        <summary className="min-h-11 cursor-pointer font-semibold">Unavailable ESPN feed details</summary>
+        <ul className="space-y-3">{board.sources.filter((source) => !source.ok).map((source) => <li key={source.id} className="min-w-0 break-words">
+          <p>{source.id}: {source.error || 'Unavailable'}</p>
+          {source.httpStatus !== undefined && <p>{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`} · {source.errorKind || 'response'}</p>}
+          {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
+        </li>)}</ul>
+      </details>}
       <div role="group" aria-label="Filter by sport" className="flex min-w-0 gap-2 overflow-x-auto pb-2 mb-3 sm:flex-wrap">
         {(['all', ...AVAILABLE_SPORTS] as const).map((id) => (
           <button

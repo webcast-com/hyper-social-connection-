@@ -1,22 +1,30 @@
 import type { Metadata } from 'next';
+import { getEspnOdds } from '@/lib/espn-odds-feed';
+import { getViewer } from '@/lib/viewer';
+import type { OddsBoard } from '@/lib/espn-odds';
 import SportsPredictionsBoard from '@/components/SportsPredictionsBoard';
-import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = {
-  title: 'Sports Predictions — Football picks and odds',
-  description: 'View football match predictions, odds, and shareable picks for upcoming UEFA fixtures.',
+  title: 'Sports Predictions',
+  description: 'Upcoming ESPN fixtures and reported bookmaker odds for match discussions and polls.',
   alternates: { canonical: '/sports/predictions' },
   openGraph: {
     title: 'Sports Predictions | Hyper',
-    description: 'Football match predictions and odds powered by the RapidAPI prediction feed.',
+    description: 'Upcoming ESPN fixtures and reported bookmaker odds for match discussions and polls.',
     url: '/sports/predictions',
     images: ['/og-image.png'],
   },
 };
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export default async function SportsPredictionsPage() {
-  const board = await getSportsBoard({ bypassCache: true });
-  return <SportsPredictionsBoard initial={board} />;
+  const [initial, viewer] = await Promise.all([
+    getEspnOdds().catch((): OddsBoard => ({
+      matches: [], sources: [], fetchedAt: new Date().toISOString(), status: 'unavailable', truncated: false,
+    })),
+    getViewer(),
+  ]);
+  return <SportsPredictionsBoard initial={initial} currentUserId={viewer?.id} />;
 }

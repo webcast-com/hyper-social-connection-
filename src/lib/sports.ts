@@ -1,20 +1,15 @@
 /**
- * Sports board — fetch live / upcoming / finished events from several
- * public endpoints, then normalize them into one card shape.
- *
- * Sources (no API key required):
- *   1. ESPN scoreboard JSON  — live clock, scores, team logos
- *   2. TheSportsDB           — extra fixtures, cricket results + venues
- *
- * When every source is unreachable (restricted networks, this sandbox),
- * a small demo board is returned so the page still works.
+ * ESPN scores and fixtures, normalized into a shared board.
+ * No external prediction provider is connected.
+ * If ESPN is unreachable, return clearly labeled sample fixtures.
  */
 
 import {
-  ESPN_LEAGUES, SPORTSDB_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
+  ESPN_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
   type SportKind, type SportsRegion,
 } from './sports-catalog';
-import { fetchEspnEvents } from './espn-client';
+import { fetchEspnScoreboard } from './espn-client';
+import { espnFailureDetails, espnScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -30,7 +25,7 @@ export type SportsRace = { title: string; entries: { name: string; position: num
 
 export type SportsEvent = {
   id: string;
-  source: 'espn' | 'thesportsdb' | 'demo';
+  source: 'espn' | 'demo';
   race?: SportsRace;
   sport: SportKind;
   league: string;
@@ -46,7 +41,7 @@ export type SportsEvent = {
 
 export type SportsPrediction = {
   id: string;
-  source: 'rapidapi' | 'demo';
+  source: 'manual' | 'demo';
   federation: string;
   market: string;
   startAt: string;
@@ -57,7 +52,7 @@ export type SportsPrediction = {
   competition?: string | null;
 };
 
-export type SportsSourceReport = {
+export type SportsSourceReport = Partial<EspnEndpointDetails> & {
   id: string;
   ok: boolean;
   count: number;
@@ -72,123 +67,12 @@ export type SportsBoard = {
   mode: 'live' | 'partial' | 'demo';
 };
 
-const PREDICTION_ENDPOINT = 'https://football-prediction-api.p.rapidapi.com/api/v2/predictions';
-const PREDICTION_HOST = 'football-prediction-api.p.rapidapi.com';
-// Day boundary the API uses for the iso_date query parameter.
-const API_TZ = 'Europe/London';
 // Kickoff times are shown to users in Kenyan time (EAT, UTC+3 — no DST).
 export const PREDICTION_DISPLAY_TZ = 'Africa/Nairobi';
 
-const FETCH_MS = 4_000;
 const CACHE_MS = 45_000;
 
 let cache: { at: number; board: SportsBoard } | null = null;
-
-function sportsDbNextUrl(leagueId: string) {
-  return `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
-}
-
-function sportsDbPastUrl(leagueId: string) {
-  return `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
-}
-
-async function fetchJson(url: string): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_MS);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HyperSports/1.0 (+https://hyper.social)',
-      },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function parseScore(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-function sportsDbStatus(row: any): EventStatus {
-  const raw = String(row?.strStatus || '').toLowerCase();
-  if (raw.includes('live') || raw === '1h' || raw === '2h' || raw === 'ht') return 'live';
-  if (raw === 'ft' || raw === 'aet' || raw === 'pen' || raw === 'match finished') return 'final';
-  if (row?.intHomeScore != null && row?.intAwayScore != null && raw) return 'final';
-  return 'upcoming';
-}
-
-function parseSportsDbEvents(
-  payload: any,
-  meta: (typeof SPORTSDB_LEAGUES)[number],
-  fallbackStatus?: EventStatus,
-): SportsEvent[] {
-  const rows = Array.isArray(payload?.events) ? payload.events : [];
-  return rows.slice(0, 8).map((row: any) => {
-    const date = row.dateEvent || '';
-    const time = (row.strTime || '00:00:00').slice(0, 8);
-    const startAt = date ? new Date(`${date}T${time}Z`).toISOString() : new Date().toISOString();
-    const status = fallbackStatus || sportsDbStatus(row);
-    return {
-      id: `tsdb-${meta.slug}-${row.idEvent}`,
-      source: 'thesportsdb' as const,
-      sport: meta.kind,
-      league: meta.slug,
-      leagueName: row.strLeague || meta.name,
-      status,
-      startAt,
-      venue: row.strVenue || null,
-      detail: row.strResult || row.strStatus || (status === 'upcoming' ? row.strTime : null),
-      home: {
-        name: row.strHomeTeam || 'Home',
-        logo: row.strHomeTeamBadge || null,
-        score: parseScore(row.intHomeScore),
-      },
-      away: {
-        name: row.strAwayTeam || 'Away',
-        logo: row.strAwayTeamBadge || null,
-        score: parseScore(row.intAwayScore),
-      },
-      url: row.strVideo || null,
-    };
-  });
-}
-
-
-function dateInTimeZone(offsetDays: number, timeZone: string) {
-  const date = new Date(Date.now() + offsetDays * 86400000);
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const get = (type: string) => parts.find((p) => p.type === type)?.value || '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-}
-
-function parsePredictionStart(value: unknown) {
-  const raw = String(value || '').trim();
-  if (!raw) return new Date().toISOString();
-  // RapidAPI returns a naive timestamp like "2018-12-06T19:00:00" (also seen
-  // space-separated). Cross-checked against the provider's documented sample —
-  // Feyenoord vs VVV-Venlo, a 20:00 CET Eredivisie evening kickoff, is listed
-  // as 19:00 — so the value is UTC. Tag it as such and convert to ISO.
-  if (raw.endsWith('Z') || raw.includes('+') || /-\d{2}:\d{2}$/.test(raw)) {
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-  }
-  const normalized = `${raw.replace(' ', 'T')}Z`;
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
-}
 
 /**
  * Kickoff label in Nairobi time, e.g. "Sep 2, 22:00 EAT". Explicit locale +
@@ -209,80 +93,12 @@ export function formatPredictionKickoff(iso: string) {
   return `${label} EAT`;
 }
 
-async function fetchRapidApiPredictions(): Promise<SportsPrediction[]> {
-  const key = process.env.RAPIDAPI_KEY;
-  if (!key) return [];
-
-  // Today's board: the API day starts at 00:00 London time, so ask for the
-  // current London date to get today's fixtures (was +1 / tomorrow).
-  const isoDate = dateInTimeZone(0, API_TZ);
-  const url = new URL(PREDICTION_ENDPOINT);
-  url.searchParams.set('federation', 'UEFA');
-  url.searchParams.set('market', 'classic');
-  url.searchParams.set('iso_date', isoDate);
-
-  const payload = await fetchJsonWithHeaders(url.toString(), {
-    'X-RapidAPI-Key': key,
-    'X-RapidAPI-Host': PREDICTION_HOST,
-  });
-  const rows = Array.isArray((payload as any)?.data) ? (payload as any).data : [];
-
-  return rows
-    .map((match: any, index: number) => {
-      const prediction = String(match?.prediction || '').trim();
-      const odds = match?.odds && typeof match.odds === 'object' ? match.odds : null;
-      const oddValue = odds && prediction ? Number(odds[prediction]) : 0;
-      return {
-        id: `rapidapi-${match?.id || match?.home_team || 'match'}-${index}`,
-        source: 'rapidapi' as const,
-        federation: String(match?.federation || 'UEFA'),
-        market: 'classic',
-        startAt: parsePredictionStart(match?.start_date),
-        homeTeam: String(match?.home_team || 'Home'),
-        awayTeam: String(match?.away_team || 'Away'),
-        prediction: prediction || 'n/a',
-        winOdds: oddValue > 1 ? String(oddValue) : null,
-        competition: match?.competition_name || match?.competition || match?.league || null,
-      };
-    })
-    .sort((a: SportsPrediction, b: SportsPrediction) => a.startAt.localeCompare(b.startAt))
-    .slice(0, 12);
-}
-
-async function fetchJsonWithHeaders(url: string, headers: Record<string, string>): Promise<unknown> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_MS);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HyperSports/1.0 (+https://hyper.social)',
-        ...headers,
-      },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function eventKey(ev: SportsEvent) {
-  if (ev.race) return `${ev.league}:race:${ev.id}`;
-  const day = ev.startAt.slice(0, 10);
-  return `${ev.league}:${ev.home.name.toLowerCase()}:${ev.away.name.toLowerCase()}:${day}`;
-}
-
 function mergeEvents(groups: SportsEvent[][]) {
   const seen = new Map<string, SportsEvent>();
-  const rank = { espn: 0, thesportsdb: 1, demo: 2 } as const;
   for (const group of groups) {
     for (const ev of group) {
-      const key = eventKey(ev);
-      const prev = seen.get(key);
-      if (!prev || rank[ev.source] < rank[prev.source]) seen.set(key, ev);
+      // ESPN event IDs distinguish same-day doubleheaders and race sessions.
+      if (!seen.has(ev.id)) seen.set(ev.id, ev);
     }
   }
   return [...seen.values()].sort((a, b) => {
@@ -409,7 +225,6 @@ function demoBoard(): SportsBoard {
     { league: 'south-africa', home: 'Mamelodi Sundowns', away: 'Orlando Pirates' },
     { league: 'aleague', home: 'Melbourne Victory', away: 'Sydney FC' },
     { league: 'wnba', home: 'Las Vegas Aces', away: 'New York Liberty' },
-    { league: 'ipl', home: 'Mumbai Indians', away: 'Chennai Super Kings' },
     { league: 'super-rugby', home: 'Blues', away: 'Crusaders' },
     { league: 'mlb', home: 'Los Angeles Dodgers', away: 'New York Yankees' },
     { league: 'nhl', home: 'Toronto Maple Leafs', away: 'Edmonton Oilers' },
@@ -423,24 +238,10 @@ function demoBoard(): SportsBoard {
       home: { name: sample.home }, away: { name: sample.away },
     });
   }
-  const predictions: SportsPrediction[] = [
-    {
-      id: 'demo-prediction-epl',
-      source: 'demo',
-      federation: 'UEFA',
-      market: 'classic',
-      startAt: iso(3 * 60 * 60_000),
-      homeTeam: 'Real Madrid',
-      awayTeam: 'Bayern Munich',
-      prediction: '1X',
-      winOdds: '1.64',
-      competition: 'Champions League',
-    },
-  ];
   return {
     events,
-    predictions,
-    sources: [{ id: 'demo', ok: true, count: events.length + predictions.length }],
+    predictions: [],
+    sources: [{ id: 'demo', ok: true, count: events.length }],
     fetchedAt: new Date().toISOString(),
     mode: 'demo',
   };
@@ -481,56 +282,29 @@ async function settleJobs(jobs: (() => Promise<void>)[]) {
 async function fetchSportsBoard(): Promise<SportsBoard> {
   const sources: SportsSourceReport[] = [];
   const groups: SportsEvent[][] = [];
-  let predictions: SportsPrediction[] = [];
 
   const espnJobs = ESPN_LEAGUES.map((meta) => async () => {
-    const events = await fetchEspnEvents(meta);
-    sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length });
+    const { events, url, httpStatus } = await fetchEspnScoreboard(meta);
+    sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length, url, httpStatus });
     groups.push(events);
   });
 
-  const dbJobs = SPORTSDB_LEAGUES.flatMap((meta) => [
-    (async () => {
-      const events = parseSportsDbEvents(await fetchJson(sportsDbNextUrl(meta.id)), meta, 'upcoming');
-      sources.push({ id: `thesportsdb:next:${meta.slug}`, ok: true, count: events.length });
-      groups.push(events);
-    }),
-    (async () => {
-      const events = parseSportsDbEvents(await fetchJson(sportsDbPastUrl(meta.id)), meta, 'final');
-      sources.push({ id: `thesportsdb:past:${meta.slug}`, ok: true, count: events.length });
-      groups.push(events);
-    }),
-  ]);
-
-  const predictionJobs = [
-    (async () => {
-      predictions = await fetchRapidApiPredictions();
-      if (process.env.RAPIDAPI_KEY) {
-        sources.push({ id: 'rapidapi:predictions', ok: true, count: predictions.length });
-      }
-    }),
-  ];
-
-  const settled = await settleJobs([...espnJobs, ...dbJobs, ...predictionJobs]);
+  const settled = await settleJobs(espnJobs);
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return;
-    const ids = [
-      ...ESPN_LEAGUES.map((l) => `espn:${l.slug}`),
-      ...SPORTSDB_LEAGUES.flatMap((l) => [`thesportsdb:next:${l.slug}`, `thesportsdb:past:${l.slug}`]),
-      'rapidapi:predictions',
-    ];
-    const message = result.reason instanceof Error ? result.reason.message : 'fetch failed';
-    sources.push({ id: ids[i] || `source-${i}`, ok: false, count: 0, error: message });
+    const meta = ESPN_LEAGUES[i];
+    sources.push({ id: `espn:${meta.slug}`, ok: false, count: 0,
+      ...espnFailureDetails(result.reason, espnScoreboardUrl(meta)) });
   });
 
   const events = mergeEvents(groups);
-  const anyOk = sources.some((s) => s.ok) || predictions.length > 0;
+  const anyOk = sources.some((s) => s.ok);
   const allOk = sources.length > 0 && sources.every((s) => s.ok);
 
   const board: SportsBoard = anyOk
     ? {
         events,
-        predictions,
+        predictions: [],
         sources,
         fetchedAt: new Date().toISOString(),
         mode: allOk ? 'live' : 'partial',
@@ -554,7 +328,6 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
   { id: 'basketball', label: 'Basketball' },
   { id: 'american-football', label: 'American football' },
   { id: 'motorsport', label: 'Motorsport' },
-  { id: 'cricket', label: 'Cricket' },
   { id: 'rugby', label: 'Rugby' },
   { id: 'baseball', label: 'Baseball' },
   { id: 'ice-hockey', label: 'Ice hockey' },

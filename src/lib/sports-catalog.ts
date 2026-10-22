@@ -1,7 +1,7 @@
 /** Provider competition identifiers, kept separate from fetching for use in filters. */
 export type SportKind =
   | 'football' | 'basketball' | 'american-football' | 'motorsport'
-  | 'tennis' | 'cricket' | 'rugby' | 'baseball' | 'ice-hockey' | 'other';
+  | 'tennis' | 'rugby' | 'baseball' | 'ice-hockey' | 'other';
 
 export const SPORTS_REGIONS = [
   { id: 'africa', name: 'Africa' },
@@ -54,22 +54,13 @@ export const ESPN_LEAGUES: EspnLeague[] = [
   { sport: 'football', league: 'nfl', kind: 'american-football', slug: 'nfl', name: 'NFL', region: 'americas' },
   { sport: 'baseball', league: 'mlb', kind: 'baseball', slug: 'mlb', name: 'Major League Baseball', region: 'americas' },
   { sport: 'hockey', league: 'nhl', kind: 'ice-hockey', slug: 'nhl', name: 'NHL', region: 'americas' },
-  { sport: 'rugby', league: '180659', kind: 'rugby', slug: 'prem-rugby', name: 'Premiership Rugby', region: 'europe' },
-  { sport: 'rugby', league: '164205', kind: 'rugby', slug: 'super-rugby', name: 'Super Rugby Pacific', region: 'oceania' },
+  { sport: 'rugby', league: '267979', kind: 'rugby', slug: 'prem-rugby', name: 'Premiership Rugby', region: 'europe' },
+  { sport: 'rugby', league: '242041', kind: 'rugby', slug: 'super-rugby', name: 'Super Rugby Pacific', region: 'oceania' },
   { sport: 'racing', league: 'f1', kind: 'motorsport', slug: 'f1', name: 'Formula 1', region: 'global' },
 ];
 
-export const SPORTSDB_LEAGUES: (Competition & { id: string })[] = [
-  { id: '4328', slug: 'epl', name: 'Premier League', kind: 'football', region: 'europe' },
-  { id: '4335', slug: 'laliga', name: 'La Liga', kind: 'football', region: 'europe' },
-  { id: '4480', slug: 'ucl', name: 'Champions League', kind: 'football', region: 'europe' },
-  { id: '4387', slug: 'nba', name: 'NBA', kind: 'basketball', region: 'americas' },
-  { id: '4460', slug: 'ipl', name: 'Indian Premier League', kind: 'cricket', region: 'asia' },
-];
-
-export const SPORTS_COMPETITIONS: Competition[] = [...new Map(
-  [...ESPN_LEAGUES, ...SPORTSDB_LEAGUES].map((league) => [league.slug, league]),
-).values()];
+// Scores and fixtures use ESPN only. Do not advertise unsupported competitions.
+export const SPORTS_COMPETITIONS: Competition[] = ESPN_LEAGUES;
 
 export function competitionRegion(slug: string) {
   return SPORTS_COMPETITIONS.find((league) => league.slug === slug)?.region;
@@ -77,7 +68,7 @@ export function competitionRegion(slug: string) {
 
 export const SPORT_LABELS: Record<SportKind, string> = {
   football: 'Football', basketball: 'Basketball', 'american-football': 'American football',
-  motorsport: 'Motorsport', tennis: 'Tennis', cricket: 'Cricket', rugby: 'Rugby',
+  motorsport: 'Motorsport', tennis: 'Tennis', rugby: 'Rugby',
   baseball: 'Baseball', 'ice-hockey': 'Ice hockey', other: 'Other',
 };
 export const AVAILABLE_SPORTS = [...new Set(SPORTS_COMPETITIONS.map((league) => league.kind))];

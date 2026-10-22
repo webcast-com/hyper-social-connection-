@@ -1,36 +1,33 @@
 import { parseEspnEvents } from './espn';
 import type { EspnLeague } from './sports-catalog';
+import { EspnEndpointError, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
+export { espnScoreboardUrl } from './espn-endpoints';
 
-export function espnScoreboardUrl(league: EspnLeague): string {
-  return `https://site.api.espn.com/apis/site/v2/sports/${league.sport}/${league.league}/scoreboard`;
-}
-
-function networkMessage(error: unknown): string {
-  if (!(error instanceof Error)) return 'Request failed';
-  const cause = error.cause as { code?: string; message?: string } | undefined;
-  return [error.message, cause?.code || cause?.message].filter(Boolean).join(': ');
-}
+type TransportOptions = { timeoutMs?: number; retryDelayMs?: number };
 
 /** Server-side ESPN transport. Two attempts share one deadline, not two timeouts. */
-export async function fetchEspnEvents(
-  league: EspnLeague,
-  options: { timeoutMs?: number; retryDelayMs?: number } = {},
-) {
+export async function fetchEspnScoreboard(league: EspnLeague, options: TransportOptions = {}) {
+  const url = espnScoreboardUrl(league);
   const timeoutMs = options.timeoutMs ?? 4_000;
   const delayMs = options.retryDelayMs ?? 150;
   const controller = new AbortController();
   const deadline = Date.now() + timeoutMs;
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let httpStatus: number | null = null;
+  const timeoutError = () => new EspnEndpointError(`ESPN request timed out after ${timeoutMs}ms`, url, 'timeout', httpStatus);
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       let retry = false;
       let retryAfterMs = delayMs;
+      let parsing = false;
+      httpStatus = null;
       try {
-        const response = await fetch(espnScoreboardUrl(league), {
+        const response = await fetch(url, {
           signal: controller.signal,
           headers: { Accept: 'application/json', 'User-Agent': 'HyperSports/1.0 (+https://hyper.social)' },
           cache: 'no-store',
         });
+        httpStatus = response.status;
         if (!response.ok) {
           retry = [429, 500, 502, 503, 504].includes(response.status);
           const retryAfter = response.headers.get('Retry-After');
@@ -41,22 +38,29 @@ export async function fetchEspnEvents(
           }
           // Release the failed response before retrying; never retry unsupported feeds.
           await response.body?.cancel();
-          throw new Error(`ESPN HTTP ${response.status}`);
+          throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status);
         }
-        // JSON/schema errors are not transient connection failures.
-        return parseEspnEvents(await response.json(), league);
+        parsing = true;
+        const events = parseEspnEvents(await response.json(), league);
+        return { events, url, httpStatus: response.status };
       } catch (error) {
-        if (controller.signal.aborted) throw new Error(`ESPN request timed out after ${timeoutMs}ms`);
-        const connectionFailure = error instanceof TypeError && error.message === 'fetch failed';
+        if (controller.signal.aborted) throw timeoutError();
+        const connectionFailure = !parsing && error instanceof TypeError && error.message === 'fetch failed';
         if (attempt === 1 || (!retry && !connectionFailure) || Date.now() + retryAfterMs >= deadline) {
-          throw new Error(networkMessage(error));
+          if (error instanceof EspnEndpointError) throw error;
+          throw new EspnEndpointError(espnErrorMessage(error), url, parsing ? 'invalid-response' : 'network', httpStatus);
         }
       }
       await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
-      if (controller.signal.aborted) throw new Error(`ESPN request timed out after ${timeoutMs}ms`);
+      if (controller.signal.aborted) throw timeoutError();
     }
-    throw new Error('ESPN request failed');
+    throw new EspnEndpointError('ESPN request failed', url, 'network', httpStatus);
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Compatibility wrapper for callers that only need normalized events. */
+export async function fetchEspnEvents(league: EspnLeague, options: TransportOptions = {}) {
+  return (await fetchEspnScoreboard(league, options)).events;
 }
