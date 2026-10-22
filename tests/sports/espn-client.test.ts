@@ -100,3 +100,26 @@ test('a retry shares the first attempt’s abort signal and deadline', async () 
     assert.equal(calls, 2);
   });
 });
+
+test('HTTP 403 keeps safe denial metadata without reading/exposing HTML or retrying', async () => {
+  const { espnFailureDetails, espnScoreboardUrl } = await import('../../src/lib/espn-endpoints');
+  let calls = 0;
+  await withFetch(async () => {
+    calls++;
+    return new Response('<html>test-private-body</html>', { status: 403, headers: {
+      server: 'example-edge', 'content-type': 'text/html', 'set-cookie': 'test-private-cookie',
+      'x-mitmproxy-blocked-reason': 'OUTBOUND_HOST_DENIED',
+    } });
+  }, async () => {
+    await assert.rejects(fetchEspnEvents(league), (error: unknown) => {
+      const source = espnFailureDetails(error, espnScoreboardUrl(league));
+      assert.equal(source.httpStatus, 403);
+      assert.equal(source.errorKind, 'http');
+      assert.equal(source.responseMetadata?.server, 'example-edge');
+      assert.equal(source.responseMetadata?.proxyBlockReason, 'OUTBOUND_HOST_DENIED');
+      assert.ok(!JSON.stringify(source).includes('test-private'));
+      return true;
+    });
+    assert.equal(calls, 1);
+  });
+});

@@ -1,11 +1,24 @@
 import type { EspnLeague } from './sports-catalog';
 
+export type EspnResponseMetadata = { server?: string; via?: string; contentType?: string; proxyBlockReason?: string };
+
+// Deliberate allowlist: never expose cookies, auth, arbitrary headers or response bodies.
+export function espnResponseMetadata(headers: Headers): EspnResponseMetadata {
+  const selected: EspnResponseMetadata = {};
+  for (const [key, header] of [['server', 'server'], ['via', 'via'], ['contentType', 'content-type'], ['proxyBlockReason', 'x-mitmproxy-blocked-reason']] as const) {
+    const value = headers.get(header)?.replace(/[\x00-\x1f\x7f]/g, ' ').trim().slice(0, 160);
+    if (value) selected[key] = value;
+  }
+  return selected;
+}
+
 export type EspnFailureKind = 'http' | 'network' | 'timeout' | 'invalid-response';
 export type EspnEndpointDetails = {
   url: string;
   // null means no HTTP response was received, not a 404 or an empty schedule.
   httpStatus: number | null;
   errorKind?: EspnFailureKind;
+  responseMetadata?: EspnResponseMetadata;
 };
 
 /** Site v2 scoreboards, shared by scores, odds and diagnostics. Not Core v2/v3. */
@@ -17,7 +30,7 @@ export function espnScoreboardUrl(league: Pick<EspnLeague, 'sport' | 'league'> |
 }
 
 export class EspnEndpointError extends Error {
-  constructor(message: string, readonly url: string, readonly errorKind: EspnFailureKind, readonly httpStatus: number | null = null) {
+  constructor(message: string, readonly url: string, readonly errorKind: EspnFailureKind, readonly httpStatus: number | null = null, readonly responseMetadata?: EspnResponseMetadata) {
     super(message);
     this.name = 'EspnEndpointError';
   }
@@ -31,7 +44,8 @@ export function espnErrorMessage(error: unknown): string {
 
 export function espnFailureDetails(error: unknown, url: string): EspnEndpointDetails & { error: string } {
   if (error instanceof EspnEndpointError) {
-    return { url: error.url, httpStatus: error.httpStatus, errorKind: error.errorKind, error: error.message };
+    return { url: error.url, httpStatus: error.httpStatus, errorKind: error.errorKind, error: error.message,
+      ...(error.responseMetadata && Object.keys(error.responseMetadata).length ? { responseMetadata: error.responseMetadata } : {}) };
   }
   const timeout = error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name);
   return { url, httpStatus: null, errorKind: timeout ? 'timeout' : 'network', error: espnErrorMessage(error) };

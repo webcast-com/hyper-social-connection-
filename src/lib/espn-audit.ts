@@ -28,12 +28,14 @@ export async function auditEspnScoreboards(leagues: EspnLeague[] = ESPN_LEAGUES)
   const sports = [...new Set(leagues.map((league) => league.kind))].map((sport) => {
     const rows = results.filter((row) => row.sport === sport);
     return { sport, checked: rows.length, healthy: rows.filter((row) => row.ok).length,
+      http403: rows.filter((row) => row.httpStatus === 403).length,
       http404: rows.filter((row) => row.httpStatus === 404).length,
       noHttpResponse: rows.filter((row) => row.httpStatus === null).length };
   });
   return {
     checkedAt: new Date().toISOString(),
     summary: { checked: results.length, healthy: results.filter((row) => row.ok).length,
+      http403: results.filter((row) => row.httpStatus === 403).length,
       http404: results.filter((row) => row.httpStatus === 404).length,
       httpErrors: results.filter((row) => row.errorKind === 'http').length,
       networkFailures: results.filter((row) => row.errorKind === 'network').length,

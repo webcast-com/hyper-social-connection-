@@ -44,3 +44,18 @@ test('HTTP 404 is reported separately from failures without any HTTP response', 
   assert.match(reset.error, /ECONNRESET/);
   assert.equal(espnFailureDetails(new DOMException('Aborted', 'TimeoutError'), url).errorKind, 'timeout');
 });
+
+test('denial metadata is allowlisted, bounded and never includes cookies or arbitrary headers', async () => {
+  const { espnResponseMetadata } = await import('../../src/lib/espn-endpoints');
+  const headers = new Headers({
+    server: 'example\tedge', via: 'v'.repeat(500), 'content-type': 'text/html',
+    'x-mitmproxy-blocked-reason': 'OUTBOUND_HOST_DENIED',
+    'set-cookie': 'test-private-session', authorization: 'test-private-authorization', 'x-internal-secret': 'test-private-value',
+  });
+  const metadata = espnResponseMetadata(headers);
+  assert.deepEqual(Object.keys(metadata).sort(), ['contentType', 'proxyBlockReason', 'server', 'via']);
+  assert.equal(metadata.server, 'example edge');
+  assert.equal(metadata.via?.length, 160);
+  assert.equal(metadata.proxyBlockReason, 'OUTBOUND_HOST_DENIED');
+  assert.ok(!JSON.stringify(metadata).includes('test-private'));
+});

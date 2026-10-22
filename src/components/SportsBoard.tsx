@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { RefreshCw, Sparkles, Trophy } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+import EspnResponseDetails from '@/components/EspnResponseDetails';
 import SportsEventCard from '@/components/SportsEventCard';
 import {
   filterSportsEvents,
@@ -84,6 +85,7 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
     [board.events, sport, status, region, league, query],
   );
   const groups = useMemo(() => groupEventsByLeague(filtered), [filtered]);
+  const deniedCount = board.sources.filter((source) => source.httpStatus === 403).length;
   const liveCount = board.events.filter((e) => e.status === 'live' && e.source !== 'demo').length;
 
   return (
@@ -146,11 +148,15 @@ export default function SportsBoardView({ initial }: { initial: SportsBoard }) {
             : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
         </p>
       )}
+      {deniedCount > 0 && <p role="note" aria-label="ESPN access restriction" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+        Access to ESPN was refused (HTTP 403) for {deniedCount} feeds. Check the hosting network’s outbound-access policy and ESPN access permissions. The status alone does not identify who blocked the request; see response metadata below.
+      </p>}
       {board.sources.some((source) => !source.ok) && <details className="mb-4 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
         <summary className="min-h-11 cursor-pointer font-semibold">Unavailable ESPN feed details</summary>
         <ul className="space-y-3">{board.sources.filter((source) => !source.ok).map((source) => <li key={source.id} className="min-w-0 break-words">
           <p>{source.id}: {source.error || 'Unavailable'}</p>
           {source.httpStatus !== undefined && <p>{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`} · {source.errorKind || 'response'}</p>}
+          <EspnResponseDetails metadata={source.responseMetadata} />
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
         </li>)}</ul>
       </details>}

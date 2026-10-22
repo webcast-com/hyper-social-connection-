@@ -52,3 +52,19 @@ test('connection resets and malformed HTTP 200 responses cannot be confused with
     assert.equal(report.results[0].errorKind, 'invalid-response');
   });
 });
+
+test('all-sport HTTP 403 denials get distinct summary counts and retain metadata without retries', async () => {
+  let calls = 0;
+  await withFetch(async () => {
+    calls++; return new Response('test-private-body', { status: 403, headers: { server: 'example-edge', 'content-type': 'text/plain' } });
+  }, async () => {
+    const report = await auditEspnScoreboards();
+    assert.equal(calls, 38);
+    assert.equal(report.summary.http403, 38);
+    assert.equal(report.summary.http404, 0);
+    assert.equal(report.summary.networkFailures, 0);
+    assert.ok(report.sports.every((sport) => sport.http403 === sport.checked));
+    assert.ok(report.results.every((row) => row.httpStatus === 403 && row.responseMetadata?.server === 'example-edge'));
+    assert.ok(!JSON.stringify(report).includes('test-private-body'));
+  });
+});

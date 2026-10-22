@@ -1,4 +1,4 @@
-import { EspnEndpointError, espnErrorMessage, espnFailureDetails, espnScoreboardUrl } from './espn-endpoints';
+import { EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnFailureDetails, espnScoreboardUrl } from './espn-endpoints';
 import {
   BATCH_SIZE, FREE_MATCHES, MAX_MATCHES, ODDS_LEAGUES, dayStamp, field,
   mapOddsEvent, normalizeOddsRequest, text, type OddsBoard, type OddsMatch, type OddsRequest,
@@ -37,8 +37,9 @@ async function fetchBoard(request: OddsRequest): Promise<OddsBoard> {
           });
           httpStatus = response.status;
           if (!response.ok) {
-            await response.body?.cancel();
-            throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status);
+            const metadata = espnResponseMetadata(response.headers);
+            await response.body?.cancel().catch(() => undefined);
+            throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status, metadata);
           }
           const json: unknown = await response.json();
           const events = field(json, 'events');

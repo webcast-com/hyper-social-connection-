@@ -248,3 +248,21 @@ test('upstream odds 404s stay distinct from app-route 404s and network resets', 
   await expect(page.getByRole('link', { name: url, exact: true })).toHaveAttribute('href', url);
   await assertFit(page);
 });
+
+test('odds distinguish HTTP 403 access refusal from network unreachability and display only safe metadata', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json: {
+    matches: [], status: 'unavailable', truncated: false, fetchedAt: new Date().toISOString(),
+    sources: [{ path: 'basketball/nba', date: null, ok: false, count: 0, httpStatus: 403, errorKind: 'http', error: 'ESPN HTTP 403',
+      responseMetadata: { server: 'example-edge', via: '1.1 example-proxy', contentType: 'text/html' } }],
+  } }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('note', { name: 'ESPN access restriction' })).toContainText('HTTP 403');
+  await expect(page.getByRole('status')).toContainText('Access to ESPN odds was refused');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.getByText('Feed details (0/1 responding)', { exact: true }).click();
+  await expect(page.getByText('example-edge', { exact: true })).toBeVisible();
+  await expect(page.getByText('1.1 example-proxy', { exact: true })).toBeVisible();
+  await assertFit(page);
+});

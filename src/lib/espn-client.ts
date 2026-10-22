@@ -1,6 +1,6 @@
 import { parseEspnEvents } from './espn';
 import type { EspnLeague } from './sports-catalog';
-import { EspnEndpointError, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
+import { EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
 export { espnScoreboardUrl } from './espn-endpoints';
 
 type TransportOptions = { timeoutMs?: number; retryDelayMs?: number };
@@ -37,8 +37,9 @@ export async function fetchEspnScoreboard(league: EspnLeague, options: Transport
             if (Number.isFinite(wait)) retryAfterMs = Math.max(delayMs, wait);
           }
           // Release the failed response before retrying; never retry unsupported feeds.
-          await response.body?.cancel();
-          throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status);
+          const metadata = espnResponseMetadata(response.headers);
+          await response.body?.cancel().catch(() => undefined);
+          throw new EspnEndpointError(`ESPN HTTP ${response.status}`, url, 'http', response.status, metadata);
         }
         parsing = true;
         const events = parseEspnEvents(await response.json(), league);
