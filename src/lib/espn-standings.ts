@@ -3,7 +3,7 @@ import { MatchInputError } from './espn-match';
 import type { EspnEndpointDetails } from './espn-endpoints';
 
 export type StandingColumn = { name: string; label: string; description: string };
-export type StandingRow = { teamId: string; team: string; rank: string | null; note: string | null; values: Record<string, string | null> };
+export type StandingRow = { teamId: string; team: string; logo?: string | null; rank: string | null; note: string | null; values: Record<string, string | null> };
 export type StandingGroup = { id: string; label: string; columns: StandingColumn[]; rows: StandingRow[] };
 export type StandingsBoard = {
   league: string; requestedSeason: number | null; season: { year: number; label: string | null } | null;
@@ -20,6 +20,15 @@ export function resolveStandings(league: string, season?: string) {
 const obj = (v: unknown): Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 const text = (v: unknown): string | null => typeof v === 'string' && v.trim() ? v.trim().slice(0, 300) : typeof v === 'number' && Number.isFinite(v) ? String(v) : null;
+
+/** Only use provider-reported remote images; never infer a crest from a team ID. */
+export function safeStandingCrest(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 2048 || !value.trim()) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+  } catch { return null; }
+}
 
 /** Preserve supplied groups/order/ranks/stat labels, never calculate a league table from scores. */
 export function parseStandings(payload: unknown, requestedSeason: number | null): Pick<StandingsBoard, 'season' | 'groups' | 'status'> {
@@ -55,7 +64,7 @@ export function parseStandings(payload: unknown, requestedSeason: number | null)
           if (!columns.has(key)) columns.set(key, { name: key, label: text(stat.shortDisplayName) ?? text(stat.abbreviation) ?? text(stat.displayName) ?? key, description: text(stat.description) ?? text(stat.displayName) ?? key });
           values[key] = display;
         }
-        return [{ teamId, team: teamName, rank, note: text(obj(item.note).description), values }];
+        return [{ teamId, team: teamName, logo: safeStandingCrest(team.logo) ?? list(team.logos).slice(0, 10).map((logo) => safeStandingCrest(obj(logo).href)).find((logo) => logo !== null) ?? null, rank, note: text(obj(item.note).description), values }];
       });
       if (rows.length) groups.push({ id: path, label: labels.join(' / ') || 'League standings', columns: [...columns.values()], rows });
     }
@@ -83,7 +92,7 @@ export function isStandingsBoard(value: unknown, league: string, season: number 
         && group.columns.every((column) => ['name', 'label', 'description'].every((key) => typeof obj(column)[key] === 'string'))
         && Array.isArray(group.rows) && group.rows.length > 0 && group.rows.length <= 300 && group.rows.every((entry) => {
           const row = obj(entry);
-          return typeof row.teamId === 'string' && typeof row.team === 'string' && optionalText(row.rank) && optionalText(row.note)
+          return typeof row.teamId === 'string' && typeof row.team === 'string' && (row.logo === undefined || row.logo === null || safeStandingCrest(row.logo) !== null) && optionalText(row.rank) && optionalText(row.note)
             && row.values !== null && typeof row.values === 'object' && !Array.isArray(row.values) && Object.values(obj(row.values)).every(optionalText);
         });
     });

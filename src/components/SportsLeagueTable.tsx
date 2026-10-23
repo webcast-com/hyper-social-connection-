@@ -4,6 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MatchDetails } from '@/lib/espn-match';
 import { isStandingsBoard, type StandingsBoard } from '@/lib/espn-standings';
 
+function TeamCrest({ url, name }: { url: string | null | undefined; name: string }) {
+  const [failed, setFailed] = useState(false);
+  return <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 dark:bg-slate-700 dark:text-slate-200">
+    {url && !failed ? (
+      // Provider CDN images load directly; fixed dimensions reserve space and avoid a server image proxy.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="" width={28} height={28} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-7 w-7 object-contain" />
+    ) : <span>{name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()}</span>}
+  </span>;
+}
+
 export function SportsLeagueTable({ match }: { match: MatchDetails }) {
   const season = match.season?.year ?? null;
   const [board, setBoard] = useState<StandingsBoard | null>(null);
@@ -65,7 +76,7 @@ export function SportsLeagueTable({ match }: { match: MatchDetails }) {
           <thead className="bg-gray-100 dark:bg-slate-800 text-xs text-gray-600 dark:text-slate-300"><tr><th scope="col" className="px-3 py-3">Pos</th><th scope="col" className="sticky left-0 z-10 min-w-40 bg-gray-100 dark:bg-slate-800 px-3 py-3">Team</th>{group.columns.map((column) => <th key={column.name} scope="col" className="whitespace-nowrap px-3 py-3 text-right"><abbr title={column.description} className="no-underline">{column.label}</abbr></th>)}</tr></thead>
           <tbody>{group.rows.map((row) => {
             const involved = teams.includes(row.teamId); const background = involved ? 'bg-blue-50 dark:bg-sky-950' : 'bg-white dark:bg-slate-900';
-            return <tr key={row.teamId} className={`${background} border-t border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200`}><td className="px-3 py-3 tabular-nums">{row.rank ?? '—'}</td><th scope="row" className={`sticky left-0 z-10 max-w-52 px-3 py-3 font-medium ${background}`}><span className="block">{row.team}</span>{involved && <span className="mt-1 block text-xs text-blue-700 dark:text-sky-300">In this match</span>}{row.note && <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-slate-400">{row.note}</span>}</th>{group.columns.map((column) => <td key={column.name} className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{row.values[column.name] ?? '—'}</td>)}</tr>;
+            return <tr key={row.teamId} className={`${background} border-t border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200`}><td className="px-3 py-3 tabular-nums">{row.rank ?? '—'}</td><th scope="row" className={`sticky left-0 z-10 max-w-52 px-3 py-3 font-medium ${background}`}><span className="flex items-center gap-2"><TeamCrest key={`${row.teamId}-${row.logo ?? 'missing'}`} url={row.logo} name={row.team} /><span className="min-w-0 break-words">{row.team}</span></span>{involved && <span className="mt-1 block text-xs text-blue-700 dark:text-sky-300">In this match</span>}{row.note && <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-slate-400">{row.note}</span>}</th>{group.columns.map((column) => <td key={column.name} className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{row.values[column.name] ?? '—'}</td>)}</tr>;
           })}</tbody>
         </table>
       </div>

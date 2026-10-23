@@ -660,3 +660,28 @@ test('browser history request deadline releases retry and keeps other sections u
   await expect(page.getByRole('button', { name: 'Retry history', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Statistics', exact: true }).click(); await expect(page.getByRole('table')).toContainText('Possession'); release();
 });
+
+test('standings crests render decoratively and broken/missing images keep readable team names', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.route('**/api/sports/standings/**', (route) => route.fulfill({ json: standingsResponse() }));
+  await page.route('https://a.espncdn.com/**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="14" fill="blue"/></svg>' }));
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  const table = page.getByRole('table', { name: 'Group B', exact: true });
+  const home = table.getByRole('rowheader').filter({ hasText: 'Very Long International Home Club Name' });
+  const crest = home.locator('img');
+  await expect(crest).toHaveAttribute('src', 'https://a.espncdn.com/i/teamlogos/soccer/500/100.png');
+  await expect(crest).toHaveAttribute('alt', '');
+  await expect(crest).toHaveAttribute('width', '28');
+  await expect(crest).toHaveAttribute('loading', 'lazy');
+  await expect.poll(() => crest.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await crest.dispatchEvent('error');
+  await expect(home.locator('img')).toHaveCount(0);
+  await expect(home.getByText('VL', { exact: true })).toBeVisible();
+  await expect(home.getByText('Very Long International Home Club Name', { exact: true })).toBeVisible();
+  await expect(home.getByText('In this match', { exact: true })).toBeVisible();
+  await page.getByLabel('Table / group').selectOption({ label: 'Group A' });
+  await expect(page.getByRole('table', { name: 'Group A', exact: true }).locator('img')).toHaveCount(0);
+  await expect(page.getByText('Other Club', { exact: true })).toBeVisible();
+  await assertFit(page);
+});

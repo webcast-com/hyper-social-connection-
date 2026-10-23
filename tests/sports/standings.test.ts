@@ -65,3 +65,23 @@ test('match summary extracts supplied season without inferring it from kickoff',
   const season = { year: 2025, displayName: '2024/25' };
   assert.deepEqual(parseMatchDetails({ ...fixture, header: { ...fixture.header, season } }, { league: 'epl', eventId: '401234567' }).season, { year: 2025, label: '2024/25' });
 });
+
+test('standings retain provider crests from logo and logos with null for missing images', () => {
+  const result = parseStandings(standingsFixture(), 2026);
+  assert.equal(result.groups[0].rows[0].logo, null);
+  assert.equal(result.groups[1].rows[0].logo, 'https://a.espncdn.com/i/teamlogos/soccer/500/100.png');
+  assert.equal(result.groups[1].rows[1].logo, 'https://a.espncdn.com/i/teamlogos/soccer/500/200.png');
+});
+test('unsafe crest URLs are discarded while a safe logos fallback is retained', () => {
+  for (const logo of ['javascript:alert(1)', 'data:image/svg+xml,bad', '//attacker.test/logo.png', 'http://example.test/logo.png', 'https://user:secret@example.test/logo.png', {}, 'x'.repeat(2049)]) {
+    const result = parseStandings({ standings: { entries: [{ team: { id: '1', name: 'Club', logo, logos: [{ href: 'https://a.espncdn.com/club.png' }] } }] } }, null);
+    assert.equal(result.groups[0].rows[0].logo, 'https://a.espncdn.com/club.png');
+  }
+});
+test('client guard permits older crest-free responses and rejects unsafe nested image values', () => {
+  const board = { league: 'epl', requestedSeason: 2026, ...parseStandings(standingsFixture(), 2026), fetchedAt: '2026-10-23T18:00:00Z', source: { ok: true, url: resolveStandings('epl').url, httpStatus: 200 } };
+  delete board.groups[1].rows[0].logo;
+  assert.equal(isStandingsBoard(board, 'epl', 2026), true);
+  board.groups[1].rows[0].logo = 'javascript:alert(1)';
+  assert.equal(isStandingsBoard(board, 'epl', 2026), false);
+});
