@@ -11,7 +11,8 @@ export const metadata: Metadata = getPageMetadata({
 
 export const dynamic = 'force-dynamic';
 
-export default async function SportsPage() {
+export default async function SportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
   const board = await getSportsBoard();
-  return <SportsBoardView initial={board} />;
+  return <SportsBoardView key={typeof params.league === 'string' ? params.league : 'all'} initial={board} initialLeague={typeof params.league === 'string' ? params.league : 'all'} />;
 }

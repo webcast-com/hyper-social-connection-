@@ -25,7 +25,7 @@ function TeamLogo({ team }: { team: SportsEvent['home'] }) {
   );
 }
 
-export default function SportsEventCard({ event }: { event: SportsEvent }) {
+export default function SportsEventCard({ event, compact = false }: { event: SportsEvent; compact?: boolean }) {
   const showScore = event.status !== 'upcoming';
   const shareLine = event.race ? `${event.race.title} — ${event.leagueName}` :
     event.status === 'upcoming'
@@ -52,7 +52,10 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
         )}
       </div>
 
-      {event.race ? <SportsRaceSummary race={event.race} /> : <div>
+      {event.race ? <SportsRaceSummary race={event.race} /> : compact ? <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0 space-y-2">{[event.away, event.home].map((team, index) => <div key={index} className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><span className="shrink-0"><TeamLogo team={team} /></span><span className="min-w-0 break-words">{team.name}</span></div>)}</div>
+        <span aria-label={showScore ? `${event.away.name}: ${event.away.score ?? 'not reported'}; ${event.home.name}: ${event.home.score ?? 'not reported'}` : 'Scheduled match'} className="shrink-0 whitespace-nowrap rounded-xl bg-gray-50 px-2 py-3 text-lg font-black tabular-nums text-gray-900 dark:bg-gray-900 dark:text-white">{showScore ? `${event.away.score ?? '–'}–${event.home.score ?? '–'}` : 'VS'}</span>
+      </div> : <div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <TeamLogo team={event.away} />
           <span className={showScore

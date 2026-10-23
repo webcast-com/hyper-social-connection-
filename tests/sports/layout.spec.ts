@@ -33,7 +33,7 @@ test.beforeEach(async ({ page }) => {
 
 async function assertFit(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => innerWidth));
-  for (const input of await page.locator('input, select').all()) {
+  for (const input of await page.locator('input:visible, select:visible').all()) {
     const bounds = await input.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(await page.evaluate(() => innerWidth));
@@ -268,4 +268,56 @@ test('score cards link to real match details, excluding samples and motorsport',
   await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
   await page.evaluate(() => window.renderSports('demo'));
   await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+});
+
+test('country filtering narrows competitions and sport changes clear an incompatible country', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Country or area', exact: true }).selectOption('England');
+  await expect(page.getByRole('article')).toHaveCount(4);
+  await page.getByRole('combobox', { name: 'League or competition', exact: true }).selectOption('epl');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Basketball', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('all');
+  await expect(page.getByRole('article')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Reset filters', exact: true }).click();
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+});
+
+test('desktop country browser selects a league, and status/list/card controls preserve match links', async ({ page }) => {
+  const browser = page.locator('aside').getByRole('navigation', { name: 'Competition browser', exact: true });
+  await browser.getByText('England', { exact: true }).click();
+  await browser.getByRole('button', { name: 'Show Premier League', exact: true }).click();
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('epl');
+  const layouts = page.getByRole('group', { name: 'Score layout', exact: true });
+  for (const label of ['cards', 'list']) {
+    await layouts.getByRole('button', { name: label, exact: true }).click();
+    await expect(page.getByRole('article')).toHaveCount(1);
+    await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveAttribute('href', '/sports/matches/epl/401234567');
+  }
+  await page.getByRole('group', { name: 'Quick match status', exact: true }).getByRole('button', { name: 'Results', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No events in this view', exact: true })).toBeVisible();
+});
+
+test('mobile advanced filters and country browser stay reachable without hiding the first fixtures', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await expect(page.getByRole('combobox', { name: 'Region', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'More filters', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Match date (EAT)', exact: true }).selectOption('2026-10-22');
+  await page.getByRole('combobox', { name: 'Region', exact: true }).selectOption('asia');
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Fewer filters', exact: true }).click();
+  await page.getByText('Browse competitions', { exact: true }).click();
+  const browser = page.getByRole('navigation', { name: 'Competition browser', exact: true });
+  await browser.getByText('Japan', { exact: true }).click();
+  await browser.getByRole('button', { name: 'Show J1 League', exact: true }).click();
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await assertFit(page);
+});
+
+test('competition links initialize a filtered board and invalid league references safely show all', async ({ page }) => {
+  await page.evaluate(() => window.renderSports('live', false, 'nba'));
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('nba');
+  await page.evaluate(() => window.renderSports('live', false, '../private'));
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
 });

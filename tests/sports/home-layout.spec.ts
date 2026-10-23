@@ -384,3 +384,12 @@ for (const width of [320, 768, 1440]) {
     });
   }
 }
+
+test('match competition navigation returns to its league and missing stats never acquire comparison bars', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview());
+  const nav = page.getByRole('navigation', { name: 'Match navigation', exact: true });
+  await expect(nav.getByRole('link', { name: 'Premier League', exact: true })).toHaveAttribute('href', '/sports?league=epl');
+  await expect(page.getByRole('img', { name: /Relative comparison/ })).toHaveCount(1);
+  await page.evaluate(() => window.renderMatchDetailsReview('empty'));
+  await expect(page.getByRole('img', { name: /Relative comparison/ })).toHaveCount(0);
+});

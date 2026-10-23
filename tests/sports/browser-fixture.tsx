@@ -5,12 +5,12 @@ import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
-    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean) => void;
+    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialLeague?: string) => void;
   }
 }
 const root = createRoot(document.getElementById('root')!);
 let key = 0;
-window.renderSports = (mode, stress = false) => root.render(<SportsBoardView key={++key} initial={{
+window.renderSports = (mode, stress = false, initialLeague = 'all') => root.render(<SportsBoardView initialLeague={initialLeague} key={++key} initial={{
   mode: mode === 'empty' ? 'live' : mode,
   fetchedAt: new Date().toISOString(), predictions: [], sources: [],
   events: mode === 'empty' ? [] : SPORTS_COMPETITIONS.map((league) => ({
