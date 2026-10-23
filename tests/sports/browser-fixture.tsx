@@ -1,16 +1,24 @@
 import { createRoot } from 'react-dom/client';
+import SportsMatchDetails from '../../src/components/SportsMatchDetails';
+import { summaryFixture } from './match-fixture';
+import { parseMatchDetails, resolveMatch } from '../../src/lib/espn-match';
+import { readSportsFilters, sportsFilterHref } from '../../src/lib/sports-filters';
 import SportsBoardView from '../../src/components/SportsBoard';
 import { SPORTS_COMPETITIONS } from '../../src/lib/sports-catalog';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
-    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean) => void;
+    renderSportsMatch: (returnTo?: string) => void;
+    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialLeague?: string) => void;
   }
 }
 const root = createRoot(document.getElementById('root')!);
 let key = 0;
-window.renderSports = (mode, stress = false) => root.render(<SportsBoardView key={++key} initial={{
+window.renderSports = (mode, stress = false, initialLeague = 'all') => {
+  const filters = readSportsFilters(new URLSearchParams(initialLeague.startsWith('?') ? initialLeague : `league=${initialLeague}`));
+  window.history.replaceState(null, '', sportsFilterHref(filters));
+  root.render(<SportsBoardView initialFilters={filters} key={++key} initial={{
   mode: mode === 'empty' ? 'live' : mode,
   fetchedAt: new Date().toISOString(), predictions: [], sources: [],
   events: mode === 'empty' ? [] : SPORTS_COMPETITIONS.map((league) => ({
@@ -25,3 +33,12 @@ window.renderSports = (mode, stress = false) => root.render(<SportsBoardView key
     away: { name: stress ? 'Very Long International Away Club Name' : `${league.name} Away`, score: stress ? 183 : 1 },
   })),
 }} />);
+};
+
+window.renderSportsMatch = (returnTo) => {
+  const reference = { league: 'epl', eventId: '401234567' };
+  root.render(<SportsMatchDetails key={++key} reference={reference} returnTo={returnTo} initial={{
+    status: 'ready', match: parseMatchDetails(summaryFixture(), reference), fetchedAt: '2026-10-23T18:00:00Z',
+    source: { ok: true, httpStatus: 200, url: resolveMatch(reference.league, reference.eventId).url },
+  }} />);
+};

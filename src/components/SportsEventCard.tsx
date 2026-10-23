@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
+import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { matchHref } from '@/lib/espn-match';
 import SportsRaceSummary from './SportsRaceSummary';
 import type { SportsEvent } from '@/lib/sports';
@@ -25,7 +27,14 @@ function TeamLogo({ team }: { team: SportsEvent['home'] }) {
   );
 }
 
-export default function SportsEventCard({ event }: { event: SportsEvent }) {
+function MatchTarget({ href, label, children }: { href?: string; label: string; children: ReactNode }) {
+  return href ? <Link href={href} prefetch={false} aria-label={label} className="block rounded-xl transition-colors hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 dark:hover:bg-blue-950/40">{children}</Link> : <div>{children}</div>;
+}
+
+export default function SportsEventCard({ event, compact = false, returnTo }: { event: SportsEvent; compact?: boolean; returnTo?: string }) {
+  const back = safeSportsReturnPath(returnTo);
+  const href = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
+    ? `${matchHref(event.details)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
   const showScore = event.status !== 'upcoming';
   const shareLine = event.race ? `${event.race.title} — ${event.leagueName}` :
     event.status === 'upcoming'
@@ -52,7 +61,11 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
         )}
       </div>
 
-      {event.race ? <SportsRaceSummary race={event.race} /> : <div>
+      <MatchTarget href={href} label={`Open ${event.away.name}${showScore ? ` (${event.away.score ?? 'not reported'})` : ''} vs ${event.home.name}${showScore ? ` (${event.home.score ?? 'not reported'})` : ''} match details`}>
+      {event.race ? <SportsRaceSummary race={event.race} /> : compact ? <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0 space-y-2">{[event.away, event.home].map((team, index) => <div key={index} className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><span className="shrink-0"><TeamLogo team={team} /></span><span className="min-w-0 break-words">{team.name}</span></div>)}</div>
+        <span aria-label={showScore ? `${event.away.name}: ${event.away.score ?? 'not reported'}; ${event.home.name}: ${event.home.score ?? 'not reported'}` : 'Scheduled match'} className="min-w-20 shrink-0 whitespace-nowrap rounded-xl bg-gray-50 px-2 py-3 text-center text-lg font-black tabular-nums text-gray-900 dark:bg-gray-900 dark:text-white">{showScore ? `${event.away.score ?? '–'}–${event.home.score ?? '–'}` : 'VS'}</span>
+      </div> : <div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <TeamLogo team={event.away} />
           <span className={showScore
@@ -68,7 +81,9 @@ export default function SportsEventCard({ event }: { event: SportsEvent }) {
         </div>
       </div>}
 
-      {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
+      </MatchTarget>
+
+      {href && <Link href={href} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
 
       {(event.venue || event.status === 'upcoming') && (
         <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-gray-400">

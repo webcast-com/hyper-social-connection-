@@ -1,3 +1,4 @@
+import { competitionCountry, sportsDate } from './sports-navigation';
 /**
  * ESPN scores and fixtures, normalized into a shared board.
  * No external prediction provider is connected.
@@ -338,7 +339,7 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
 export function filterSportsEvents(
   events: SportsEvent[],
   filter: 'all' | EventStatus | SportKind,
-  options?: { sport?: SportKind | 'all'; status?: EventStatus | 'all'; region?: SportsRegion | 'all'; league?: string; query?: string },
+  options?: { sport?: SportKind | 'all'; status?: EventStatus | 'all'; region?: SportsRegion | 'all'; league?: string; query?: string; country?: string; date?: string },
 ): SportsEvent[] {
   if (options) {
     const query = options.query?.trim().toLowerCase();
@@ -346,8 +347,10 @@ export function filterSportsEvents(
       (!options.sport || options.sport === 'all' || event.sport === options.sport) &&
       (!options.status || options.status === 'all' || event.status === options.status) &&
       (!options.region || options.region === 'all' || competitionRegion(event.league) === options.region) &&
+      (!options.country || options.country === 'all' || competitionCountry(event.league) === options.country) &&
+      (!options.date || options.date === 'all' || sportsDate(event.startAt) === options.date) &&
       (!options.league || options.league === 'all' || event.league === options.league) &&
-      (!query || `${event.home.name} ${event.away.name} ${event.leagueName} ${event.race?.title || ''} ${event.race?.entries.map((entry) => entry.name).join(' ') || ''}`.toLowerCase().includes(query)),
+      (!query || `${event.home.name} ${event.away.name} ${event.leagueName} ${competitionCountry(event.league) || ''} ${event.race?.title || ''} ${event.race?.entries.map((entry) => entry.name).join(' ') || ''}`.toLowerCase().includes(query)),
     );
   }
   if (filter === 'all') return events;
