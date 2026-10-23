@@ -100,7 +100,7 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', { hasDatabase: false });
     const rows = await loaded.default();
-    assert.deepEqual(rows.map((row) => row.url), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/about', 'https://hyper.co.ke/privacy', 'https://hyper.co.ke/login', 'https://hyper.co.ke/signup', 'https://hyper.co.ke/search']);
+    assert.deepEqual(rows.map((row) => row.url), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/sports/nba', 'https://hyper.co.ke/sports/nfl', 'https://hyper.co.ke/about', 'https://hyper.co.ke/privacy', 'https://hyper.co.ke/login', 'https://hyper.co.ke/signup', 'https://hyper.co.ke/search']);
     assert.ok(rows.every((row) => row.lastModified === undefined));
   });
 });
@@ -117,6 +117,8 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
     assert.ok(rows.some((row) => row.url.endsWith('/search')));
+    assert.ok(rows.some((row) => row.url.endsWith('/sports/nba')));
+    assert.ok(rows.some((row) => row.url.endsWith('/sports/nfl')));
   });
 });
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {

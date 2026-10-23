@@ -6,6 +6,7 @@ import { RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { DEFAULT_SPORTS_FILTERS, sportsFilterHref, type SportsFilters } from '@/lib/sports-filters';
+import { SPORTS_LEAGUE_PAGES, scopeLeagueBoard, type SportsLeaguePage } from '@/lib/sports-league-pages';
 import { useSportsFilters } from '@/lib/use-sports-filters';
 import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
@@ -22,15 +23,17 @@ import {
   competitionRegion, type SportsRegion,
 } from '@/lib/sports-catalog';
 
-export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPORTS_FILTERS }: { initial: SportsBoard; initialFilters?: SportsFilters }) {
-  const [board, setBoard] = useState(initial);
-  const { filters, update } = useSportsFilters(initialFilters);
+export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPORTS_FILTERS, leaguePage }: { initial: SportsBoard; initialFilters?: SportsFilters; leaguePage?: SportsLeaguePage }) {
+  const [rawBoard, setBoard] = useState(initial);
+  const board = useMemo(() => leaguePage ? scopeLeagueBoard(rawBoard, leaguePage) : rawBoard, [rawBoard, leaguePage]);
+  const page = leaguePage ? SPORTS_LEAGUE_PAGES[leaguePage] : null;
+  const { filters, update } = useSportsFilters(initialFilters, leaguePage);
   const { sport, status, region, league, country, date, view, query } = filters;
   const [moreFilters, setMoreFilters] = useState(false);
   const resetFilters = () => update({ ...DEFAULT_SPORTS_FILTERS, view });
   const setLeague = (value: string) => update({ league: value });
-  const returnTo = sportsFilterHref(filters);
-  const filterChips = [
+  const returnTo = sportsFilterHref(filters, leaguePage);
+  const filterChips = ([
     { key: 'sport', label: 'Sport', value: sport === 'all' ? '' : SPORT_LABELS[sport] },
     { key: 'region', label: 'Region', value: SPORTS_REGIONS.find((item) => item.id === region)?.name ?? '' },
     { key: 'country', label: 'Country', value: country === 'all' ? '' : country },
@@ -38,7 +41,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     { key: 'status', label: 'Status', value: status === 'all' ? '' : { live: 'Live', upcoming: 'Upcoming', final: 'Results' }[status] },
     { key: 'date', label: 'Date (EAT)', value: date === 'all' ? '' : date },
     { key: 'query', label: 'Search', value: query },
-  ] as const;
+  ] as const).filter((chip) => !leaguePage || !['sport', 'region', 'country', 'league'].includes(chip.key));
   const countryOptions = [...new Set(SPORTS_COMPETITIONS.filter((item) =>
     (sport === 'all' || item.kind === sport) && (region === 'all' || item.region === region),
   ).map((item) => competitionCountry(item.slug)).filter((item): item is string => !!item))].sort();
@@ -105,15 +108,19 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   const deniedCount = board.sources.filter((source) => source.httpStatus === 403).length;
   const liveCount = board.events.filter((e) => e.status === 'live' && e.source !== 'demo').length;
 
+  const leagueNavigation = <nav aria-label="Sports leagues" className={`flex shrink-0 gap-2 ${leaguePage ? 'mb-3 flex-wrap' : ''}`}>
+        {[{ name: 'All sports', path: '/sports' }, ...Object.values(SPORTS_LEAGUE_PAGES)].map((item) => <Link key={item.path} href={item.path} prefetch={false} aria-current={(page?.path ?? '/sports') === item.path ? 'page' : undefined} className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${(page?.path ?? '/sports') === item.path ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 hover:bg-blue-50 dark:border-gray-700 dark:hover:bg-gray-800'}`}>{item.name}</Link>)}
+      </nav>;
+
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
       <div className="relative mb-3">
         <div>
           <h1 className="pr-28 text-2xl font-black flex items-center gap-2 text-gray-900 dark:text-white">
-            <Trophy className="text-amber-500" /> Sports
+            <Trophy className="shrink-0 text-amber-500" /> {page?.name ?? 'Sports'}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Worldwide scores and fixtures from ESPN
+            {page ? `${page.name} scores and fixtures from ESPN` : 'Worldwide scores and fixtures from ESPN'}
             {liveCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -136,6 +143,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </span>
       </div>
 
+      {leaguePage && leagueNavigation}
+      {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
       <div className="mb-3 flex items-center gap-2">
         <button type="button" onClick={() => void refreshScores(true)} disabled={refreshing}
           className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none sm:px-4 rounded-full border border-gray-200 bg-white px-2 py-2 text-[11px] font-bold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
@@ -159,7 +168,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           {board.mode === 'demo'
             ? 'Sample fixtures only — live providers are unavailable. These are not current scores or schedules.'
-            : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
+            : page ? `${page.name} scores are currently unavailable. No other league’s fixtures are substituted.` : 'Some feeds are unavailable. Showing fixtures from responding sources.'}
         </p>
       )}
       {deniedCount > 0 && <p role="note" aria-label="ESPN access restriction" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -174,7 +183,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
         </li>)}</ul>
       </details>}
-      <div role="group" aria-label="Filter by sport" className="flex min-w-0 gap-2 overflow-x-auto pb-2 mb-3 sm:flex-wrap">
+      {!leaguePage && <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto pb-2 sm:flex-wrap">{leagueNavigation}<div role="group" aria-label="Filter by sport" className="flex shrink-0 gap-2">
         {(['all', ...AVAILABLE_SPORTS] as const).map((id) => (
           <button
             key={id}
@@ -190,7 +199,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
             {id === 'all' ? 'All sports' : SPORT_LABELS[id]}
           </button>
         ))}
-      </div>
+      </div></div>}
       <div id="sports-filters" className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
         <label className={`${moreFilters ? '' : 'hidden sm:block'} min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300`}>
           Match status
@@ -198,6 +207,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
             <option value="all">All statuses</option><option value="live">Live</option><option value="upcoming">Upcoming</option><option value="final">Results</option>
           </select>
         </label>
+        {!leaguePage && <>
         <label className={`${moreFilters ? '' : 'hidden sm:block'} min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300`}>
           Region
           <select value={region} onChange={(e) => update({ region: e.target.value as SportsRegion | 'all' })} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800">
@@ -219,6 +229,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
             {leagueOptions.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
           </select>
         </label>
+        </>}
         <label className="col-span-2 min-w-0 text-xs font-semibold text-gray-600 sm:col-span-1 dark:text-gray-300">
           Search teams or leagues
           <input type="search" maxLength={160} value={query} onChange={(e) => update({ query: e.target.value }, 'replace')} placeholder="Team or competition…" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800" />
@@ -248,16 +259,16 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         <button type="button" aria-expanded={moreFilters} aria-controls="sports-filters" onClick={() => setMoreFilters((value) => !value)} className="min-h-11 text-xs font-semibold text-blue-600 sm:hidden dark:text-blue-400">{moreFilters ? 'Fewer filters' : (date !== 'all' || region !== 'all') ? 'More filters (active)' : 'More filters'}</button>
         <div role="group" aria-label="Score layout" className="flex gap-1">{(['list', 'cards'] as const).map((id) => <button type="button" key={id} aria-pressed={view === id} onClick={() => update({ view: id })} className={`min-h-11 rounded-xl px-3 text-xs font-bold capitalize ${view === id ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{id}</button>)}</div>
       </div>
-      <details className="mb-3 rounded-xl border border-gray-200 bg-white p-2 lg:hidden dark:border-gray-700 dark:bg-gray-800">
+      {!leaguePage && <details className="mb-3 rounded-xl border border-gray-200 bg-white p-2 lg:hidden dark:border-gray-700 dark:bg-gray-800">
         <summary className="min-h-11 cursor-pointer content-center px-2 text-sm font-bold text-gray-900 dark:text-white">Browse competitions</summary>
         {browser}
-      </details>
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
-        <aside className="hidden min-w-0 lg:block"><div className="sticky top-24">{browser}</div></aside>
+      </details>}
+      <div className={`grid min-w-0 gap-5 ${leaguePage ? '' : 'lg:grid-cols-[230px_minmax(0,1fr)]'}`}>
+        {!leaguePage && <aside className="hidden min-w-0 lg:block"><div className="sticky top-24">{browser}</div></aside>}
         <div className="min-w-0">
       {groups.length === 0 ? (
         <EmptyState variant="search" title="No events in this view">
-          Try another region, sport or competition, or reset the filters. Fixtures appear when reported by a provider; some competitions may be out of season.
+          {leaguePage ? `No ${page!.name} fixtures match this view. Reset filters or check again later; games appear only when reported by ESPN, including during the off-season.` : 'Try another region, sport or competition, or reset the filters. Fixtures appear when reported by a provider; some competitions may be out of season.'}
         </EmptyState>
       ) : (
         <div className="space-y-4">
@@ -279,9 +290,9 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </div>
       </div>
       <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-        {SPORTS_COMPETITIONS.length} competitions · {AVAILABLE_SPORTS.length} sports · ESPN-reported fixtures
+        {page ? `${page.name} · ESPN-reported fixtures` : `${SPORTS_COMPETITIONS.length} competitions · ${AVAILABLE_SPORTS.length} sports · ESPN-reported fixtures`}
       </p>
-      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">Availability varies by season and provider. Date and country filters apply to loaded fixtures only; they do not request historical schedules.</p>
+      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">{page ? 'Availability varies by season and provider. Dates filter loaded fixtures only; this page does not fetch full-season or historical schedules.' : 'Availability varies by season and provider. Date and country filters apply to loaded fixtures only; they do not request historical schedules.'}</p>
     </div>
   );
 }

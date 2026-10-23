@@ -412,3 +412,61 @@ test('long active search chips fit at 320px and can be removed independently', a
   await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('England');
   await expect(page.getByRole('article')).toHaveCount(4);
 });
+
+for (const league of ['nba', 'nfl'] as const) {
+  for (const width of [320, 768, 1440]) {
+    test(`${league.toUpperCase()} dedicated page keeps scoped filters and match return context at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      if (width === 768) await page.evaluate(() => document.documentElement.classList.add('dark'));
+      await page.evaluate((league) => window.renderSports('live', false, '?league=epl&sport=football', league), league);
+      await expect(page.getByRole('heading', { level: 1, name: league.toUpperCase(), exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Sports leagues' }).getByRole('link', { name: league.toUpperCase(), exact: true })).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('group', { name: 'Filter by sport' })).toHaveCount(0);
+      await expect(page.getByLabel('League or competition', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Premier League Home', { exact: true })).toHaveCount(0);
+      await expect(page.getByText(`${league.toUpperCase()} Home`, { exact: true }).first()).toBeVisible();
+      await page.getByRole('button', { name: 'cards', exact: true }).click();
+      expect(new URL(page.url()).pathname).toBe(`/sports/${league}`);
+      expect(new URL(page.url()).searchParams.get('view')).toBe('cards');
+      const detail = page.getByRole('link', { name: 'View match details', exact: true }).first();
+      const href = new URL((await detail.getAttribute('href'))!, page.url());
+      expect(href.pathname).toBe(`/sports/matches/${league}/401234567`);
+      expect(href.searchParams.get('returnTo')).toBe(`/sports/${league}?view=cards`);
+      await page.getByRole('button', { name: 'Results', exact: true }).click();
+      await expect(page.getByText('No events in this view', { exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Reset filters', exact: true }).click();
+      await expect(page.getByText(`${league.toUpperCase()} Home`, { exact: true }).first()).toBeVisible();
+      expect(new URL(page.url()).pathname).toBe(`/sports/${league}`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    });
+  }
+}
+test('NBA page keeps native back/forward and failed refresh inside the league', async ({ page }) => {
+  await page.evaluate(() => window.renderSports('live', false, '?view=cards', 'nba'));
+  await page.getByRole('button', { name: 'Upcoming', exact: true }).click();
+  await page.getByRole('button', { name: 'Live', exact: true }).click();
+  await page.evaluate(() => history.back());
+  await expect(page.getByRole('button', { name: 'Upcoming', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.evaluate(() => history.forward());
+  await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'All matches', exact: true }).click();
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ status: 503, json: {} }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Showing the previous update');
+  await expect(page.getByText('NBA Home', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('NFL Home', { exact: true })).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/sports/nba');
+});
+test('NBA refresh isolates failed NFL diagnostics and keeps only NBA fixtures', async ({ page }) => {
+  await page.evaluate(() => window.renderSports('live', false, 'all', 'nba'));
+  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: {
+    mode: 'partial', predictions: [], fetchedAt: '2026-10-23T18:00:00Z', sources: [{ id: 'espn:nba', ok: true, count: 1 }, { id: 'espn:nfl', ok: false, count: 0, httpStatus: 403 }],
+    events: ['nba', 'nfl'].map((league) => ({ id: league, league, leagueName: league.toUpperCase(), sport: league === 'nba' ? 'basketball' : 'american-football', source: 'espn', status: 'live', startAt: '2026-10-23T18:00:00Z', home: { name: `${league} refreshed home`, score: 112 }, away: { name: `${league} refreshed away`, score: 111 } })),
+  } }));
+  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
+  await expect(page.getByText('nba refreshed home', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('nfl refreshed home', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Live feeds', { exact: true })).toBeVisible();
+  await expect(page.getByRole('note', { name: 'ESPN access restriction' })).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe('/sports/nba');
+});

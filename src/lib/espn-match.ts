@@ -10,6 +10,8 @@ export type MatchPlayerStats = { teamId: string; label: string; columns: string[
 export type MatchUpdate = { id: string; text: string; clock: string | null; period: string | null; team: string | null; participants: string[] };
 export type MatchDetails = {
   reference: MatchReference; leagueName: string; title: string; kickoff: string | null; venue: string | null;
+  season?: { year: number; label: string | null } | null;
+  information?: { stage: string | null; attendance: string | null; officials: { name: string; role: string | null }[] };
   state: string | null; statusText: string | null; teams: MatchTeam[]; statistics: MatchStatistics[];
   lineups: MatchLineup[]; playerStats: MatchPlayerStats[]; updates: MatchUpdate[]; updatesLabel: string;
 };
@@ -140,11 +142,30 @@ export function parseMatchDetails(payload: unknown, reference: MatchReference): 
   const rawDate = text(at(competition, 'date')) ?? text(at(header, 'date'));
   const status = at(competition, 'status', 'type') ?? at(header, 'status', 'type');
   const kickoff = rawDate && Number.isFinite(Date.parse(rawDate)) ? new Date(rawDate).toISOString() : null;
+  const seasonYear = Number(at(header, 'season', 'year') ?? at(payload, 'season', 'year'));
+  const season = Number.isInteger(seasonYear) && seasonYear >= 1900 && seasonYear <= 2100 ? { year: seasonYear, label: text(at(header, 'season', 'displayName')) ?? text(at(payload, 'season', 'displayName')) } : null;
   return {
-    reference, leagueName: meta.name, title: `${teams[0].name} vs ${teams[1].name}`,
+    information: {
+      stage: text(at(competition, 'round', 'displayName')) ?? text(at(competition, 'round', 'name')) ?? text(at(header, 'round', 'displayName')) ?? text(at(header, 'round', 'name')),
+      attendance: (() => { const value = display(at(payload, 'gameInfo', 'attendance')) ?? display(at(competition, 'attendance')); return value && /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(value) ? value : null; })(),
+      officials: array(at(payload, 'gameInfo', 'officials')).slice(0, 20).flatMap((official) => {
+        const name = text(at(official, 'displayName')) ?? text(at(official, 'fullName'));
+        return name ? [{ name, role: text(at(official, 'position', 'displayName')) ?? text(at(official, 'position', 'name')) }] : [];
+      }),
+    },
+    season, reference, leagueName: meta.name, title: `${teams[0].name} vs ${teams[1].name}`,
     kickoff, venue: text(at(payload, 'gameInfo', 'venue', 'fullName')) ?? text(at(competition, 'venue', 'fullName')),
     state: text(at(status, 'state')),
     statusText: text(at(status, 'detail')) ?? text(at(status, 'shortDetail')),
     teams, statistics: [...statisticMap.values()], lineups: [...lineups.values()], playerStats, updates, updatesLabel,
   };
+}
+
+/** Optional metadata is validated separately for old/new API deployments and safe refreshes. */
+export function validMatchMetadata(value: unknown): boolean {
+  const data = object(value); const optionalText = (v: unknown) => v === null || typeof v === 'string';
+  const season = object(data.season); const info = object(data.information);
+  return (data.season === undefined || data.season === null || (typeof season.year === 'number' && Number.isInteger(season.year) && season.year >= 1900 && season.year <= 2100 && optionalText(season.label)))
+    && (data.information === undefined || (optionalText(info.stage) && optionalText(info.attendance) && Array.isArray(info.officials) && info.officials.length <= 20
+      && info.officials.every((raw) => typeof object(raw).name === 'string' && optionalText(object(raw).role))));
 }
