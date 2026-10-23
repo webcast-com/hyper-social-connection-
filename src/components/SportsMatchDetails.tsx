@@ -6,6 +6,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import EspnResponseDetails from './EspnResponseDetails';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry, statisticShare } from '@/lib/sports-navigation';
+import { safeSportsReturnPath } from '@/lib/sports-filters';
 import type { MatchBoard, MatchLineup } from '@/lib/espn-match';
 
 const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events']] as const;
@@ -29,7 +30,7 @@ function Lineup({ lineup, name }: { lineup: MatchLineup; name: string }) {
   </article>;
 }
 
-export default function SportsMatchDetails({ initial, reference }: { initial: MatchBoard; reference: { league: string; eventId: string } }) {
+export default function SportsMatchDetails({ initial, reference, returnTo }: { initial: MatchBoard; reference: { league: string; eventId: string }; returnTo?: string }) {
   const [board, setBoard] = useState(initial);
   const [section, setSection] = useState<Section>('statistics');
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ export default function SportsMatchDetails({ initial, reference }: { initial: Ma
   const teamName = (id: string) => match?.teams.find((team) => team.id === id)?.name ?? 'Team';
   return <div className="mx-auto max-w-5xl p-3 text-gray-900 sm:p-5 dark:text-white">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-      <Link href="/sports" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
+      <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
       <button type="button" onClick={refresh} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-bold text-white disabled:opacity-60"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Refreshing…' : 'Refresh details'}</button>
     </div>
     {error && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{error}</p>}

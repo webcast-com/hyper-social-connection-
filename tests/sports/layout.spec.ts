@@ -22,7 +22,11 @@ test.beforeEach(async ({ page }) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === '/fixture.js') return route.fulfill({ contentType: 'text/javascript', body: javascript });
     if (pathname === '/fixture.css') return route.fulfill({ contentType: 'text/css', body: css });
-    if (pathname === '/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"></head><body><main id="root"></main><script src="/fixture.js"></script></body></html>' });
+    if (pathname === '/' || pathname === '/sports' || pathname.startsWith('/sports/matches/')) {
+      const start = pathname === '/sports' ? 'window.renderSports("live",false,window.location.search);'
+        : pathname.startsWith('/sports/matches/') ? 'window.renderSportsMatch(new URL(location.href).searchParams.get("returnTo") || undefined);' : '';
+      return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"></head><body><main id="root"></main><script src="/fixture.js"></script><script>${start}</script></body></html>` });
+    }
     return route.abort();
   });
   await page.goto('http://sports.test');
@@ -292,7 +296,7 @@ test('desktop country browser selects a league, and status/list/card controls pr
   for (const label of ['cards', 'list']) {
     await layouts.getByRole('button', { name: label, exact: true }).click();
     await expect(page.getByRole('article')).toHaveCount(1);
-    await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveAttribute('href', '/sports/matches/epl/401234567');
+    await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent(`/sports?league=epl${label === 'cards' ? '&view=cards' : ''}`)}`);
   }
   await page.getByRole('group', { name: 'Quick match status', exact: true }).getByRole('button', { name: 'Results', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No events in this view', exact: true })).toBeVisible();
@@ -320,4 +324,91 @@ test('competition links initialize a filtered board and invalid league reference
   await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('nba');
   await page.evaluate(() => window.renderSports('live', false, '../private'));
   await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+});
+
+test('compatible country choices survive sport changes and removable chips leave other filters intact', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Country or area', exact: true }).selectOption('England');
+  await page.getByRole('button', { name: 'Football', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('England');
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Rugby', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('England');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await page.getByRole('group', { name: 'Active filters', exact: true }).getByRole('button', { name: 'Remove country filter', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Rugby', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('article')).toHaveCount(2);
+  await expect(page).toHaveURL(/sport=rugby$/);
+});
+
+test('native back and forward restore filters and layout without new feed requests', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/api/sports**', (route) => { requests++; return route.abort(); });
+  await page.getByRole('combobox', { name: 'Country or area', exact: true }).selectOption('England');
+  await page.getByRole('button', { name: 'Football', exact: true }).click();
+  await page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'cards', exact: true }).click();
+  await expect(page).toHaveURL(/sport=football&country=England&view=cards$/);
+  await page.goBack();
+  await expect(page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'list', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('article')).toHaveCount(3);
+  await page.goBack();
+  await expect(page.getByRole('button', { name: 'All sports', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('article')).toHaveCount(4);
+  await page.goForward();
+  await page.goForward();
+  await expect(page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'cards', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(requests).toBe(0);
+});
+
+test('shared URLs restore query/date/layout, and typing replaces history rather than adding entries', async ({ page }) => {
+  await page.goto('http://sports.test/sports?sport=football&country=England&league=epl&status=live&date=2026-10-22&q=Premier&view=cards');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('epl');
+  await expect(page.getByLabel('Search teams or leagues')).toHaveValue('Premier');
+  const entries = await page.evaluate(() => history.length);
+  await page.getByLabel('Search teams or leagues').fill('Premier League');
+  expect(await page.evaluate(() => history.length)).toBe(entries);
+  await page.reload();
+  await expect(page.getByLabel('Search teams or leagues')).toHaveValue('Premier League');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  await expect(page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'cards', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+for (const view of ['list', 'cards']) {
+  test(`clickable ${view} match area and detail back link restore the complete scoreboard context`, async ({ page }) => {
+    const search = `?sport=football&region=europe&country=England&league=epl&status=live&date=2026-10-22&q=Premier${view === 'cards' ? '&view=cards' : ''}`;
+    await page.goto(`http://sports.test/sports${search}`);
+    const row = page.getByRole('article');
+    const mainLink = row.getByRole('link', { name: /^Open .* match details$/ });
+    expect(await row.locator('a a, a button').count()).toBe(0);
+    await mainLink.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Very Long International Away Club Name');
+    const back = page.getByRole('link', { name: 'Back to sports scores', exact: true });
+    await expect(back).toHaveAttribute('href', `/sports${search}`);
+    await back.click();
+    await expect(page.getByRole('article')).toHaveCount(1);
+    await expect(page.getByLabel('Search teams or leagues')).toHaveValue('Premier');
+    await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('England');
+    await expect(page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: view, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  });
+}
+
+test('sample and race rows stay non-navigable and copy actions remain outside match links', async ({ page }) => {
+  await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
+  await expect(page.getByRole('link', { name: /^Open .* match details$/ })).toHaveCount(0);
+  await page.evaluate(() => window.renderSports('demo'));
+  await expect(page.getByRole('link', { name: /^Open .* match details$/ })).toHaveCount(0);
+  await page.evaluate(() => window.renderSports('live', false, 'jleague'));
+  const button = page.getByRole('button', { name: 'Copy to post', exact: true });
+  expect(await button.evaluate((element) => element.closest('a') !== null)).toBe(false);
+});
+
+test('long active search chips fit at 320px and can be removed independently', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.getByRole('combobox', { name: 'Country or area', exact: true }).selectOption('England');
+  await page.getByLabel('Search teams or leagues').fill('long-search-'.repeat(15));
+  await assertFit(page);
+  await page.getByRole('button', { name: 'Remove search filter', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('England');
+  await expect(page.getByRole('article')).toHaveCount(4);
 });

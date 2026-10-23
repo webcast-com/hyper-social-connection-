@@ -15,7 +15,7 @@ declare global {
   interface Window {
     renderInformationReview: (page: 'about' | 'privacy') => void;
     matchReviewBoard: MatchBoard;
-    renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball') => Promise<void>;
+    renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball', returnTo?: string) => Promise<void>;
     renderPredictionsReview: (status?: OddsBoard['status'], signedIn?: boolean) => Promise<void>;
     oddsReviewBoard: OddsBoard;
     predictionPosts: Record<string, FormDataEntryValue>[];
@@ -79,7 +79,7 @@ window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
   </div>);
 };
 
-window.renderMatchDetailsReview = async (mode = 'ready') => {
+window.renderMatchDetailsReview = async (mode = 'ready', returnTo) => {
   window.homeReviewUser = null;
   const reference = { league: mode === 'basketball' ? 'nba' : 'epl', eventId: '401234567' };
   const fixture = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
@@ -87,7 +87,7 @@ window.renderMatchDetailsReview = async (mode = 'ready') => {
   window.matchReviewBoard = { match, status: match ? 'ready' : 'unavailable', fetchedAt: '2026-10-23T18:00:00Z',
     source: { url: resolveMatch(reference.league, reference.eventId).url, ok: !!match, httpStatus: match ? 200 : 403,
       ...(match ? {} : { error: 'ESPN HTTP 403', errorKind: 'http' as const, responseMetadata: { server: 'example-edge' } }) } };
-  const content = await MatchDetailsPage({ params: Promise.resolve(reference) });
+  const content = await MatchDetailsPage({ params: Promise.resolve(reference), searchParams: Promise.resolve(returnTo ? { returnTo } : {}) });
   root.render(<div key={++key}><Navbar user={null} /><main className="app-main app-surface max-w-7xl mx-auto">{content}</main></div>);
 };
 

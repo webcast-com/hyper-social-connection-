@@ -393,3 +393,12 @@ test('match competition navigation returns to its league and missing stats never
   await page.evaluate(() => window.renderMatchDetailsReview('empty'));
   await expect(page.getByRole('img', { name: /Relative comparison/ })).toHaveCount(0);
 });
+
+test('actual match page forwards only safe scoreboard return contexts to its back link', async ({ page }) => {
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', '/sports?sport=football&country=England&league=epl&view=cards'));
+  await expect(page.getByRole('link', { name: 'Back to sports scores', exact: true })).toHaveAttribute('href', '/sports?sport=football&country=England&league=epl&view=cards');
+  for (const value of ['https://evil.test/path', '//evil.test/sports', '/settings']) {
+    await page.evaluate((returnTo) => window.renderMatchDetailsReview('ready', returnTo), value);
+    await expect(page.getByRole('link', { name: 'Back to sports scores', exact: true })).toHaveAttribute('href', '/sports');
+  }
+});
