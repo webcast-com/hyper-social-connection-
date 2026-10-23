@@ -6,6 +6,8 @@ import postcss from 'postcss';
 import tailwind from '@tailwindcss/postcss';
 import { parseStandings, resolveStandings } from '../../src/lib/espn-standings';
 import { standingsFixture } from './standings-fixture';
+import { parseTeamSchedule, recentGames, type MatchHistoryBoard } from '../../src/lib/espn-match-history';
+import { historyEvent, scheduleFixture } from './history-fixture';
 
 let javascript = '';
 let css = '';
@@ -530,4 +532,131 @@ test('hung browser table requests have a twelve-second deadline and leave match 
   await page.getByRole('button', { name: 'Statistics', exact: true }).click();
   await expect(page.getByRole('table')).toContainText('Possession');
   release();
+});
+
+function historyResponse(): MatchHistoryBoard {
+  const cutoff = '2026-10-23T18:00:00.000Z';
+  const teams = ['100', '200'].map((id) => {
+    const events = [historyEvent(), historyEvent(id === '100' ? '9002' : '9003', '2026-10-19T18:00:00Z', id === '100' ? ['100', '300'] : ['400', '200'])];
+    return { teamId: id, name: `Very Long International ${id === '100' ? 'Home' : 'Away'} Club Name`,
+      games: parseTeamSchedule(scheduleFixture(id, 2026, events), id, 2026, cutoff, '401234567'),
+      sources: [2026, 2025].map((season) => ({ ok: true, season, url: `https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/${id}/schedule?season=${season}`, httpStatus: 200 })) };
+  });
+  return { reference: { league: 'epl', eventId: '401234567' }, cutoff, seasonYears: [2026, 2025], teams, headToHead: recentGames(teams.flatMap((team) => team.games), ['100', '200']), status: 'ready', fetchedAt: cutoff, message: null };
+}
+for (const width of [320, 768, 1440]) {
+  test(`guest match info, recent form and limited head-to-head fit at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 768) await page.evaluate(() => document.documentElement.classList.add('dark'));
+    let calls = 0;
+    await page.route('**/api/sports/matches/**/history*', (route) => { calls++; return route.fulfill({ json: historyResponse() }); });
+    await page.evaluate(() => window.renderMatchDetailsReview('ready', '/sports?league=epl&view=cards', 2026));
+    for (const name of ['Lineups & rosters', 'Match events', 'Player stats', 'Match info']) await page.getByRole('button', { name, exact: true }).click();
+    const info = page.getByRole('region', { name: 'Match info', exact: true });
+    await expect(info.getByText('Quarter-finals', { exact: true })).toBeVisible();
+    await expect(info.getByText('0', { exact: true })).toBeVisible();
+    await expect(info.getByText('Reported Referee · Referee', { exact: true })).toBeVisible();
+    expect(calls).toBe(0); await assertFit(page);
+    await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Recent form', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Head-to-head', exact: true })).toBeVisible();
+    await expect(page.getByText(/not a complete history or an all-time/)).toBeVisible();
+    await expect(page.getByRole('listitem')).toHaveCount(5); expect(calls).toBe(1);
+    await expect(page.getByLabel('Win', { exact: true })).toHaveCount(2);
+    await expect(page.getByLabel('Loss', { exact: true })).toHaveCount(2);
+    const result = page.getByRole('link').filter({ hasText: 'Reported Team 100' }).first();
+    await expect(result).toHaveAttribute('href', '/sports/matches/epl/9001?returnTo=%2Fsports%3Fleague%3Depl%26view%3Dcards');
+    await result.focus(); await expect(result).toBeFocused(); await assertFit(page);
+    await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+    await expect(page.getByRole('table')).toContainText('Possession');
+    await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Recent form', exact: true })).toBeVisible(); expect(calls).toBe(1);
+  });
+}
+test('history loading is single-flight and match refresh does not refetch already opened history', async ({ page }) => {
+  let calls = 0; let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route('**/api/sports/matches/**/history*', async (route) => { calls++; await gate; return route.fulfill({ json: historyResponse() }); });
+  await page.route('**/api/sports/matches/epl/401234567?refresh=1', async (route) => route.fulfill({ json: await page.evaluate(() => window.matchReviewBoard) }));
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Loading history…', exact: true })).toBeDisabled();
+  await expect.poll(() => calls).toBe(1);
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  release(); await expect(page.getByRole('heading', { name: 'Recent form', exact: true })).toBeVisible();
+  const response = page.waitForResponse('**/api/sports/matches/epl/401234567?refresh=1');
+  await page.getByRole('button', { name: 'Refresh details', exact: true }).click(); await response;
+  await expect(page.getByRole('button', { name: 'Refresh details', exact: true })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Recent form', exact: true })).toBeVisible(); expect(calls).toBe(1);
+});
+test('failed or partial history refresh keeps previous results and its separate retry control', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/matches/**/history*', (route) => {
+    calls++; if (calls === 2) return route.fulfill({ status: 503, json: { error: 'busy' } });
+    const board = historyResponse();
+    if (calls === 3) { board.status = 'partial'; board.message = 'Some schedules are unavailable'; board.teams[0].sources[0].ok = false; board.teams[0].games = []; }
+    return route.fulfill({ json: board });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  await expect(page.getByRole('listitem')).toHaveCount(5);
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: 'Refresh history', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Showing previously loaded results');
+    await expect(page.getByRole('listitem')).toHaveCount(5);
+  }
+  expect(calls).toBe(3);
+});
+test('partial and empty history disclose limited coverage, not an all-time claim', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/matches/**/history*', (route) => {
+    calls++; const board = historyResponse(); board.headToHead = []; board.teams.forEach((team) => { team.games = []; });
+    if (calls === 1) { board.status = 'partial'; board.message = 'Some requested schedules are unavailable'; board.teams[0].sources[0].ok = false; }
+    return route.fulfill({ json: board });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  await expect(page.getByText('Some requested schedules are unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText(/does not mean the teams have never met/)).toBeVisible();
+  await expect(page.getByText(/No usable completed results/)).toHaveCount(2);
+  await page.getByRole('button', { name: 'Refresh history', exact: true }).click();
+  await expect(page.getByText('Some requested schedules are unavailable', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('listitem')).toHaveCount(0);
+});
+test('unknown match season has a clear unavailable message; missing match information stays missing', async ({ page }) => {
+  await page.route('**/api/sports/matches/**/history*', (route) => route.fulfill({ json: { ...historyResponse(), status: 'unavailable', seasonYears: [], teams: [], headToHead: [], message: 'Match season not reported; historical results cannot be safely selected.' } }));
+  await page.evaluate(() => window.renderMatchDetailsReview('empty'));
+  await page.getByRole('button', { name: 'Match info', exact: true }).click();
+  const info = page.getByRole('region', { name: 'Match info', exact: true });
+  await expect(info.getByText('—', { exact: true })).toHaveCount(5);
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Match season not reported');
+  await expect(page.getByRole('button', { name: 'Retry history', exact: true })).toBeEnabled();
+  await expect(page.getByRole('listitem')).toHaveCount(0);
+});
+test('history rejects future results and malformed metadata without losing match data', async ({ page }) => {
+  await page.route('**/api/sports/matches/**/history*', (route) => { const board = historyResponse(); board.headToHead[0].kickoff = '2027-01-01'; return route.fulfill({ json: board }); });
+  await page.route('**/api/sports/matches/epl/401234567?refresh=1', async (route) => {
+    const board = await page.evaluate(() => window.matchReviewBoard);
+    return route.fulfill({ json: { ...board, match: { ...board.match, information: { stage: null, attendance: null, officials: [{}] } } } });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Match history could not be loaded');
+  await expect(page.getByRole('listitem')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Refresh details', exact: true }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Could not refresh match details' })).toBeVisible();
+  await page.getByRole('button', { name: 'Match info', exact: true }).click();
+  await expect(page.getByText('Reported Referee · Referee', { exact: true })).toBeVisible();
+});
+test('browser history request deadline releases retry and keeps other sections usable', async ({ page }) => {
+  await page.clock.install();
+  let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; }); let calls = 0;
+  await page.route('**/api/sports/matches/**/history*', async (route) => { calls++; await gate; return route.fulfill({ json: historyResponse() }); });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'Form & H2H', exact: true }).click(); await expect.poll(() => calls).toBe(1);
+  await page.clock.fastForward(20_001);
+  await expect(page.getByRole('alert')).toContainText('Match history could not be loaded');
+  await expect(page.getByRole('button', { name: 'Retry history', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click(); await expect(page.getByRole('table')).toContainText('Possession'); release();
 });

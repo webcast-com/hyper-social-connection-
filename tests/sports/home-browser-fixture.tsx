@@ -82,7 +82,8 @@ window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
 window.renderMatchDetailsReview = async (mode = 'ready', returnTo, season) => {
   window.homeReviewUser = null;
   const reference = { league: mode === 'basketball' ? 'nba' : 'epl', eventId: '401234567' };
-  const original = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
+  const raw = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
+  const original = mode === 'empty' ? raw : { ...raw, header: { ...raw.header, round: { displayName: 'Quarter-finals' } }, gameInfo: { ...raw.gameInfo, attendance: 0, officials: [{ displayName: 'Reported Referee', position: { name: 'Referee' } }] } };
   const fixture = season ? { ...original, header: { ...original.header, season: { year: season } } } : original;
   const match = mode === 'unavailable' ? null : parseMatchDetails(mode === 'empty' ? { header: fixture.header } : fixture, reference);
   window.matchReviewBoard = { match, status: match ? 'ready' : 'unavailable', fetchedAt: '2026-10-23T18:00:00Z',

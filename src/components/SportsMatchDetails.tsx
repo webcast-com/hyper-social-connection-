@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import EspnResponseDetails from './EspnResponseDetails';
 import { SportsLeagueTable } from './SportsLeagueTable';
+import { SportsMatchHistory } from './SportsMatchHistory';
+import { SportsMatchInformation } from './SportsMatchInformation';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry, statisticShare } from '@/lib/sports-navigation';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
-import type { MatchBoard, MatchLineup } from '@/lib/espn-match';
+import { validMatchMetadata, type MatchBoard, type MatchLineup } from '@/lib/espn-match';
 
-const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table']] as const;
+const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table'], ['history', 'Form & H2H'], ['information', 'Match info']] as const;
 type Section = typeof sections[number][0];
 function EmptySection({ children }: { children: React.ReactNode }) {
   return <p className="rounded-2xl border border-dashed border-gray-300 p-5 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">{children}</p>;
@@ -35,6 +37,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
   const [board, setBoard] = useState(initial);
   const [section, setSection] = useState<Section>('statistics');
   const [tableOpened, setTableOpened] = useState(false);
+  const [historyOpened, setHistoryOpened] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [failure, setFailure] = useState<MatchBoard['source'] | null>(null);
@@ -52,7 +55,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
       if (!['ready', 'unavailable'].includes(next.status) || !next.source || typeof next.source.ok !== 'boolean'
         || typeof next.source.url !== 'string' || (next.status === 'unavailable' && next.match !== null)
         || (next.status === 'ready' && (!next.match || next.match.reference?.eventId !== reference.eventId || next.match.reference?.league !== reference.league
-          || !['teams', 'statistics', 'lineups', 'playerStats', 'updates'].every((key) => Array.isArray(next.match?.[key as keyof typeof next.match]))))) throw new Error('Invalid match response');
+          || !validMatchMetadata(next.match) || !['teams', 'statistics', 'lineups', 'playerStats', 'updates'].every((key) => Array.isArray(next.match?.[key as keyof typeof next.match]))))) throw new Error('Invalid match response');
       if (controller.signal.aborted) return;
       if (next.status === 'unavailable' && board.match) { setFailure(next.source); setError('Unable to update match details. Keeping the previous data. Please try again.'); }
       else { setBoard(next); setFailure(null); }
@@ -93,7 +96,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
     </header>
     {!match ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{source.httpStatus === 403 ? 'Access to ESPN match details was refused (HTTP 403).' : 'ESPN match details are currently unavailable.'} No sample statistics or lineups are substituted. Please try refreshing.</p> : <>
       <div role="group" aria-label="Match detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 gap-2 overflow-x-auto rounded-2xl bg-gray-100 py-2 dark:bg-gray-900">
-        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => { setSection(id); if (id === 'table') setTableOpened(true); }} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold ${section === id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>{label}</button>)}
+        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => { setSection(id); if (id === 'table') setTableOpened(true); if (id === 'history') setHistoryOpened(true); }} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold ${section === id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>{label}</button>)}
       </div>
       <section id={sectionId} aria-label={sections.find(([id]) => id === section)?.[1]} aria-busy={loading} className="min-w-0 rounded-3xl bg-white p-3 shadow-sm sm:p-5 dark:bg-gray-800">
         <h2 className="mb-4 text-lg font-bold">{section === 'events' ? match.updatesLabel : sections.find(([id]) => id === section)?.[1]}</h2>
@@ -116,6 +119,8 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
           </table></div>
         </div>)}</div> : <EmptySection>Individual player statistics have not been provided by ESPN for this match.</EmptySection>)}
         <div hidden={section !== 'table'}>{tableOpened && <SportsLeagueTable key={`${match.reference.league}-${match.season?.year ?? 'current'}`} match={match} />}</div>
+        <div hidden={section !== 'history'}>{historyOpened && <SportsMatchHistory key={`${match.reference.league}-${match.reference.eventId}-${match.season?.year ?? 'unknown'}-${match.kickoff}-${match.teams.map((team) => team.id).join('-')}`} match={match} returnTo={returnTo} />}</div>
+        {section === 'information' && <SportsMatchInformation match={match} />}
         {section === 'events' && (match.updates.length ? <>
           <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Up to 200 reported updates, in ESPN’s supplied order. This may be a key-event or scoring-only feed, not every play.</p>
           <ol className="space-y-3">{match.updates.map((update) => <li key={update.id} className="min-w-0 rounded-2xl border border-gray-100 p-3 dark:border-gray-700">
