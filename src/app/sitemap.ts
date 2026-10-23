@@ -40,6 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.6,
     },
+    ...['/sports/nba', '/sports/nfl'].map((path) => ({ url: `${baseUrl}${path}`, changeFrequency: 'hourly' as const, priority: 0.7 })),
     ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
       url: `${baseUrl}${path}`,
       changeFrequency: 'monthly' as const,

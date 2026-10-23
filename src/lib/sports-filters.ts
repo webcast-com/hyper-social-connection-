@@ -1,3 +1,4 @@
+import { SPORTS_LEAGUE_PAGES, type SportsLeaguePage } from './sports-league-pages';
 import { AVAILABLE_SPORTS, SPORTS_COMPETITIONS, SPORTS_REGIONS, type SportKind, type SportsRegion } from './sports-catalog';
 import { competitionCountry } from './sports-navigation';
 
@@ -47,14 +48,24 @@ export function sportsFilterSearch(input: SportsFilters): string {
   }
   return params.size ? `?${params.toString()}` : '';
 }
-export function sportsFilterHref(filters: SportsFilters): string { return `/sports${sportsFilterSearch(filters)}`; }
+export function scopeLeagueFilters(filters: SportsFilters, league?: SportsLeaguePage): SportsFilters {
+  return league ? normalizeSportsFilters({ ...filters, sport: SPORTS_LEAGUE_PAGES[league].sport, league, region: 'all', country: 'all' }) : filters;
+}
+export function sportsFilterHref(filters: SportsFilters, league?: SportsLeaguePage): string {
+  if (!league) return `/sports${sportsFilterSearch(filters)}`;
+  const params = new URLSearchParams(sportsFilterSearch(scopeLeagueFilters(filters, league)));
+  for (const key of ['sport', 'league', 'region', 'country']) params.delete(key);
+  return `${SPORTS_LEAGUE_PAGES[league].path}${params.size ? `?${params}` : ''}`;
+}
 
 /** Only a known local scoreboard path and whitelisted, validated filters may be returned to. */
 export function safeSportsReturnPath(value: unknown): string {
   if (typeof value !== 'string' || value.length > 2000 || !value.startsWith('/sports') || /[\u0000-\u001f\u007f]/.test(value)) return '/sports';
   try {
     const url = new URL(value, 'https://sports.invalid');
-    if (url.origin !== 'https://sports.invalid' || url.pathname !== '/sports') return '/sports';
-    return sportsFilterHref(readSportsFilters(url.searchParams));
+    if (url.origin !== 'https://sports.invalid') return '/sports';
+    if (url.pathname === '/sports') return sportsFilterHref(readSportsFilters(url.searchParams));
+    const league = (Object.keys(SPORTS_LEAGUE_PAGES) as SportsLeaguePage[]).find((key) => SPORTS_LEAGUE_PAGES[key].path === url.pathname);
+    return league ? sportsFilterHref(readSportsFilters(url.searchParams), league) : '/sports';
   } catch { return '/sports'; }
 }

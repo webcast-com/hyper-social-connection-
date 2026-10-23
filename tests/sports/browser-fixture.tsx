@@ -2,7 +2,8 @@ import { createRoot } from 'react-dom/client';
 import SportsMatchDetails from '../../src/components/SportsMatchDetails';
 import { summaryFixture } from './match-fixture';
 import { parseMatchDetails, resolveMatch } from '../../src/lib/espn-match';
-import { readSportsFilters, sportsFilterHref } from '../../src/lib/sports-filters';
+import { readSportsFilters, scopeLeagueFilters, sportsFilterHref } from '../../src/lib/sports-filters';
+import type { SportsLeaguePage } from '../../src/lib/sports-league-pages';
 import SportsBoardView from '../../src/components/SportsBoard';
 import { SPORTS_COMPETITIONS } from '../../src/lib/sports-catalog';
 import type { SportsBoard } from '../../src/lib/sports';
@@ -10,15 +11,15 @@ import type { SportsBoard } from '../../src/lib/sports';
 declare global {
   interface Window {
     renderSportsMatch: (returnTo?: string) => void;
-    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialLeague?: string) => void;
+    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialLeague?: string, leaguePage?: SportsLeaguePage) => void;
   }
 }
 const root = createRoot(document.getElementById('root')!);
 let key = 0;
-window.renderSports = (mode, stress = false, initialLeague = 'all') => {
-  const filters = readSportsFilters(new URLSearchParams(initialLeague.startsWith('?') ? initialLeague : `league=${initialLeague}`));
-  window.history.replaceState(null, '', sportsFilterHref(filters));
-  root.render(<SportsBoardView initialFilters={filters} key={++key} initial={{
+window.renderSports = (mode, stress = false, initialLeague = 'all', leaguePage) => {
+  const filters = scopeLeagueFilters(readSportsFilters(new URLSearchParams(initialLeague.startsWith('?') ? initialLeague : `league=${initialLeague}`)), leaguePage);
+  window.history.replaceState(null, '', sportsFilterHref(filters, leaguePage));
+  root.render(<SportsBoardView leaguePage={leaguePage} initialFilters={filters} key={++key} initial={{
   mode: mode === 'empty' ? 'live' : mode,
   fetchedAt: new Date().toISOString(), predictions: [], sources: [],
   events: mode === 'empty' ? [] : SPORTS_COMPETITIONS.map((league) => ({
