@@ -10,6 +10,7 @@ export type MatchPlayerStats = { teamId: string; label: string; columns: string[
 export type MatchUpdate = { id: string; text: string; clock: string | null; period: string | null; team: string | null; participants: string[] };
 export type MatchDetails = {
   reference: MatchReference; leagueName: string; title: string; kickoff: string | null; venue: string | null;
+  competitionId?: string | null;
   season?: { year: number; label: string | null } | null;
   information?: { stage: string | null; attendance: string | null; officials: { name: string; role: string | null }[] };
   state: string | null; statusText: string | null; teams: MatchTeam[]; statistics: MatchStatistics[];
@@ -145,6 +146,7 @@ export function parseMatchDetails(payload: unknown, reference: MatchReference): 
   const seasonYear = Number(at(header, 'season', 'year') ?? at(payload, 'season', 'year'));
   const season = Number.isInteger(seasonYear) && seasonYear >= 1900 && seasonYear <= 2100 ? { year: seasonYear, label: text(at(header, 'season', 'displayName')) ?? text(at(payload, 'season', 'displayName')) } : null;
   return {
+    competitionId: matchReference(reference.league, at(competition, 'id'))?.eventId ?? null,
     information: {
       stage: text(at(competition, 'round', 'displayName')) ?? text(at(competition, 'round', 'name')) ?? text(at(header, 'round', 'displayName')) ?? text(at(header, 'round', 'name')),
       attendance: (() => { const value = display(at(payload, 'gameInfo', 'attendance')) ?? display(at(competition, 'attendance')); return value && /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(value) ? value : null; })(),
