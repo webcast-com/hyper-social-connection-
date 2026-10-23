@@ -10,6 +10,7 @@ export type MatchPlayerStats = { teamId: string; label: string; columns: string[
 export type MatchUpdate = { id: string; text: string; clock: string | null; period: string | null; team: string | null; participants: string[] };
 export type MatchDetails = {
   reference: MatchReference; leagueName: string; title: string; kickoff: string | null; venue: string | null;
+  season?: { year: number; label: string | null } | null;
   state: string | null; statusText: string | null; teams: MatchTeam[]; statistics: MatchStatistics[];
   lineups: MatchLineup[]; playerStats: MatchPlayerStats[]; updates: MatchUpdate[]; updatesLabel: string;
 };
@@ -140,8 +141,10 @@ export function parseMatchDetails(payload: unknown, reference: MatchReference): 
   const rawDate = text(at(competition, 'date')) ?? text(at(header, 'date'));
   const status = at(competition, 'status', 'type') ?? at(header, 'status', 'type');
   const kickoff = rawDate && Number.isFinite(Date.parse(rawDate)) ? new Date(rawDate).toISOString() : null;
+  const seasonYear = Number(at(header, 'season', 'year') ?? at(payload, 'season', 'year'));
+  const season = Number.isInteger(seasonYear) && seasonYear >= 1900 && seasonYear <= 2100 ? { year: seasonYear, label: text(at(header, 'season', 'displayName')) ?? text(at(payload, 'season', 'displayName')) } : null;
   return {
-    reference, leagueName: meta.name, title: `${teams[0].name} vs ${teams[1].name}`,
+    season, reference, leagueName: meta.name, title: `${teams[0].name} vs ${teams[1].name}`,
     kickoff, venue: text(at(payload, 'gameInfo', 'venue', 'fullName')) ?? text(at(competition, 'venue', 'fullName')),
     state: text(at(status, 'state')),
     statusText: text(at(status, 'detail')) ?? text(at(status, 'shortDetail')),

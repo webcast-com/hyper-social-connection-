@@ -15,7 +15,7 @@ declare global {
   interface Window {
     renderInformationReview: (page: 'about' | 'privacy') => void;
     matchReviewBoard: MatchBoard;
-    renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball', returnTo?: string) => Promise<void>;
+    renderMatchDetailsReview: (mode?: 'ready' | 'empty' | 'unavailable' | 'basketball', returnTo?: string, season?: number) => Promise<void>;
     renderPredictionsReview: (status?: OddsBoard['status'], signedIn?: boolean) => Promise<void>;
     oddsReviewBoard: OddsBoard;
     predictionPosts: Record<string, FormDataEntryValue>[];
@@ -79,10 +79,11 @@ window.renderPredictionsReview = async (status = 'empty', signedIn = false) => {
   </div>);
 };
 
-window.renderMatchDetailsReview = async (mode = 'ready', returnTo) => {
+window.renderMatchDetailsReview = async (mode = 'ready', returnTo, season) => {
   window.homeReviewUser = null;
   const reference = { league: mode === 'basketball' ? 'nba' : 'epl', eventId: '401234567' };
-  const fixture = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
+  const original = summaryFixture(mode === 'basketball' ? 'basketball' : 'football');
+  const fixture = season ? { ...original, header: { ...original.header, season: { year: season } } } : original;
   const match = mode === 'unavailable' ? null : parseMatchDetails(mode === 'empty' ? { header: fixture.header } : fixture, reference);
   window.matchReviewBoard = { match, status: match ? 'ready' : 'unavailable', fetchedAt: '2026-10-23T18:00:00Z',
     source: { url: resolveMatch(reference.league, reference.eventId).url, ok: !!match, httpStatus: match ? 200 : 403,

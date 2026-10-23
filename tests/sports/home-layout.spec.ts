@@ -4,6 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import postcss from 'postcss';
 import tailwind from '@tailwindcss/postcss';
+import { parseStandings, resolveStandings } from '../../src/lib/espn-standings';
+import { standingsFixture } from './standings-fixture';
 
 let javascript = '';
 let css = '';
@@ -401,4 +403,131 @@ test('actual match page forwards only safe scoreboard return contexts to its bac
     await page.evaluate((returnTo) => window.renderMatchDetailsReview('ready', returnTo), value);
     await expect(page.getByRole('link', { name: 'Back to sports scores', exact: true })).toHaveAttribute('href', '/sports');
   }
+});
+
+function standingsResponse(league = 'epl', season: number | null = 2026) {
+  return { league, requestedSeason: season, ...parseStandings(standingsFixture(season ?? 2026), season), fetchedAt: '2026-10-23T18:00:00Z', source: { ok: true, url: resolveStandings(league).url, httpStatus: 200 } };
+}
+for (const width of [320, 768, 1440]) {
+  test(`lazy league table highlights match teams, preserves zeros and fits at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 768) await page.evaluate(() => document.documentElement.classList.add('dark'));
+    let requests = 0;
+    await page.route('**/api/sports/standings/**', (route) => { requests++; return route.fulfill({ json: standingsResponse() }); });
+    await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+    for (const name of ['Lineups & rosters', 'Player stats', 'Match events', 'Statistics']) await page.getByRole('button', { name, exact: true }).click();
+    expect(requests).toBe(0);
+    await page.getByRole('button', { name: 'League table', exact: true }).click();
+    const table = page.getByRole('table', { name: 'Group B', exact: true });
+    await expect(table).toBeVisible(); expect(requests).toBe(1);
+    await expect(page.getByText('In this match', { exact: true })).toHaveCount(2);
+    await expect(table.getByRole('cell', { name: '0', exact: true })).toBeVisible();
+    await expect(table.getByRole('cell', { name: '—', exact: true })).toHaveCount(4);
+    await expect(page.getByText('Season 2025/2026', { exact: true })).toBeVisible();
+    const region = page.getByRole('region', { name: /Group B standings/ });
+    await region.focus(); await expect(region).toBeFocused(); await region.press('ArrowRight');
+    await assertFit(page);
+    await page.getByLabel('Table / group').selectOption({ label: 'Group A' });
+    await expect(page.getByRole('table', { name: 'Group A', exact: true })).toContainText('Other Club');
+    await expect(page.getByRole('cell', { name: '7', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+    await expect(page.getByRole('table')).toContainText('Possession');
+    await page.getByRole('button', { name: 'League table', exact: true }).click();
+    await expect(page.getByRole('table', { name: 'Group A', exact: true })).toBeVisible(); expect(requests).toBe(1);
+    await assertFit(page);
+  });
+}
+test('league table requests the reported match season and preserves table on independent refresh failure', async ({ page }) => {
+  const urls: string[] = [];
+  await page.route('**/api/sports/standings/**', (route) => {
+    urls.push(route.request().url());
+    return urls.length === 1 ? route.fulfill({ json: standingsResponse('epl', 2025) }) : route.fulfill({ status: 503, json: { error: 'busy' } });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2025));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  await expect(page.getByRole('table', { name: 'Group B', exact: true })).toBeVisible();
+  expect(new URL(urls[0]).searchParams.get('season')).toBe('2025');
+  await page.getByRole('button', { name: 'Refresh table', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Showing the previously loaded table');
+  await expect(page.getByRole('table', { name: 'Group B', exact: true })).toBeVisible();
+  expect(new URL(urls[1]).searchParams.get('refresh')).toBe('1');
+  expect(new URL(urls[1]).searchParams.get('season')).toBe('2025');
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+  await expect(page.getByRole('table')).toContainText('Possession');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Very Long International Away Club Name');
+});
+test('unknown match season is explicitly current, and a malformed table can be retried without losing match details', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/standings/**', (route) => {
+    calls++; expect(new URL(route.request().url()).searchParams.has('season')).toBe(false);
+    return route.fulfill({ json: calls === 1 ? { status: 'ready', groups: [{}] } : standingsResponse('epl', null) });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview());
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('League table could not be loaded');
+  await expect(page.getByText(/not a historical match table/)).toBeVisible();
+  await page.getByRole('button', { name: 'Retry table', exact: true }).click();
+  await expect(page.getByRole('table', { name: 'Group B', exact: true })).toBeVisible(); expect(calls).toBe(2);
+});
+test('empty cup standings and wrong-season responses never become fabricated rankings', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/standings/**', (route) => {
+    calls++;
+    return route.fulfill({ json: calls === 1 ? standingsResponse('epl', 2024) : { ...standingsResponse(), groups: [], status: 'empty' } });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('could not be loaded');
+  await expect(page.getByRole('table')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Retry table', exact: true }).click();
+  await expect(page.getByText(/Cup and knockout competitions may not have standings/)).toBeVisible();
+  await expect(page.getByRole('table')).toHaveCount(0);
+});
+test('table loading is single-flight and match refresh does not request another table', async ({ page }) => {
+  let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; });
+  let calls = 0;
+  await page.route('**/api/sports/standings/**', async (route) => { calls++; await gate; return route.fulfill({ json: standingsResponse() }); });
+  await page.route('**/api/sports/matches/**', async (route) => route.fulfill({ json: await page.evaluate(() => window.matchReviewBoard) }));
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Loading table…', exact: true })).toBeDisabled();
+  await expect.poll(() => calls).toBe(1);
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  release(); await expect(page.getByRole('table', { name: 'Group B', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Refresh details', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Refresh details', exact: true })).toBeEnabled();
+  expect(calls).toBe(1);
+});
+test('basketball conference table uses reported sport labels and leaves unreported positions blank', async ({ page }) => {
+  const parsed = parseStandings({ season: { year: 2026 }, children: [{ name: 'Eastern Conference', standings: { entries: [
+    { team: { id: '100', displayName: 'Home Club' }, stats: [{ name: 'wins', displayName: 'W', displayValue: '12' }, { name: 'winPercent', displayName: 'PCT', displayValue: '.788' }, { name: 'streak', displayName: 'Strk', displayValue: 'W3' }] },
+  ] } }] }, 2026);
+  await page.route('**/api/sports/standings/**', (route) => {
+    expect(new URL(route.request().url()).pathname).toBe('/api/sports/standings/nba');
+    return route.fulfill({ json: { ...standingsResponse('nba'), ...parsed } });
+  });
+  await page.evaluate(() => window.renderMatchDetailsReview('basketball', undefined, 2026));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  const table = page.getByRole('table', { name: 'Eastern Conference', exact: true });
+  await expect(table.getByRole('columnheader', { name: 'PCT', exact: true })).toBeVisible();
+  await expect(table.getByRole('cell', { name: '.788', exact: true })).toBeVisible();
+  await expect(table.getByRole('cell', { name: 'W3', exact: true })).toBeVisible();
+  await expect(table.getByRole('cell', { name: '—', exact: true })).toHaveCount(1);
+  await expect(page.getByLabel('Table / group')).toHaveCount(0);
+});
+test('hung browser table requests have a twelve-second deadline and leave match sections usable', async ({ page }) => {
+  await page.clock.install();
+  let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; });
+  let calls = 0;
+  await page.route('**/api/sports/standings/**', async (route) => { calls++; await gate; await route.fulfill({ json: standingsResponse() }); });
+  await page.evaluate(() => window.renderMatchDetailsReview('ready', undefined, 2026));
+  await page.getByRole('button', { name: 'League table', exact: true }).click();
+  await expect.poll(() => calls).toBe(1);
+  await page.clock.fastForward(12_001);
+  await expect(page.getByRole('alert')).toContainText('could not be loaded');
+  await expect(page.getByRole('button', { name: 'Retry table', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+  await expect(page.getByRole('table')).toContainText('Possession');
+  release();
 });
