@@ -57,6 +57,27 @@ export function americanToDecimal(value: unknown): number | null {
   return Number.isFinite(rounded) && rounded > 1 ? rounded : null;
 }
 
+// Owner-supplied provider directory; fallback attribution only, not a coverage guarantee.
+// ESPN's reported name remains authoritative if provider branding changes.
+const BETTING_PROVIDER_NAMES: Readonly<Record<string, string>> = Object.freeze({
+  '38': 'Caesars',
+  '37': 'FanDuel',
+  '41': 'DraftKings',
+  '58': 'BetMGM',
+  '68': 'ESPN BET',
+  '2000': 'Bet365',
+});
+
+function oddsProviderName(provider: unknown): string | null {
+  const name = text(field(provider, 'name'));
+  if (name) return name;
+  const rawId = field(provider, 'id');
+  const id = typeof rawId === 'string' ? rawId.trim()
+    : typeof rawId === 'number' && Number.isSafeInteger(rawId) ? String(rawId) : null;
+  if (!id || !/^[1-9]\d{0,19}$/.test(id)) return null;
+  return BETTING_PROVIDER_NAMES[id] ?? `Provider ID ${id}`;
+}
+
 /** ESPN money lines are American; explicit decimalOdds values are already decimal. */
 export function mapOdds(competition: unknown): MatchOdds {
   const raw = field(competition, 'odds');
@@ -75,7 +96,7 @@ export function mapOdds(competition: unknown): MatchOdds {
       home: money('home'), away: money('away'), draw: money('draw'),
       over_under: total !== null && total > 0 ? total : null,
       spread: number(field(row, 'spread')),
-      provider: text(field(row, 'provider', 'name')),
+      provider: oddsProviderName(field(row, 'provider')),
     };
     // Do not combine prices from different bookmakers, or invent missing markets.
     if (odds.home !== null || odds.away !== null || odds.over_under !== null) return odds;

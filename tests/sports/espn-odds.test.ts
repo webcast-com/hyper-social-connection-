@@ -71,3 +71,54 @@ test('legacy drawOdds variants are normalized and overflow prices never become I
   }
   assert.equal(americanToDecimal(1e308), null);
 });
+
+// These fixtures exercise the owner-supplied directory, not live ESPN coverage.
+for (const [id, name] of [[38, 'Caesars'], [37, 'FanDuel'], [41, 'DraftKings'], [58, 'BetMGM'], [68, 'ESPN BET'], [2000, 'Bet365']] as const) {
+  test(`provider ID ${id} falls back to ${name} for numeric and string IDs`, () => {
+    for (const value of [id, String(id), ` ${id} `]) {
+      const odds = mapOdds({ odds: [{ provider: { id: value }, homeTeamOdds: { moneyLine: -125 } }] });
+      assert.equal(odds.provider, name);
+      assert.equal(odds.home, 1.8);
+    }
+  });
+}
+
+test('reported provider names take precedence over supplied ID branding', () => {
+  for (const id of [68, '999', null, { unexpected: true }]) {
+    const odds = mapOdds({ odds: [{ provider: { id, name: '  Current ESPN branding  ' }, overUnder: 225.5 }] });
+    assert.equal(odds.provider, 'Current ESPN branding');
+  }
+  for (const name of ['', '  ', null, 123, {}]) {
+    assert.equal(mapOdds({ odds: [{ provider: { id: 37, name }, overUnder: 225.5 }] }).provider, 'FanDuel');
+  }
+});
+
+test('unknown provider IDs are neutral and malformed IDs are never guessed', () => {
+  for (const id of [999, '999']) {
+    assert.equal(mapOdds({ odds: [{ provider: { id }, overUnder: 225.5 }] }).provider, 'Provider ID 999');
+  }
+  for (const provider of [undefined, null, 'FanDuel', {}, { $ref: 'https://example.test/37' }]) {
+    assert.equal(mapOdds({ odds: [{ provider, overUnder: 225.5 }] }).provider, null);
+  }
+  for (const id of [undefined, null, '', ' ', 0, -37, 37.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, true, {}, [], '037', '37x', '3.7e1', 'constructor', '__proto__', '123456789012345678901']) {
+    const odds = mapOdds({ odds: [{ provider: { id }, homeTeamOdds: { moneyLine: 120 } }] });
+    assert.equal(odds.provider, null);
+    assert.equal(odds.home, 2.2);
+  }
+});
+
+test('provider ID fallback never mixes bookmaker prices or selects an empty provider row', () => {
+  const odds = mapOdds({ odds: [
+    { provider: { id: 38 } },
+    { provider: { id: 37 }, homeTeamOdds: { moneyLine: -125 } },
+    { provider: { id: 41 }, awayTeamOdds: { moneyLine: 120 }, overUnder: 225.5 },
+  ] });
+  assert.deepEqual(odds, { home: 1.8, away: null, draw: null, spread: null, over_under: null, provider: 'FanDuel' });
+  assert.equal(mapOdds({ odds: [{ provider: { id: 37 } }] }).provider, null);
+});
+
+test('scoreboard event odds use the shared provider ID fallback', () => {
+  const event = oddsEvent();
+  const competition = { ...event.competitions[0], odds: [{ provider: { id: '41' }, homeTeamOdds: { moneyLine: -125 } }] };
+  assert.equal(mapOddsEvent({ ...event, competitions: [competition] }, league)?.odds.provider, 'DraftKings');
+});

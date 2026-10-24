@@ -69,3 +69,14 @@ test('client guard validates ordered sections, reference and nested renderable v
   const bad = structuredClone(board); bad.sections[0].url = 'javascript:alert(1)'; assert.equal(isInsightsBoard(bad, match.reference), false);
   const wrong = structuredClone(board); (wrong.sections[0].values[0] as unknown as { value: unknown }).value = {}; assert.equal(isInsightsBoard(wrong, match.reference), false);
 });
+
+test('Core insights label ID-only bookmakers through the shared odds adapter', () => {
+  const odds = parseInsight('odds', { items: [
+    { provider: { id: '37' }, homeTeamOdds: { moneyLine: -125 } },
+    { provider: { id: 41 }, awayTeamOdds: { moneyLine: 120 } },
+  ] }, match);
+  assert.equal(odds.status, 'ready');
+  assert.deepEqual(odds.values, [{ label: 'FanDuel · Home decimal', value: '1.8', teamId: null }]);
+  const unknown = parseInsight('odds', { items: [{ provider: { id: 999 }, overUnder: 225.5 }] }, match);
+  assert.equal(unknown.values[0].label, 'Provider ID 999 · Total (O/U)');
+});
