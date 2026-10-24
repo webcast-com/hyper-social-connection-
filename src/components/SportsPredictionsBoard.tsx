@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from 'reac
 import Link from 'next/link';
 import { matchHref } from '@/lib/espn-match';
 import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from 'lucide-react';
+import SportsPredictionInsights from './SportsPredictionInsights';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { ODDS_SPORTS, type OddsBoard, type OddsMatch } from '@/lib/espn-odds';
@@ -70,6 +71,7 @@ function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?:
       </dl>
       <p className="mt-2 break-words text-[11px] text-gray-500 dark:text-gray-400">Decimal odds · {match.odds.provider || 'Provider not specified'} · via ESPN</p>
       {match.details && <Link href={matchHref(match.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
+      {match.details && <SportsPredictionInsights key={`${match.details.league}-${match.details.eventId}`} reference={match.details} />}
       {currentUserId ? <>
         <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} aria-label={`Your take on ${match.home_team} vs ${match.away_team}`}
           placeholder="Add your take before sharing…" className="mt-3 w-full min-w-0 rounded-xl border border-gray-200 bg-transparent p-3 text-sm text-gray-900 dark:border-gray-700 dark:text-white" />
@@ -125,7 +127,7 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
       <header className="mb-5 rounded-3xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-blue-600 p-5 text-white">
         <p className="text-xs font-bold uppercase tracking-wide">ESPN match odds</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-black sm:text-3xl"><Trophy aria-hidden="true" className="h-7 w-7 shrink-0 text-amber-300" />Match predictions</h1>
-        <p className="mt-2 text-sm">Upcoming fixtures and bookmaker odds—not model predictions or guaranteed outcomes.</p>
+        <p className="mt-2 text-sm">Upcoming fixtures and bookmaker odds. Open ESPN insights for supported model estimates, game/live probabilities and strength ratings. No guaranteed outcomes.</p>
         <p className="mt-2 text-xs">{board.matches.length} matches · Prices can change; refresh for the latest update.</p>
         <p className="mt-1 text-xs" suppressHydrationWarning>Last checked: {formatPredictionKickoff(board.fetchedAt)}</p>
       </header>

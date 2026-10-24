@@ -8,6 +8,7 @@ import { parseStandings, resolveStandings } from '../../src/lib/espn-standings';
 import { standingsFixture } from './standings-fixture';
 import { parseTeamSchedule, recentGames, type MatchHistoryBoard } from '../../src/lib/espn-match-history';
 import { historyEvent, scheduleFixture } from './history-fixture';
+import { insightsBoard } from './insights-fixture';
 
 let javascript = '';
 let css = '';
@@ -172,7 +173,7 @@ for (const width of [320, 768, 1440]) {
     await expect(cards.getByText('Premium', { exact: true })).toHaveCount(2);
     await expect(cards.first().getByText('1.80', { exact: true })).toBeVisible();
     await expect(cards.first().getByRole('heading')).toContainText('Very Long International Home Club Name');
-    await expect(page.getByText('Upcoming fixtures and bookmaker odds—not model predictions or guaranteed outcomes.')).toBeVisible();
+    await expect(page.getByText('Upcoming fixtures and bookmaker odds. Open ESPN insights for supported model estimates, game/live probabilities and strength ratings. No guaranteed outcomes.')).toBeVisible();
     await expect(cards.getByRole('button', { name: 'Share', exact: true })).toHaveCount(0);
     await expect(cards.first().getByRole('link', { name: 'Log in to share or create a poll' })).toHaveAttribute('href', '/login');
     await assertFit(page);
@@ -684,4 +685,103 @@ test('standings crests render decoratively and broken/missing images keep readab
   await expect(page.getByRole('table', { name: 'Group A', exact: true }).locator('img')).toHaveCount(0);
   await expect(page.getByText('Other Club', { exact: true })).toBeVisible();
   await assertFit(page);
+});
+
+for (const width of [320, 768, 1440]) {
+  test(`five prediction sources load lazily and remain distinct at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 768) await page.evaluate(() => document.documentElement.classList.add('dark'));
+    let calls = 0;
+    await page.route('**/api/sports/matches/**/insights*', (route) => { calls++; return route.fulfill({ json: insightsBoard() }); });
+    await page.evaluate(() => window.renderPredictionsReview('ready', false));
+    expect(calls).toBe(0);
+    const card = page.getByRole('article').first();
+    await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+    await expect(card.getByRole('region', { name: 'League predictions', exact: true })).toBeVisible();
+    await expect(card.getByRole('region', { name: 'Game model projection', exact: true }).getByText('63.4%', { exact: true })).toBeVisible();
+    await expect(card.getByRole('region', { name: 'Game / live probabilities', exact: true }).getByText('72%', { exact: true })).toBeVisible();
+    await expect(card.getByRole('region', { name: 'Power index', exact: true }).getByText('12.7', { exact: true })).toBeVisible();
+    await expect(card.getByRole('region', { name: 'Bookmaker odds', exact: true }).getByText('1.8', { exact: true })).toBeVisible();
+    await expect(card.getByText(/not a historical pre-match snapshot/)).toBeVisible();
+    await expect(card.getByText('Provider strength metrics—not win probabilities.')).toBeVisible();
+    expect(calls).toBe(1); await assertFit(page);
+    await card.getByRole('button', { name: 'Hide ESPN insights', exact: true }).click();
+    await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+    await expect(card.getByRole('region', { name: 'Game model projection', exact: true })).toBeVisible(); expect(calls).toBe(1);
+  });
+}
+test('prediction source failures/unknown formats are explicit without losing main bookmaker odds', async ({ page }) => {
+  await page.route('**/api/sports/matches/**/insights*', (route) => {
+    const board = insightsBoard(); board.status = 'partial';
+    board.sections[0] = { ...board.sections[0], status: 'unsupported', values: [], message: 'Reference-only format.' };
+    board.sections[2] = { ...board.sections[2], status: 'unavailable', httpStatus: 403, values: [], message: 'ESPN HTTP 403' };
+    return route.fulfill({ json: board });
+  });
+  await page.evaluate(() => window.renderPredictionsReview('ready', false));
+  const card = page.getByRole('article').first(); await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  await expect(card.getByText(/Model\/data format unavailable/)).toBeVisible();
+  await expect(card.getByText(/Source unavailable. ESPN HTTP 403/)).toBeVisible();
+  await expect(card.getByRole('region', { name: 'Game model projection', exact: true }).getByText('63.4%', { exact: true })).toBeVisible();
+  await expect(card.getByText(/Review bookmaker/)).toBeVisible();
+});
+test('failed/incomplete insight refresh retains every previously displayed estimate', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/matches/**/insights*', (route) => {
+    calls++; if (calls === 2) return route.fulfill({ status: 503, json: {} });
+    const board = insightsBoard();
+    if (calls === 3) { board.status = 'partial'; board.sections[1] = { ...board.sections[1], status: 'unavailable', values: [] }; }
+    return route.fulfill({ json: board });
+  });
+  await page.evaluate(() => window.renderPredictionsReview('ready', false));
+  const card = page.getByRole('article').first(); await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  await expect(card.getByRole('button', { name: 'Refresh insights', exact: true })).toBeVisible();
+  for (let i = 0; i < 2; i++) {
+    await card.getByRole('button', { name: 'Refresh insights', exact: true }).click();
+    await expect(card.getByRole('alert')).toContainText('Showing previously loaded insights');
+    await expect(card.getByRole('region', { name: 'Game model projection', exact: true }).getByText('63.4%', { exact: true })).toBeVisible();
+  }
+  expect(calls).toBe(3);
+});
+test('insight loading is single-flight, rejects wrong games/nested objects, and retries independently', async ({ page }) => {
+  let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; }); let calls = 0;
+  await page.route('**/api/sports/matches/**/insights*', async (route) => {
+    calls++; if (calls === 1) await gate;
+    if (calls === 1) return route.fulfill({ json: insightsBoard('epl', '999') });
+    const board = insightsBoard();
+    return route.fulfill({ json: calls === 2 ? { ...board, sections: [{ ...board.sections[0], values: [{}] }, ...board.sections.slice(1)] } : board });
+  });
+  await page.evaluate(() => window.renderPredictionsReview('ready', false));
+  const card = page.getByRole('article').first(); await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  await expect(card.getByRole('status')).toContainText('Loading ESPN insights');
+  await expect.poll(() => calls).toBe(1);
+  await card.getByRole('button', { name: 'Hide ESPN insights', exact: true }).click();
+  await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  release(); await expect(card.getByRole('alert')).toContainText('could not be updated'); expect(calls).toBe(1);
+  await card.getByRole('button', { name: 'Retry insights', exact: true }).click();
+  await expect.poll(() => calls).toBe(2); await expect(card.getByRole('alert')).toContainText('could not be updated');
+  await card.getByRole('button', { name: 'Retry insights', exact: true }).click();
+  await expect(card.getByRole('region', { name: 'League predictions', exact: true })).toBeVisible(); expect(calls).toBe(3);
+});
+test('match-detail insights preserve existing sections and load only after explicit expansion', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/sports/matches/**/insights*', (route) => { calls++; return route.fulfill({ json: insightsBoard('nba') }); });
+  await page.evaluate(() => window.renderMatchDetailsReview('basketball'));
+  await page.getByRole('button', { name: 'Predictions & odds', exact: true }).click(); expect(calls).toBe(0);
+  await page.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Power index', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+  await expect(page.getByRole('table')).toContainText('Possession');
+  await page.getByRole('button', { name: 'Predictions & odds', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Game model projection', exact: true })).toBeVisible(); expect(calls).toBe(1);
+});
+test('insights browser deadline enables retry and main odds remain usable', async ({ page }) => {
+  await page.clock.install();
+  let release!: () => void; const gate = new Promise<void>((resolve) => { release = resolve; }); let calls = 0;
+  await page.route('**/api/sports/matches/**/insights*', async (route) => { calls++; await gate; return route.fulfill({ json: insightsBoard() }); });
+  await page.evaluate(() => window.renderPredictionsReview('ready', false));
+  const card = page.getByRole('article').first(); await card.getByRole('button', { name: 'Show ESPN insights', exact: true }).click();
+  await expect.poll(() => calls).toBe(1); await page.clock.fastForward(20_001);
+  await expect(card.getByRole('alert')).toContainText('could not be updated');
+  await expect(card.getByRole('button', { name: 'Retry insights', exact: true })).toBeEnabled();
+  await expect(card.getByText(/Review bookmaker/)).toBeVisible(); release();
 });
