@@ -785,3 +785,68 @@ test('insights browser deadline enables retry and main odds remain usable', asyn
   await expect(card.getByRole('button', { name: 'Retry insights', exact: true })).toBeEnabled();
   await expect(card.getByText(/Review bookmaker/)).toBeVisible(); release();
 });
+
+for (const width of [320, 768, 1440]) {
+  test(`spread/total prices and derived American odds fit at ${width}px without invented sides`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 320) await page.evaluate(() => localStorage.setItem('theme', 'dark'));
+    await page.evaluate(() => window.renderPredictionsReview('ready', true));
+    const next = await page.evaluate(() => ({ ...window.oddsReviewBoard, matches: [
+      { ...window.oddsReviewBoard.matches[0], odds: { home: null, away: null, draw: null, provider: 'FanDuel', spread: 0, spread_home_odds: 1.8, over_under: null, over_odds: 2.2 } },
+    ] }));
+    await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json: next }));
+    await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+    const card = page.getByRole('article');
+    await expect(card).toHaveCount(1);
+    await expect(card.getByText('Spread home price', { exact: true })).toBeVisible();
+    await expect(card.getByText('Over price', { exact: true })).toBeVisible();
+    await expect(card.getByText('American (derived): -125', { exact: true })).toBeVisible();
+    await expect(card.getByText('American (derived): +120', { exact: true })).toBeVisible();
+    await expect(card.getByText('Spread away price', { exact: true })).toHaveCount(0);
+    await expect(card.getByText('Under price', { exact: true })).toHaveCount(0);
+    await expect(card.getByText('Total (O/U)', { exact: true })).toHaveCount(0);
+    await expect(card.getByText('Home', { exact: true })).toHaveCount(0);
+    await card.getByRole('button', { name: 'Share', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.predictionPosts.length)).toBe(1);
+    expect(await page.evaluate(() => window.predictionPosts[0].content)).toContain('Spread home price 1.8');
+    await assertFit(page);
+  });
+}
+
+test('malformed nested odds responses and HTTP errors keep the previous cards without runtime errors', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  const original = await page.evaluate(() => window.oddsReviewBoard);
+  for (const json of [
+    { ...original, matches: [null] },
+    { ...original, matches: [{ ...original.matches[0], odds: { ...original.matches[0].odds, home: {} } }] },
+    { ...original, sources: [{ ...original.sources[0], responseMetadata: { server: {} } }] },
+    { ...original, matches: [{ ...original.matches[0], home_logo: 'javascript:alert(1)' }] },
+  ]) {
+    await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json }));
+    await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+    await expect(page.getByRole('alert')).toContainText('Keeping the previous results');
+    await expect(page.getByRole('article')).toHaveCount(8);
+  }
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ status: 503, json: { ...original, success: true } }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Keeping the previous results');
+  await expect(page.getByRole('article')).toHaveCount(8);
+  expect(errors).toEqual([]);
+});
+
+test('odds browser deadline releases a hung refresh and allows a successful retry', async ({ page }) => {
+  await page.clock.install();
+  await page.evaluate(() => window.renderPredictionsReview('ready'));
+  await page.route('**/api/sports/predictions?refresh=1', () => {});
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Loading odds…', exact: true })).toBeDisabled();
+  await page.clock.fastForward(35_100);
+  await expect(page.getByRole('alert')).toContainText('Keeping the previous results');
+  await expect(page.getByRole('article')).toHaveCount(8);
+  const next = await page.evaluate(() => ({ ...window.oddsReviewBoard, status: 'empty', matches: [] }));
+  await page.route('**/api/sports/predictions?refresh=1', (route) => route.fulfill({ json: next }));
+  await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('article')).toHaveCount(0);
+});

@@ -1,5 +1,5 @@
 import { matchReference, resolveMatch, type MatchDetails, type MatchReference } from './espn-match';
-import { mapOdds } from './espn-odds';
+import { decimalToAmerican, hasOdds, mapOdds } from './espn-odds';
 import type { EspnFailureKind, EspnResponseMetadata } from './espn-endpoints';
 
 export const INSIGHT_KINDS = ['predictions', 'predictor', 'probabilities', 'powerindex', 'odds'] as const;
@@ -106,8 +106,14 @@ export function parseInsight(kind: InsightKind, payload: unknown, match: MatchDe
     for (const row of Array.isArray(root.items) ? rows : [root]) {
       checkIdentity(obj(row), match);
       const odds = mapOdds({ odds: [row] });
-      if (odds.home === null && odds.away === null && odds.draw === null && odds.spread === null && odds.over_under === null) continue;
+      if (!hasOdds(odds)) continue;
       for (const [label, value] of [['Home decimal', odds.home], ['Away decimal', odds.away], ['Draw decimal', odds.draw], ['Spread', odds.spread], ['Total (O/U)', odds.over_under]] as const) if (value !== null) values.push({ label: `${odds.provider ?? 'Provider unspecified'} · ${label}`, value: String(value), teamId: null });
+      for (const [label, price] of [['Home', odds.home], ['Away', odds.away], ['Draw', odds.draw], ['Spread home', odds.spread_home_odds], ['Spread away', odds.spread_away_odds], ['Over', odds.over_odds], ['Under', odds.under_odds]] as const) {
+        if (price == null) continue;
+        if (!['Home', 'Away', 'Draw'].includes(label)) values.push({ label: `${odds.provider ?? 'Provider unspecified'} · ${label} decimal`, value: String(price), teamId: null });
+        const american = decimalToAmerican(price);
+        if (american) values.push({ label: `${odds.provider ?? 'Provider unspecified'} · ${label} American (derived)`, value: american, teamId: null });
+      }
       recognized = true; break; // Never mix bookmakers or manufacture absent markets.
     }
   }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { americanToDecimal, dayStamp, mapOdds, mapOddsEvent, normalizeOddsRequest, ODDS_LEAGUES } from '../../src/lib/espn-odds';
+import { americanToDecimal, decimalToAmerican, hasOdds, isOddsBoard, dayStamp, mapOdds, mapOddsEvent, normalizeOddsRequest, ODDS_LEAGUES } from '../../src/lib/espn-odds';
 import { oddsEvent } from './odds-fixture';
 
 const league = ODDS_LEAGUES.find((item) => item.path === 'soccer/eng.1')!;
@@ -24,7 +24,7 @@ test('explicit decimal odds and nested close/open money lines are supported with
   assert.equal(odds.over_under, null);
   assert.equal(odds.provider, 'First provider');
 });
-test('totals-only markets are retained; missing, malformed and spread-only odds are not invented', () => {
+test('totals-only markets are retained; missing and malformed prices are not invented', () => {
   assert.equal(mapOdds({ odds: [{ overUnder: '225.5', spread: 0 }] }).over_under, 225.5);
   for (const odds of [undefined, [], [null], [{ details: 'OFF', spread: -2.5 }], [{ overUnder: 0 }]]) {
     assert.equal(mapOdds({ odds }).home, null);
@@ -121,4 +121,94 @@ test('scoreboard event odds use the shared provider ID fallback', () => {
   const event = oddsEvent();
   const competition = { ...event.competitions[0], odds: [{ provider: { id: '41' }, homeTeamOdds: { moneyLine: -125 } }] };
   assert.equal(mapOddsEvent({ ...event, competitions: [competition] }, league)?.odds.provider, 'DraftKings');
+});
+
+test('derived American prices are finite, signed, rounded and never inferred from absent prices', () => {
+  for (const [decimal, american] of [[1.8, '-125'], [2, '+100'], [2.2, '+120'], [3.5, '+250'], [1.91, '-110']] as const) {
+    assert.equal(decimalToAmerican(decimal), american);
+  }
+  for (const value of [null, undefined, '2', false, NaN, Infinity, 0, 1, -2, 1 + Number.EPSILON, 1e308]) {
+    assert.equal(decimalToAmerican(value), null);
+  }
+});
+
+test('legacy spread and total prices are kept with the selected bookmaker only', () => {
+  const odds = mapOdds({ odds: [
+    { provider: { id: 37 }, spread: 0, homeTeamOdds: { spreadOdds: -125 }, awayTeamOdds: { spreadOdds: '+120' }, overUnder: 225.5, overOdds: -110, underOdds: 100 },
+    { provider: { id: 41 }, homeTeamOdds: { moneyLine: -200 } },
+  ] });
+  assert.equal(odds.provider, 'FanDuel');
+  assert.equal(odds.spread, 0);
+  assert.equal(odds.spread_home_odds, 1.8);
+  assert.equal(odds.spread_away_odds, 2.2);
+  assert.equal(odds.over_odds, 1.9091);
+  assert.equal(odds.under_odds, 2);
+  assert.equal(odds.home, null);
+});
+
+test('nested spread and total quote phases are not combined with each other', () => {
+  const odds = mapOdds({ odds: [{
+    pointSpread: { home: { close: { line: '-2.5', odds: '-110' }, open: { line: -1.5, odds: -125 } }, away: { open: { odds: 120 } } },
+    total: { over: { open: { line: '225.5', decimalOdds: 1.9 } }, under: { open: { odds: '+110' } } },
+  }] });
+  assert.equal(odds.spread, -2.5);
+  assert.equal(odds.spread_home_odds, 1.9091);
+  assert.equal(odds.spread_away_odds, undefined); // No opening price added to a closing quote.
+  assert.equal(odds.over_under, 225.5);
+  assert.equal(odds.over_odds, 1.9);
+  assert.equal(odds.under_odds, 2.1);
+});
+
+test('draw-only, spread-only and price-only fixtures survive without invented opposing prices or lines', () => {
+  for (const raw of [{ spread: 0 }, { drawOdds: 250 }, { homeTeamOdds: { spreadOdds: -110 } }, { overOdds: 120 }]) {
+    const odds = mapOdds({ odds: [raw] });
+    assert.equal(hasOdds(odds), true);
+    const event = oddsEvent();
+    assert.ok(mapOddsEvent({ ...event, competitions: [{ ...event.competitions[0], odds: [raw] }] }, league));
+    assert.equal(odds.home, null);
+    assert.equal(odds.away, null);
+  }
+  for (const raw of [{ overOdds: 'OFF' }, { overUnder: -1 }, { homeTeamOdds: { spreadOdds: false } }, { pointSpread: { home: { close: { odds: Infinity } } } }]) {
+    assert.equal(hasOdds(mapOdds({ odds: [raw] })), false);
+  }
+});
+
+function validBoard() {
+  return {
+    matches: [mapOddsEvent(oddsEvent(), league)!],
+    sources: [{ path: league.path, date: null, ok: true, count: 1 }],
+    status: 'ready', truncated: false, fetchedAt: new Date().toISOString(),
+  };
+}
+
+test('browser odds validator accepts current and older boards with optional market prices', () => {
+  assert.equal(isOddsBoard(validBoard()), true);
+  const board = validBoard();
+  board.matches[0].odds.over_odds = 1.9;
+  assert.equal(isOddsBoard(board), true);
+  board.matches[0].odds.over_odds = null;
+  assert.equal(isOddsBoard(board), true);
+});
+
+test('browser odds validator rejects malformed nested render values, unsafe links and duplicate IDs', () => {
+  const change = (fn: (board: ReturnType<typeof validBoard>) => void) => {
+    const board = validBoard(); fn(board); assert.equal(isOddsBoard(board), false);
+  };
+  change((board) => { Object.assign(board.matches[0].odds, { home: '1.8' }); });
+  change((board) => { board.matches[0].odds.home = NaN; });
+  change((board) => { board.matches[0].odds.over_odds = 1; });
+  change((board) => { Object.assign(board.matches[0].odds, { provider: {} }); });
+  change((board) => { Object.assign(board.matches[0], { home_team: {} }); });
+  change((board) => { board.matches[0].home_logo = 'javascript:alert(1)'; });
+  change((board) => { board.matches[0].away_logo = 'https://user:password@example.test/img.png'; });
+  change((board) => { board.matches[0].kickoff = 'invalid'; });
+  change((board) => { Object.assign(board.sources[0], { responseMetadata: { server: {} } }); });
+  change((board) => { Object.assign(board.sources[0], { url: 'https://example.test' }); });
+  change((board) => { Object.assign(board.sources[0], { date: [] }); });
+  change((board) => { Object.assign(board.sources[0], { count: -1 }); });
+  change((board) => { board.matches[0].details = { league: 'epl', eventId: '../bad' }; });
+  change((board) => { board.matches.push(board.matches[0]); });
+  for (const value of [null, {}, [], { ...validBoard(), matches: [null] }, { ...validBoard(), sources: [null] }]) {
+    assert.equal(isOddsBoard(value), false);
+  }
 });

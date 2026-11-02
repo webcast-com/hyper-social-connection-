@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET, POST } from '../../src/app/api/sports/predictions/route';
+import { isOddsBoard } from '../../src/lib/espn-odds';
 import { oddsEvent } from './odds-fixture';
 
 test('odds GET and POST return normalized matches through the app API, with no-store responses', async () => {
@@ -47,5 +48,27 @@ test('odds API serializes safe HTTP 403 source metadata, not raw denial content'
     assert.equal(board.sources[0].httpStatus, 403);
     assert.equal(board.sources[0].responseMetadata.server, 'example-edge');
     assert.ok(!JSON.stringify(board).includes('test-private'));
+  } finally { globalThis.fetch = original; }
+});
+
+test('odds API preserves isolated markets and enriched prices in a browser-valid board', async () => {
+  const original = globalThis.fetch;
+  const markets = [{ drawOdds: 250 }, { spread: 0 }, { overOdds: -125 }];
+  globalThis.fetch = async () => Response.json({ events: markets.map((odds, i) => {
+    const event = oddsEvent(String(101 + i));
+    return { ...event, competitions: [{ ...event.competitions[0], odds: [{ ...odds, provider: { id: 37 } }] }] };
+  }) });
+  try {
+    const response = await POST(new NextRequest('https://hyper.test/api/sports/predictions?refresh=1', {
+      method: 'POST', body: JSON.stringify({ sports: ['baseball'], perLeague: 3, days: 1 }),
+    }));
+    assert.equal(response.status, 200);
+    const board = await response.json();
+    assert.equal(isOddsBoard(board), true);
+    assert.equal(board.matches.length, 3);
+    assert.equal(board.matches[0].odds.draw, 3.5);
+    assert.equal(board.matches[1].odds.spread, 0);
+    assert.equal(board.matches[2].odds.over_odds, 1.8);
+    assert.ok(board.matches.every((match: { odds: { provider: string; home: null; away: null } }) => match.odds.provider === 'FanDuel' && match.odds.home === null && match.odds.away === null));
   } finally { globalThis.fetch = original; }
 });

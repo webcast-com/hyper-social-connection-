@@ -60,7 +60,7 @@ test('power metrics require named match teams and stay bounded; bookmaker rows a
   const ratings = parseInsight('powerindex', { teams: [100, 200].map((id) => ({ team: { id: String(id) }, stats: Array.from({ length: 40 }, (_, i) => ({ name: `stat-${i}`, value: i })) })) }, match);
   assert.equal(ratings.values.length, 40);
   const odds = parseInsight('odds', { items: [{ provider: { name: 'First' }, homeTeamOdds: { moneyLine: -110 } }, { provider: { name: 'Second' }, awayTeamOdds: { moneyLine: 130 } }] }, match);
-  assert.equal(odds.values.length, 1); assert.match(odds.values[0].label, /First/);
+  assert.equal(odds.values.length, 2); assert.ok(odds.values.every((value) => value.label.startsWith('First ·')));
 });
 test('client guard validates ordered sections, reference and nested renderable values/links', () => {
   const board = insightsBoard(); assert.equal(isInsightsBoard(board, match.reference), true);
@@ -76,7 +76,20 @@ test('Core insights label ID-only bookmakers through the shared odds adapter', (
     { provider: { id: 41 }, awayTeamOdds: { moneyLine: 120 } },
   ] }, match);
   assert.equal(odds.status, 'ready');
-  assert.deepEqual(odds.values, [{ label: 'FanDuel · Home decimal', value: '1.8', teamId: null }]);
+  assert.deepEqual(odds.values, [
+    { label: 'FanDuel · Home decimal', value: '1.8', teamId: null },
+    { label: 'FanDuel · Home American (derived)', value: '-125', teamId: null },
+  ]);
   const unknown = parseInsight('odds', { items: [{ provider: { id: 999 }, overUnder: 225.5 }] }, match);
   assert.equal(unknown.values[0].label, 'Provider ID 999 · Total (O/U)');
+});
+
+test('Core odds retain isolated market lines/prices and derived American labels without fabricating outcomes', () => {
+  for (const raw of [{ spread: 0 }, { drawOdds: { moneyLine: 250 } }, { overOdds: -110 }]) {
+    assert.equal(parseInsight('odds', { items: [raw] }, match).status, 'ready');
+  }
+  const parsed = parseInsight('odds', { items: [{ provider: { id: 37 }, homeTeamOdds: { spreadOdds: -125 }, underOdds: 100 }] }, match);
+  assert.ok(parsed.values.some((value) => value.label === 'FanDuel · Spread home decimal' && value.value === '1.8'));
+  assert.ok(parsed.values.some((value) => value.label === 'FanDuel · Under American (derived)' && value.value === '+100'));
+  assert.ok(!parsed.values.some((value) => value.label.includes('Spread away') || value.label.includes('Total (O/U)')));
 });
