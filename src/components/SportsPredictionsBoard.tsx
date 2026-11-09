@@ -7,7 +7,8 @@ import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from '
 import SportsPredictionInsights from './SportsPredictionInsights';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
-import { ODDS_SPORTS, type OddsBoard, type OddsMatch } from '@/lib/espn-odds';
+import { decimalToAmerican, ODDS_SPORTS, type OddsBoard, type OddsMatch } from '@/lib/espn-odds';
+import { refreshEspnOdds, SportsRequestError } from '@/lib/espn-odds-client';
 import { SPORT_LABELS, type SportKind } from '@/lib/sports-catalog';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { createPost } from '@/app/actions';
@@ -21,6 +22,8 @@ function matchText(match: OddsMatch, note: string) {
       odds.home !== null ? `Home ${odds.home}` : '', odds.draw !== null ? `Draw ${odds.draw}` : '',
       odds.away !== null ? `Away ${odds.away}` : '', odds.over_under !== null ? `O/U ${odds.over_under}` : '',
       odds.spread !== null ? `Reported spread ${odds.spread}` : '',
+      ...([['Spread home price', odds.spread_home_odds], ['Spread away price', odds.spread_away_odds], ['Over price', odds.over_odds], ['Under price', odds.under_odds]] as const)
+        .filter(([, value]) => value != null).map(([label, value]) => `${label} ${value}`),
     ].filter(Boolean).join(' · ')}`,
     odds.provider ? `Provider: ${odds.provider}` : '',
     'Bookmaker odds, not a model prediction. Prices may change.', note.trim(), '#Sports #MatchDay',
@@ -63,11 +66,13 @@ function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?:
       </p>
       {match.venue && <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">{match.venue}</p>}
       <dl className="mt-3 grid grid-cols-3 gap-2 rounded-2xl bg-violet-50 p-3 text-xs dark:bg-violet-950/30">
-        {([['Home', match.odds.home], ['Draw', match.odds.draw], ['Away', match.odds.away]] as const).filter(([, value]) => value !== null).map(([label, value]) => (
-          <div key={label} className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">{label}</dt><dd className="break-all font-bold tabular-nums text-gray-900 dark:text-white">{value!.toFixed(2)}</dd></div>
+        {([['Home', match.odds.home], ['Draw', match.odds.draw], ['Away', match.odds.away],
+          ['Spread home price', match.odds.spread_home_odds], ['Spread away price', match.odds.spread_away_odds],
+          ['Over price', match.odds.over_odds], ['Under price', match.odds.under_odds]] as const).filter(([, value]) => value != null).map(([label, value]) => (
+          <div key={label} className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">{label}</dt><dd className="break-all font-bold tabular-nums text-gray-900 dark:text-white"><span>{value!.toFixed(2)}</span>{decimalToAmerican(value) && <span className="mt-1 block text-[10px] font-normal">American (derived): {decimalToAmerican(value)}</span>}</dd></div>
         ))}
-        {match.odds.over_under !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Total (O/U)</dt><dd className="font-bold text-gray-900 dark:text-white">{match.odds.over_under}</dd></div>}
-        {match.odds.spread !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Spread</dt><dd className="font-bold text-gray-900 dark:text-white">{match.odds.spread}</dd></div>}
+        {match.odds.over_under !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Total (O/U)</dt><dd className="break-all font-bold text-gray-900 dark:text-white">{match.odds.over_under}</dd></div>}
+        {match.odds.spread !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Spread</dt><dd className="break-all font-bold text-gray-900 dark:text-white">{match.odds.spread}</dd></div>}
       </dl>
       <p className="mt-2 break-words text-[11px] text-gray-500 dark:text-gray-400">Decimal odds · {match.odds.provider || 'Provider not specified'} · via ESPN</p>
       {match.details && <Link href={matchHref(match.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
@@ -101,18 +106,11 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
     const controller = new AbortController();
     request.current = controller;
     setLoading(true); setError('');
-    let routeMissing = false;
     try {
-      const response = await fetch('/api/sports/predictions?refresh=1', {
-        method: 'POST', cache: 'no-store', signal: controller.signal, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sports: sport ? [sport] : [], perLeague, days }),
-      });
-      routeMissing = response.status === 404;
-      if (!response.ok) throw new Error('Request failed');
-      const next = await response.json() as OddsBoard;
-      if (!Array.isArray(next.matches) || !Array.isArray(next.sources) || !['ready', 'partial', 'empty', 'unavailable'].includes(next.status)) throw new Error('Invalid response');
+      const next = await refreshEspnOdds({ sports: sport ? [sport] : [], perLeague, days }, controller.signal);
       if (!controller.signal.aborted) setBoard(next);
-    } catch {
+    } catch (error) {
+      const routeMissing = error instanceof SportsRequestError && error.httpStatus === 404;
       if (!controller.signal.aborted) setError(routeMissing
         ? 'The app endpoint /api/sports/predictions returned HTTP 404. Check this deployment includes the odds API. Keeping the previous results.'
         : 'Could not refresh ESPN odds. Keeping the previous results; please try again.');

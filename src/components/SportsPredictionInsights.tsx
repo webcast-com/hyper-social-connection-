@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { MatchReference } from '@/lib/espn-match';
-import { INSIGHT_LABELS, isInsightsBoard, type InsightsBoard } from '@/lib/espn-insights';
+import { INSIGHT_LABELS, type InsightsBoard } from '@/lib/espn-insights';
+import { fetchEspnInsights } from '@/lib/espn-odds-client';
 import { formatPredictionKickoff } from '@/lib/sports';
 
 export default function SportsPredictionInsights({ reference }: { reference: MatchReference }) {
@@ -15,20 +16,15 @@ export default function SportsPredictionInsights({ reference }: { reference: Mat
   const load = async (refresh = false) => {
     if (request.current) return;
     const controller = new AbortController(); request.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 20_000);
     setBusy(true); setError(null);
     try {
-      const response = await fetch(`/api/sports/matches/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.eventId)}/insights${refresh ? '?refresh=1' : ''}`, { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('Insights request failed');
-      const next: unknown = await response.json();
-      if (!isInsightsBoard(next, reference)) throw new Error('Invalid insight response');
+      const next = await fetchEspnInsights(reference, refresh, controller.signal);
       if (controller.signal.aborted) return;
       if (board && board.sections.some((old) => old.status === 'ready' && next.sections.find((section) => section.kind === old.kind)?.status !== 'ready')) throw new Error('Incomplete refresh');
       setBoard(next);
     } catch {
       if (request.current === controller) setError('ESPN insights could not be updated. Try again shortly.');
     } finally {
-      clearTimeout(timeout);
       if (request.current === controller) { request.current = null; setBusy(false); }
     }
   };
