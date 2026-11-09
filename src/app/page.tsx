@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
@@ -13,17 +13,7 @@ import SportsLiveWidget from '@/components/SportsLiveWidget';
 import SportsScoresWidget from '@/components/SportsScoresWidget';
 import { getSportsBoard } from '@/lib/sports';
 
-export const metadata: Metadata = {
-  title: { absolute: 'Hyper — Connect with the world' },
-  description: 'See what your Hyper community is sharing, discover new friends, and join the conversation.',
-  alternates: { canonical: '/' },
-  openGraph: {
-    title: 'Hyper — Connect with the world',
-    description: 'See what your Hyper community is sharing, discover new friends, and join the conversation.',
-    url: '/',
-    images: ['/og-image.png'],
-  },
-};
+export const metadata = getHomeMetadata();
 
 const DEMO_USERS = [
   { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.', createdAt: new Date() },
@@ -352,6 +342,10 @@ export default async function Home() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(getWebsiteStructuredData()).replace(/</g, '\\u003c') }}
+      />
       {/* Left Sidebar — desktop shortcuts */}
       <aside className="hidden lg:flex order-2 lg:order-none min-w-0 flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
         <Link href={`/profile/${currentUser.id}`} className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
@@ -543,6 +537,16 @@ export default async function Home() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
+          <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            Follow <Link href="/sports?sport=football" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">football</Link>,{' '}
+            <Link href="/sports/nba" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NBA basketball</Link>,{' '}
+            <Link href="/sports/nfl" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NFL American football</Link>,{' '}
+            <Link href="/sports?sport=rugby" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">rugby</Link> and more. Scores and match details depend on available coverage.
+          </p>
         </section>
 
         {dbFeedError && (

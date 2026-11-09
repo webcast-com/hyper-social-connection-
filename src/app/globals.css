@@ -31,8 +31,7 @@ h3 {
   to { width: 100%; }
 }
 
-/* Dark mode is class-based: the toggle in the navbar puts `.dark` on <html>.
-   This makes Tailwind's `dark:` utilities respond to that class. */
+/* The root layout sets `.dark` on <html> for the dark-only interface. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ── App-wide visual refresh ────────────────────────────────────────────────

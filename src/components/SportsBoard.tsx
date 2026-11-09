@@ -143,6 +143,16 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </span>
       </div>
 
+      {!leaguePage && <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+        <a href="/scorehub" className="font-bold underline hover:no-underline">ScoreHub</a>
+        {' '}— a separate design demo with illustrative scores and news, not live data.
+      </div>}
+
+      {!leaguePage && <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+        <a href="/nfl-basketball/" className="font-bold text-blue-600 underline hover:no-underline dark:text-blue-400">Basketball &amp; NFL dashboard</a>
+        {' '}— a separate sports experience with live feeds when available and sample content otherwise.
+      </p>}
+
       {leaguePage && leagueNavigation}
       {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
       <div className="mb-3 flex items-center gap-2">

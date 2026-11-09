@@ -19,6 +19,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  colorScheme: 'dark',
+  themeColor: '#08111f',
 };
 
 // The app renders the signed-in viewer per request, so skip static
@@ -31,14 +33,6 @@ function DocumentHead() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={GOOGLE_FONTS_STYLESHEET} />
-      {/* Apply the saved/system theme before hydration to avoid a flash of
-          the wrong theme. Only touches <html>'s class (not managed by
-          React), so it can never cause a hydration mismatch. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
-        }}
-      />
       <meta name="fo-verify" content="14ce23b7-528a-4490-88f7-5f3043e433e6" />
     </head>
   );
@@ -63,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <DocumentHead />
       <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />

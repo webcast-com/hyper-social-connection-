@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { isPreviewDeployment } from '@/lib/site-url';
+import { SITE_DESCRIPTION } from '@/lib/site-description';
 
 export const SITE_NAME = 'Hyper';
-export const SITE_DESCRIPTION =
-  'Connect with friends, discover communities, and share what matters on Hyper.';
+export { SITE_DESCRIPTION } from '@/lib/site-description';
 
 /**
  * Shared site-level metadata. Route-specific pages can extend or override
@@ -16,7 +16,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       google: '0_cko3izuhuWqNHJ2touhJTuXeoA2Kuxtbe4A8vXIwc',
     },
     title: {
-      default: 'Hyper — Connect with the world',
+      default: 'Hyper — Social Network, Communities & Sports',
       template: '%s | Hyper',
     },
     description: SITE_DESCRIPTION,
@@ -27,6 +27,11 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       'connect with friends',
       'online communities',
       'discover people',
+      'sports scores',
+      'football',
+      'NBA',
+      'NFL',
+      'rugby',
     ],
     authors: [{ name: SITE_NAME }],
     creator: SITE_NAME,
@@ -37,7 +42,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       locale: 'en_US',
       url: siteUrl,
       siteName: SITE_NAME,
-      title: 'Hyper — Connect with the world',
+      title: 'Hyper — Social Network, Communities & Sports',
       description: SITE_DESCRIPTION,
       images: [
         {
@@ -50,7 +55,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Hyper — Connect with the world',
+      title: 'Hyper — Social Network, Communities & Sports',
       description: SITE_DESCRIPTION,
       images: ['/og-image.png'],
     },

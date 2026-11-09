@@ -3,7 +3,7 @@ import { getPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Create an account',
-  description: 'Join Hyper to connect with friends and discover communities.',
+  description: 'Create a Hyper account to connect with friends, share posts and join communities.',
   path: '/signup',
 });
 

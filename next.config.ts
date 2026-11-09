@@ -15,15 +15,27 @@ const nextConfig: NextConfig = {
   // Canonical tags consolidate previews; this also prevents any preview route
   // (including pages overriding their robots metadata) from being indexed.
   async headers() {
+    const demoHeaders = ['/scorehub/:path*', '/nfl-basketball/:path*'].map((source) => ({ source, headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }));
     return process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development'
-      ? [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
-      : [];
+      ? [...demoHeaders, { source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
+      : demoHeaders;
+  },
+  // Preserve ScoreHub's relative stylesheet and script paths in its standalone document.
+  async redirects() {
+    return [{ source: '/scorehub', destination: '/scorehub/index.htm', permanent: false }];
   },
   // Files present in public/uploads are served statically first. Missing
   // names (Prisma bucket / S3 objects) fall through to /api/media, which
   // 302s to a short-lived presigned GET. Stored URLs stay `/uploads/…`.
   async rewrites() {
-    return [{ source: "/uploads/:filename", destination: "/api/media/:filename" }];
+    return {
+      // Existing public assets win before the SPA fallback, including JS/CSS.
+      fallback: [
+        { source: '/nfl-basketball', destination: '/nfl-basketball/index.html' },
+        { source: '/nfl-basketball/:path*', destination: '/nfl-basketball/index.html' },
+        { source: '/uploads/:filename', destination: '/api/media/:filename' },
+      ],
+    };
   },
 };
 
