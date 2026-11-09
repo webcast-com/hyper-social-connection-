@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050d17">
+  <meta name="description" content="ScoreHub — every score, every moment. Live scores, fixtures, standings and sports news.">
+  <title>ScoreHub — Every Score. Every Moment.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="ScoreHub home"><span class="brand-mark">↗</span><span><b>Score<span>Hub</span></b><small>Every Score. Every Moment.</small></span></a>
+    <button class="mobile-menu" id="menuToggle" aria-label="Toggle navigation">☰</button>
+    <nav class="main-nav" id="mainNav">
+      <a class="active" href="#home">Home</a><a href="#live">Live Scores</a><a href="#fixtures">Fixtures</a><a href="#leagues">Leagues</a><a href="#news">News</a><a href="#teams">Teams</a><a href="#stats">Stats</a><a href="#more">More⌄</a>
+    </nav>
+    <div class="header-actions"><label class="search"><span>⌕</span><input id="searchInput" placeholder="Search teams, matches, leagues…"></label><button class="icon-btn" id="themeToggle" aria-label="Toggle theme">☾</button><button class="icon-btn" aria-label="Notifications">♧</button><button class="login">Login</button></div>
+  </header>
+  <nav class="sport-nav" aria-label="Sports">
+    <a href="#sports">♧ <span>All Sports</span></a><a class="selected" href="#football">⚽ <span>Football</span></a><a href="#basketball">🏀 <span>Basketball</span></a><a href="#tennis">🟡 <span>Tennis</span></a><a href="#baseball">⚾ <span>Baseball</span></a><a href="#hockey">🏒 <span>Ice Hockey</span></a><a href="#rugby">🏉 <span>Rugby</span></a><a href="#esports">🎮 <span>Esports</span></a>
+  </nav>
+  <main class="page" id="home">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="live-pill">♨ <b>54</b> Matches Live Now</div>
+        <h1>Every Score.<br><span>Every Moment.</span></h1>
+        <p>Real-time live scores, stats, fixtures and results<br class="desktop-only"> from your favorite leagues and teams.</p>
+        <div class="hero-buttons"><a class="btn primary" href="#live">ϟ &nbsp;Live Scores</a><a class="btn secondary" href="#fixtures">▣ &nbsp;Upcoming Fixtures</a></div>
+        <div class="quick-stats"><div><i class="stat-icon red">◉</i><b>54</b><small>LIVE MATCHES</small></div><div><i class="stat-icon teal">◷</i><b>12</b><small>SPORTS</small></div><div><i class="stat-icon green">◉</i><b>98</b><small>LEAGUES</small></div><div><i class="stat-icon gold">♟</i><b>2.5M+</b><small>USERS</small></div></div>
+      </div>
+      <div class="featured-match">
+        <div class="feature-head"><span>⚽ &nbsp;UEFA Champions League</span><span class="live-time"><i></i> LIVE &nbsp; <b>72′</b></span></div>
+        <div class="feature-teams"><div class="team-large"><span class="crest arsenal">A</span><b>Arsenal</b></div><div class="feature-score"><strong>2 - 1</strong><small>HT 1-0</small></div><div class="team-large"><span class="crest chelsea">C</span><b>Chelsea</b></div></div>
+        <div class="event-list"><span>│ &nbsp;12′ &nbsp; ⚽ &nbsp; Martin Ødegaard</span><span>│ &nbsp;45′+2 &nbsp; ⚽ &nbsp; Bukayo Saka</span><span>45′ &nbsp; ⚽ &nbsp; N. Jackson</span></div>
+        <button class="watch-btn" id="watchLive">▷ &nbsp; Watch Live</button>
+        <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <button class="hero-arrow left" aria-label="Previous feature">‹</button><button class="hero-arrow right" aria-label="Next feature">›</button>
+    </section>
+    <section class="live-strip" id="live">
+      <div class="section-heading"><h2><i class="red-dot"></i> Live Now</h2><span class="muted">ⓘ</span></div>
+      <div class="ticker">
+        <article class="ticker-card"><small>⚽ UCL <b>72′</b></small><div><span class="mini-crest arsenal">A</span> ARS <strong>2 - 1</strong> CHE <span class="mini-crest chelsea">C</span></div></article>
+        <article class="ticker-card"><small>🏴 EPL <b>68′</b></small><div><span class="mini-crest city">M</span> MCI <strong>1 - 0</strong> NEW <span class="mini-crest newcastle">N</span></div></article>
+        <article class="ticker-card"><small>🇪🇸 LALIGA <b>71′</b></small><div><span class="mini-crest barca">B</span> BAR <strong>0 - 0</strong> RMA <span class="mini-crest madrid">R</span></div></article>
+        <article class="ticker-card"><small>🇮🇹 SERIE A <b>65′</b></small><div><span class="mini-crest milan">M</span> MIL <strong>1 - 1</strong> INT <span class="mini-crest inter">I</span></div></article>
+        <article class="ticker-card"><small>🇫🇷 LIGUE 1 <b>70′</b></small><div><span class="mini-crest psg">P</span> PSG <strong>2 - 0</strong> LIL <span class="mini-crest lille">L</span></div></article>
+      </div>
+    </section>
+    <section class="dashboard-grid">
+      <aside class="left-column">
+        <div class="panel leagues-panel" id="leagues"><div class="panel-title"><h2>Popular Leagues</h2><a href="#leagues">View All</a></div>
+          <a class="league-row" href="#"><span class="league-badge purple">♛</span><span><b>Premier League</b><small>20 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge">⚽</span><span><b>UEFA Champions League</b><small>32 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge orange">▣</span><span><b>La Liga</b><small>20 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge blue">♟</span><span><b>Serie A</b><small>20 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge red">⚑</span><span><b>Bundesliga</b><small>18 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge yellow">⚽</span><span><b>Ligue 1</b><small>18 Teams</small></span><em>›</em></a>
+          <a class="league-row" href="#"><span class="league-badge">🇺🇸</span><span><b>MLS</b><small>29 Teams</small></span><em>›</em></a>
+        </div>
+        <div class="panel scorers"><div class="panel-title"><h2>Top Scorers</h2><a href="#stats">View All</a></div>
+          <div class="scorer"><div class="avatar">👨🏽</div><span><b>Erling Haaland</b><small>Man City</small></span><strong>21</strong></div>
+          <div class="scorer"><div class="avatar">👨🏿</div><span><b>Kylian Mbappé</b><small>PSG</small></span><strong>18</strong></div>
+          <div class="scorer"><div class="avatar">👨🏻</div><span><b>Harry Kane</b><small>Bayern Munich</small></span><strong>17</strong></div>
+          <div class="scorer"><div class="avatar">👨🏽‍🦱</div><span><b>Lautaro Martínez</b><small>Inter Milan</small></span><strong>16</strong></div>
+          <div class="scorer"><div class="avatar">👨🏿‍🦱</div><span><b>Mohamed Salah</b><small>Liverpool</small></span><strong>15</strong></div>
+        </div>
+      </aside>
+      <section class="panel matches-panel" id="fixtures">
+        <div class="panel-title"><h2>Live Scores</h2><a class="arrow-link" href="#live">›</a></div>
+        <div class="filters" role="group" aria-label="Filter matches"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="live">◉ &nbsp;Live</button><button class="filter" data-filter="ht">◉ &nbsp;HT</button><button class="filter" data-filter="today">♡ &nbsp;Today</button><button class="filter" data-filter="favorites">☆ &nbsp;Favorites</button><button class="filter tune" id="sortBtn">☷</button></div>
+        <div class="match-list" id="matchList">
+          <article class="match-card" data-status="live" data-league="UEFA Champions League"><div class="match-meta"><span>⚽ UEFA Champions League</span><b>72′</b><div class="match-actions"><button class="star" aria-label="Favorite match">☆</button><button aria-label="Match details">♧</button></div></div><div class="match-scoreline"><span class="team-name"><i class="mini-crest arsenal">A</i> Arsenal</span><strong>2 - 1</strong><span class="team-name away"><i class="mini-crest chelsea">C</i> Chelsea</span></div><div class="match-stats"><span>◉ 55% &nbsp; ♧ 8 &nbsp; ▤ 4 &nbsp; ▣ 2</span><span>◉ 45% &nbsp; ♧ 6 &nbsp; ▤ 2 &nbsp; ▣ 1</span></div></article>
+          <article class="match-card" data-status="live" data-league="Premier League"><div class="match-meta"><span>🏴 Premier League</span><b>68′</b><div class="match-actions"><button class="star" aria-label="Favorite match">☆</button><button aria-label="Match details">♧</button></div></div><div class="match-scoreline"><span class="team-name"><i class="mini-crest city">M</i> Manchester City</span><strong>1 - 0</strong><span class="team-name away"><i class="mini-crest newcastle">N</i> Newcastle United</span></div><div class="match-stats"><span>◉ 62% &nbsp; ♧ 7 &nbsp; ▤ 5 &nbsp; ▣ 1</span><span>◉ 38% &nbsp; ♧ 3 &nbsp; ▤ 1 &nbsp; ▣ 2</span></div></article>
+          <article class="match-card" data-status="ht" data-league="La Liga"><div class="match-meta"><span>🇪🇸 La Liga</span><b>71′</b><div class="match-actions"><button class="star" aria-label="Favorite match">☆</button><button aria-label="Match details">♧</button></div></div><div class="match-scoreline"><span class="team-name"><i class="mini-crest barca">B</i> Barcelona</span><strong>0 - 0</strong><span class="team-name away"><i class="mini-crest madrid">R</i> Real Madrid</span></div><div class="match-stats"><span>◉ 58% &nbsp; ♧ 6 &nbsp; ▤ 3 &nbsp; ▣ 0</span><span>◉ 42% &nbsp; ♧ 4 &nbsp; ▤ 2 &nbsp; ▣ 0</span></div></article>
+          <article class="match-card" data-status="live" data-league="Serie A"><div class="match-meta"><span>🇮🇹 Serie A</span><b>65′</b><div class="match-actions"><button class="star" aria-label="Favorite match">☆</button><button aria-label="Match details">♧</button></div></div><div class="match-scoreline"><span class="team-name"><i class="mini-crest milan">M</i> AC Milan</span><strong>1 - 1</strong><span class="team-name away"><i class="mini-crest inter">I</i> Inter Milan</span></div><div class="match-stats"><span>◉ 47% &nbsp; ♧ 5 &nbsp; ▤ 2 &nbsp; ▣ 2</span><span>◉ 53% &nbsp; ♧ 6 &nbsp; ▤ 4 &nbsp; ▣ 1</span></div></article>
+          <article class="match-card" data-status="today" data-league="Ligue 1"><div class="match-meta"><span>🇫🇷 Ligue 1</span><b>70′</b><div class="match-actions"><button class="star" aria-label="Favorite match">☆</button><button aria-label="Match details">♧</button></div></div><div class="match-scoreline"><span class="team-name"><i class="mini-crest psg">P</i> PSG</span><strong>2 - 0</strong><span class="team-name away"><i class="mini-crest lille">L</i> Lille</span></div><div class="match-stats"><span>◉ 64% &nbsp; ♧ 9 &nbsp; ▤ 4 &nbsp; ▣ 0</span><span>◉ 36% &nbsp; ♧ 2 &nbsp; ▤ 1 &nbsp; ▣ 1</span></div></article>
+        </div>
+        <a class="view-all" href="#live">View All Live Matches &nbsp; →</a>
+      </section>
+      <aside class="right-column">
+        <div class="panel standings" id="stats"><div class="panel-title"><h2>Standings</h2></div><div class="league-tabs"><button class="active">EPL</button><button>La Liga</button><button>Serie A</button></div><table><thead><tr><th>#</th><th>Team</th><th>P</th><th>GD</th><th>Pts</th></tr></thead><tbody><tr><td>1</td><td>🔴 Arsenal</td><td>37</td><td>31</td><td>89</td></tr><tr><td>2</td><td>🔵 Man City</td><td>37</td><td>45</td><td>85</td></tr><tr><td>3</td><td>🔴 Liverpool</td><td>37</td><td>41</td><td>79</td></tr><tr><td>4</td><td>🟣 Aston Villa</td><td>37</td><td>20</td><td>68</td></tr><tr><td>5</td><td>⚪ Tottenham</td><td>37</td><td>13</td><td>63</td></tr></tbody></table><a class="table-link" href="#leagues">View Full Table →</a></div>
+        <div class="panel statistics"><div class="panel-title"><h2>Match Statistics</h2></div><div class="stats-score"><span><i class="mini-crest arsenal">A</i> ARS</span><b>2 - 1</b><span>CHE <i class="mini-crest chelsea">C</i></span></div><div class="possession"><div class="donut"><span>Possession</span></div><b>55%</b><b>45%</b></div><div class="stat-bars"><div><span>Shots</span><b>8</b><i style="--left:57%;--right:43%"></i><b>6</b></div><div><span>Shots on Target</span><b>4</b><i style="--left:67%;--right:33%"></i><b>2</b></div><div><span>Corners</span><b>4</b><i style="--left:50%;--right:50%"></i><b>4</b></div><div><span>Fouls</span><b>7</b><i style="--left:47%;--right:53%"></i><b>8</b></div><div><span>Yellow Cards</span><b>2</b><i style="--left:67%;--right:33%"></i><b>1</b></div></div><a class="table-link" href="#stats">View Full Stats →</a></div>
+      </aside>
+    </section>
+    <section class="panel news-section" id="news"><div class="panel-title"><h2>Latest News</h2><a href="#news">View All News →</a></div><div class="news-grid">
+      <article class="news-card"><img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=800&q=80" alt="Football stadium"><div class="news-copy"><small>TRANSFER NEWS <span>15m ago</span></small><h3>Official: Mbappé signs new deal with Real Madrid</h3><p>Kylian Mbappé has signed a new contract until 2029.</p></div></article>
+      <article class="news-card"><img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80" alt="Football match"><div class="news-copy"><small>PREMIER LEAGUE <span>1h ago</span></small><h3>Arsenal extend lead at the top after win against Chelsea</h3><p>Arsenal beat Chelsea 2-1 in a thrilling London derby at Emirates.</p></div></article>
+      <article class="news-card"><img src="https://images.unsplash.com/photo-1518091043644-c1d4457512c6?auto=format&fit=crop&w=800&q=80" alt="Champions trophy"><div class="news-copy"><small>UCL <span>2h ago</span></small><h3>Champions League final bracket confirmed</h3><p>All teams are now set for the road to the final in London.</p></div></article>
+      <article class="news-card"><img src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80" alt="Football player on pitch"><div class="news-copy"><small>INJURY NEWS <span>3h ago</span></small><h3>Salah returns to training ahead of weekend clash</h3><p>Mohamed Salah could be back in action this weekend.</p></div></article>
+    </div></section>
+    <section class="feature-row"><div><span class="feature-icon purple">ϟ</span><span><b>Real-time Updates</b><small>Get live scores and updates<br> instantly as they happen.</small></span></div><div><span class="feature-icon teal">▥</span><span><b>In-depth Statistics</b><small>Detailed stats, analytics and<br> team performance data.</small></span></div><div><span class="feature-icon blue">♧</span><span><b>Personalized Alerts</b><small>Follow your teams and get<br> instant notifications.</small></span></div><div><span class="feature-icon red">⚽</span><span><b>All Sports Covered</b><small>Football, Basketball, Tennis<br> and many more.</small></span></div></section>
+  </main>
+  <footer class="footer"><div class="footer-main"><div class="footer-brand"><a class="brand" href="#"><span class="brand-mark">↗</span><span><b>Score<span>Hub</span></b><small>Every Score. Every Moment.</small></span></a><p>Your ultimate destination for live scores,<br> sports news, stats and much more.</p><div class="socials"><a href="#">f</a><a href="#">♥</a><a href="#">◎</a><a href="#">▶</a><a href="#">➤</a></div></div><div><h3>Quick Links</h3><a href="#home">Home</a><a href="#live">Live Scores</a><a href="#fixtures">Fixtures</a><a href="#news">News</a><a href="#teams">Teams</a></div><div><h3>Leagues</h3><a href="#leagues">Premier League</a><a href="#leagues">La Liga</a><a href="#leagues">Serie A</a><a href="#leagues">Bundesliga</a><a href="#leagues">Champions League</a></div><div><h3>Support</h3><a href="#about">About Us</a><a href="#contact">Contact Us</a><a href="#privacy">Privacy Policy</a><a href="#terms">Terms of Use</a><a href="#faq">FAQ</a></div><div class="app-links"><h3>Download Our App</h3><p>Get the latest scores and updates<br> on your mobile device.</p><div><a href="#">▶ Google Play</a><a href="#">● App Store</a></div></div></div><div class="footer-bottom"><span>© 2024 ScoreHub. All Rights Reserved.</span><span>Made with <b>♥</b> for sports fans</span></div></footer>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="script.js"></script>
+</body>
+</html>
