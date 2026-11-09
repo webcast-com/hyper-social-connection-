@@ -15,7 +15,6 @@ import {
   Users,
   Trophy,
 } from 'lucide-react';
-import DarkModeToggle from '@/components/Theme/DarkModeToggle';
 import BrandLogo from '@/components/BrandLogo';
 
 const MOBILE_TABS = [
@@ -195,10 +194,8 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
         </nav>
 
-        {/* Right: Theme Toggle, Settings, Logout & User Avatar */}
+        {/* Right: Settings, Logout & User Avatar */}
         <div className="flex items-center space-x-2 shrink-0">
-          <DarkModeToggle />
-
           {user ? (
             <>
               <Link

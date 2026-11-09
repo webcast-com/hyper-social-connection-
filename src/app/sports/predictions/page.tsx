@@ -6,7 +6,7 @@ import type { OddsBoard } from '@/lib/espn-odds';
 import SportsPredictionsBoard from '@/components/SportsPredictionsBoard';
 
 export const metadata: Metadata = getPageMetadata({
-  title: 'Sports Predictions',
+  title: 'Sports Predictions and Odds',
   description: 'Upcoming ESPN fixtures and bookmaker odds, with optional reported model estimates, game probabilities and strength metrics where available.',
   path: '/sports/predictions',
 });

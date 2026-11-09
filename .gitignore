@@ -19,3 +19,6 @@ public/uploads/*
 # browser regression test artifacts
 test-results/
 playwright-report/
+
+# Generated standalone NFL / basketball dashboard
+public/nfl-basketball/

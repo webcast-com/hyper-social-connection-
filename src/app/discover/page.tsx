@@ -8,7 +8,7 @@ import { Users, Sparkles, Trophy } from 'lucide-react';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Discover People and Communities',
-  description: 'Find interesting people, communities, and conversations to follow on Hyper.',
+  description: 'Discover people, follow profiles and explore conversations and communities on Hyper.',
   path: '/discover',
 });
 

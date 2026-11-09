@@ -1,5 +1,5 @@
 import { fetchEspnScoreboard } from './espn-client';
-import { espnFailureDetails, espnScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
+import { espnFailureDetails, espnSportsScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
 import { ESPN_LEAGUES, type EspnLeague } from './sports-catalog';
 
 export type EspnAuditRow = EspnEndpointDetails & {
@@ -21,7 +21,7 @@ export async function auditEspnScoreboards(leagues: EspnLeague[] = ESPN_LEAGUES)
         results[index] = { ...common, url: board.url, httpStatus: board.httpStatus, ok: true,
           events: board.events.length, live: board.events.filter((event) => event.status === 'live').length };
       } catch (error) {
-        results[index] = { ...common, ...espnFailureDetails(error, espnScoreboardUrl(league)), ok: false, events: null, live: null };
+        results[index] = { ...common, ...espnFailureDetails(error, espnSportsScoreboardUrl(league)), ok: false, events: null, live: null };
       }
     }
   }));

@@ -59,3 +59,14 @@ test('denial metadata is allowlisted, bounded and never includes cookies or arbi
   assert.equal(metadata.proxyBlockReason, 'OUTBOUND_HOST_DENIED');
   assert.ok(!JSON.stringify(metadata).includes('test-private'));
 });
+
+test('Sports board requests broader NCAA basketball coverage without changing other scoreboards or odds URLs', async () => {
+  const { espnSportsScoreboardUrl } = await import('../../src/lib/espn-endpoints');
+  for (const slug of ['ncaam', 'ncaaw']) {
+    const league = ESPN_LEAGUES.find((item) => item.slug === slug)!;
+    assert.equal(espnSportsScoreboardUrl(league), `${espnScoreboardUrl(league)}?groups=50&limit=500`);
+  }
+  for (const league of ESPN_LEAGUES.filter((item) => item.slug !== 'ncaam' && item.slug !== 'ncaaw')) {
+    assert.equal(espnSportsScoreboardUrl(league), espnScoreboardUrl(league));
+  }
+});

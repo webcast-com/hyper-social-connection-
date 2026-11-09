@@ -10,7 +10,7 @@ import { getMyGroupInvites } from '@/app/invite-actions';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Communities and Groups',
-  description: 'Explore Hyper communities and find a group for the things you care about.',
+  description: 'Explore Hyper groups, find communities around shared interests and join conversations and events.',
   path: '/groups',
 });
 

@@ -5,7 +5,7 @@ import { sportsFiltersFromRecord, sportsFilterSearch } from '@/lib/sports-filter
 import { getSportsBoard } from '@/lib/sports';
 
 export const metadata: Metadata = getPageMetadata({
-  title: 'Sports',
+  title: 'Live Sports Scores and Fixtures',
   description: 'Follow worldwide football, basketball, rugby, baseball, ice hockey, American football and motorsport scores and fixtures.',
   path: '/sports',
 });

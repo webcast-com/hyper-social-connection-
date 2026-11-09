@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Connect with friends, share stories, join communities, and explore new conversations.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#2563eb',
+    background_color: '#08111f',
+    theme_color: '#08111f',
     icons: [
       {
         src: '/icon-192.png',

@@ -125,3 +125,24 @@ test('HTTP 403 keeps safe denial metadata without reading/exposing HTML or retry
     assert.equal(calls, 1);
   });
 });
+
+test('both NCAA scoreboards request broad Division I coverage and retain returned games beyond default limits', async () => {
+  for (const slug of ['ncaam', 'ncaaw']) {
+    const college = ESPN_LEAGUES.find((item) => item.slug === slug)!;
+    const events = Array.from({ length: 150 }, (_, index) => ({
+      id: String(index + 1), date: '2026-11-08T18:00:00Z',
+      competitions: [{ competitors: [
+        { homeAway: 'home', team: { displayName: `Home ${index}` } },
+        { homeAway: 'away', team: { displayName: `Away ${index}` } },
+      ] }],
+    }));
+    await withFetch(async (input) => {
+      assert.equal(String(input), `https://site.api.espn.com/apis/site/v2/sports/basketball/${college.league}/scoreboard?groups=50&limit=500`);
+      return Response.json({ events });
+    }, async () => {
+      const parsed = await fetchEspnEvents(college);
+      assert.equal(parsed.length, 150);
+      assert.equal(parsed[149].home.name, 'Home 149');
+    });
+  }
+});

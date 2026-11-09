@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
 import { getSiteUrl } from '../../src/lib/site-url';
-import { getPageMetadata } from '../../src/lib/seo';
+import { getHomeMetadata, getPageMetadata, getWebsiteStructuredData } from '../../src/lib/seo';
 import { getSiteMetadata } from '../../src/components/SEO/SEOMeta';
 import robots from '../../src/app/robots';
 import nextConfig from '../../next.config';
@@ -68,6 +68,27 @@ test('site metadata supplies the production base and images without imposing a h
     assert.deepEqual(metadata.robots && typeof metadata.robots === 'object' && metadata.robots?.index, true);
   });
 });
+test('homepage search and sharing metadata describe the app consistently', async () => {
+  await withEnv(publicEnv, () => {
+    const home = getHomeMetadata();
+    const site = getSiteMetadata(getSiteUrl());
+    assert.deepEqual(home.title, { absolute: 'Hyper — Social Network, Communities & Sports' });
+    assert.equal(home.description, site.description);
+    assert.equal(home.openGraph?.description, home.description);
+    assert.equal(home.twitter?.description, home.description);
+    assert.equal(home.alternates?.canonical, '/');
+    assert.match(home.description!, /communities/);
+    for (const term of ['sports', 'football', 'NBA', 'NFL', 'rugby']) assert.match(home.description!, new RegExp(term, 'i'));
+    for (const term of ['football', 'NBA', 'NFL', 'rugby']) assert.ok((site.keywords as string[]).includes(term));
+  });
+});
+test('homepage WebSite structured data identifies this app on its canonical origin', async () => {
+  await withEnv(publicEnv, () => {
+    assert.deepEqual(getWebsiteStructuredData(), {
+      '@context': 'https://schema.org', '@type': 'WebSite', name: 'Hyper', url: 'https://hyper.co.ke/',
+    });
+  });
+});
 test('page canonical, Open Graph and Twitter resolve to one production URL and image', async () => {
   await withEnv(publicEnv, () => {
     const metadata = getPageMetadata({ title: 'Review match', description: 'Reported details.', path: '/sports/matches/epl/401234567' });
@@ -83,9 +104,9 @@ test('preview deployments prevent indexing through metadata and a global HTTP he
     assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
     const root = getSiteMetadata(getSiteUrl());
     assert.equal(typeof root.robots === 'object' && root.robots?.index, false);
-    assert.deepEqual(await nextConfig.headers!(), [{ source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]);
+    assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/nfl-basketball/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]);
   });
-  await withEnv(publicEnv, async () => assert.deepEqual(await nextConfig.headers!(), []));
+  await withEnv(publicEnv, async () => assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/nfl-basketball/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]));
 });
 test('robots advertises the real host and sitemap while retaining API/account crawl restrictions', async () => {
   await withEnv(publicEnv, () => {
@@ -194,6 +215,13 @@ test('About and Privacy render readable guest content and shared footer links wi
     const aboutHtml = renderToStaticMarkup(createElement(about.default));
     const privacyHtml = renderToStaticMarkup(createElement(privacy.default));
     assert.match(aboutHtml, /<h1[^>]*>About Hyper<\/h1>/);
+    for (const term of ['football', 'NBA', 'NFL', 'rugby']) {
+      assert.match(aboutHtml, new RegExp(term, 'i'));
+      assert.match(about.metadata.description!, new RegExp(term, 'i'));
+    }
+    for (const href of ['/sports/nba', '/sports/nfl', '/sports?sport=football', '/sports?sport=rugby']) {
+      assert.ok(aboutHtml.includes(`href="${href.replace('&', '&amp;')}"`));
+    }
     assert.match(privacyHtml, /<h1[^>]*>Privacy notice<\/h1>/);
     assert.match(privacyHtml, /has not yet published a dedicated privacy contact/);
     assert.ok(!privacyHtml.includes('mailto:'));

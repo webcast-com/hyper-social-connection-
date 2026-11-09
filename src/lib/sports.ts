@@ -10,7 +10,7 @@ import {
   type SportKind, type SportsRegion,
 } from './sports-catalog';
 import { fetchEspnScoreboard } from './espn-client';
-import { espnFailureDetails, espnScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
+import { espnFailureDetails, espnSportsScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
 import type { MatchReference } from './espn-match';
 export type { SportKind } from './sports-catalog';
 
@@ -297,7 +297,7 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
     if (result.status === 'fulfilled') return;
     const meta = ESPN_LEAGUES[i];
     sources.push({ id: `espn:${meta.slug}`, ok: false, count: 0,
-      ...espnFailureDetails(result.reason, espnScoreboardUrl(meta)) });
+      ...espnFailureDetails(result.reason, espnSportsScoreboardUrl(meta)) });
   });
 
   const events = mergeEvents(groups);

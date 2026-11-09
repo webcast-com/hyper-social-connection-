@@ -23,7 +23,13 @@
     "test:sports-layout": "playwright test --config=playwright.sports.config.ts",
     "test:mobile-navigation": "playwright test --config=playwright.mobile-navigation.config.ts",
     "check:espn": "tsx scripts/check-espn.ts",
-    "test:seo": "tsx --test tests/seo/*.test.ts"
+    "test:seo": "tsx --test tests/seo/*.test.ts",
+    "test:theme": "tsx --test tests/theme/*.test.ts",
+    "test:scorehub": "tsx --test tests/scorehub/*.test.ts",
+    "predev": "node scripts/build-nfl-basketball.mjs",
+    "prebuild": "node scripts/build-nfl-basketball.mjs",
+    "build:nfl-basketball": "node scripts/build-nfl-basketball.mjs",
+    "test:nfl-basketball": "tsx --test tests/nfl-basketball/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
@@ -54,6 +60,7 @@
     "esbuild": "^0.28.2",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "jsdom": "^26.1.0",
     "postcss": "8.5.8",
     "prisma": "^7.9.1",
     "tailwindcss": "4.1.17",
