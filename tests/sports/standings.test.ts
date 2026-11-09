@@ -85,3 +85,15 @@ test('client guard permits older crest-free responses and rejects unsafe nested 
   board.groups[1].rows[0].logo = 'javascript:alert(1)';
   assert.equal(isStandingsBoard(board, 'epl', 2026), false);
 });
+
+test('standings retain more than 32 conference tables and the client accepts them', () => {
+  const children = Array.from({ length: 48 }, (_, i) => ({
+    name: `Conference ${i + 1}`,
+    standings: { entries: [{ team: { id: String(i + 1), name: `Team ${i + 1}` }, stats: [] }] },
+  }));
+  const parsed = parseStandings({ season: { year: 2026 }, children }, 2026);
+  assert.equal(parsed.groups.length, 48);
+  assert.equal(parsed.groups[47].label, 'Conference 48');
+  const board = { league: 'ncaaw', requestedSeason: 2026, ...parsed, fetchedAt: '2026-10-23T18:00:00Z', source: { ok: true, url: resolveStandings('ncaaw').url, httpStatus: 200 } };
+  assert.equal(isStandingsBoard(board, 'ncaaw', 2026), true);
+});

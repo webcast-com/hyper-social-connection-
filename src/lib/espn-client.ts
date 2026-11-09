@@ -1,13 +1,13 @@
 import { parseEspnEvents } from './espn';
 import type { EspnLeague } from './sports-catalog';
-import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnScoreboardUrl } from './espn-endpoints';
+import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnResponseMetadata, espnErrorMessage, espnSportsScoreboardUrl } from './espn-endpoints';
 export { espnScoreboardUrl } from './espn-endpoints';
 
 type TransportOptions = { timeoutMs?: number; retryDelayMs?: number };
 
 /** Server-side ESPN transport. Two attempts share one deadline, not two timeouts. */
 export async function fetchEspnScoreboard(league: EspnLeague, options: TransportOptions = {}) {
-  const url = espnScoreboardUrl(league);
+  const url = espnSportsScoreboardUrl(league);
   const timeoutMs = options.timeoutMs ?? 4_000;
   const delayMs = options.retryDelayMs ?? 150;
   const controller = new AbortController();

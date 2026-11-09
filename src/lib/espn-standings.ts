@@ -30,6 +30,12 @@ export function safeStandingCrest(value: unknown): string | null {
   } catch { return null; }
 }
 
+// Bounded traversal avoids truncating the NCAA conference tables at 32 while
+// retaining limits for unexpectedly large provider responses.
+const MAX_GROUPS = 128;
+const MAX_NODES = 512;
+const MAX_CHILDREN = 128;
+
 /** Preserve supplied groups/order/ranks/stat labels, never calculate a league table from scores. */
 export function parseStandings(payload: unknown, requestedSeason: number | null): Pick<StandingsBoard, 'season' | 'groups' | 'status'> {
   const root = obj(payload);
@@ -41,7 +47,7 @@ export function parseStandings(payload: unknown, requestedSeason: number | null)
   const groups: StandingGroup[] = [];
   let visited = 0;
   const visit = (node: unknown, path: string, names: string[], depth: number) => {
-    if (depth > 5 || ++visited > 100 || groups.length >= 32) return;
+    if (depth > 5 || ++visited > MAX_NODES || groups.length >= MAX_GROUPS) return;
     const data = obj(node); const table = obj(data.standings);
     const name = text(data.name) ?? text(data.displayName) ?? text(table.displayName) ?? text(table.name);
     const labels = name ? [...names, name] : names;
@@ -68,7 +74,7 @@ export function parseStandings(payload: unknown, requestedSeason: number | null)
       });
       if (rows.length) groups.push({ id: path, label: labels.join(' / ') || 'League standings', columns: [...columns.values()], rows });
     }
-    list(data.children).slice(0, 40).forEach((child, index) => visit(child, `${path}-${index}`, labels, depth + 1));
+    list(data.children).slice(0, MAX_CHILDREN).forEach((child, index) => visit(child, `${path}-${index}`, labels, depth + 1));
   };
   visit(root, 'table', [], 0);
   if (!recognized) throw new Error('Invalid ESPN standings');
@@ -84,7 +90,7 @@ export function isStandingsBoard(value: unknown, league: string, season: number 
     && (source.httpStatus === null || typeof source.httpStatus === 'number')
     && (board.season === null || (typeof obj(board.season).year === 'number' && optionalText(obj(board.season).label)))
     && (season === null || board.status === 'unavailable' || obj(board.season).year === season)
-    && Array.isArray(board.groups) && board.groups.length <= 32
+    && Array.isArray(board.groups) && board.groups.length <= MAX_GROUPS
     && (board.status === 'ready' ? source.ok === true && board.groups.length > 0 : board.groups.length === 0)
     && board.groups.every((raw) => {
       const group = obj(raw);

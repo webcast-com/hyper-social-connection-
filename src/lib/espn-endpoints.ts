@@ -33,6 +33,19 @@ export function espnScoreboardUrl(league: Pick<EspnLeague, 'sport' | 'league'> |
   return `https://site.api.espn.com/apis/site/v2/sports/${path}/scoreboard${date ? `?dates=${date}&limit=100` : ''}`;
 }
 
+
+/** Broader ESPN Division I college basketball scoreboard for the Sports board.
+ * The Site API is unofficial; group 50 does not establish Division II/III coverage.
+ * Other consumers (including odds date searches) retain their existing URLs.
+ */
+export function espnSportsScoreboardUrl(league: Pick<EspnLeague, 'sport' | 'league'>): string {
+  const url = espnScoreboardUrl(league);
+  if (league.sport === 'basketball' && ['mens-college-basketball', 'womens-college-basketball'].includes(league.league)) {
+    return `${url}?groups=50&limit=500`;
+  }
+  return url;
+}
+
 export class EspnEndpointError extends Error {
   constructor(message: string, readonly url: string, readonly errorKind: EspnFailureKind, readonly httpStatus: number | null = null, readonly responseMetadata?: EspnResponseMetadata) {
     super(message);

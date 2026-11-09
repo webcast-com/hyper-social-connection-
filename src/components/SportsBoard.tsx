@@ -145,7 +145,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
 
       {!leaguePage && <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
         <a href="/scorehub" className="font-bold underline hover:no-underline">ScoreHub</a>
-        {' '}— a separate design demo with illustrative scores and news, not live data.
+        {' '}— a separate dashboard using the same ESPN scores; news and top scorers are sample content.
       </div>}
 
       {!leaguePage && <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
@@ -173,6 +173,9 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </Link>
       </div>
 
+      {(league === 'ncaam' || league === 'ncaaw') && <p role="note" className="mb-3 rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-slate-800 dark:text-slate-200">
+        NCAA scores use ESPN’s broader Division I scoreboard for the currently loaded dates. Division II and III coverage is not verified and may be missing; ESPN may omit games. The date filter only filters loaded fixtures, not a full season.
+      </p>}
       {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
       {board.mode !== 'live' && (
         <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
