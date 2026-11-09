@@ -4,7 +4,7 @@ The standalone React/Vite dashboard copied from `nfl-nba-main (1)/nfl-nba-main`
 on main at `d4ea5eefd7d0dd39ee41486af13ac8a8f16d547c` is available through the
 Sports page at `/nfl-basketball`. It has its own navigation and theme switch;
 Hyper's existing `/sports/nba` and `/sports/nfl` pages remain unchanged. In the
-copied source, the router uses Vite's base URL so nested routes work beneath the
+copied source, the router uses Vite's base URL, normalized without a trailing slash, so both the entry URL and nested routes work beneath the
 prefix; routing tests were added. The dashboard shortcuts for overview, schedule, news, community and notifications are wired to existing pages, and a logo link returns to Hyper Sports. Shortcuts for features that do not exist are disabled.
 
 Root `npm run dev` and `npm run build` first run

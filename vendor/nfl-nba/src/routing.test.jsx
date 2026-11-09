@@ -2,15 +2,28 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor, within } from "@testing-library/react";
 import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import App from "./App";
+import { routerBase } from "./routerBase";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); document.documentElement.removeAttribute("data-theme"); });
 
 function mount(path) {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
-  return render(<MemoryRouter basename="/nfl-basketball/" initialEntries={[`/nfl-basketball${path}`]}><App /></MemoryRouter>);
+  return render(<MemoryRouter basename={routerBase("/nfl-basketball/")} initialEntries={[`/nfl-basketball${path}`]}><App /></MemoryRouter>);
 }
 
 describe("integrated dashboard navigation", () => {
+  it.each(["/nfl-basketball", "/nfl-basketball/"])("opens the entry URL %s and redirects to basketball", async (entry) => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const view = render(<MemoryRouter basename={routerBase("/nfl-basketball/")} initialEntries={[entry]}><App /></MemoryRouter>);
+    expect(await view.findByText("Basketball Center")).toBeTruthy();
+    expect(view.getByRole("link", { name: "Football" }).getAttribute("href")).toBe("/nfl-basketball/nfl");
+  });
+
+  it("supports the dashboard's standalone root development base", () => {
+    expect(routerBase("/")).toBe("/");
+    expect(routerBase("/nfl-basketball/")).toBe("/nfl-basketball");
+  });
+
   it("moves between basketball, NFL and their respective sections under the prefix", async () => {
     const view = mount("/basketball");
     const tabs = within(view.getByRole("navigation", { name: "Sports" }));
@@ -64,7 +77,7 @@ describe("integrated dashboard navigation", () => {
   it("starts on deep links and browser back and forward stay inside the dashboard", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     window.history.replaceState(null, "", "/nfl-basketball/nfl/news");
-    const view = render(<BrowserRouter basename="/nfl-basketball/"><App /></BrowserRouter>);
+    const view = render(<BrowserRouter basename={routerBase("/nfl-basketball/")}><App /></BrowserRouter>);
     expect(await view.findByText("Football newsroom")).toBeTruthy();
     const sections = within(view.getByRole("navigation", { name: "Sections" }));
     fireEvent.click(sections.getByRole("link", { name: "Upcoming" }));
