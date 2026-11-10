@@ -42,6 +42,8 @@ export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
       const common = {
         ...(details ? { details } : {}),
         id: `espn-${meta.slug}-${id}${competitions.length > 1 ? `-${competition.id || index}` : ''}`,
+        // The provider's own event id, for endpoints that address one game.
+        sourceId: String(id),
         source: 'espn' as const, sport: meta.kind, league: meta.slug,
         leagueName: payload.leagues?.[0]?.name || meta.name,
         startAt: new Date(date).toISOString(), status, detail,

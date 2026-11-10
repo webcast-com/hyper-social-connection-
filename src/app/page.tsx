@@ -13,8 +13,10 @@ import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } fro
 import SportsLiveWidget from '@/components/SportsLiveWidget';
 import SportsScoresWidget from '@/components/SportsScoresWidget';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
+import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { getSportsBoard } from '@/lib/sports';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
+import { getSportsHighlights } from '@/lib/espn-highlights-feed';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
@@ -128,6 +130,7 @@ export default async function Home() {
   // homepage renders the leaders board next to the scores. A failed leaders feed
   // resolves to the bundled sample board and never blocks the page.
   const leaderBoards = await getSportsLeaderBoards();
+  const highlightBoard = await getSportsHighlights();
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -459,6 +462,10 @@ export default async function Home() {
             <SportsLeadersBoard boards={leaderBoards} />
           </div>
 
+          <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <SportsHighlightsFeed board={highlightBoard} />
+          </div>
+
           <div id="groups" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Groups</h2>
@@ -551,6 +558,8 @@ export default async function Home() {
         </section>
 
         <SportsLeadersBoard boards={leaderBoards} />
+
+        <SportsHighlightsFeed board={highlightBoard} />
 
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>

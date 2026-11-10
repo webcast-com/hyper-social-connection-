@@ -83,10 +83,10 @@ test('Like, Comment, Share and save all work on a player card', async () => {
     // The card is honest about where a comment lives.
     assert.match(card.textContent, /Comments stay in this browser/);
 
-    // Share opens a menu that can copy the player link.
+    // Share opens a menu that can copy the player link and expand the image.
     await click(findButton(document, 'Share Luka Dončić'));
     assert.match(card.textContent, /Copy Link/);
-    assert.match(card.textContent, /Open Player Profile/);
+    assert.match(card.textContent, /Expand Image/);
     await click([...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Close')!);
     assert.doesNotMatch(card.textContent, /Copy Link/);
 
@@ -94,7 +94,7 @@ test('Like, Comment, Share and save all work on a player card', async () => {
     const save = findButton(document, 'Save Luka Dončić');
     await click(save);
     assert.equal(save.getAttribute('aria-pressed'), 'true');
-    assert.equal(findButton(document, 'Remove Luka Dončić from saved players').getAttribute('aria-pressed'), 'true');
+    assert.equal(findButton(document, 'Remove Luka Dončić from saved').getAttribute('aria-pressed'), 'true');
   } finally {
     mount.unmount();
   }
@@ -125,8 +125,10 @@ test('the more menu reaches the player profile and every card fits its column', 
   try {
     const { document, click } = mount;
     const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Dončić'))!;
-    await click(findButton(document, 'More player options'));
+    await click(findButton(document, 'More options'));
     assert.ok([...card.querySelectorAll('a')].some((node: any) => node.textContent.trim() === 'Open Player Profile'));
+    await mount.click(findButton(document, 'More options'));
+    assert.doesNotMatch(card.textContent, /Open Player Profile/);
 
     // A post card must not overflow the column it sits in, at phone width.
     for (const article of document.querySelectorAll('article')) {
