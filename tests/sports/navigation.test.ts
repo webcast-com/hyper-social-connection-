@@ -24,7 +24,7 @@ test('country, sport, region, competition, status, date and search combine witho
   assert.equal(events.length, SPORTS_COMPETITIONS.length);
 });
 test('country search and country grouping preserve domestic versus multi-country coverage', () => {
-  assert.deepEqual(filterSportsEvents(events, 'all', { sport: 'football', country: 'England' }).map((item) => item.id), ['epl', 'championship', 'wsl']);
+  assert.deepEqual(filterSportsEvents(events, 'all', { sport: 'football', country: 'England' }).map((item) => item.id), ['epl', 'championship', 'wsl', 'league-one', 'league-two', 'fa-cup', 'efl-cup', 'womens-fa-cup']);
   assert.ok(filterSportsEvents(events, 'all', { query: 'England' }).every((item) => competitionCountry(item.league) === 'England'));
   assert.equal(filterSportsEvents(events, 'all', { country: 'International / multi-country', sport: 'motorsport' })[0].id, 'f1');
 });

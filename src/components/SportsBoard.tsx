@@ -11,6 +11,7 @@ import { useSportsFilters } from '@/lib/use-sports-filters';
 import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
 import SportsEventCard from '@/components/SportsEventCard';
+import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
   filterSportsEvents,
   groupEventsByLeague,
@@ -19,12 +20,13 @@ import {
 } from '@/lib/sports';
 
 import {
-  AVAILABLE_SPORTS, SPORT_LABELS, SPORTS_COMPETITIONS, SPORTS_REGIONS,
+  AVAILABLE_SPORTS, SPORT_LABELS, SPORTS_COMPETITIONS, SPORTS_REGIONS, ESPN_LEAGUES,
   competitionRegion, type SportsRegion,
 } from '@/lib/sports-catalog';
 
 export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPORTS_FILTERS, leaguePage }: { initial: SportsBoard; initialFilters?: SportsFilters; leaguePage?: SportsLeaguePage }) {
   const [rawBoard, setBoard] = useState(initial);
+  const previousBoard = useRef(initial);
   const board = useMemo(() => leaguePage ? scopeLeagueBoard(rawBoard, leaguePage) : rawBoard, [rawBoard, leaguePage]);
   const page = leaguePage ? SPORTS_LEAGUE_PAGES[leaguePage] : null;
   const { filters, update } = useSportsFilters(initialFilters, leaguePage);
@@ -51,6 +53,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(initial.sources.length === 0 && initial.events.length === 0 && initial.mode === 'partial');
   const [refreshError, setRefreshError] = useState('');
   const mounted = useRef(false);
   const request = useRef<AbortController | null>(null);
@@ -60,36 +63,40 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     request.current = controller;
     setRefreshing(true);
     if (force) setRefreshError('');
-    let routeMissing = false;
     try {
-      const res = await fetch(force ? '/api/sports?refresh=1' : '/api/sports', {
-        cache: 'no-store', signal: controller.signal,
+      const leagues = leaguePage ? ESPN_LEAGUES.filter((item) => item.slug === leaguePage)
+        : prioritizeSportsLeagues(ESPN_LEAGUES, { sport, region, country, league });
+      const next = await browserSportsBoard(controller.signal, force, leagues, (progress) => {
+        // Update completed leagues promptly while retaining other previous scores.
+        if (mounted.current && !controller.signal.aborted) setBoard(mergeBrowserProgress(previousBoard.current, progress));
       });
-      routeMissing = res.status === 404;
-      if (!res.ok) throw new Error('Refresh failed');
-      const next = (await res.json()) as SportsBoard;
-      if (!Array.isArray(next.events) || !Array.isArray(next.sources) || !['live', 'partial', 'demo'].includes(next.mode)) {
-        throw new Error('Invalid scoreboard');
+      if (mounted.current && !controller.signal.aborted) {
+        if (next.mode === 'demo' && previousBoard.current.events.some((event) => event.source === 'espn')) {
+          setRefreshError('Could not refresh scores. Showing the previous update. Please try again.');
+        } else { previousBoard.current = next; setBoard(next); setRefreshError(''); }
       }
-      if (mounted.current && !controller.signal.aborted) { setBoard(next); setRefreshError(''); }
-    } catch {
-      if (mounted.current && !controller.signal.aborted && force) {
-        setRefreshError(routeMissing
-          ? 'The app endpoint /api/sports returned HTTP 404. Check this deployment includes the sports API. Showing the previous update.'
-          : 'Could not refresh scores. Showing the previous update. Please try again.');
-      }
+    } catch (error) {
+      // Only claim a retained update when one is actually on screen.
+      if (mounted.current && !controller.signal.aborted) setRefreshError(error instanceof SportsApiError && error.status === 404
+        ? 'The app endpoint /api/sports returned HTTP 404. This deployment is missing the scores API, so ESPN was not reached. Keeping the previous update. Please try again.'
+        : previousBoard.current.events.some((event) => event.source === 'espn')
+          ? 'Could not refresh scores. Showing the previous update. Please try again.'
+          : 'Could not load ESPN scores. Please try again.');
     } finally {
       if (request.current === controller) request.current = null;
-      if (mounted.current && !controller.signal.aborted) setRefreshing(false);
+      if (mounted.current && !controller.signal.aborted) { setRefreshing(false); setInitialLoading(false); }
     }
-  }, []);
+  }, [leaguePage, sport, region, country, league]);
 
   useEffect(() => {
     mounted.current = true;
+    let active = true;
+    void Promise.resolve().then(() => { if (active) void refreshScores(); });
     const id = setInterval(() => {
       if (document.visibilityState !== 'hidden') void refreshScores();
     }, 45_000);
     return () => {
+      active = false;
       mounted.current = false;
       request.current?.abort();
       request.current = null;
@@ -116,7 +123,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     <div className="max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
       <div className="relative mb-3">
         <div>
-          <h1 className="pr-28 text-2xl font-black flex items-center gap-2 text-gray-900 dark:text-white">
+          <h1 className="pr-28 text-xl font-black flex items-center gap-2 text-gray-900 sm:text-2xl dark:text-white">
             <Trophy className="shrink-0 text-amber-500" /> {page?.name ?? 'Sports'}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -139,19 +146,17 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           }`}
           title={board.sources.filter((s) => !s.ok).map((s) => `${s.id}: ${s.error}`).join('\n') || 'All sources ok'}
         >
-          {board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'}
+          {initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'}
         </span>
       </div>
 
-      {!leaguePage && <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+      {!leaguePage && <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:px-4 sm:py-3 sm:text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
         <a href="/scorehub" className="font-bold underline hover:no-underline">ScoreHub</a>
-        {' '}— a separate dashboard using the same ESPN scores; news and top scorers are sample content.
-      </div>}
-
-      {!leaguePage && <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+        {' '}— a separate dashboard using the same ESPN scores.
+        <span aria-hidden="true" className="px-1 text-amber-400">·</span>
         <a href="/nfl-basketball/" className="font-bold text-blue-600 underline hover:no-underline dark:text-blue-400">Basketball &amp; NFL dashboard</a>
         {' '}— a separate sports experience with live feeds when available and sample content otherwise.
-      </p>}
+      </div>}
 
       {leaguePage && leagueNavigation}
       {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
@@ -177,7 +182,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         NCAA scores use ESPN’s broader Division I scoreboard for the currently loaded dates. Division II and III coverage is not verified and may be missing; ESPN may omit games. The date filter only filters loaded fixtures, not a full season.
       </p>}
       {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
-      {board.mode !== 'live' && (
+      {initialLoading && <p role="status" className="mb-4 text-sm text-gray-500 dark:text-gray-400">Loading ESPN scores from your browser…</p>}
+      {!initialLoading && board.mode !== 'live' && (
         <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           {board.mode === 'demo'
             ? 'Sample fixtures only — live providers are unavailable. These are not current scores or schedules.'
@@ -185,12 +191,12 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </p>
       )}
       {deniedCount > 0 && <p role="note" aria-label="ESPN access restriction" className="mb-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-        Access to ESPN was refused (HTTP 403) for {deniedCount} feeds. Check the hosting network’s outbound-access policy and ESPN access permissions. The status alone does not identify who blocked the request; see response metadata below.
+        Access to ESPN was refused (HTTP 403) for {deniedCount} feeds. Check the browser or hosting network’s outbound-access policy and ESPN access permissions. The status alone does not identify who blocked the request; see response metadata below.
       </p>}
       {board.sources.some((source) => !source.ok) && <details className="mb-4 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
         <summary className="min-h-11 cursor-pointer font-semibold">Unavailable ESPN feed details</summary>
         <ul className="space-y-3">{board.sources.filter((source) => !source.ok).map((source) => <li key={source.id} className="min-w-0 break-words">
-          <p>{source.id}: {source.error || 'Unavailable'}</p>
+          <p>{source.id}{source.transport ? ` (${source.transport})` : ''}: {source.error || 'Unavailable'}</p>
           {source.httpStatus !== undefined && <p>{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`} · {source.errorKind || 'response'}</p>}
           <EspnResponseDetails metadata={source.responseMetadata} />
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
@@ -265,21 +271,22 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div role="group" aria-label="Quick match status" className="flex w-full min-w-0 gap-1 overflow-x-auto sm:w-auto">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <div role="group" aria-label="Quick match status" className="flex min-w-0 flex-1 gap-1 overflow-x-auto sm:flex-none">
           {([['all', 'All matches'], ['live', 'Live'], ['upcoming', 'Upcoming'], ['final', 'Results']] as const).map(([id, label]) => <button type="button" key={id} aria-pressed={status === id} onClick={() => update({ status: id })} className={`min-h-11 shrink-0 rounded-xl px-3 text-xs font-bold ${status === id ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{label}</button>)}
         </div>
         <button type="button" aria-expanded={moreFilters} aria-controls="sports-filters" onClick={() => setMoreFilters((value) => !value)} className="min-h-11 text-xs font-semibold text-blue-600 sm:hidden dark:text-blue-400">{moreFilters ? 'Fewer filters' : (date !== 'all' || region !== 'all') ? 'More filters (active)' : 'More filters'}</button>
         <div role="group" aria-label="Score layout" className="flex gap-1">{(['list', 'cards'] as const).map((id) => <button type="button" key={id} aria-pressed={view === id} onClick={() => update({ view: id })} className={`min-h-11 rounded-xl px-3 text-xs font-bold capitalize ${view === id ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{id}</button>)}</div>
       </div>
-      {!leaguePage && <details className="mb-3 rounded-xl border border-gray-200 bg-white p-2 lg:hidden dark:border-gray-700 dark:bg-gray-800">
+      {!leaguePage && <details className="mb-3 rounded-xl border border-gray-200 bg-white px-2 py-1.5 lg:hidden dark:border-gray-700 dark:bg-gray-800">
         <summary className="min-h-11 cursor-pointer content-center px-2 text-sm font-bold text-gray-900 dark:text-white">Browse competitions</summary>
         {browser}
       </details>}
       <div className={`grid min-w-0 gap-5 ${leaguePage ? '' : 'lg:grid-cols-[230px_minmax(0,1fr)]'}`}>
         {!leaguePage && <aside className="hidden min-w-0 lg:block"><div className="sticky top-24">{browser}</div></aside>}
         <div className="min-w-0">
-      {groups.length === 0 ? (
+      {refreshing && !initialLoading && groups.length === 0 && <p role="status" className="text-sm text-gray-500 dark:text-gray-400">Loading scores for this selection…</p>}
+      {(initialLoading || refreshing) && groups.length === 0 ? null : groups.length === 0 ? (
         <EmptyState variant="search" title="No events in this view">
           {leaguePage ? `No ${page!.name} fixtures match this view. Reset filters or check again later; games appear only when reported by ESPN, including during the off-season.` : 'Try another region, sport or competition, or reset the filters. Fixtures appear when reported by a provider; some competitions may be out of season.'}
         </EmptyState>

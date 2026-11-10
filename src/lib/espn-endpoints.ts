@@ -28,7 +28,7 @@ export type EspnEndpointDetails = {
 /** Site v2 scoreboards, shared by scores, odds and diagnostics. Not Core v2/v3. */
 export function espnScoreboardUrl(league: Pick<EspnLeague, 'sport' | 'league'> | { path: string }, date?: string): string {
   const path = 'path' in league ? league.path : `${league.sport}/${league.league}`;
-  if (!/^[a-z][a-z0-9-]*\/[a-z0-9][a-z0-9.-]*$/.test(path)) throw new Error('Invalid ESPN scoreboard path');
+  if (!/^[a-z][a-z0-9-]*\/[a-z0-9][a-z0-9._-]*$/.test(path)) throw new Error('Invalid ESPN scoreboard path');
   if (date !== undefined && !/^\d{8}$/.test(date)) throw new Error('ESPN date must use YYYYMMDD');
   return `https://site.api.espn.com/apis/site/v2/sports/${path}/scoreboard${date ? `?dates=${date}&limit=100` : ''}`;
 }

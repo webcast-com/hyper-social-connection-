@@ -7,7 +7,7 @@ import { competitionCountry, sportsDate } from './sports-navigation';
 
 import {
   ESPN_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
-  type SportKind, type SportsRegion,
+  type EspnLeague, type SportKind, type SportsRegion,
 } from './sports-catalog';
 import { fetchEspnScoreboard } from './espn-client';
 import { espnFailureDetails, espnSportsScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
@@ -59,6 +59,7 @@ export type SportsSourceReport = Partial<EspnEndpointDetails> & {
   id: string;
   ok: boolean;
   count: number;
+  transport?: 'browser' | 'server';
   error?: string;
 };
 
@@ -74,8 +75,9 @@ export type SportsBoard = {
 export const PREDICTION_DISPLAY_TZ = 'Africa/Nairobi';
 
 const CACHE_MS = 45_000;
-
-let cache: { at: number; board: SportsBoard } | null = null;
+/** One entry per requested competition set; the browser route asks for subsets. */
+const CACHE_ENTRIES = 8;
+const cache = new Map<string, { at: number; board: SportsBoard }>();
 
 /**
  * Kickoff label in Nairobi time, e.g. "Sep 2, 22:00 EAT". Explicit locale +
@@ -250,18 +252,33 @@ function demoBoard(): SportsBoard {
   };
 }
 
-let inFlight: Promise<SportsBoard> | null = null;
+let inFlight: Map<string, Promise<SportsBoard>> | null = null;
 
-export async function getSportsBoard(opts?: { bypassCache?: boolean }): Promise<SportsBoard> {
-  if (!opts?.bypassCache && cache && Date.now() - cache.at < CACHE_MS) return cache.board;
-  // The page, sidebar and refresh requests share the same in-progress fetch.
-  if (inFlight) return inFlight;
-  inFlight = fetchSportsBoard();
-  try {
-    return await inFlight;
-  } finally {
-    inFlight = null;
+/** Unknown or repeated slugs are ignored, so a caller can only narrow the set. */
+function selectLeagues(requested?: string[]): EspnLeague[] {
+  const known = ESPN_LEAGUES.filter((item) => requested?.includes(item.slug));
+  return known.length ? known : ESPN_LEAGUES;
+}
+
+export async function getSportsBoard(opts?: { bypassCache?: boolean; leagues?: string[] }): Promise<SportsBoard> {
+  const selected = selectLeagues(opts?.leagues);
+  const key = selected.map((item) => item.slug).join(',');
+  if (!opts?.bypassCache) {
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.at < CACHE_MS) return hit.board;
   }
+  // The page, sidebar and refresh requests share the same in-progress fetch.
+  const pending = inFlight ?? new Map<string, Promise<SportsBoard>>();
+  inFlight = pending;
+  const shared = pending.get(key);
+  if (shared) return shared;
+  const request = fetchSportsBoard(selected).then((board) => {
+    cache.set(key, { at: Date.now(), board });
+    if (cache.size > CACHE_ENTRIES) cache.delete(cache.keys().next().value!);
+    return board;
+  }).finally(() => pending.delete(key));
+  pending.set(key, request);
+  return request;
 }
 
 /** Bound provider fan-out as the competition catalog grows. */
@@ -282,11 +299,11 @@ async function settleJobs(jobs: (() => Promise<void>)[]) {
   return results;
 }
 
-async function fetchSportsBoard(): Promise<SportsBoard> {
+async function fetchSportsBoard(leagues: EspnLeague[] = ESPN_LEAGUES): Promise<SportsBoard> {
   const sources: SportsSourceReport[] = [];
   const groups: SportsEvent[][] = [];
 
-  const espnJobs = ESPN_LEAGUES.map((meta) => async () => {
+  const espnJobs = leagues.map((meta) => async () => {
     const { events, url, httpStatus } = await fetchEspnScoreboard(meta);
     sources.push({ id: `espn:${meta.slug}`, ok: true, count: events.length, url, httpStatus });
     groups.push(events);
@@ -295,7 +312,7 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
   const settled = await settleJobs(espnJobs);
   settled.forEach((result, i) => {
     if (result.status === 'fulfilled') return;
-    const meta = ESPN_LEAGUES[i];
+    const meta = leagues[i];
     sources.push({ id: `espn:${meta.slug}`, ok: false, count: 0,
       ...espnFailureDetails(result.reason, espnSportsScoreboardUrl(meta)) });
   });
@@ -318,7 +335,6 @@ async function fetchSportsBoard(): Promise<SportsBoard> {
     board.sources = [...sources, ...board.sources];
   }
 
-  cache = { at: Date.now(), board };
   return board;
 }
 

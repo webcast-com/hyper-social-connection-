@@ -172,14 +172,15 @@ test('private profile and group metadata are noindex and omit private descriptio
     }
   });
 });
-test('match metadata uses the event canonical and title; upstream outages are noindex', async () => {
+test('browser-first match metadata keeps its canonical and remains noindex until match data is server-verified', async () => {
   await withEnv(publicEnv, async () => {
     const fixture: { board: { status: string; match: { title: string } | null } } = { board: { status: 'ready', match: { title: 'Away Club vs Home Club' } } };
     const loaded = await loadMetadataModule('src/app/sports/matches/[league]/[eventId]/page.tsx', fixture);
     const input = { params: Promise.resolve({ league: 'epl', eventId: '401234567' }) };
     const metadata = await loaded.generateMetadata(input);
     assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/matches/epl/401234567');
-    assert.match(String(metadata.title), /Away Club vs Home Club/);
+    assert.match(String(metadata.title), /Premier League match details/);
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
     fixture.board = { status: 'unavailable', match: null };
     const unavailable = await loaded.generateMetadata(input);
     assert.equal(typeof unavailable.robots === 'object' && unavailable.robots?.index, false);
