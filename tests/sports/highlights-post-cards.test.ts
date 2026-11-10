@@ -80,14 +80,19 @@ test('a highlight clip is a post card with the home crest and a playable video',
     assert.match(card.textContent, /Premier League · Full time/);
     assert.match(card.textContent, /Saka opens the scoring — A curled finish/);
 
-    // The media is the feed's own post video block, with the clip as the source.
+    // The media is the site's own play card, with the clip as the source.
     const video = card.querySelector('video')!;
     assert.equal(video.getAttribute('src'), 'https://a.espncdn.com/media/video/2026/0907/49861382_3600k.mp4');
     assert.equal(video.getAttribute('poster'), 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
     assert.equal(video.getAttribute('controls'), '');
+    // A board of cards must not pull a dozen streams on page load.
     assert.equal(video.getAttribute('preload'), 'none');
     assert.match(video.className, /block w-full max-h-\[min\(70vh,520px\)\] object-contain bg-black/);
-    assert.match(video.closest('div')!.className, /relative z-10 bg-black w-full min-w-0 overflow-hidden/);
+    assert.match(video.closest('div')!.className, /rounded-xl sm:rounded-2xl overflow-hidden border border-gray-200/);
+    // The play card names the provider and keeps a way out to the original.
+    assert.match(card.textContent, /ESPN/);
+    const original = [...card.querySelectorAll('a')].find((node: any) => node.textContent.includes('Open original'))!;
+    assert.equal(original.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
 
     // Clip details below the video.
     assert.deepEqual([...card.querySelectorAll('dt')].map((node: any) => node.textContent), ['Length', 'Competition', 'State']);

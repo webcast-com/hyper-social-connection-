@@ -7,9 +7,10 @@
  * A failure here must never break the homepage, so errors resolve to an
  * `unavailable` board instead of rejecting.
  *
- * ESPN has no highlights collection endpoint; a game's clips live in that
- * game's summary. So the board the site already fetches supplies the fixtures,
- * and a bounded number of game summaries supply the clips.
+ * ESPN has no highlights collection endpoint; a game's clips live on that
+ * game's own video collection. So the board the site already fetches supplies
+ * the fixtures, and a bounded number of those video collections supply the
+ * clips.
  */
 import { getSportsBoard, type SportsEvent } from './sports';
 import { ESPN_LEAGUES } from './sports-catalog';
@@ -19,14 +20,21 @@ import { bundledHighlights, normalizeHighlights, type SportsHighlightClip } from
 export type SportsHighlightsBoard = {
   clips: SportsHighlightClip[];
   status: 'live' | 'partial' | 'unavailable';
-  /** How many game summaries were read to build the board. */
+  /** How many ESPN video collections answered with a clip. */
   games: number;
   source: { ok: boolean; url: string; httpStatus: number | null; error?: string; errorKind?: string };
 };
 
-/** One summary per competition keeps the board varied and the fan-out small. */
+/**
+ * One video collection per competition keeps the board varied, and a bounded
+ * pool keeps the fan-out small. ESPN publishes clips for some competitions and
+ * not for others (the Champions League and the NBA answer with clips, the
+ * Premier League and the NFL with an empty list), so the pool is wider than the
+ * board it feeds: a handful of fixtures have to be asked before one of them
+ * carries a clip.
+ */
 const MAX_GAMES_PER_LEAGUE = 1;
-const MAX_GAMES = 6;
+const MAX_GAMES = 10;
 const MAX_CLIPS = 12;
 const SUMMARY_TIMEOUT_MS = 6_000;
 const LIVE_TTL = 15 * 60_000;
@@ -36,20 +44,24 @@ const cache = new Map<string, { at: number; board: SportsHighlightsBoard }>();
 let pending: Promise<SportsHighlightsBoard> | null = null;
 
 /**
- * The summary endpoint for one fixture.
+ * The video collection for one fixture.
  *
  * `SportsEvent.sport` is the site's own sport kind (`football`,
  * `american-football`), while ESPN addresses a league by its provider path
  * (`soccer/eng.1`), so the catalog supplies the path. The board id is namespaced
- * (`espn-epl-401234`) and the summary wants the provider's own id, which the
- * event carries; sample fixtures have none and are skipped.
+ * (`espn-epl-401234`) and the video collection wants the provider's own id,
+ * which the event carries; sample fixtures have none and are skipped.
+ *
+ * The game summary is *not* a substitute: read live, it answers with boxscore,
+ * plays, leaders and standings but no videos at all, so the clips have to come
+ * from here.
  */
-const summaryUrl = (event: SportsEvent) => {
+const videosUrl = (event: SportsEvent) => {
   const meta = ESPN_LEAGUES.find((league) => league.slug === event.league);
   const eventId = event.sourceId ?? null;
   const path = meta ? `${meta.sport}/${meta.league}` : null;
   if (!path || !eventId || !/^[a-z][a-z0-9-]*\/[a-z0-9][a-z0-9._-]*$/.test(path)) return null;
-  return `https://site.api.espn.com/apis/site/v2/sports/${path}/summary?event=${encodeURIComponent(eventId)}`;
+  return `https://site.api.espn.com/apis/site/v2/sports/${path}/videos?event=${encodeURIComponent(eventId)}`;
 };
 
 /** Live and finished games carry highlights; upcoming fixtures usually do not. */
@@ -85,8 +97,8 @@ const contextFor = (event: SportsEvent) => ({
   status: event.status,
 });
 
-async function readSummary(event: SportsEvent) {
-  const url = summaryUrl(event);
+async function readClips(event: SportsEvent) {
+  const url = videosUrl(event);
   if (!url) return { url: null, httpStatus: null, clips: [] as SportsHighlightClip[] };
   const signal = AbortSignal.timeout(SUMMARY_TIMEOUT_MS);
   const response = await fetch(url, { headers: ESPN_REQUEST_HEADERS, cache: 'no-store', signal });
@@ -100,10 +112,15 @@ async function fetchHighlights(): Promise<SportsHighlightsBoard> {
   const games = pickGames(board.events);
   const sources: { ok: boolean; url: string; httpStatus: number | null; error?: string; errorKind?: string }[] = [];
 
-  const settled = await Promise.allSettled(games.map(readSummary));
+  const settled = await Promise.allSettled(games.map(readClips));
   const clips: SportsHighlightClip[] = [];
+  // ESPN publishes clips for some competitions and not for others, so the
+  // board counts the collections that actually answered with a clip rather
+  // than the ones it asked.
+  let read = 0;
   for (const result of settled) {
     if (result.status === 'fulfilled') {
+      if (result.value.clips.length) read += 1;
       clips.push(...result.value.clips);
       if (result.value.url) sources.push({ ok: true, url: result.value.url, httpStatus: result.value.httpStatus });
       continue;
@@ -116,7 +133,12 @@ async function fetchHighlights(): Promise<SportsHighlightsBoard> {
   const anyOk = sources.some((source) => source.ok);
   // A board with no clips is worse than useless on the homepage: fall back.
   if (anyOk && clips.length) {
-    return { clips: clips.slice(0, MAX_CLIPS), status: sources.every((source) => source.ok) ? 'live' : 'partial', games: games.length, source: sources.find((source) => source.ok)! };
+    return {
+      clips: clips.slice(0, MAX_CLIPS),
+      status: sources.every((source) => source.ok) ? 'live' : 'partial',
+      games: read,
+      source: sources.find((source) => source.ok)!,
+    };
   }
   return {
     clips: bundledHighlights(),

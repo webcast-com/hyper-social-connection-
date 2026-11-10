@@ -2,48 +2,94 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bundledHighlights, normalizeHighlights, type SportsHighlightContext } from '../../src/lib/espn-highlights';
 
+/**
+ * The normaliser reads the shapes ESPN's video collection actually sends. The
+ * fixtures below are copied from a live response (Champions League event
+ * 401915383, read back on 2026-11-09), trimmed to the fields that matter.
+ */
+
 const context: SportsHighlightContext = {
-  eventId: '401584793',
-  eventName: 'Arsenal vs Chelsea',
-  sport: 'soccer',
-  league: 'epl',
-  leagueName: 'Premier League',
-  home: 'Arsenal',
-  away: 'Chelsea',
-  homeLogo: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png',
-  awayLogo: 'https://a.espncdn.com/i/teamlogos/soccer/500/363.png',
-  startAt: '2026-11-08T18:00:00.000Z',
+  eventId: '401915383',
+  eventName: 'AEK Athens vs Real Madrid',
+  sport: 'football',
+  league: 'ucl',
+  leagueName: 'Champions League',
+  home: 'AEK Athens',
+  away: 'Real Madrid',
+  homeLogo: 'https://a.espncdn.com/i/teamlogos/soccer/500/887.png',
+  awayLogo: 'https://a.espncdn.com/i/teamlogos/soccer/500/86.png',
+  startAt: '2026-11-04T17:45:00.000Z',
   status: 'final',
 };
 
-test('a summary video becomes a playable clip with the match it belongs to', () => {
+test('a live video entry becomes a playable clip with the match it belongs to', () => {
   const [clip] = normalizeHighlights({
     videos: [{
-      id: '49861382',
-      title: 'Saka opens the scoring',
-      description: 'A curled finish from the edge of the box.',
-      duration: 47,
-      thumbnails: [{ href: 'https://a.espncdn.com/media/2026/0907/49861382.jpg' }],
-      source: { href: 'https://a.espncdn.com/media/video/2026/0907/49861382_3600k.mp4' },
-      links: [{ rel: ['summary'], href: 'https://www.espn.com/video/clip/_/id/49861382' }],
+      id: 50383009,
+      cerebroId: '6aebbd002f5e962a8dcb471c',
+      source: 'espn',
+      headline: 'Klinsmann: Real Madrid understand when it is important to step it up',
+      description: 'Klinsmann: Real Madrid understand when it is important to step it up',
+      duration: 97,
+      thumbnail: 'https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1104/dm_261104_Klinsmann.jpg',
+      links: {
+        api: { self: { href: 'https://content.core.api.espn.com/v1/video/clips/50383009' } },
+        mobile: {
+          href: 'https://watch.auth.api.espn.com/video/auth/brightcove/64c61209/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50383009',
+          source: { href: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1104/dm_261104_Klinsmann.mp4' },
+        },
+        source: {
+          href: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1104/dm_261104_Klinsmann.mp4',
+          HD: { href: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1104/dm_261104_Klinsmann.mp4' },
+          HLS: { href: 'https://cmp-espn.media.dssott.com/opp/hls/espn/2026/1104/dm_261104_Klinsmann/playlist.m3u8' },
+        },
+      },
+      // The clip's own page is a top-level key, a sibling of `links`.
+      web: { href: 'https://www.espn.com/video/clip/_/id/50383009/real-madrid-understand-important-step-up' },
     }],
   }, context);
 
-  assert.equal(clip.title, 'Saka opens the scoring');
-  assert.equal(clip.description, 'A curled finish from the edge of the box.');
-  assert.equal(clip.duration, 47);
-  assert.equal(clip.thumbnail, 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
-  assert.equal(clip.mp4, 'https://a.espncdn.com/media/video/2026/0907/49861382_3600k.mp4');
-  assert.equal(clip.hls, null);
+  // ESPN sends the id as a number, not a string.
+  assert.equal(clip.id, '50383009');
+  assert.equal(clip.title, 'Klinsmann: Real Madrid understand when it is important to step it up');
+  assert.equal(clip.description, 'Klinsmann: Real Madrid understand when it is important to step it up');
+  assert.equal(clip.duration, 97);
+  assert.equal(clip.thumbnail, 'https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1104/dm_261104_Klinsmann.jpg');
+  assert.equal(clip.mp4, 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1104/dm_261104_Klinsmann.mp4');
+  assert.equal(clip.hls, 'https://cmp-espn.media.dssott.com/opp/hls/espn/2026/1104/dm_261104_Klinsmann/playlist.m3u8');
   assert.equal(clip.playable, true);
-  assert.equal(clip.page, 'https://www.espn.com/video/clip/_/id/49861382');
+  assert.equal(clip.page, 'https://www.espn.com/video/clip/_/id/50383009/real-madrid-understand-important-step-up');
   // The fixture travels with the clip, so the card can show it.
-  assert.equal(clip.eventName, 'Arsenal vs Chelsea');
-  assert.equal(clip.leagueName, 'Premier League');
-  assert.equal(clip.home, 'Arsenal');
+  assert.equal(clip.eventName, 'AEK Athens vs Real Madrid');
+  assert.equal(clip.leagueName, 'Champions League');
+  assert.equal(clip.home, 'AEK Athens');
   assert.equal(clip.homeLogo, context.homeLogo);
   assert.equal(clip.status, 'final');
   assert.equal(clip.startAt, context.startAt);
+});
+
+test('an auth-gated rendition is never handed to a <video> element', () => {
+  const [clip] = normalizeHighlights({
+    videos: [{
+      id: 50390519,
+      headline: 'Jude Bellingham visits Atlanta Falcons training session',
+      duration: 25,
+      thumbnail: 'https://espnmedia-cdn.akamaized.net/espn/media/common/2026/1105/dm_261105_Bellingham.jpg',
+      links: {
+        mobile: {
+          href: 'https://watch.auth.api.espn.com/video/auth/brightcove/e771786b/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50390519',
+          progressiveDownload: { href: 'https://watch.auth.api.espn.com/video/auth/brightcove/e771786b/asset?UMADPARAMreferer=https://www.espn.com/video/clip/_/id/50390519' },
+        },
+        source: { href: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1105/dm_261105_Bellingham.mp4' },
+      },
+      web: { href: 'https://www.espn.com/video/clip/_/id/50390519/jude-bellingham-visits-atlanta-falcons-training-session' },
+    }],
+  }, context);
+
+  assert.equal(clip.mp4, 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1105/dm_261105_Bellingham.mp4');
+  assert.equal(clip.playable, true);
+  // `links.web` is accepted as well as the top-level `web` key.
+  assert.equal(clip.page, 'https://www.espn.com/video/clip/_/id/50390519/jude-bellingham-visits-atlanta-falcons-training-session');
 });
 
 test('clips are read from the highlights key and from playback renditions', () => {
@@ -100,7 +146,11 @@ test('duplicate clips are de-duplicated and durations are read from clock string
   assert.equal(clips.length, 3);
   assert.deepEqual(clips.map((clip) => clip.duration), [65, 129, 12]);
   // Without an ESPN id the clip is keyed by the fixture plus its title.
-  assert.deepEqual(clips.map((clip) => clip.id), ['9', '401584793:clock string', '401584793:numeric string']);
+  assert.deepEqual(clips.map((clip) => clip.id), ['9', '401915383:clock string', '401915383:numeric string']);
+});
+
+test('a game with no videos produces no clips', () => {
+  assert.deepEqual(normalizeHighlights({ videos: [] }, context), []);
 });
 
 test('malformed payloads produce no clips', () => {

@@ -7,10 +7,10 @@ export const dynamic = 'force-dynamic';
 /**
  * ESPN match highlights.
  *
- * Reads a bounded set of ESPN game summaries (the endpoint the Site API
- * documents for a single game) and returns their highlight clips, so the
- * homepage can refresh the same board the server rendered. Falls back to the
- * bundled sample cards when ESPN does not answer; `refresh=1` bypasses the
+ * Reads a bounded set of ESPN video collections (one per fixture, the Site API
+ * endpoint for the videos of a single game) and returns their highlight clips,
+ * so the homepage can refresh the same board the server rendered. Falls back to
+ * the bundled sample cards when ESPN does not answer; `refresh=1` bypasses the
  * 15-minute cache.
  */
 export async function GET(req: NextRequest) {

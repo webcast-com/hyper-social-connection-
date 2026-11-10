@@ -12,14 +12,24 @@ import { resolveLinkMedia, type LinkMedia } from '@/lib/link-media';
  * Third-party iframes stay behind a click-to-play facade so the feed doesn't
  * load a dozen trackers on scroll, and every player keeps an "open original"
  * link so the existing behaviour is always one click away.
+ *
+ * The sports boards use it too: an ESPN highlight clip is a direct MP4, so the
+ * match-highlights cards pass the clip through here rather than rolling their
+ * own <video> element.
  */
 export default function LinkMediaPlayer({
   url,
   media,
+  poster,
+  preload,
   onRemove,
 }: {
   url: string;
   media?: LinkMedia | null;
+  /** Poster frame for a direct video file, when the caller has one. */
+  poster?: string | null;
+  /** How much of a direct video file to fetch before it is played. */
+  preload?: 'none' | 'metadata' | 'auto';
   onRemove?: () => void;
 }) {
   const resolved = useMemo(() => media ?? resolveLinkMedia(url), [media, url]);
@@ -61,9 +71,10 @@ export default function LinkMediaPlayer({
         {resolved.kind === 'video' && (
           <video
             src={src}
+            poster={poster ?? undefined}
             controls
             playsInline
-            preload="metadata"
+            preload={preload ?? 'metadata'}
             className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
             onError={() => setFailed(true)}
           />
