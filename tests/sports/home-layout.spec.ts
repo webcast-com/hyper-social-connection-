@@ -423,6 +423,7 @@ for (const width of [320, 768, 1440]) {
     await page.getByRole('button', { name: 'League table', exact: true }).click();
     const table = page.getByRole('table', { name: 'Group B', exact: true });
     await expect(table).toBeVisible(); expect(requests).toBe(1);
+    await expect(page.getByText('Showing the Premier League table for this competition.')).toBeVisible();
     await expect(page.getByText('In this match', { exact: true })).toHaveCount(2);
     await expect(table.getByRole('cell', { name: '0', exact: true })).toBeVisible();
     await expect(table.getByRole('cell', { name: '—', exact: true })).toHaveCount(4);
@@ -512,6 +513,8 @@ test('basketball conference table uses reported sport labels and leaves unreport
   });
   await page.evaluate(() => window.renderMatchDetailsReview('basketball', undefined, 2026));
   await page.getByRole('button', { name: 'League table', exact: true }).click();
+  // The table follows the competition this match belongs to, not a fixed league.
+  await expect(page.getByText('Showing the NBA table for this competition.')).toBeVisible();
   const table = page.getByRole('table', { name: 'Eastern Conference', exact: true });
   await expect(table.getByRole('columnheader', { name: 'PCT', exact: true })).toBeVisible();
   await expect(table.getByRole('cell', { name: '.788', exact: true })).toBeVisible();

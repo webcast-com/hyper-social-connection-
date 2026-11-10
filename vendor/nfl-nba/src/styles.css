@@ -729,6 +729,8 @@ html[data-theme='light'] .sh-topbar { background: rgba(255, 255, 255, 0.85); }
 .sh-team-logo { flex: none; object-fit: contain; filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.5)); }
 .sh-team-logo-xs { width: 22px; height: 22px; }
 .sh-team-logo-md { width: 46px; height: 46px; }
+/* Commentary uses the large size: constrain the original image aspect ratio. */
+.sh-team-logo-lg { width: clamp(48px, 6vw, 68px); height: clamp(48px, 6vw, 68px); }
 .sh-team-logo-xl { width: clamp(64px, 8vw, 98px); height: clamp(64px, 8vw, 98px); }
 
 .sh-crest {
@@ -743,6 +745,7 @@ html[data-theme='light'] .sh-topbar { background: rgba(255, 255, 255, 0.85); }
 
 .sh-crest-xs { width: 22px; height: 22px; border-radius: 7px; font-size: 8px; }
 .sh-crest-md { width: 46px; height: 46px; border-radius: 14px; font-size: 12px; }
+.sh-crest-lg { width: clamp(48px, 6vw, 68px); height: clamp(48px, 6vw, 68px); border-radius: 18px; font-size: 13px; padding: 4px; text-align: center; overflow-wrap: anywhere; }
 .sh-crest-xl { width: clamp(64px, 8vw, 98px); height: clamp(64px, 8vw, 98px); border-radius: 24px; font-size: 20px; }
 
 /* -------------------------------------------------------------------- score */
@@ -2031,6 +2034,7 @@ html { scroll-behavior: smooth; }
 
 .sh-match-team { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .sh-match-team.is-away { justify-content: flex-end; text-align: right; }
+.sh-match-team > div { min-width: 0; overflow-wrap: anywhere; }
 .sh-match-team b { display: block; font-size: 14px; }
 .sh-match-team i { font-style: normal; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); }
 .sh-match-score { font: 700 30px var(--font-display); font-variant-numeric: tabular-nums; }
@@ -2079,4 +2083,58 @@ html { scroll-behavior: smooth; }
   .sh-match-team, .sh-match-team.is-away { justify-content: center; }
   .sh-commentary li { flex-wrap: wrap; }
   .sh-commentary-clock { min-width: 0; }
+}
+
+/* ESPN-style match details: keep wide stat tables within their own scroll area. */
+.sh-match-breakdown, .sh-detail-panel { min-width: 0; }
+.sh-match-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding: 0 14px 4px; }
+.sh-match-table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sh-match-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sh-match-table th, .sh-match-table td { padding: 9px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.sh-match-table th:first-child { text-align: left; }
+.sh-match-table thead th { color: var(--muted-2); font-size: 10px; text-transform: uppercase; }
+.sh-player-table { min-width: max-content; }
+.sh-player-table th:first-child { min-width: 140px; }
+.sh-player-table small { color: var(--muted-2); font-weight: 400; }
+.sh-match-caption { padding: 4px 18px 10px; margin: 0; color: var(--muted-2); font-size: 11px; line-height: 1.4; }
+.sh-match-disclosure { min-width: 0; padding: 0 14px 10px; }
+.sh-match-disclosure summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-text); }
+.sh-match-disclosure summary::before { content: '▸'; margin-right: 8px; }
+.sh-match-disclosure[open] summary::before { content: '▾'; }
+.sh-drive-list { list-style: none; margin: 0; padding: 0; }
+.sh-drive-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); font-size: 12px; overflow-wrap: anywhere; }
+.sh-drive-list li > span:nth-child(2) { color: var(--muted-2); }
+.sh-drive-list strong { color: var(--accent-text); }
+.sh-commentary-filters { display: flex; gap: 7px; overflow-x: auto; overscroll-behavior-x: contain; padding: 4px 14px 8px; }
+.sh-commentary-filters button { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.sh-commentary-filters button[aria-pressed="true"] { color: var(--accent-text); background: var(--accent-soft); border-color: var(--accent-line); font-weight: 700; }
+.sh-commentary-filters button:focus-visible, .sh-match-disclosure summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sh-commentary-clock span { display: grid; gap: 2px; }
+.sh-commentary-clock b { font-size: 10px; color: var(--muted); }
+.sh-play-type { display: inline-block; margin-right: 6px; font-size: 10.5px; font-weight: 700; color: var(--muted); }
+.sh-play-description { overflow-wrap: anywhere; }
+.sh-play-context { display: block; margin-top: 4px; color: var(--muted-2); font-size: 11px; }
+.sh-team-stats { padding: 0 14px 12px; }
+.sh-team-stats-head, .sh-team-stat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 9px 2px; text-align: center; border-bottom: 1px solid var(--line); font-size: 12px; overflow-wrap: anywhere; }
+.sh-team-stats-head { color: var(--muted-2); font-size: 10px; text-transform: uppercase; }
+.sh-team-stat span { color: var(--muted); }
+.sh-boxscore-groups { padding-top: 2px; }
+.sh-boxscore-groups .sh-match-disclosure + .sh-match-disclosure { border-top: 1px solid var(--line); }
+.sh-game-info { margin: 0; padding: 0 18px 14px; }
+.sh-game-info > div { display: grid; grid-template-columns: minmax(80px, 120px) minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.sh-game-info dt { color: var(--muted-2); }
+.sh-game-info dd { margin: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .sh-match-team, .sh-match-team.is-away { width: 100%; max-width: 100%; }
+  .sh-match-team > div { flex: 0 1 auto; }
+  .sh-commentary { padding: 4px 12px 12px; }
+  .sh-commentary li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; }
+  .sh-commentary-clock { grid-column: 1; grid-row: 1; }
+  .sh-commentary-clock span { display: flex; gap: 6px; }
+  .sh-commentary-score { grid-column: 2; grid-row: 1; }
+  .sh-commentary-text { grid-column: 1 / -1; grid-row: 2; overflow-wrap: anywhere; }
+  .sh-drive-list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .sh-drive-list li > span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+  .sh-drive-list strong { grid-column: 2; grid-row: 1; text-align: right; }
 }

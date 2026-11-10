@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MatchDetails } from '@/lib/espn-match';
-import { isStandingsBoard, type StandingsBoard } from '@/lib/espn-standings';
+import type { StandingsBoard } from '@/lib/espn-standings';
+import { browserStandingsBoard } from '@/lib/espn-browser';
 
 function TeamCrest({ url, name }: { url: string | null | undefined; name: string }) {
   const [failed, setFailed] = useState(false);
@@ -27,16 +28,10 @@ export function SportsLeagueTable({ match }: { match: MatchDetails }) {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 12_000);
+    const timeout = setTimeout(() => controller.abort(), 20_000);
     setBusy(true); setError(null);
     try {
-      const params = new URLSearchParams();
-      if (season !== null) params.set('season', String(season));
-      if (refresh) params.set('refresh', '1');
-      const response = await fetch(`/api/sports/standings/${encodeURIComponent(match.reference.league)}${params.size ? `?${params}` : ''}`, { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('Standings request failed');
-      const next: unknown = await response.json();
-      if (!isStandingsBoard(next, match.reference.league, season)) throw new Error('Invalid standings response');
+      const next = await browserStandingsBoard(match.reference.league, season, controller.signal, refresh);
       if (controller.signal.aborted) return;
       if (next.status === 'unavailable') throw new Error('Standings unavailable');
       setBoard(next);
@@ -61,6 +56,8 @@ export function SportsLeagueTable({ match }: { match: MatchDetails }) {
       <div className="text-sm text-gray-600 dark:text-slate-300">
         <p>{board?.season ? `Season ${board.season.label ?? board.season.year}` : season !== null ? `Requested season: ${season}` : 'Current provider season'}</p>
         {season === null && <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">The match season was not reported. This is the provider’s current table, not a historical match table.</p>}
+        {/* The table always follows the competition of this match — the competition the scoreboard filter selected. */}
+        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Showing the {match.leagueName} table for this competition.</p>
       </div>
       <button type="button" disabled={busy} onClick={() => void load(true)} className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50">{busy ? 'Loading table…' : board ? 'Refresh table' : 'Retry table'}</button>
     </div>

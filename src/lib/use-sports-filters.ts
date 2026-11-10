@@ -13,7 +13,7 @@ function subscribe(listener: () => void) {
 }
 const getSnapshot = () => window.location.search;
 
-/** Native history updates do not navigate/refetch the score feed. SSR gets the same validated state. */
+/** Native history updates do not navigate. SSR gets the same validated state. */
 export function useSportsFilters(initial: SportsFilters = DEFAULT_SPORTS_FILTERS, league?: SportsLeaguePage) {
   const serverSearch = sportsFilterSearch(initial);
   const search = useSyncExternalStore(subscribe, getSnapshot, () => serverSearch);

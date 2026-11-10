@@ -12,6 +12,7 @@ import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry, statisticShare } from '@/lib/sports-navigation';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { validMatchMetadata, type MatchBoard, type MatchLineup } from '@/lib/espn-match';
+import { browserMatchBoard } from '@/lib/espn-browser';
 
 const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table'], ['history', 'Form & H2H'], ['information', 'Match info'], ['insights', 'Predictions & odds']] as const;
 type Section = typeof sections[number][0];
@@ -40,20 +41,17 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
   const [insightsOpened, setInsightsOpened] = useState(false);
   const [tableOpened, setTableOpened] = useState(false);
   const [historyOpened, setHistoryOpened] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!initial.match);
   const [error, setError] = useState('');
   const [failure, setFailure] = useState<MatchBoard['source'] | null>(null);
   const request = useRef<AbortController | null>(null);
   const sectionId = useId();
-  useEffect(() => () => { request.current?.abort(); }, []);
   const refresh = async () => {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller; setLoading(true); setError('');
     try {
-      const response = await fetch(`/api/sports/matches/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.eventId)}?refresh=1`, { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('Match request failed');
-      const next = await response.json() as MatchBoard;
+      const next = await browserMatchBoard(reference, controller.signal, true);
       if (!['ready', 'unavailable'].includes(next.status) || !next.source || typeof next.source.ok !== 'boolean'
         || typeof next.source.url !== 'string' || (next.status === 'unavailable' && next.match !== null)
         || (next.status === 'ready' && (!next.match || next.match.reference?.eventId !== reference.eventId || next.match.reference?.league !== reference.league
@@ -68,6 +66,13 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
       if (!controller.signal.aborted) setLoading(false);
     }
   };
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => { if (active) void refresh(); });
+    return () => { active = false; request.current?.abort(); request.current = null; };
+    // Refresh on mount and when navigating to a different match.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reference.league, reference.eventId]);
   const match = board.match;
   const source = failure ?? board.source;
   const teamName = (id: string) => match?.teams.find((team) => team.id === id)?.name ?? 'Team';
@@ -83,7 +88,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
     </nav>
     <header className="mb-5 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
       <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">ESPN · {match?.leagueName ?? 'Match details'}</p>
-      <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? 'Match details unavailable'}</h1>
+      <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? (loading ? 'Loading match details…' : 'Match details unavailable')}</h1>
       {match && <>
         <p className="mt-2 break-words text-sm text-gray-600 dark:text-gray-300">{match.statusText ?? 'Status not reported'}{match.kickoff ? ` · ${formatPredictionKickoff(match.kickoff)}` : ''}</p>
         {match.venue && <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-400">{match.venue}</p>}
@@ -96,7 +101,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
       <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Only ESPN-reported data is shown. — means not reported. Coverage varies by sport and match status.</p>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400" suppressHydrationWarning>Last checked: {formatPredictionKickoff(board.fetchedAt)}</p>
     </header>
-    {!match ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{source.httpStatus === 403 ? 'Access to ESPN match details was refused (HTTP 403).' : 'ESPN match details are currently unavailable.'} No sample statistics or lineups are substituted. Please try refreshing.</p> : <>
+    {!match ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{loading ? 'Loading ESPN match details…' : source.httpStatus === 403 ? 'Access to ESPN match details was refused (HTTP 403).' : 'ESPN match details are currently unavailable.'} No sample statistics or lineups are substituted.</p> : <>
       <div role="group" aria-label="Match detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 gap-2 overflow-x-auto rounded-2xl bg-gray-100 py-2 dark:bg-gray-900">
         {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => { setSection(id); if (id === 'table') setTableOpened(true); if (id === 'history') setHistoryOpened(true); if (id === 'insights') setInsightsOpened(true); }} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold ${section === id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>{label}</button>)}
       </div>

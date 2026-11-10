@@ -109,16 +109,29 @@ export const ESPN_LEAGUES = {
   },
 };
 
-/** Leagues merged into the basketball scoreboard, in display order. */
-export const BASKETBALL_LIVE_LEAGUES = ["nba", "wnba", "nbl", "euroleague"];
+/**
+ * Leagues merged into the basketball scoreboard, in display order.
+ *
+ * The two Division I college boards are part of the default view. ESPN only
+ * returns its featured subset for college basketball unless the caller asks for
+ * group 50, so those boards are fetched with the wider parameters below.
+ */
+export const BASKETBALL_LIVE_LEAGUES = [
+  "nba",
+  "wnba",
+  "nbl",
+  "euroleague",
+  "mens-college-basketball",
+  "womens-college-basketball",
+];
 
 /** Leagues merged into the NFL scoreboard. */
 export const FOOTBALL_LIVE_LEAGUES = ["nfl"];
 
 /**
  * Competitions the hub can load on demand. The default "All competitions" view
- * keeps the four flagship basketball leagues; NCAA boards are only fetched once
- * that competition is selected, so the dashboard never floods with 100+ games.
+ * uses the basketball/football league lists above; a competition outside those
+ * lists (college football) is fetched on its own once it is selected.
  */
 export const LEAGUE_BY_COMPETITION = {
   nba: "nba",
@@ -297,13 +310,33 @@ function requireLeague(leagueKey) {
   return league;
 }
 
+/**
+ * Per-league scoreboard parameters. College basketball defaults to ESPN's
+ * featured games (roughly the top 25); asking for group 50 with a higher limit
+ * returns the whole Division I day, which is also a much bigger payload, so
+ * those boards get a longer request timeout. Every other league keeps
+ * `limit=100`.
+ */
+const SCOREBOARD_PARAMS = {
+  "mens-college-basketball": { limit: 500, groups: 50, timeout: 25 * 1000 },
+  "womens-college-basketball": { limit: 500, groups: 50, timeout: 25 * 1000 },
+};
+
+/** Parameters for one league's scoreboard request (URL + timeout). */
+export function scoreboardParams(leagueKey) {
+  const league = requireLeague(leagueKey);
+  return SCOREBOARD_PARAMS[league.key] ?? { limit: 100 };
+}
+
 export function scoreboardUrls(leagueKey, { date, week, seasonType, limit = 100 } = {}) {
   const league = requireLeague(leagueKey);
+  const board = SCOREBOARD_PARAMS[league.key];
   const path = `/apis/site/v2/sports/${league.path}/scoreboard${buildQuery({
-    limit,
+    limit: board?.limit ?? limit,
     dates: date,
     week,
     seasontype: seasonType,
+    groups: board?.groups,
   })}`;
   return withProxyFallback(ESPN_SITE_BASE, ESPN_SITE_PROXY, path);
 }
@@ -861,49 +894,116 @@ export function normalizeLeaderboard(payload, { limit = 5, sport = "basketball" 
   return boards.slice(0, 6);
 }
 
+// Normalize only what ESPN actually supplies. In particular, NFL summaries use
+// drives.previous/current, while basketball summaries generally have plays[].
+const summaryValue = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+};
+
 export function normalizeSummary(payload) {
-  const wrapped = [
-    ...asArray(payload?.commentary),
-    ...asArray(payload?.plays),
-    ...asArray(payload?.drives).flatMap((drive) => asArray(drive?.plays)),
-    ...asArray(payload?.scoringPlays),
-  ];
-
-  const plays = wrapped
-    .map((entry) => {
-      const play = entry?.play ?? entry;
-      const text = play?.text ?? play?.description ?? entry?.text;
-      if (!text) return null;
-      const clock = play?.clock?.displayValue ?? play?.clock ?? entry?.clock ?? "";
-      const team = play?.team?.abbreviation ?? entry?.team?.abbreviation ?? null;
-      const away = play?.awayScore ?? entry?.awayScore;
-      const home = play?.homeScore ?? entry?.homeScore;
-      // Home–away, matching the scoreline in the hero.
-      const score = home !== undefined && away !== undefined ? `${home}-${away}` : null;
-      return { clock: String(clock), team, text, score };
-    })
-    .filter(Boolean)
-    .slice(0, 60);
-
   const competition = payload?.header?.competitions?.[0] ?? {};
   const competitors = asArray(competition.competitors);
   const teamOf = (entry) => ({
+    id: summaryValue(entry?.team?.id ?? entry?.id),
     name: entry?.team?.displayName ?? entry?.team?.name ?? null,
     code: entry?.team?.abbreviation ?? null,
     logo: teamLogo(entry?.team),
-    score: entry?.score ?? null,
+    score: summaryValue(entry?.score?.displayValue ?? entry?.score),
     homeAway: entry?.homeAway ?? null,
+    linescores: asArray(entry?.linescores).map((row) => summaryValue(row?.displayValue ?? row?.value ?? row)),
+  });
+  const teams = competitors.map(teamOf).filter((team) => team.name);
+  const teamsById = new Map(teams.filter((team) => team.id).map((team) => [team.id, team]));
+  const codeFor = (team) => summaryValue(team?.abbreviation) ?? teamsById.get(summaryValue(team?.id))?.code ?? null;
+
+  const rawDrives = Array.isArray(payload?.drives) ? payload.drives : [
+    ...asArray(payload?.drives?.previous), ...(payload?.drives?.current ? [payload.drives.current] : []),
+  ];
+  const seenDrives = new Set();
+  const drives = rawDrives.filter((drive) => {
+    if (!drive || typeof drive !== "object") return false;
+    const id = summaryValue(drive.id);
+    if (id && seenDrives.has(id)) return false;
+    if (id) seenDrives.add(id);
+    return true;
+  });
+  const driveEntries = drives.flatMap((drive) => asArray(drive.plays).map((play) => ({ play, drive })));
+  const rawPlays = asArray(payload?.plays).map((play) => ({ play: play?.play ?? play }));
+  const commentary = asArray(payload?.commentary).map((play) => ({ play: play?.play ?? play }));
+  const scoring = asArray(payload?.scoringPlays).map((play) => ({ play: play?.play ?? play }));
+  // Scoring plays are a subset of the full feed, not additional commentary.
+  // Empty placeholder rows must not prevent a valid fallback feed from showing.
+  const hasText = (entries) => entries.some(({ play }) => summaryValue(play?.text ?? play?.description));
+  const wrapped = hasText(driveEntries) ? driveEntries : hasText(rawPlays) ? rawPlays : hasText(commentary) ? commentary : scoring;
+  const seenPlays = new Set();
+  const plays = wrapped.flatMap(({ play, drive }) => {
+    const text = summaryValue(play?.text ?? play?.description);
+    if (!text) return [];
+    const id = summaryValue(play?.id);
+    if (id && seenPlays.has(id)) return [];
+    if (id) seenPlays.add(id);
+    const clock = summaryValue(play?.clock?.displayValue ?? play?.clock) ?? "";
+    const periodNumber = summaryValue(play?.period?.number);
+    const period = summaryValue(play?.period?.displayValue ?? play?.period?.shortDisplayValue)
+      ?? (periodNumber ? `Period ${periodNumber}` : null);
+    const away = summaryValue(play?.awayScore), home = summaryValue(play?.homeScore);
+    const score = home !== null && away !== null ? `${home}-${away}` : null;
+    return [{ id, clock, period, team: codeFor(play?.team) ?? codeFor(play?.start?.team) ?? codeFor(drive?.team), text, score,
+      type: summaryValue(play?.type?.text), downDistance: summaryValue(play?.start?.downDistanceText ?? play?.start?.shortDownDistanceText),
+      scoring: play?.scoringPlay === true }];
   });
 
-  const statusType = competition?.status?.type ?? {};
+  const driveSummaries = drives.flatMap((drive) => {
+    const team = codeFor(drive.team);
+    const description = summaryValue(drive.description);
+    const result = summaryValue(drive.displayResult ?? drive.shortDisplayResult ?? drive.result);
+    if (!team && !description && !result) return [];
+    return [{ id: summaryValue(drive.id), team, description, result,
+      start: summaryValue(drive.start?.shortDownDistanceText ?? drive.start?.possessionText),
+      scoring: drive.isScore === true }];
+  });
 
+  const statTeams = asArray(payload?.boxscore?.teams);
+  const statRows = new Map();
+  for (const row of statTeams) {
+    const id = summaryValue(row?.team?.id);
+    const side = teamsById.get(id)?.homeAway ?? row?.homeAway;
+    if (side !== "home" && side !== "away") continue;
+    for (const stat of asArray(row.statistics)) {
+      const key = summaryValue(stat?.name ?? stat?.label);
+      const value = summaryValue(stat?.displayValue ?? stat?.value);
+      if (!key || value === null) continue;
+      const current = statRows.get(key) ?? { label: summaryValue(stat.label ?? stat.displayName) ?? key, home: null, away: null };
+      current[side] = value;
+      statRows.set(key, current);
+    }
+  }
+  const playerTables = asArray(payload?.boxscore?.players).flatMap((team) => asArray(team?.statistics).flatMap((group) => {
+    const labels = asArray(group?.labels).map((value) => summaryValue(value) ?? "—");
+    if (!labels.length) return [];
+    const athletes = asArray(group?.athletes).flatMap((row) => {
+      const name = summaryValue(row?.athlete?.displayName ?? row?.athlete?.fullName ?? row?.athlete?.name);
+      if (!name) return [];
+      return [{ id: summaryValue(row?.athlete?.id), name, didNotPlay: row.didNotPlay === true,
+        reason: summaryValue(row.reason), stats: labels.map((_, index) => summaryValue(asArray(row.stats)[index]) ?? "—") }];
+    });
+    if (!athletes.length) return [];
+    return [{ team: summaryValue(team?.team?.displayName) ?? codeFor(team?.team) ?? "Team",
+      label: summaryValue(group?.displayName ?? group?.name) ?? "Players", labels, athletes }];
+  }));
+  const statusType = competition?.status?.type ?? {};
+  const info = payload?.gameInfo ?? {};
+  const broadcast = asArray(competition?.broadcasts).flatMap((item) => asArray(item?.names)).map(summaryValue).filter(Boolean);
   return {
-    plays,
+    plays, playsKind: wrapped === scoring ? "scoring" : "full", drives: driveSummaries,
+    teamStats: [...statRows.values()], playerTables,
+    gameInfo: { attendance: summaryValue(info.attendance), officials: asArray(info.officials).map((row) => summaryValue(row?.fullName ?? row?.displayName)).filter(Boolean), broadcast },
     period: statusType.shortDetail ?? statusType.detail ?? null,
     statusText: statusType.shortDetail ?? statusType.detail ?? null,
-    state: statusType.state ?? null, // pre · in · post
-    venue: competition?.venue?.fullName ?? null,
-    teams: competitors.map(teamOf).filter((team) => team.name),
+    state: statusType.state ?? null,
+    venue: competition?.venue?.fullName ?? info?.venue?.fullName ?? null,
+    teams,
   };
 }
 
@@ -915,6 +1015,7 @@ export async function loadScoreboard(leagueKey, { date, week, seasonType, force 
   const data = await requestEspn(scoreboardUrls(leagueKey, { date, week, seasonType }), {
     ttl: SCOREBOARD_TTL,
     force,
+    timeout: scoreboardParams(leagueKey).timeout,
   });
   const league = requireLeague(leagueKey);
   return {

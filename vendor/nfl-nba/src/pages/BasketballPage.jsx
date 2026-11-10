@@ -110,7 +110,7 @@ export default function BasketballPage({
     competition !== "all" && visibleIds.has(competition) ? competition : "all";
 
   const isControlled = Boolean(games || standings || leaders || stats);
-  // NCAA boards are fetched only while their competition is selected.
+  // The college boards ride along with the flagship leagues (see espn.js).
   const feed = useEspnFeed({
     sport: "basketball",
     enabled: live && !isControlled,

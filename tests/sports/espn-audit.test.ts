@@ -17,20 +17,20 @@ test('the complete audit checks all sports, bounds concurrency and records true 
     active--; return Response.json({ events: [] });
   }, async () => {
     const report = await auditEspnScoreboards();
-    assert.equal(calls, 38);
+    assert.equal(calls, ESPN_LEAGUES.length);
     assert.ok(maximum > 1 && maximum <= 8);
-    assert.equal(report.summary.healthy, 38);
+    assert.equal(report.summary.healthy, ESPN_LEAGUES.length);
     assert.equal(report.sports.length, 7);
-    assert.deepEqual(report.sports.map((row) => row.checked), [28, 4, 1, 1, 1, 2, 1]);
+    for (const row of report.sports) assert.equal(row.checked, ESPN_LEAGUES.filter((league) => league.kind === row.sport).length);
     assert.ok(report.results.every((row) => row.httpStatus === 200 && row.events === 0 && row.live === 0));
   });
 });
-test('HTTP 404 for every sport records 38 unavailable routes without retrying or calling them empty schedules', async () => {
+test('HTTP 404 for every sport records unavailable routes without retrying or calling them empty schedules', async () => {
   let calls = 0;
   await withFetch(async () => { calls++; return new Response('', { status: 404 }); }, async () => {
     const report = await auditEspnScoreboards();
-    assert.equal(calls, 38);
-    assert.equal(report.summary.http404, 38);
+    assert.equal(calls, ESPN_LEAGUES.length);
+    assert.equal(report.summary.http404, ESPN_LEAGUES.length);
     assert.equal(report.summary.networkFailures, 0);
     assert.ok(report.results.every((row) => !row.ok && row.httpStatus === 404 && row.errorKind === 'http' && row.events === null));
     assert.ok(report.sports.every((row) => row.http404 === row.checked && row.noHttpResponse === 0));
@@ -59,8 +59,8 @@ test('all-sport HTTP 403 denials get distinct summary counts and retain metadata
     calls++; return new Response('test-private-body', { status: 403, headers: { server: 'example-edge', 'content-type': 'text/plain' } });
   }, async () => {
     const report = await auditEspnScoreboards();
-    assert.equal(calls, 38);
-    assert.equal(report.summary.http403, 38);
+    assert.equal(calls, ESPN_LEAGUES.length);
+    assert.equal(report.summary.http403, ESPN_LEAGUES.length);
     assert.equal(report.summary.http404, 0);
     assert.equal(report.summary.networkFailures, 0);
     assert.ok(report.sports.every((sport) => sport.http403 === sport.checked));

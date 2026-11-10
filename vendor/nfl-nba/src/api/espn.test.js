@@ -302,6 +302,23 @@ describe("ESPN request layer", () => {
     expect(standingsUrls("nba")[0]).toContain("/apis/v2/sports/basketball/nba/standings");
   });
 
+  it("asks for the wider Division I board for college basketball", () => {
+    const [direct, proxied] = scoreboardUrls("mens-college-basketball");
+    expect(direct).toBe(
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=500&groups=50"
+    );
+    expect(proxied).toBe(
+      "/espn/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=500&groups=50"
+    );
+    expect(scoreboardUrls("womens-college-basketball")[0]).toContain("womens-college-basketball/scoreboard?limit=500&groups=50");
+    // dated requests keep the extra parameters
+    expect(scoreboardUrls("mens-college-basketball", { date: "20261110" })[0]).toContain("dates=20261110");
+    // every other league keeps its existing URL
+    expect(scoreboardUrls("nba")[0]).toBe(
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?limit=100"
+    );
+  });
+
   it("falls back to the same-origin proxy and caches the payload", async () => {
     const fetchMock = vi
       .fn()
@@ -328,14 +345,19 @@ describe("ESPN request layer", () => {
 });
 
 describe("NCAA league routing", () => {
-  it("keeps the flagship boards on the default view", () => {
-    expect(liveLeaguesFor("basketball")).toEqual(["nba", "wnba", "nbl", "euroleague"]);
+  it("keeps the flagship and Division I college boards on the default view", () => {
+    expect(liveLeaguesFor("basketball")).toEqual([
+      "nba",
+      "wnba",
+      "nbl",
+      "euroleague",
+      "mens-college-basketball",
+      "womens-college-basketball",
+    ]);
     expect(liveLeaguesFor("football", "all")).toEqual(["nfl"]);
   });
 
-  it("fetches a single college board once that competition is selected", () => {
-    expect(liveLeaguesFor("basketball", "ncaam")).toEqual(["mens-college-basketball"]);
-    expect(liveLeaguesFor("basketball", "ncaaw")).toEqual(["womens-college-basketball"]);
+  it("fetches college football on its own once that competition is selected", () => {
     expect(liveLeaguesFor("football", "cfb")).toEqual(["college-football"]);
   });
 

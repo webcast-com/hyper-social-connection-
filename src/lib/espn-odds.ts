@@ -8,7 +8,7 @@ export const BATCH_SIZE = 20;
 
 const primary = new Set(['epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'ucl', 'nba', 'nfl', 'mlb', 'nhl']);
 // Motorsport has athlete fields, not the home/away markets this feed requires.
-export const ODDS_LEAGUES = ESPN_LEAGUES.filter((league) => league.kind !== 'motorsport').map((league) => ({
+export const ODDS_LEAGUES = ESPN_LEAGUES.filter((league) => league.kind !== 'motorsport' && !league.excludeFromOdds).map((league) => ({
   slug: league.slug, sport: league.kind, path: `${league.sport}/${league.league}`, name: league.name,
   secondary: !primary.has(league.slug),
 }));

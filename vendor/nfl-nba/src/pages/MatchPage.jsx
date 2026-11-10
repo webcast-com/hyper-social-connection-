@@ -11,6 +11,7 @@ import {
 import { gameClockLabel } from "../utils/dates";
 import { EmptyState, Panel, PanelHead, TeamLogo } from "../components/ui";
 import { IconClock, IconPlay } from "../components/Icons";
+import { FootballDrives, MatchBoxScore, MatchGameInfo, MatchScoreBreakdown } from "../components/MatchDetailSections";
 
 function findDemoGame(games, matchId) {
   return games.find((game) => String(game.id) === String(matchId)) ?? null;
@@ -33,9 +34,11 @@ export default function MatchPage({ sport = "basketball" }) {
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(!isEspnDisabled());
+  const [selectedPeriod, setSelectedPeriod] = useState("all");
 
   useEffect(() => {
     setSummary(null);
+    setSelectedPeriod("all");
     if (isEspnDisabled()) {
       setLoading(false);
       return undefined;
@@ -55,6 +58,24 @@ export default function MatchPage({ sport = "basketball" }) {
       active = false;
     };
   }, [leagueKey, matchId]);
+
+  // Keep an in-progress real game current without discarding the last good
+  // summary if a refresh fails. This uses the existing summary endpoint.
+  useEffect(() => {
+    if (demoGame || summary?.state !== "in" || isEspnDisabled()) return undefined;
+    let active = true;
+    let pending = false;
+    const timer = setInterval(async () => {
+      if (document.visibilityState === "hidden" || pending) return;
+      pending = true;
+      try {
+        const payload = await loadMatchSummary(leagueKey, matchId, { force: true });
+        if (active && (payload.teams.length || payload.plays.length)) setSummary(payload);
+      } catch { /* Keep the last ESPN response on screen. */ }
+      finally { pending = false; }
+    }, 30_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [leagueKey, matchId, summary?.state, demoGame]);
 
   const summaryHome =
     summary?.teams?.find((team) => team.homeAway === "home") ?? summary?.teams?.[0] ?? null;
@@ -92,6 +113,10 @@ export default function MatchPage({ sport = "basketball" }) {
     () => (summary?.plays?.length ? summary.plays : demoCommentary[String(matchId)]?.plays ?? []),
     [summary, matchId]
   );
+
+  const periods = [...new Set(plays.map((play) => play.period).filter(Boolean))];
+  const activePeriod = selectedPeriod === "all" || periods.includes(selectedPeriod) ? selectedPeriod : "all";
+  const visiblePlays = activePeriod === "all" ? plays : plays.filter((play) => play.period === activePeriod);
 
   const backLink = (
     <Link className="sh-detail-back" to={config.hub}>
@@ -174,6 +199,9 @@ export default function MatchPage({ sport = "basketball" }) {
         </div>
       </header>
 
+      {summary ? <MatchScoreBreakdown teams={summary.teams} /> : null}
+      {sport === "football" ? <FootballDrives drives={summary?.drives} /> : null}
+
       <Panel className="sh-detail-panel">
         <PanelHead
           icon={<IconPlay size={15} />}
@@ -181,29 +209,36 @@ export default function MatchPage({ sport = "basketball" }) {
           note={
             plays.length
               ? summary?.plays?.length
-                ? "ESPN play-by-play"
+                ? summary.playsKind === "scoring" ? "ESPN scoring plays only" : "ESPN play-by-play"
                 : "Sample play-by-play"
               : undefined
           }
         />
 
-        {plays.length ? (
+        {plays.length ? <>
+          {periods.length ? <div className="sh-commentary-filters" role="group" aria-label="Filter commentary by period">
+            <button type="button" aria-pressed={activePeriod === "all"} onClick={() => setSelectedPeriod("all")}>All periods</button>
+            {periods.map((period) => <button type="button" key={period} aria-pressed={activePeriod === period} onClick={() => setSelectedPeriod(period)}>{period}</button>)}
+          </div> : null}
+          <p className="sh-match-caption">Play score: {teams.home?.code || "Home"} – {teams.away?.code || "Away"} (home – away)</p>
           <ol className="sh-commentary">
-            {plays.map((play, index) => (
-              <li key={`${play.clock}-${index}`}>
+            {visiblePlays.map((play, index) => (
+              <li key={play.id || `${play.clock}-${index}`}>
                 <span className="sh-commentary-clock">
                   <IconClock size={12} />
-                  {play.clock}
+                  <span>{play.period ? <b>{play.period}</b> : null}{play.clock || "—"}</span>
                 </span>
                 <span className="sh-commentary-text">
                   {play.team ? <b>{play.team}</b> : null}
-                  {play.text}
+                  {play.type ? <span className="sh-play-type">{play.type}</span> : null}
+                  <span className="sh-play-description">{play.text}</span>
+                  {sport === "football" && play.downDistance ? <span className="sh-play-context">{play.downDistance}</span> : null}
                 </span>
-                {play.score ? <span className="sh-commentary-score">{play.score}</span> : null}
+                {play.score ? <span className="sh-commentary-score" aria-label={`Home ${play.score.split("-")[0]}, away ${play.score.split("-")[1]}`}>{play.score}</span> : null}
               </li>
             ))}
           </ol>
-        ) : (
+        </> : (
           <p className="sh-detail-note">
             {state === "UPCOMING"
               ? `Commentary starts at ${statusText ?? "tip-off"} — come back when the game is live.`
@@ -214,6 +249,8 @@ export default function MatchPage({ sport = "basketball" }) {
         )}
       </Panel>
 
+      <MatchBoxScore summary={summary} teams={teams} />
+      <MatchGameInfo summary={summary} />
       {backLink}
     </main>
   );

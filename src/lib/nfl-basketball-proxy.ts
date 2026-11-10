@@ -4,9 +4,13 @@ const leagues = new Set([
   'basketball/mens-college-basketball', 'basketball/womens-college-basketball',
   'football/nfl', 'football/college-football',
 ]);
+// ESPN only returns its featured college games unless group 50 is asked for, so
+// the Division I boards need a wider limit plus the group parameter. Everything
+// else keeps the documented limit of 100 and no group.
+const collegeBoards = new Set(['basketball/mens-college-basketball', 'basketball/womens-college-basketball']);
 const queryPatterns: Record<string, RegExp> = {
   limit: /^\d{1,3}$/, dates: /^\d{8}(?:-\d{8})?$/, week: /^\d{1,2}$/,
-  seasontype: /^[1-3]$/, season: /^\d{4}$/, event: /^\d{1,20}$/,
+  seasontype: /^[1-3]$/, season: /^\d{4}$/, event: /^\d{1,20}$/, groups: /^\d{1,3}$/,
 };
 const maxBytes = 4 * 1024 * 1024;
 let activeRequests = 0;
@@ -25,10 +29,15 @@ export function dashboardEspnUrl(kind: 'site' | 'web', segments: string[], query
     : prefix === 'v2' ? endpoint === 'standings'
       : /^(leaders|athletes\/[A-Za-z0-9-]{1,40})$/.test(endpoint);
   if (!allowed) return null;
+  const board = `${match[2]}/${match[3]}`;
+  const college = collegeBoards.has(board) && endpoint === 'scoreboard';
+  const limitMax = college ? 500 : 100;
   const keys = new Set<string>();
   for (const [key, value] of query) {
     if (keys.has(key) || !Object.hasOwn(queryPatterns, key) || !queryPatterns[key].test(value)) return null;
-    if (key === 'limit' && (Number(value) < 1 || Number(value) > 100)) return null;
+    if (key === 'limit' && (Number(value) < 1 || Number(value) > limitMax)) return null;
+    // `groups` is only meaningful for the Division I college boards.
+    if (key === 'groups' && !college) return null;
     keys.add(key);
   }
   const url = new URL(`https://${kind === 'site' ? 'site.api.espn.com' : 'site.web.api.espn.com'}/${path}`);

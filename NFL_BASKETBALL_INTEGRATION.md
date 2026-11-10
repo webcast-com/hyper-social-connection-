@@ -26,4 +26,6 @@ uses bundled sample content if data is unavailable; its pages carry a noindex
 header to avoid indexing sample content. Live ESPN availability and CORS are
 dependent on the deployment and cannot be verified in the restricted sandbox.
 
+Commentary team crests use a bounded large size for both provider images and abbreviation fallbacks, including at narrow widths. A failed image does not prevent a newly supplied logo from loading. ESPN endpoints and requests are unchanged.
+
 Tests: `npm run test:nfl-basketball` and `npm --prefix vendor/nfl-nba test`.
