@@ -855,7 +855,7 @@ test('odds browser deadline releases a hung refresh and allows a successful retr
   await expect(page.getByRole('article')).toHaveCount(0);
 });
 
-test('homepage leaders board shows player cards that link to the dashboard profile', async ({ page }) => {
+test('homepage players board renders post cards with the team crest and player details', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 900 });
   await render(page);
   const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
@@ -865,32 +865,72 @@ test('homepage leaders board shows player cards that link to the dashboard profi
   await expect(cards).toHaveCount(2);
   const card = cards.filter({ hasText: 'Luka Dončić' });
   await expect(card.getByText('Luka Dončić')).toBeVisible();
-  await expect(card.getByText('PG · DAL')).toBeVisible();
-  // The card carries a player image, not the initials fallback.
-  await expect(card.locator('img.sh-player-photo')).toHaveCount(1);
-  await expect(card.locator('.sh-player-mono')).toHaveCount(0);
-  const photo = card.locator('img.sh-player-photo');
+  await expect(card.getByText('PG · DAL · Points Per Game')).toBeVisible();
+
+  // The team crest stands in for the post author image, linking to the team.
+  const crest = card.locator('img[src*="teamlogos"]');
+  await expect(crest).toHaveCount(1);
+  await expect(crest).toHaveAttribute('src', /teamlogos\/nba\/500\/dal\.png$/);
+  await expect(board.getByRole('link', { name: 'Team profile: Dallas Mavericks' })).toHaveAttribute('href', '/nfl-basketball/basketball/team/dallas-mavericks');
+
+  // Media is the post image block, with a readable caption inside the image.
+  const photo = card.locator('img.w-full');
+  await expect(photo).toHaveCount(1);
   expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
-  // Stats row matches the dashboard card: Team, Stat, Avg, Rank.
-  await expect(card.locator('.sh-player-stats i')).toHaveText(['Team', 'Stat', 'Avg', 'Rank']);
-  await expect(card.locator('.sh-player-stats b')).toHaveText(['DAL', 'PTS', '33.9', '01']);
-  const link = board.getByRole('link', { name: 'Player profile: Luka Dončić' });
-  await expect(link).toHaveAttribute('href', '/nfl-basketball/basketball/player/luka-doncic');
+  await expect(card.locator('.pointer-events-none.absolute').first()).toContainText('Luka Dončić');
+  await expect(card.locator('.pointer-events-none.absolute').first()).toContainText('Dallas Mavericks · PTS 33.9');
+
+  // Player details sit below the image.
+  await expect(card.locator('dl dt')).toHaveText(['Team', 'Stat', 'Value']);
+  await expect(card.locator('dl dd')).toHaveText(['DAL', 'PTS', '33.9']);
+
+  // The whole card is clickable, and the actions are the post actions.
+  await expect(card.getByRole('link', { name: 'Player profile: Luka Dončić' })).toHaveAttribute('href', '/nfl-basketball/basketball/player/luka-doncic');
+  await expect(card.getByRole('button', { name: 'Like Luka Dončić' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Comment on Luka Dončić' })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Share Luka Dončić' })).toBeVisible();
   await assertFit(page);
 });
 
-test('homepage leaders board switches between basketball and NFL cards', async ({ page }) => {
+test('homepage players board likes, comments and shares like a post', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await render(page);
+  const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
+  const card = board.getByRole('article').filter({ hasText: 'Luka Dončić' });
+
+  await card.getByRole('button', { name: 'Like Luka Dončić' }).click();
+  await expect(card.getByRole('button', { name: 'Like Luka Dončić' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(card.getByText('1 cheer')).toBeVisible();
+
+  await card.getByRole('button', { name: 'Comment on Luka Dončić' }).click();
+  await card.getByRole('textbox', { name: 'Write a comment about Luka Dončić' }).fill('What a season');
+  await card.getByRole('button', { name: 'Post', exact: true }).click();
+  await expect(card.getByText('What a season')).toBeVisible();
+  await expect(card.getByText('1 comment')).toBeVisible();
+  await expect(card.getByText(/Comments stay in this browser/)).toBeVisible();
+
+  await card.getByRole('button', { name: 'Share Luka Dončić' }).click();
+  await expect(card.getByRole('button', { name: /Copy Link/ })).toBeVisible();
+  await card.getByRole('button', { name: 'Close' }).click();
+  await expect(card.getByRole('button', { name: /Copy Link/ })).toHaveCount(0);
+
+  // Clicking the image opens the post lightbox over the card.
+  await card.locator('img.w-full').click();
+  await expect(page.locator('.fixed.inset-0').first()).toBeVisible();
+  await assertFit(page);
+});
+
+test('homepage players board switches between basketball and NFL cards', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 900 });
   await render(page);
   const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
   await board.getByRole('button', { name: 'NFL', exact: true }).click();
   await expect(board.getByText('NFL season leaders from ESPN')).toBeVisible();
   const card = board.getByRole('article').filter({ hasText: 'Lamar Jackson' });
-  await expect(card.getByText('QB · BAL')).toBeVisible();
-  await expect(card.locator('.sh-player-stats b')).toHaveText(['BAL', 'PASS', '3,678', '01']);
+  await expect(card.getByText('QB · BAL · Passing Yards')).toBeVisible();
+  await expect(card.locator('dl dd')).toHaveText(['BAL', 'PASS', '3,678']);
   await expect(board.getByRole('link', { name: 'Player profile: Lamar Jackson' })).toHaveAttribute('href', '/nfl-basketball/nfl/player/lamar-jackson');
-  // NFL cards use the NFL portrait artwork.
-  await expect(card.locator('img.sh-player-photo')).toHaveAttribute('src', /nfl-portrait-[1-5]\.jpg$/);
+  await expect(card.locator('img.w-full')).toHaveAttribute('src', /nfl-portrait-[1-5]\.jpg$|headshots\/nfl/);
   await expect(board.getByRole('button', { name: 'NFL', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(board.getByRole('link', { name: 'Open the NFL dashboard' })).toBeVisible();
   // Football scores and predictions stay reachable from the homepage sports rail.
@@ -901,7 +941,7 @@ test('homepage leaders board switches between basketball and NFL cards', async (
   await assertFit(page);
 });
 
-test('homepage leaders board keeps the card layout inside the mobile rail at 320px', async ({ page }) => {
+test('homepage players board keeps the post cards inside the mobile rail at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   await render(page);
   const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
@@ -910,7 +950,10 @@ test('homepage leaders board keeps the card layout inside the mobile rail at 320
   const box = (await card.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(320);
-  const stats = (await card.locator('.sh-player-stats').boundingBox())!;
-  expect(stats.width).toBeLessThanOrEqual(box.width);
+  // The details strip and the caption inside the image stay within the card.
+  const details = (await card.locator('dl').boundingBox())!;
+  expect(details.width).toBeLessThanOrEqual(box.width);
+  const caption = (await card.locator('.pointer-events-none.absolute').first().boundingBox())!;
+  expect(caption.width).toBeLessThanOrEqual(box.width);
   await assertFit(page);
 });
