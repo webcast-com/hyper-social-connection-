@@ -81,3 +81,36 @@ test('portraits are deterministic per player and differ between sports', () => {
   assert.match(portraitFor('basketball', 'Anyone'), /^\/sports\/players\/nba-portrait-[1-5]\.jpg$/);
   assert.match(portraitFor('football', 'Anyone'), /^\/sports\/players\/nfl-portrait-[1-5]\.jpg$/);
 });
+
+test('the full board keeps every player per statistic, not just the leader', async () => {
+  const { normalizeTopScorers, bundledTopScorers } = await import('../../src/lib/sports-top-scorers');
+  const groups = normalizeTopScorers(leadersPayload, 'basketball', 5);
+  assert.deepEqual(groups.map((group) => group.metric), ['Points Per Game', 'Rebounds Per Game', 'Assists Per Game']);
+  const points = groups[0];
+  assert.equal(points.entries.length, 2, 'every reported entry is kept, capped at the limit');
+  assert.deepEqual(points.entries.map((row) => row.name), ['Luka Dončić', 'Someone Else']);
+  assert.equal(points.short, 'POINT');
+  assert.equal(points.entries[1].key, 'someone-else');
+
+  const capped = normalizeTopScorers(leadersPayload, 'basketball', 1);
+  assert.deepEqual(capped.map((group) => group.entries.length), [1, 1, 1]);
+
+  const bundled = bundledTopScorers('basketball');
+  assert.ok(bundled.length >= 3);
+  assert.ok(bundled.every((group) => group.entries.length > 1), 'the bundled boards list the whole ladder');
+  assert.ok(bundled.some((group) => group.entries.some((row) => row.name === 'Luka Dončić')));
+  assert.ok(bundledTopScorers('football').every((group) => group.entries.every((row) => row.headshot === null)));
+});
+
+test('duplicate statistics and malformed entries never repeat a player twice', async () => {
+  const { normalizeTopScorers } = await import('../../src/lib/sports-top-scorers');
+  const groups = normalizeTopScorers({
+    categories: [
+      { displayName: 'Points Per Game Leaders', leaders: [{ athlete: { displayName: 'A' }, displayValue: '1' }] },
+      { displayName: 'Points Per Game Leaders', leaders: [{ athlete: { displayName: 'B' }, displayValue: '2' }] },
+      { displayName: 'Broken', leaders: [{ athlete: {} }, { athlete: { displayName: 'No Value' } }, null] },
+    ],
+  }, 'basketball');
+  assert.deepEqual(groups.map((group) => group.metric), ['Points Per Game']);
+  assert.deepEqual(groups[0].entries.map((row) => row.name), ['A']);
+});

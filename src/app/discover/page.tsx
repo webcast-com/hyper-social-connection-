@@ -5,6 +5,8 @@ import { prisma, hasDatabase } from '@/lib/prisma';
 import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
 import { Users, Sparkles, Trophy } from 'lucide-react';
+import DiscoveryTopScorers from '@/components/DiscoveryTopScorers';
+import { getSportsTopScorerBoards } from '@/lib/espn-leaders-feed';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Discover People and Communities',
@@ -42,6 +44,10 @@ export default async function Discover() {
   const followingIdsSet = new Set(followingIds.map(f => f.id));
   const filteredUsers = discoverUsers.filter(u => !followingIdsSet.has(u.id));
 
+  // Every player on the top-scorer boards, in the same layout as the people
+  // below. A failed leaders feed resolves to the bundled sample board.
+  const topScorerBoards = await getSportsTopScorerBoards();
+
   const isGuest = !currentUser || currentUser.id === 0;
 
   return (
@@ -56,6 +62,8 @@ export default async function Discover() {
             <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">Discover People</h2>
             <p className="text-blue-50 text-xs sm:text-sm">Follow new people to see their posts in your feed.</p>
           </div>
+
+          <DiscoveryTopScorers boards={topScorerBoards} />
 
           <Link
             href="/sports"

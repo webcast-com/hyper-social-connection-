@@ -31,6 +31,17 @@ declare module '*/vendor/nfl-nba/src/data/sportsData' {
   type LeaderRow = { player?: string; playerName?: string; name?: string; team?: string; teamName?: string };
 }
 
+declare module '*/vendor/nfl-nba/src/data/scorerBoards' {
+  export const basketballScorers: { metric: string; short: string; entries: unknown[] }[];
+  export const nflScorers: { metric: string; short: string; entries: unknown[] }[];
+}
+
+declare module '*/vendor/nfl-nba/src/data/scorersData' {
+  export const demoPlayerImages: Record<string, string[]>;
+  export function portraitFor(sport: string, name: string): string;
+  export { basketballScorers, nflScorers } from '*/vendor/nfl-nba/src/data/scorerBoards';
+}
+
 declare module '*/vendor/nfl-nba/src/utils/entities' {
   export function slugify(value: string): string;
   export function teamKeyFor(value: string): string;
