@@ -28,6 +28,8 @@ export type SportsRace = { title: string; entries: { name: string; position: num
 export type SportsEvent = {
   id: string;
   source: 'espn' | 'demo';
+  /** ESPN's own event id, for endpoints that address a single game. */
+  sourceId?: string | null;
   details?: MatchReference;
   race?: SportsRace;
   sport: SportKind;

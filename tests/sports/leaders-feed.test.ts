@@ -69,3 +69,40 @@ test('a successful board is cached and shared by concurrent callers', async () =
     assert.equal(calls, 1, 'a fresh board is served from cache');
   }, async () => { calls += 1; return Response.json(livePayload); });
 });
+
+test('top-scorer boards return every player per statistic, and fall back to the bundled ladder', async () => {
+  const { getSportsTopScorers } = await import('../../src/lib/espn-leaders-feed');
+  const ladder = {
+    categories: [
+      { displayName: 'Points Per Game Leaders', leaders: [
+        { athlete: { id: '3945274', displayName: 'Luka Dončić', team: { displayName: 'Dallas Mavericks', abbreviation: 'DAL' } }, displayValue: '33.9' },
+        { athlete: { id: '1', displayName: 'Shai Gilgeous-Alexander', team: { abbreviation: 'OKC' } }, displayValue: '31.4' },
+        { athlete: { id: '2', displayName: 'Giannis Antetokounmpo', team: { abbreviation: 'MIL' } }, displayValue: '30.8' },
+      ] },
+      { displayName: 'Rebounds Per Game Leaders', leaders: [
+        { athlete: { id: '3202', displayName: 'Nikola Jokić', team: { abbreviation: 'DEN' } }, displayValue: '12.4' },
+        { athlete: { id: '4', displayName: 'Domantas Sabonis', team: { abbreviation: 'SAC' } }, displayValue: '12.1' },
+      ] },
+    ],
+  };
+  await withFetch(async () => {
+    const board = await getSportsTopScorers('basketball', true);
+    assert.equal(board.status, 'live');
+    assert.equal(board.groups.length, 2);
+    assert.deepEqual(board.groups.map((group) => group.metric), ['Points Per Game', 'Rebounds Per Game']);
+    assert.equal(board.groups[0].entries.length, 3, 'the whole ladder is returned, not only the leader');
+    assert.deepEqual(board.groups[0].entries.map((row) => row.key), ['luka-doncic', 'shai-gilgeous-alexander', 'giannis-antetokounmpo']);
+    assert.equal(board.groups[0].entries[0].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/3945274.png');
+    assert.equal(board.groups[0].entries[1].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/1.png');
+  }, async (input) => {
+    assert.match(String(input), /basketball\/nba\/leaders$/);
+    return Response.json(ladder);
+  });
+  await withFetch(async () => {
+    const board = await getSportsTopScorers('football', true);
+    assert.equal(board.status, 'unavailable');
+    assert.ok(board.groups.length >= 3, 'the bundled NFL board has several statistics');
+    assert.ok(board.groups.every((group) => group.entries.length >= 4), 'each statistic keeps its full ladder');
+    assert.equal(board.source.errorKind, 'network');
+  }, async () => { throw new TypeError('fetch failed'); });
+});
