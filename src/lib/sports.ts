@@ -6,7 +6,7 @@ import { competitionCountry, sportsDate } from './sports-navigation';
  */
 
 import {
-  ESPN_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
+  ESPN_LEAGUES, SPORTS_BOARD_LEAGUES, SPORTS_COMPETITIONS, competitionRegion,
   type EspnLeague, type SportKind, type SportsRegion,
 } from './sports-catalog';
 import { fetchEspnScoreboard } from './espn-client';
@@ -131,19 +131,6 @@ function demoBoard(): SportsBoard {
       away: { name: 'Chelsea', short: 'CHE', score: 1 },
     },
     {
-      id: 'demo-nba-live',
-      source: 'demo',
-      sport: 'basketball',
-      league: 'nba',
-      leagueName: 'NBA',
-      status: 'live',
-      startAt: iso(-80 * 60_000),
-      venue: 'Crypto.com Arena',
-      detail: 'Q3 4:12',
-      home: { name: 'Los Angeles Lakers', short: 'LAL', score: 88 },
-      away: { name: 'Boston Celtics', short: 'BOS', score: 84 },
-    },
-    {
       id: 'demo-ucl-up',
       source: 'demo',
       sport: 'football',
@@ -207,19 +194,6 @@ function demoBoard(): SportsBoard {
       home: { name: 'Barcelona', short: 'BAR', score: 3 },
       away: { name: 'Atlético Madrid', short: 'ATM', score: 1 },
     },
-    {
-      id: 'demo-nba-ft',
-      source: 'demo',
-      sport: 'basketball',
-      league: 'nba',
-      leagueName: 'NBA',
-      status: 'final',
-      startAt: iso(-8 * 60 * 60_000),
-      venue: 'Chase Center',
-      detail: 'Final',
-      home: { name: 'Golden State Warriors', short: 'GSW', score: 112 },
-      away: { name: 'Denver Nuggets', short: 'DEN', score: 108 },
-    },
   ];
   // Representative examples, never merged into a board with responding feeds.
   const worldwideSamples = [
@@ -229,7 +203,6 @@ function demoBoard(): SportsBoard {
     { league: 'saudi', home: 'Al Hilal', away: 'Al Nassr' },
     { league: 'south-africa', home: 'Mamelodi Sundowns', away: 'Orlando Pirates' },
     { league: 'aleague', home: 'Melbourne Victory', away: 'Sydney FC' },
-    { league: 'wnba', home: 'Las Vegas Aces', away: 'New York Liberty' },
     { league: 'super-rugby', home: 'Blues', away: 'Crusaders' },
     { league: 'mlb', home: 'Los Angeles Dodgers', away: 'New York Yankees' },
     { league: 'nhl', home: 'Toronto Maple Leafs', away: 'Edmonton Oilers' },
@@ -254,10 +227,11 @@ function demoBoard(): SportsBoard {
 
 let inFlight: Map<string, Promise<SportsBoard>> | null = null;
 
-/** Unknown or repeated slugs are ignored, so a caller can only narrow the set. */
+/** Unknown or repeated slugs are ignored, so a caller can only narrow the set.
+ * The default set is the board catalog: basketball lives in the dashboard. */
 function selectLeagues(requested?: string[]): EspnLeague[] {
-  const known = ESPN_LEAGUES.filter((item) => requested?.includes(item.slug));
-  return known.length ? known : ESPN_LEAGUES;
+  const known = SPORTS_BOARD_LEAGUES.filter((item) => requested?.includes(item.slug));
+  return known.length ? known : SPORTS_BOARD_LEAGUES;
 }
 
 export async function getSportsBoard(opts?: { bypassCache?: boolean; leagues?: string[] }): Promise<SportsBoard> {
@@ -299,7 +273,7 @@ async function settleJobs(jobs: (() => Promise<void>)[]) {
   return results;
 }
 
-async function fetchSportsBoard(leagues: EspnLeague[] = ESPN_LEAGUES): Promise<SportsBoard> {
+async function fetchSportsBoard(leagues: EspnLeague[] = SPORTS_BOARD_LEAGUES): Promise<SportsBoard> {
   const sources: SportsSourceReport[] = [];
   const groups: SportsEvent[][] = [];
 
@@ -344,7 +318,6 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'final', label: 'Results' },
   { id: 'football', label: 'Football' },
-  { id: 'basketball', label: 'Basketball' },
   { id: 'american-football', label: 'American football' },
   { id: 'motorsport', label: 'Motorsport' },
   { id: 'rugby', label: 'Rugby' },

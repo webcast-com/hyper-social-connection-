@@ -104,9 +104,10 @@ test('preview deployments prevent indexing through metadata and a global HTTP he
     assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
     const root = getSiteMetadata(getSiteUrl());
     assert.equal(typeof root.robots === 'object' && root.robots?.index, false);
-    assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/nfl-basketball/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]);
+    assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]);
   });
-  await withEnv(publicEnv, async () => assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }, { source: '/nfl-basketball/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]));
+  // The dashboard serves its own per-route metadata, so it is not blanket-blocked.
+  await withEnv(publicEnv, async () => assert.deepEqual(await nextConfig.headers!(), [{ source: '/scorehub/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]));
 });
 test('robots advertises the real host and sitemap while retaining API/account crawl restrictions', async () => {
   await withEnv(publicEnv, () => {
@@ -121,7 +122,11 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', { hasDatabase: false });
     const rows = await loaded.default();
-    assert.deepEqual(rows.map((row) => row.url), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/sports/nba', 'https://hyper.co.ke/sports/nfl', 'https://hyper.co.ke/about', 'https://hyper.co.ke/privacy', 'https://hyper.co.ke/login', 'https://hyper.co.ke/signup', 'https://hyper.co.ke/search']);
+    assert.deepEqual(rows.map((row) => row.url).slice(0, 6), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/nfl-basketball/basketball']);
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/basketball/upcoming'));
+    assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
+    assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
     assert.ok(rows.every((row) => row.lastModified === undefined));
   });
 });
@@ -138,8 +143,9 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
     assert.ok(rows.some((row) => row.url.endsWith('/search')));
-    assert.ok(rows.some((row) => row.url.endsWith('/sports/nba')));
-    assert.ok(rows.some((row) => row.url.endsWith('/sports/nfl')));
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
+    assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
+    assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
   });
 });
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
@@ -220,9 +226,12 @@ test('About and Privacy render readable guest content and shared footer links wi
       assert.match(aboutHtml, new RegExp(term, 'i'));
       assert.match(about.metadata.description!, new RegExp(term, 'i'));
     }
-    for (const href of ['/sports/nba', '/sports/nfl', '/sports?sport=football', '/sports?sport=rugby']) {
+    for (const href of ['/sports?sport=football', '/sports?sport=rugby']) {
       assert.ok(aboutHtml.includes(`href="${href.replace('&', '&amp;')}"`));
     }
+    // Basketball and NFL now live in the dashboard, and About links there.
+    assert.ok(aboutHtml.includes('href="/nfl-basketball/basketball"'));
+    assert.ok(aboutHtml.includes('href="/nfl-basketball/nfl"'));
     assert.match(privacyHtml, /<h1[^>]*>Privacy notice<\/h1>/);
     assert.match(privacyHtml, /has not yet published a dedicated privacy contact/);
     assert.ok(!privacyHtml.includes('mailto:'));

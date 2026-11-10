@@ -1,4 +1,5 @@
 import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
+import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
@@ -13,7 +14,7 @@ import SportsLiveWidget from '@/components/SportsLiveWidget';
 import SportsScoresWidget from '@/components/SportsScoresWidget';
 import { getSportsBoard } from '@/lib/sports';
 
-export const metadata = getHomeMetadata();
+export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
 const DEMO_USERS = [
   { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.', createdAt: new Date() },

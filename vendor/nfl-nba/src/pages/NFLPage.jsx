@@ -214,6 +214,7 @@ export default function NFLPage({
           viewAllHref="/nfl/top-scorers"
           leaders={playerCards}
           note={source === "espn" ? "ESPN leaders" : "Demo leaders"}
+          sport="football"
         />
         <StatTiles stats={activeStats} title="League format" note="NFL structure" />
       </aside>

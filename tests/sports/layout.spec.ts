@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import postcss from 'postcss';
 import tailwind from '@tailwindcss/postcss';
-import { SPORTS_COMPETITIONS } from '../../src/lib/sports-catalog';
+import { SPORTS_BOARD_COMPETITIONS } from '../../src/lib/sports-catalog';
 
 let javascript = '';
 let css = '';
@@ -16,6 +16,9 @@ test.beforeAll(async () => {
   javascript = result.outputFiles[0].text;
   css = (await postcss([tailwind()]).process(await fs.readFile('src/app/globals.css', 'utf8'), { from: path.resolve('src/app/globals.css') })).css;
 });
+/** A minimal document that boots the fixture bundle, like the real pages do. */
+const boardPage = (start: string) => `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"></head><body><main id="root"></main><script src="/fixture.js"></script><script>${start}</script></body></html>`;
+
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.route('**/*', (route) => {
@@ -25,14 +28,18 @@ test.beforeEach(async ({ page }) => {
     if (pathname === '/' || pathname === '/sports' || pathname.startsWith('/sports/matches/')) {
       const start = pathname === '/sports' ? 'window.renderSports("live",false,window.location.search);'
         : pathname.startsWith('/sports/matches/') ? 'window.renderSportsMatch(new URL(location.href).searchParams.get("returnTo") || undefined);' : '';
-      return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"></head><body><main id="root"></main><script src="/fixture.js"></script><script>${start}</script></body></html>` });
+      return route.fulfill({ contentType: 'text/html', body: boardPage(start) });
+    }
+    if (/^\/sports\/(nba|nfl)$/.test(pathname)) {
+      // These URLs canonicalise to the dashboard and no longer render a board.
+      return route.fulfill({ contentType: 'text/html', body: boardPage(`window.renderSportsLeague("${pathname.split('/')[2]}");`) });
     }
     return route.abort();
   });
   await page.goto('http://sports.test');
   await page.waitForFunction(() => typeof window.renderSports === 'function', null, { timeout: 5_000 });
   await page.evaluate(() => window.renderSports('live'));
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
 });
 
 async function assertFit(page: Page) {
@@ -59,7 +66,7 @@ for (const width of [320, 375, 768, 1440]) {
 test('an unfiltered board keeps live, upcoming and final matches until a filter is changed', async ({ page }) => {
   // Every competition is listed with the default filters: all regions, all sports,
   // all countries and all statuses.
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
   const status = page.getByRole('combobox', { name: 'Match status', exact: true });
   await status.selectOption('live');
   await expect(page.getByRole('article')).toHaveCount(1);
@@ -68,11 +75,11 @@ test('an unfiltered board keeps live, upcoming and final matches until a filter 
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'Major League Baseball' })).toBeVisible();
   await status.selectOption('upcoming');
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length - 2);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length - 2);
   // Returning to every status restores the whole board again.
   await page.getByRole('group', { name: 'Quick match status' }).getByRole('button', { name: 'All matches' }).click();
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
-  await expect(page.getByText(`${SPORTS_COMPETITIONS.length} events in ${SPORTS_COMPETITIONS.length} competitions`)).toBeVisible();
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
+  await expect(page.getByText(`${SPORTS_BOARD_COMPETITIONS.length} events in ${SPORTS_BOARD_COMPETITIONS.length} competitions`)).toBeVisible();
 });
 
 test('combines region, sport, league, search and status, and resets incompatible league selections', async ({ page }) => {
@@ -87,7 +94,7 @@ test('combines region, sport, league, search and status, and resets incompatible
   await page.getByRole('combobox', { name: 'Match status', exact: true }).selectOption('live');
   await expect(page.getByRole('heading', { name: 'No events in this view' })).toBeVisible();
   await page.getByRole('button', { name: 'Reset filters' }).click();
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
   await page.getByRole('combobox', { name: 'League or competition', exact: true }).selectOption('epl');
   await page.getByRole('combobox', { name: 'Region', exact: true }).selectOption('africa');
   await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('all');
@@ -101,7 +108,7 @@ test('sample and partial boards explain provider availability', async ({ page })
   await page.evaluate(() => window.renderSports('demo'));
   await expect(page.getByRole('status')).toContainText('not current scores or schedules');
   await expect(page.getByText('Sample board', { exact: true })).toBeVisible();
-  await expect(page.getByText('Sample fixture', { exact: true })).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByText('Sample fixture', { exact: true })).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
   await expect(page.getByText('1 live', { exact: true })).toHaveCount(0);
   await page.evaluate(() => window.renderSports('partial'));
   await expect(page.getByRole('status')).toContainText('Some feeds are unavailable');
@@ -113,7 +120,7 @@ test('empty successful boards show an honest empty state, not sample events', as
   await expect(page.getByRole('article')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'No events in this view' })).toBeVisible();
   await expect(page.getByText('Sample board', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true }).locator('option')).toHaveCount(SPORTS_COMPETITIONS.length + 1);
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true }).locator('option')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length + 1);
 });
 
 test('dark mode keeps the global filters operable', async ({ page }) => {
@@ -136,7 +143,7 @@ test('mobile competitions start within the first screen instead of below all the
   await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toBeEnabled();
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
   const firstCard = await page.getByRole('article').first().boundingBox();
   expect(firstCard!.y).toBeLessThan(700);
   const filters = page.getByRole('group', { name: 'Filter by sport' });
@@ -229,7 +236,7 @@ test('automatic polling still updates the board after 45 seconds', async ({ page
   await page.clock.install();
   // Remount after clock installation so the component schedules a controlled timer.
   await page.evaluate(() => window.renderSports('live'));
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
   let requests = 0;
   await page.route('**/api/sports', async (route) => {
     requests++;
@@ -244,7 +251,7 @@ test('the board advertises ESPN-only coverage without removed provider competiti
   await expect(page.getByText('Worldwide scores and fixtures from ESPN', { exact: false })).toBeVisible();
   await expect(page.getByText('TheSportsDB', { exact: false })).toHaveCount(0);
   const leagues = page.getByRole('combobox', { name: 'League or competition', exact: true });
-  await expect(leagues.locator('option')).toHaveCount(SPORTS_COMPETITIONS.length + 1);
+  await expect(leagues.locator('option')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length + 1);
   await expect(leagues.locator('option[value="ipl"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Cricket', exact: true })).toHaveCount(0);
 });
@@ -310,11 +317,20 @@ test('country filtering narrows competitions and sport changes clear an incompat
   await expect(page.getByRole('article')).toHaveCount(9);
   await page.getByRole('combobox', { name: 'League or competition', exact: true }).selectOption('epl');
   await expect(page.getByRole('article')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Basketball', exact: true }).click();
+  // Basketball and the NFL moved to the dashboard, so American football is the
+  // sport with no English competition: the country filter has to reset.
+  await page.getByRole('button', { name: 'American football', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Country or area', exact: true })).toHaveValue('all');
-  await expect(page.getByRole('article')).toHaveCount(4);
+  await expect(page.getByRole('article')).toHaveCount(2);
   await page.getByRole('button', { name: 'Reset filters', exact: true }).click();
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
+});
+
+test('basketball is not offered on the board and points at the dashboard instead', async ({ page }) => {
+  await expect(page.getByRole('button', { name: 'Basketball', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true }).locator('option[value="nba"]')).toHaveCount(0);
+  const dashboard = page.getByRole('link', { name: /Basketball & NFL dashboard/ });
+  await expect(dashboard).toHaveAttribute('href', '/nfl-basketball/');
 });
 
 test('desktop country browser selects a league, and status/list/card controls preserve match links', async ({ page }) => {
@@ -350,11 +366,11 @@ test('mobile advanced filters and country browser stay reachable without hiding 
 });
 
 test('competition links initialize a filtered board and invalid league references safely show all', async ({ page }) => {
-  await page.evaluate(() => window.renderSports('live', false, 'nba'));
+  await page.evaluate(() => window.renderSports('live', false, 'jleague'));
   await expect(page.getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('nba');
+  await expect(page.getByRole('combobox', { name: 'League or competition', exact: true })).toHaveValue('jleague');
   await page.evaluate(() => window.renderSports('live', false, '../private'));
-  await expect(page.getByRole('article')).toHaveCount(SPORTS_COMPETITIONS.length);
+  await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
 });
 
 test('compatible country choices survive sport changes and removable chips leave other filters intact', async ({ page }) => {
@@ -452,60 +468,20 @@ test('long active search chips fit at 320px and can be removed independently', a
   await expect(page.getByRole('article')).toHaveCount(9);
 });
 
-for (const league of ['nba', 'nfl'] as const) {
+for (const [league, dashboard] of [['nba', '/nfl-basketball/basketball'], ['nfl', '/nfl-basketball/nfl']] as const) {
   for (const width of [320, 768, 1440]) {
-    test(`${league.toUpperCase()} dedicated page keeps scoped filters and match return context at ${width}px`, async ({ page }) => {
+    test(`${league.toUpperCase()} URL hands off to the dashboard without rendering a board at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       if (width === 768) await page.evaluate(() => document.documentElement.classList.add('dark'));
-      await page.evaluate((league) => window.renderSports('live', false, '?league=epl&sport=football', league), league);
-      await expect(page.getByRole('heading', { level: 1, name: league.toUpperCase(), exact: true })).toBeVisible();
-      await expect(page.getByRole('navigation', { name: 'Sports leagues' }).getByRole('link', { name: league.toUpperCase(), exact: true })).toHaveAttribute('aria-current', 'page');
+      await page.goto(`http://sports.test/sports/${league}`);
+      await expect(page.getByRole('heading', { level: 1, name: `${league.toUpperCase()} scores`, exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: `Open the ${league.toUpperCase()} dashboard`, exact: true })).toHaveAttribute('href', dashboard);
+      await expect(page.getByRole('link', { name: 'Worldwide sports scores', exact: true })).toHaveAttribute('href', '/sports');
+      // No scoreboard controls are left behind on a page that owns no scores.
+      await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toHaveCount(0);
       await expect(page.getByRole('group', { name: 'Filter by sport' })).toHaveCount(0);
-      await expect(page.getByLabel('League or competition', { exact: true })).toHaveCount(0);
-      await expect(page.getByText('Premier League Home', { exact: true })).toHaveCount(0);
-      await expect(page.getByText(`${league.toUpperCase()} Home`, { exact: true }).first()).toBeVisible();
-      await page.getByRole('button', { name: 'cards', exact: true }).click();
-      expect(new URL(page.url()).pathname).toBe(`/sports/${league}`);
-      expect(new URL(page.url()).searchParams.get('view')).toBe('cards');
-      const detail = page.getByRole('link', { name: 'View match details', exact: true }).first();
-      const href = new URL((await detail.getAttribute('href'))!, page.url());
-      expect(href.pathname).toBe(`/sports/matches/${league}/401234567`);
-      expect(href.searchParams.get('returnTo')).toBe(`/sports/${league}?view=cards`);
-      await page.getByRole('button', { name: 'Results', exact: true }).click();
-      await expect(page.getByText('No events in this view', { exact: true })).toBeVisible();
-      await page.getByRole('button', { name: 'Reset filters', exact: true }).click();
-      await expect(page.getByText(`${league.toUpperCase()} Home`, { exact: true }).first()).toBeVisible();
-      expect(new URL(page.url()).pathname).toBe(`/sports/${league}`);
+      await expect(page.getByRole('article')).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     });
   }
 }
-test('NBA page keeps native back/forward and failed refresh inside the league', async ({ page }) => {
-  await page.evaluate(() => window.renderSports('live', false, '?view=cards', 'nba'));
-  await page.getByRole('button', { name: 'Upcoming', exact: true }).click();
-  await page.getByRole('button', { name: 'Live', exact: true }).click();
-  await page.evaluate(() => history.back());
-  await expect(page.getByRole('button', { name: 'Upcoming', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.evaluate(() => history.forward());
-  await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'All matches', exact: true }).click();
-  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ status: 503, json: {} }));
-  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Showing the previous update');
-  await expect(page.getByText('NBA Home', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('NFL Home', { exact: true })).toHaveCount(0);
-  expect(new URL(page.url()).pathname).toBe('/sports/nba');
-});
-test('NBA refresh isolates failed NFL diagnostics and keeps only NBA fixtures', async ({ page }) => {
-  await page.evaluate(() => window.renderSports('live', false, 'all', 'nba'));
-  await page.route('**/api/sports?refresh=1', (route) => route.fulfill({ json: {
-    mode: 'partial', predictions: [], fetchedAt: '2026-10-23T18:00:00Z', sources: [{ id: 'espn:nba', ok: true, count: 1 }, { id: 'espn:nfl', ok: false, count: 0, httpStatus: 403 }],
-    events: ['nba', 'nfl'].map((league) => ({ id: league, league, leagueName: league.toUpperCase(), sport: league === 'nba' ? 'basketball' : 'american-football', source: 'espn', status: 'live', startAt: '2026-10-23T18:00:00Z', home: { name: `${league} refreshed home`, score: 112 }, away: { name: `${league} refreshed away`, score: 111 } })),
-  } }));
-  await page.getByRole('button', { name: 'Refresh scores', exact: true }).click();
-  await expect(page.getByText('nba refreshed home', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('nfl refreshed home', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Live feeds', { exact: true })).toBeVisible();
-  await expect(page.getByRole('note', { name: 'ESPN access restriction' })).toHaveCount(0);
-  expect(new URL(page.url()).pathname).toBe('/sports/nba');
-});
