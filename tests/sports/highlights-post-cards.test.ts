@@ -98,8 +98,11 @@ test('a highlight clip is a post card with the home crest and a playable video',
     assert.deepEqual([...card.querySelectorAll('dt')].map((node: any) => node.textContent), ['Length', 'Competition', 'State']);
     assert.deepEqual([...card.querySelectorAll('dd')].map((node: any) => node.textContent), ['0:47', 'Premier League', 'Full time']);
 
-    // The card is clickable and keeps the post actions.
-    assert.equal(card.querySelector('a.absolute.inset-0')!.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
+    // The card is clickable, and it stays on Hyper: no card-wide link leaves
+    // the site for ESPN.
+    const cardLink = card.querySelector('a.absolute.inset-0')!;
+    assert.equal(cardLink.getAttribute('href'), '/sports?league=epl');
+    assert.ok(![...card.querySelectorAll('a')].some((node: any) => (node.getAttribute('href') ?? '').startsWith('http') && !node.getAttribute('target')));
     assert.ok(findButton(document, 'Like Saka opens the scoring'));
     assert.ok(findButton(document, 'Comment on Arsenal vs Chelsea'));
     assert.ok(findButton(document, 'Share Arsenal vs Chelsea'));
@@ -147,7 +150,35 @@ test('a clip with no media file links out instead of pretending to play', async 
     assert.equal(poster.getAttribute('src'), 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
     // The card says so under the composer, rather than failing silently.
     await mount.click(findButton(document, 'Comment on Arsenal vs Chelsea'));
-    assert.match(card.textContent, /This clip cannot play inline/);
+    assert.match(card.textContent, /This clip cannot play here\. Open it on ESPN/);
+  } finally {
+    mount.unmount();
+  }
+});
+
+test('a clip ESPN refuses to serve falls back to its thumbnail, not a dead player', async () => {
+  const mount = await mountHighlights([clip()]);
+  try {
+    const { document } = mount;
+    const card = document.querySelector('article')!;
+    // ESPN's renditions are geo-restricted per competition, so the file itself
+    // can fail; the card must not be left as the only clickable thing.
+    const video = card.querySelector('video')!;
+    const React = await import('react');
+    const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
+    await act(async () => { video.dispatchEvent(new mount.window.Event('error', { bubbles: true })); });
+
+    assert.equal(card.querySelector('video'), null, 'the player is gone');
+    assert.equal(card.querySelector('img[src*="espncdn.com/media"]')!.getAttribute('src'), 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
+    // The card says so under the composer, rather than failing silently.
+    await mount.click(findButton(document, 'Comment on Arsenal vs Chelsea'));
+    assert.match(card.textContent, /This clip cannot play here\. Open it on ESPN/);
+    // The thumbnail carries the labelled way out, and the card still goes
+    // somewhere on Hyper.
+    const play = card.querySelector('a[aria-label^="Watch"]')!;
+    assert.equal(play.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
+    assert.equal(play.getAttribute('target'), '_blank');
+    assert.equal(card.querySelector('a.absolute.inset-0')!.getAttribute('href'), '/sports?league=epl');
   } finally {
     mount.unmount();
   }
