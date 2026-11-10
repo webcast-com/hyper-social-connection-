@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Play } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
+import LinkMediaPlayer from './LinkMediaPlayer';
+import type { LinkMedia } from '@/lib/link-media';
 import type { SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import type { SportsHighlightClip } from '@/lib/espn-highlights';
 
@@ -12,12 +14,13 @@ import type { SportsHighlightClip } from '@/lib/espn-highlights';
  *
  * Every clip is a post card (see `SportsPostCard`): the home team's crest is
  * the author image, the fixture is the author name, the clip title is the post
- * text, and the media block is the feed's own video block with the clip's
- * thumbnail as the poster. The details below the video carry the length, the
- * competition and the state of the match, and the Like / Comment / Share row
- * works the same way it does on a post.
+ * text, and the media block is the site's own play card (`LinkMediaPlayer`)
+ * with the clip's ESPN MP4 as the source and its thumbnail as the poster. The
+ * details below the video carry the length, the competition and the state of
+ * the match, and the Like / Comment / Share row works the same way it does on
+ * a post.
  *
- * A clip only renders a <video> when ESPN published a media file. HLS needs
+ * A clip only renders a player when ESPN published a media file. HLS needs
  * Safari, so those cards link to the ESPN clip page instead of pretending to
  * play; a clip with neither is shown as a card with a link out.
  */
@@ -34,22 +37,34 @@ const STATUS_LABEL: Record<SportsHighlightClip['status'], string> = {
   upcoming: 'Upcoming',
 };
 
+/** The clip as the play card's own media descriptor. */
+const clipMedia = (clip: SportsHighlightClip): LinkMedia | null =>
+  clip.mp4
+    ? {
+        kind: 'video',
+        src: clip.mp4,
+        provider: 'ESPN',
+        thumbnail: clip.thumbnail,
+        aspect: 'video',
+        originalUrl: clip.page ?? clip.mp4,
+      }
+    : null;
+
 function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
   // The competition board on /sports, the same target the match details use.
   const matchHref = `/sports?league=${encodeURIComponent(clip.league)}`;
   const href = clip.page ?? matchHref;
 
   const media = clip.mp4 ? (
-    <div className="relative z-10 bg-black w-full min-w-0 overflow-hidden">
-      <video
-        src={clip.mp4}
-        poster={clip.thumbnail ?? undefined}
-        controls
-        playsInline
+    // Above the card-wide link, so the player's own controls stay clickable.
+    <div className="relative z-10">
+      <LinkMediaPlayer
+        url={href}
+        media={clipMedia(clip)}
+        poster={clip.thumbnail}
         // A board of cards must not pull a dozen streams on page load; the
         // poster carries the card until the reader presses play.
         preload="none"
-        className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
       />
     </div>
   ) : (
@@ -123,7 +138,7 @@ export default function SportsHighlightsFeed({ board, limit = 4 }: { board: Spor
           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             {sample
               ? 'Sample cards · ESPN highlight videos are unreachable right now'
-              : `Highlights from ${board.games} ESPN game ${board.games === 1 ? 'summary' : 'summaries'}`}
+              : `Highlights from ${board.games} ESPN ${board.games === 1 ? 'game' : 'games'}`}
           </p>
         </div>
         <Link href="/sports" className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-700/60">

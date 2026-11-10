@@ -24,20 +24,26 @@ const scoreboard = (eventId: string, name: string, state: string) => ({
   }],
 });
 
-const summary = (clips: unknown[]) => ({ videos: clips });
+/** A video collection in the shape ESPN's /videos endpoint sends. */
+const videoCollection = (clips: unknown[]) => ({ videos: clips });
 
 const clip = (id: string, title: string) => ({
-  id,
-  title,
+  id: Number(id),
+  source: 'espn',
+  headline: title,
+  description: title,
   duration: 42,
-  thumbnails: [{ href: `https://a.espncdn.com/media/2026/0907/${id}.jpg` }],
-  source: { href: `https://a.espncdn.com/media/video/2026/0907/${id}_3600k.mp4` },
+  thumbnail: `https://espnmedia-cdn.akamaized.net/espn/media/common/2026/0907/${id}.jpg`,
+  links: {
+    source: { href: `https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/0907/${id}.mp4` },
+    web: { href: `https://www.espn.com/video/clip/_/id/${id}` },
+  },
 });
 
 /**
  * The board cache is shared with the page, so seed it once with a known set of
  * fixtures. After that the feed's own board read is free and the only requests
- * left are the game summaries under test.
+ * left are the game video collections under test.
  */
 async function seedBoard() {
   await withFetch(async () => {
@@ -50,21 +56,22 @@ async function seedBoard() {
   });
 }
 
-test('highlights come from ESPN game summaries and keep their fixture', async () => {
+test('highlights come from ESPN video collections and keep their fixture', async () => {
   await seedBoard();
   const urls: string[] = [];
   await withFetch(async () => {
     const board = await getSportsHighlights(true);
     assert.equal(board.status, 'live');
-    assert.equal(board.games, 2, 'one summary per competition');
+    assert.equal(board.games, 2, 'one collection per competition');
     assert.equal(board.clips.length, 2);
     // Live fixtures come first, so the NFL clip leads the board.
     const [nfl, epl] = board.clips;
     assert.equal(epl.title, 'Saka scores');
-    assert.equal(epl.mp4, 'https://a.espncdn.com/media/video/2026/0907/49861382_3600k.mp4');
-    assert.equal(epl.thumbnail, 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
+    assert.equal(epl.mp4, 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/0907/49861382.mp4');
+    assert.equal(epl.thumbnail, 'https://espnmedia-cdn.akamaized.net/espn/media/common/2026/0907/49861382.jpg');
     assert.equal(epl.duration, 42);
     assert.equal(epl.playable, true);
+    assert.equal(epl.page, 'https://www.espn.com/video/clip/_/id/49861382');
     assert.equal(epl.eventName, 'Arsenal vs Visitors');
     assert.equal(epl.home, 'Arsenal');
     assert.equal(epl.homeLogo, 'https://a.espncdn.com/i/teamlogos/soccer/500/401111111.png');
@@ -74,18 +81,36 @@ test('highlights come from ESPN game summaries and keep their fixture', async ()
     assert.equal(nfl.title, 'Mahomes finds Kelce');
     assert.equal(nfl.status, 'live');
     assert.equal(nfl.league, 'nfl');
-    assert.equal(nfl.league, 'nfl');
     assert.equal(nfl.eventName, 'Chiefs vs Visitors');
-    // The board id is namespaced; the summary endpoint wants ESPN's own id.
-    assert.ok(urls.some((url) => url.endsWith('/soccer/eng.1/summary?event=401111111')), urls.join(', '));
-    assert.ok(urls.some((url) => url.endsWith('/football/nfl/summary?event=401222222')), urls.join(', '));
+    // The board id is namespaced; the video collection wants ESPN's own id.
+    assert.ok(urls.some((url) => url.endsWith('/soccer/eng.1/videos?event=401111111')), urls.join(', '));
+    assert.ok(urls.some((url) => url.endsWith('/football/nfl/videos?event=401222222')), urls.join(', '));
+    // The game summary is not read for highlights: it carries no videos.
+    assert.ok(urls.every((url) => !url.includes('/summary?')), urls.join(', '));
     assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
   }, async (input) => {
     const url = String(input);
     urls.push(url);
-    if (url.includes('/soccer/eng.1/summary')) return Response.json(summary([clip('49861382', 'Saka scores')]));
-    if (url.includes('/football/nfl/summary')) return Response.json(summary([clip('49861383', 'Mahomes finds Kelce')]));
+    if (url.includes('/soccer/eng.1/videos')) return Response.json(videoCollection([clip('49861382', 'Saka scores')]));
+    if (url.includes('/football/nfl/videos')) return Response.json(videoCollection([clip('49861383', 'Mahomes finds Kelce')]));
     throw new Error(`unexpected fetch ${url}`);
+  });
+});
+
+test('a competition with no clips does not count as a game on the board', async () => {
+  await seedBoard();
+  await withFetch(async () => {
+    const board = await getSportsHighlights(true);
+    assert.equal(board.status, 'live');
+    assert.equal(board.clips.length, 1);
+    // ESPN answers the Premier League collection with an empty list, so the
+    // board reports the one game that actually carried a clip.
+    assert.equal(board.games, 1);
+    assert.equal(board.clips[0].title, 'Mahomes finds Kelce');
+  }, async (input) => {
+    const url = String(input);
+    if (url.includes('/football/nfl/videos')) return Response.json(videoCollection([clip('49861383', 'Mahomes finds Kelce')]));
+    return Response.json(videoCollection([]));
   });
 });
 
@@ -98,8 +123,8 @@ test('a partial board is reported as partial, not as live', async () => {
     assert.equal(board.clips[0].title, 'Saka scores');
   }, async (input) => {
     const url = String(input);
-    if (url.includes('/soccer/eng.1/summary')) return Response.json(summary([clip('49861382', 'Saka scores')]));
-    throw new Error(`summary failed for ${url}`);
+    if (url.includes('/soccer/eng.1/videos')) return Response.json(videoCollection([clip('49861382', 'Saka scores')]));
+    throw new Error(`collection failed for ${url}`);
   });
 });
 
@@ -119,7 +144,7 @@ test('when ESPN does not answer the board falls back to the bundled sample clips
   });
 });
 
-test('a summary with no videos falls back to the bundled sample clips', async () => {
+test('a collection with no videos falls back to the bundled sample clips', async () => {
   await seedBoard();
   await withFetch(async () => {
     const board = await getSportsHighlights(true);

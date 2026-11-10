@@ -1,15 +1,39 @@
 /**
  * ESPN match highlights, normalised into playable clips.
  *
- * ESPN publishes a game's highlight videos inside the game summary
- * (`/apis/site/v2/sports/{sport}/{league}/summary?event={id}`), which is the
- * endpoint the Site API documents for a single game. The video entries are not
- * part of any public contract, so this reader accepts the shapes ESPN is known
- * to send - a `videos` or `highlights` list, with the media URL on `source`,
- * on `playback` renditions, or on a `links` entry - and drops anything it
- * cannot turn into a clip with a poster and a way to watch it.
+ * ESPN publishes a game's clips on that game's own video collection
+ * (`/apis/site/v2/sports/{sport}/{league}/videos?event={id}`), which is the
+ * Site API endpoint for the videos of a single game. The entries are not part
+ * of any public contract, so this reader accepts the shapes ESPN is known to
+ * send and drops anything it cannot turn into a clip with a poster and a way
+ * to watch it.
  *
- * Nothing here invents a URL: when ESPN gives no media file and no video page,
+ * A live entry looks like this (read back from the endpoint, Champions League
+ * event 401915383, November 2026):
+ *
+ *   {
+ *     "id": 50383009,
+ *     "headline": "Klinsmann: Real Madrid understand when it's important…",
+ *     "description": "…",
+ *     "duration": 97,
+ *     "thumbnail": "https://espnmedia-cdn.akamaized.net/…/….jpg",
+ *     "links": {
+ *       "source": {
+ *         "href": "https://espnmedia-cdn.akamaized.net/…/….mp4",
+ *         "HLS": { "href": "https://cmp-espn.media.dssott.com/…/playlist.m3u8" }
+ *       }
+ *     },
+ *     "web": { "href": "https://www.espn.com/video/clip/_/id/50383009/…" }
+ *   }
+ *
+ * So `links` is an object of named renditions rather than the array of
+ * `{rel, href}` links other ESPN endpoints send, `id` is a number, and the
+ * clip's own page sits at the top level as `web`. All three forms are
+ * accepted. The auth-gated renditions ESPN also lists
+ * (`watch.auth.api.espn.com/video/auth/…`) carry no file extension, so they
+ * are never mistaken for a playable file.
+ *
+ * Nothing here invents a URL: when ESPN gives no media file and no clip page,
  * the clip is dropped rather than pointed at a guessed address.
  */
 
@@ -60,6 +84,8 @@ export type SportsHighlightContext = {
 const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 
 const text = (value: unknown): string | null => {
+  // ESPN sends a video's id as a number, not a string.
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed || null;
@@ -76,7 +102,7 @@ const href = (value: unknown): string | null => {
 
 const isHttpUrl = (value: string | null): value is string => !!value && /^https?:\/\//i.test(value);
 
-/** The summary keeps its videos under one of these keys, depending on sport. */
+/** The video collection keeps its clips under one of these keys. */
 const videoList = (payload: unknown): unknown[] => {
   const record = (payload ?? {}) as Record<string, unknown>;
   for (const key of ['videos', 'highlights', 'clips', 'video']) {
@@ -90,6 +116,72 @@ const videoList = (payload: unknown): unknown[] => {
   }
   return [];
 };
+
+/** Keys a media URL hides under, once `href` itself has been handled. */
+const MEDIA_KEYS = ['href', 'url', 'src'];
+
+/** Every media URL under a value, however deeply ESPN nests its renditions. */
+function collectMediaUrls(value: unknown, out: string[] = [], depth = 0): string[] {
+  if (depth > 6) return out;
+  if (Array.isArray(value)) {
+    for (const entry of value) collectMediaUrls(entry, out, depth + 1);
+    return out;
+  }
+  if (value && typeof value === 'object') {
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (MEDIA_KEYS.includes(key)) {
+        const found = text(entry);
+        if (found) out.push(found);
+        continue;
+      }
+      collectMediaUrls(entry, out, depth + 1);
+    }
+  }
+  return out;
+}
+
+/**
+ * Progressive file or stream, decided by the URL's extension. ESPN's
+ * auth-gated renditions (`…/video/auth/…`) have no extension at all, so they
+ * fall through and are never handed to a <video> element.
+ */
+function streamKind(raw: string): 'mp4' | 'hls' | null {
+  let path: string;
+  try {
+    path = new URL(raw).pathname;
+  } catch {
+    return null;
+  }
+  if (/\.m3u8$/i.test(path)) return 'hls';
+  if (/\.(mp4|m4v|mov|webm)$/i.test(path)) return 'mp4';
+  return null;
+}
+
+/** A media file ESPN can serve directly: MP4 first, HLS as a fallback. */
+function mediaOf(item: Record<string, unknown>): { mp4: string | null; hls: string | null } {
+  const mp4s: string[] = [];
+  const streams: string[] = [];
+
+  const push = (found: string | null) => {
+    if (!isHttpUrl(found)) return;
+    const kind = streamKind(found);
+    if (kind === 'mp4') {
+      if (!mp4s.includes(found)) mp4s.push(found);
+      return;
+    }
+    if (kind === 'hls' && !streams.includes(found)) streams.push(found);
+  };
+
+  // ESPN's live entry nests its renditions under `links` by name
+  // (`links.source`, `links.source.HD`, `links.full`, `links.mobile.source`).
+  for (const found of collectMediaUrls(item.links)) push(found);
+  // Documented shapes keep one `source` object or a list of renditions.
+  for (const found of collectMediaUrls(item.source)) push(found);
+  for (const found of collectMediaUrls(item.playback ?? item.renditions ?? item.sources)) push(found);
+  for (const key of ['file', 'url', 'mp4', 'videoUrl', 'contentUrl']) push(text(item[key]));
+
+  return { mp4: mp4s[0] ?? null, hls: streams[0] ?? null };
+}
 
 /** Seconds from a number, a numeric string, or a "M:SS" clock string. */
 function durationOf(item: Record<string, unknown>): number | null {
@@ -114,40 +206,31 @@ function posterOf(item: Record<string, unknown>): string | null {
   return null;
 }
 
-/** A media file ESPN can serve directly: MP4 first, HLS as a fallback. */
-function mediaOf(item: Record<string, unknown>): { mp4: string | null; hls: string | null } {
-  const mp4s: string[] = [];
-  const hls: string[] = [];
-
-  const source = (item.source ?? {}) as Record<string, unknown>;
-  const sourceCandidates = [source.href, source.HLS, source.hls, source.mp4, source.url];
-  for (const candidate of sourceCandidates) {
-    const found = href(candidate);
-    if (!isHttpUrl(found)) continue;
-    if (/\.m3u8(\?|$)/i.test(found)) hls.push(found);
-    else mp4s.push(found);
+/** The clip's own ESPN page, wherever ESPN chose to hang it. */
+function clipPage(item: Record<string, unknown>): string | null {
+  const links = item.links;
+  // The live payload keeps it at the top level as `web`; a nested copy under
+  // `links.web` is accepted too.
+  const holders = [
+    item.web,
+    links && !Array.isArray(links) && typeof links === 'object'
+      ? (links as Record<string, unknown>).web
+      : null,
+  ];
+  for (const holder of holders) {
+    if (!holder || typeof holder !== 'object') continue;
+    const record = holder as Record<string, unknown>;
+    const found = href(record.href) ?? href(record.self) ?? href(record.link);
+    if (isHttpUrl(found)) return found;
   }
-
-  for (const rendition of asArray(item.playback ?? item.renditions ?? item.sources)) {
-    const record = (rendition ?? {}) as Record<string, unknown>;
-    const found = href(record.url) ?? href(record.href) ?? href(record.src);
-    if (!isHttpUrl(found)) continue;
-    if (/\.m3u8(\?|$)/i.test(found) || /hls/i.test(String(record.type ?? record.format ?? ''))) hls.push(found);
-    else mp4s.push(found);
-  }
-
-  const direct = [item.file, item.url, item.mp4, item.videoUrl, item.contentUrl].map(href).filter(isHttpUrl);
-  for (const found of direct) {
-    if (/\.m3u8(\?|$)/i.test(found)) hls.push(found);
-    else mp4s.push(found);
-  }
-
-  return { mp4: mp4s[0] ?? null, hls: hls[0] ?? null };
+  return null;
 }
 
 function pageOf(item: Record<string, unknown>, id: string | null): string | null {
-  const links = asArray(item.links);
-  for (const link of links) {
+  const page = clipPage(item);
+  if (page) return page;
+
+  for (const link of asArray(item.links)) {
     const record = (link ?? {}) as Record<string, unknown>;
     const rel = asArray(record.rel).map((value) => String(value).toLowerCase());
     const found = href(record.href);
@@ -155,6 +238,7 @@ function pageOf(item: Record<string, unknown>, id: string | null): string | null
     // Prefer the clip's own page over a generic API link.
     if (rel.includes('summary') || /espn\.com\/video/i.test(found)) return found;
   }
+
   const web = [item.webpage, item.watchUrl, item.canonical].map(href).find(isHttpUrl);
   if (web) return web;
   return id ? `https://www.espn.com/video/clip/_/id/${id}` : null;
