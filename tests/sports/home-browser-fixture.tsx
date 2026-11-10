@@ -20,6 +20,7 @@ declare global {
     oddsReviewBoard: OddsBoard;
     predictionPosts: Record<string, FormDataEntryValue>[];
     homeReviewBoard: SportsBoard;
+    homeReviewLeaders: Record<'basketball' | 'football', unknown>;
     homeReviewUser: { id: number; name: string; avatar: null } | null;
     renderHomeReview: (signedIn: boolean, demo?: boolean, scenario?: 'match' | 'race' | 'missing-score') => Promise<void>;
   }
@@ -28,6 +29,24 @@ const root = createRoot(document.getElementById('root')!);
 let key = 0;
 window.renderHomeReview = async (signedIn, demo = false, scenario = 'match') => {
   window.homeReviewUser = signedIn ? { id: 1, name: 'Review User', avatar: null } : null;
+  window.homeReviewLeaders = {
+    basketball: {
+      sport: 'basketball', league: 'nba', status: 'live',
+      source: { ok: true, url: 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/leaders', httpStatus: 200 },
+      rows: [
+        { key: 'luka-doncic', name: 'Luka Dončić', team: 'Dallas Mavericks', teamAbbr: 'DAL', teamLogo: null, position: 'PG', metric: 'Points Per Game', value: '33.9', initials: 'LD', headshot: null, jersey: '77' },
+        { key: 'nikola-jokic', name: 'Nikola Jokić', team: 'Denver Nuggets', teamAbbr: 'DEN', teamLogo: null, position: 'C', metric: 'Rebounds Per Game', value: '12.4', initials: 'NJ', headshot: null, jersey: '15' },
+      ],
+    },
+    football: {
+      sport: 'football', league: 'nfl', status: 'live',
+      source: { ok: true, url: 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/leaders', httpStatus: 200 },
+      rows: [
+        { key: 'lamar-jackson', name: 'Lamar Jackson', team: 'Baltimore Ravens', teamAbbr: 'BAL', teamLogo: null, position: 'QB', metric: 'Passing Yards', value: '3,678', initials: 'LJ', headshot: null, jersey: '8' },
+        { key: 'christian-mccaffrey', name: 'Christian McCaffrey', team: 'San Francisco 49ers', teamAbbr: 'SF', teamLogo: null, position: 'RB', metric: 'Rushing Yards', value: '1,142', initials: 'CM', headshot: null, jersey: '23' },
+      ],
+    },
+  };
   window.homeReviewBoard = {
     mode: demo ? 'demo' : 'live', sources: [], fetchedAt: new Date().toISOString(),
     events: [

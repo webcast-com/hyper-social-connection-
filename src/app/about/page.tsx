@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import InformationPage from '@/components/InformationPage';
 import { getPageMetadata } from '@/lib/seo';
+import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
+import { SITE_DESCRIPTION_LONG } from '@/lib/site-description';
 
 export const metadata = getPageMetadata({
   title: 'About Hyper', path: '/about',
-  description: 'Meet people and join communities on Hyper. Follow football, NBA, NFL, rugby and more with sports scores and fixtures.',
+  description: SITE_DESCRIPTION_LONG,
+  keywords: SPORTS_KEYWORDS,
 });
 
 export default function AboutPage() {
@@ -14,7 +17,8 @@ export default function AboutPage() {
       <li><Link href="/discover">Discover people</Link>, follow profiles and find conversations that interest you.</li>
       <li>Share posts, photos, videos and stories, and join discussions through comments and reactions.</li>
       <li><Link href="/groups">Explore communities</Link> built around shared interests, with group conversations, events and calling features.</li>
-      <li>Follow ESPN-reported scores, fixtures and available match details for <Link href="/sports?sport=football">football</Link>, <Link href="/sports/nba">NBA basketball</Link>, <Link href="/sports/nfl">NFL American football</Link>, <Link href="/sports?sport=rugby">rugby</Link>, baseball, ice hockey and motorsport. Coverage varies by competition; unavailable information is labeled.</li>
+      <li>Follow ESPN-reported scores, fixtures and available match details for <Link href="/sports?sport=football">football</Link>, <Link href="/sports?sport=rugby">rugby</Link>, American football, baseball, ice hockey and motorsport. Coverage varies by competition; unavailable information is labeled.</li>
+      <li><Link href="/nfl-basketball/basketball">NBA, WNBA, EuroLeague and NCAA basketball scores</Link> and <Link href="/nfl-basketball/nfl">NFL scores</Link> live in the Basketball &amp; NFL dashboard, with live scores, standings, top scorers and match detail.</li>
     </ul></section>
     <section><h2>Browse freely, participate with an account</h2><p>You can browse public pages without signing in. Posting, messaging and account-specific features require an account. <Link href="/signup">Create an account</Link> or <Link href="/login">log in</Link> to participate.</p></section>
     <section><h2>Respect people and their privacy</h2><p>Share thoughtfully, respect other people’s boundaries and avoid posting personal information without permission. Account settings include profile visibility and communication preferences. Read the <Link href="/privacy">privacy notice</Link> to understand how information is handled.</p></section>

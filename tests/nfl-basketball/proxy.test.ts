@@ -53,10 +53,13 @@ test('proxy forwards bounded valid JSON, rejects unexpected paths and handles pr
   } finally { globalThis.fetch = original; }
 });
 
-test('nested SPA routes fall back after public assets and sample pages are noindex', async () => {
+test('nested SPA routes fall back after public assets, and the dashboard itself is indexable', async () => {
   const rewrites = await nextConfig.rewrites!();
   assert.ok(!Array.isArray(rewrites));
   assert.ok(rewrites.fallback?.some((rule) => rule.source === '/nfl-basketball/:path*' && rule.destination === '/nfl-basketball/index.html'));
+  // Only ScoreHub is blanket-blocked: the dashboard serves per-route metadata
+  // with its own index/follow header, so a global noindex would override it.
   const headers = await nextConfig.headers!();
-  assert.ok(headers.some((rule) => rule.source === '/nfl-basketball/:path*' && rule.headers.some((header) => header.key === 'X-Robots-Tag' && header.value === 'noindex, nofollow')));
+  assert.ok(headers.some((rule) => rule.source === '/scorehub/:path*' && rule.headers.some((header) => header.key === 'X-Robots-Tag' && header.value === 'noindex, nofollow')));
+  assert.ok(!headers.some((rule) => rule.source === '/nfl-basketball/:path*'));
 });

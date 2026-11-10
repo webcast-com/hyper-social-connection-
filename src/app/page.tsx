@@ -1,4 +1,5 @@
 import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
+import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
@@ -11,9 +12,11 @@ import Link from 'next/link';
 import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } from 'lucide-react';
 import SportsLiveWidget from '@/components/SportsLiveWidget';
 import SportsScoresWidget from '@/components/SportsScoresWidget';
+import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import { getSportsBoard } from '@/lib/sports';
+import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 
-export const metadata = getHomeMetadata();
+export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
 const DEMO_USERS = [
   { id: 1, name: 'Alex Rivera', email: 'alex@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex', bio: '📸 Photography enthusiast | ☕ Coffee addict | 🌍 World traveler.', createdAt: new Date() },
@@ -121,6 +124,10 @@ export default async function Home() {
     createdAt: new Date(),
   };
   const sportsBoard = await getSportsBoard();
+  // Players and top scorers are the sports content visitors ask for most, so the
+  // homepage renders the leaders board next to the scores. A failed leaders feed
+  // resolves to the bundled sample board and never blocks the page.
+  const leaderBoards = await getSportsLeaderBoards();
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -448,6 +455,10 @@ export default async function Home() {
 
           <SportsScoresWidget board={sportsBoard} compact />
 
+          <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+            <SportsLeadersBoard boards={leaderBoards} />
+          </div>
+
           <div id="groups" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Groups</h2>
@@ -539,12 +550,14 @@ export default async function Home() {
           </div>
         </section>
 
+        <SportsLeadersBoard boards={leaderBoards} />
+
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             Follow <Link href="/sports?sport=football" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">football</Link>,{' '}
-            <Link href="/sports/nba" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NBA basketball</Link>,{' '}
-            <Link href="/sports/nfl" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NFL American football</Link>,{' '}
+            <Link href="/nfl-basketball/basketball" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NBA basketball</Link>,{' '}
+            <Link href="/nfl-basketball/nfl" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">NFL American football</Link>,{' '}
             <Link href="/sports?sport=rugby" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">rugby</Link> and more. Scores and match details depend on available coverage.
           </p>
         </section>

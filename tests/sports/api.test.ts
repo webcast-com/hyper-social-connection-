@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET } from '../../src/app/api/sports/route';
-import { ESPN_LEAGUES } from '../../src/lib/sports-catalog';
+import { SPORTS_BOARD_LEAGUES } from '../../src/lib/sports-catalog';
 
 test('manual sports refresh bypasses provider and response caches, normal responses retain short caching', async () => {
   const original = globalThis.fetch;
@@ -40,7 +40,7 @@ test('a leagues subset re-requests only the named competitions, and unknown name
     // Nothing valid remains: the whole catalog is used, exactly as without the parameter.
     requested.length = 0;
     await GET(new NextRequest('https://hyper.test/api/sports?leagues=neverland&refresh=1'));
-    assert.equal(requested.length, ESPN_LEAGUES.length);
+    assert.equal(requested.length, SPORTS_BOARD_LEAGUES.length);
   } finally {
     globalThis.fetch = original;
   }

@@ -2,27 +2,28 @@ import { createRoot } from 'react-dom/client';
 import SportsMatchDetails from '../../src/components/SportsMatchDetails';
 import { summaryFixture } from './match-fixture';
 import { parseMatchDetails, resolveMatch } from '../../src/lib/espn-match';
-import { readSportsFilters, scopeLeagueFilters, sportsFilterHref } from '../../src/lib/sports-filters';
-import type { SportsLeaguePage } from '../../src/lib/sports-league-pages';
+import { readSportsFilters, sportsFilterHref } from '../../src/lib/sports-filters';
 import SportsBoardView from '../../src/components/SportsBoard';
-import { SPORTS_COMPETITIONS } from '../../src/lib/sports-catalog';
+import SportsLeagueHandoff from '../../src/components/SportsLeagueHandoff';
+import { SPORTS_BOARD_COMPETITIONS } from '../../src/lib/sports-catalog';
 import type { SportsBoard } from '../../src/lib/sports';
 
 declare global {
   interface Window {
     renderSportsMatch: (returnTo?: string) => void;
-    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialLeague?: string, leaguePage?: SportsLeaguePage) => void;
+    renderSports: (mode: SportsBoard['mode'] | 'empty', stress?: boolean, initialQuery?: string) => void;
+    renderSportsLeague: (league: string) => void;
   }
 }
 const root = createRoot(document.getElementById('root')!);
 let key = 0;
-window.renderSports = (mode, stress = false, initialLeague = 'all', leaguePage) => {
-  const filters = scopeLeagueFilters(readSportsFilters(new URLSearchParams(initialLeague.startsWith('?') ? initialLeague : `league=${initialLeague}`)), leaguePage);
-  window.history.replaceState(null, '', sportsFilterHref(filters, leaguePage));
-  root.render(<SportsBoardView leaguePage={leaguePage} initialFilters={filters} key={++key} initial={{
+window.renderSports = (mode, stress = false, initialQuery = '') => {
+  const filters = readSportsFilters(new URLSearchParams(initialQuery.startsWith('?') ? initialQuery.slice(1) : initialQuery ? `league=${initialQuery}` : ''));
+  window.history.replaceState(null, '', sportsFilterHref(filters));
+  root.render(<SportsBoardView initialFilters={filters} key={++key} initial={{
   mode: mode === 'empty' ? 'live' : mode,
   fetchedAt: new Date().toISOString(), predictions: [], sources: [],
-  events: mode === 'empty' ? [] : SPORTS_COMPETITIONS.map((league) => ({
+  events: mode === 'empty' ? [] : SPORTS_BOARD_COMPETITIONS.map((league) => ({
     race: league.slug === 'f1' && !stress ? { title: 'Review Grand Prix', entries: [{ name: 'Leading Driver', position: 1 }, { name: 'Second Driver', position: 2 }] } : undefined,
     details: { league: league.slug, eventId: '401234567' },
     id: league.slug, source: mode === 'demo' ? 'demo' : 'espn',
@@ -34,6 +35,11 @@ window.renderSports = (mode, stress = false, initialLeague = 'all', leaguePage) 
     away: { name: stress ? 'Very Long International Away Club Name' : `${league.name} Away`, score: stress ? 183 : 1 },
   })),
 }} />);
+};
+
+/** The retired league URLs render a hand-off to the dashboard, not a board. */
+window.renderSportsLeague = (league) => {
+  root.render(<SportsLeagueHandoff name={league.toUpperCase()} dashboardPath={league === 'nba' ? '/nfl-basketball/basketball' : '/nfl-basketball/nfl'} key={++key} />);
 };
 
 window.renderSportsMatch = (returnTo) => {

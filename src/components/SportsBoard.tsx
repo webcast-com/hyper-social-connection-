@@ -6,7 +6,7 @@ import { RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { DEFAULT_SPORTS_FILTERS, sportsFilterHref, type SportsFilters } from '@/lib/sports-filters';
-import { SPORTS_LEAGUE_PAGES, scopeLeagueBoard, type SportsLeaguePage } from '@/lib/sports-league-pages';
+import { SPORTS_LEAGUE_PAGES, type SportsLeaguePage } from '@/lib/sports-league-pages';
 import { useSportsFilters } from '@/lib/use-sports-filters';
 import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
@@ -20,14 +20,14 @@ import {
 } from '@/lib/sports';
 
 import {
-  AVAILABLE_SPORTS, SPORT_LABELS, SPORTS_COMPETITIONS, SPORTS_REGIONS, ESPN_LEAGUES,
+  SPORT_LABELS, SPORTS_BOARD_COMPETITIONS, SPORTS_BOARD_LEAGUES, SPORTS_BOARD_SPORTS, SPORTS_COMPETITIONS, SPORTS_REGIONS,
   competitionRegion, type SportsRegion,
 } from '@/lib/sports-catalog';
 
 export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPORTS_FILTERS, leaguePage }: { initial: SportsBoard; initialFilters?: SportsFilters; leaguePage?: SportsLeaguePage }) {
   const [rawBoard, setBoard] = useState(initial);
   const previousBoard = useRef(initial);
-  const board = useMemo(() => leaguePage ? scopeLeagueBoard(rawBoard, leaguePage) : rawBoard, [rawBoard, leaguePage]);
+  const board = rawBoard;
   const page = leaguePage ? SPORTS_LEAGUE_PAGES[leaguePage] : null;
   const { filters, update } = useSportsFilters(initialFilters, leaguePage);
   const { sport, status, region, league, country, date, view, query } = filters;
@@ -48,7 +48,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     (sport === 'all' || item.kind === sport) && (region === 'all' || item.region === region),
   ).map((item) => competitionCountry(item.slug)).filter((item): item is string => !!item))].sort();
   const dates = [...new Set([...board.events.map((event) => sportsDate(event.startAt)).filter(Boolean), ...(date === 'all' ? [] : [date])])].sort();
-  const leagueOptions = SPORTS_COMPETITIONS.filter((competition) =>
+  const leagueOptions = SPORTS_BOARD_COMPETITIONS.filter((competition) =>
     (sport === 'all' || competition.kind === sport) && (region === 'all' || competition.region === region) && (country === 'all' || competitionCountry(competition.slug) === country),
   ).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -64,8 +64,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     setRefreshing(true);
     if (force) setRefreshError('');
     try {
-      const leagues = leaguePage ? ESPN_LEAGUES.filter((item) => item.slug === leaguePage)
-        : prioritizeSportsLeagues(ESPN_LEAGUES, { sport, region, country, league });
+      const leagues = leaguePage ? SPORTS_BOARD_LEAGUES.filter((item) => item.slug === leaguePage)
+        : prioritizeSportsLeagues(SPORTS_BOARD_LEAGUES, { sport, region, country, league });
       const next = await browserSportsBoard(controller.signal, force, leagues, (progress) => {
         // Update completed leagues promptly while retaining other previous scores.
         if (mounted.current && !controller.signal.aborted) setBoard(mergeBrowserProgress(previousBoard.current, progress));
@@ -115,10 +115,6 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   const deniedCount = board.sources.filter((source) => source.httpStatus === 403).length;
   const liveCount = board.events.filter((e) => e.status === 'live' && e.source !== 'demo').length;
 
-  const leagueNavigation = <nav aria-label="Sports leagues" className={`flex shrink-0 gap-2 ${leaguePage ? 'mb-3 flex-wrap' : ''}`}>
-        {[{ name: 'All sports', path: '/sports' }, ...Object.values(SPORTS_LEAGUE_PAGES)].map((item) => <Link key={item.path} href={item.path} prefetch={false} aria-current={(page?.path ?? '/sports') === item.path ? 'page' : undefined} className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold ${(page?.path ?? '/sports') === item.path ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 hover:bg-blue-50 dark:border-gray-700 dark:hover:bg-gray-800'}`}>{item.name}</Link>)}
-      </nav>;
-
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
       <div className="relative mb-3">
@@ -158,7 +154,6 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         {' '}— a separate sports experience with live feeds when available and sample content otherwise.
       </div>}
 
-      {leaguePage && leagueNavigation}
       {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
       <div className="mb-3 flex items-center gap-2">
         <button type="button" onClick={() => void refreshScores(true)} disabled={refreshing}
@@ -178,9 +173,6 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </Link>
       </div>
 
-      {(league === 'ncaam' || league === 'ncaaw') && <p role="note" className="mb-3 rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-slate-800 dark:text-slate-200">
-        NCAA scores use ESPN’s broader Division I scoreboard for the currently loaded dates. Division II and III coverage is not verified and may be missing; ESPN may omit games. The date filter only filters loaded fixtures, not a full season.
-      </p>}
       {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
       {initialLoading && <p role="status" className="mb-4 text-sm text-gray-500 dark:text-gray-400">Loading ESPN scores from your browser…</p>}
       {!initialLoading && board.mode !== 'live' && (
@@ -202,8 +194,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
         </li>)}</ul>
       </details>}
-      {!leaguePage && <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto pb-2 sm:flex-wrap">{leagueNavigation}<div role="group" aria-label="Filter by sport" className="flex shrink-0 gap-2">
-        {(['all', ...AVAILABLE_SPORTS] as const).map((id) => (
+      <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto pb-2 sm:flex-wrap"><div role="group" aria-label="Filter by sport" className="flex shrink-0 gap-2">
+        {(['all', ...SPORTS_BOARD_SPORTS] as const).map((id) => (
           <button
             key={id}
             type="button"
@@ -218,7 +210,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
             {id === 'all' ? 'All sports' : SPORT_LABELS[id]}
           </button>
         ))}
-      </div></div>}
+      </div></div>
       <div id="sports-filters" className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
         <label className={`${moreFilters ? '' : 'hidden sm:block'} min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300`}>
           Match status
@@ -310,7 +302,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </div>
       </div>
       <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
-        {page ? `${page.name} · ESPN-reported fixtures` : `${SPORTS_COMPETITIONS.length} competitions · ${AVAILABLE_SPORTS.length} sports · ESPN-reported fixtures`}
+        {page ? `${page.name} · ESPN-reported fixtures` : `${SPORTS_BOARD_COMPETITIONS.length} competitions · ${SPORTS_BOARD_SPORTS.length} sports · ESPN-reported fixtures`}
       </p>
       <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">{page ? 'Availability varies by season and provider. Dates filter loaded fixtures only; this page does not fetch full-season or historical schedules.' : 'Availability varies by season and provider. Date and country filters apply to loaded fixtures only; they do not request historical schedules.'}</p>
     </div>

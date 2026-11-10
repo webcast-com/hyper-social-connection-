@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { slugify } from "../utils/entities";
+import { portraitFor } from "../data/scorersData";
 import { IconArrowUpRight } from "./Icons";
 import { MaybeLink, Panel, PanelHead, metricShort } from "./ui";
 
@@ -11,10 +12,19 @@ const teamHue = (value = "") => {
   return hash;
 };
 
-function PlayerCard({ player, rank, linkBase }) {
-  const [photoBroken, setPhotoBroken] = useState(false);
+/**
+ * A player card always shows a face, in the same order as the player page:
+ * the ESPN headshot when one is known, the bundled portrait art for the sport
+ * otherwise, and initials only if both images fail to load.
+ */
+function PlayerCard({ player, rank, linkBase, sport = "basketball" }) {
+  const [broken, setBroken] = useState(false);
   const hue = teamHue(player.team || player.name);
-  const showPhoto = Boolean(player.headshot) && !photoBroken;
+  const photo = player.headshot ?? portraitFor(sport, player.name);
+
+  useEffect(() => {
+    setBroken(false);
+  }, [photo]);
 
   const card = (
     <article className="sh-player">
@@ -23,13 +33,13 @@ function PlayerCard({ player, rank, linkBase }) {
           <img className="sh-player-team" src={player.teamLogo} alt="" loading="lazy" />
         ) : null}
 
-        {showPhoto ? (
+        {photo && !broken ? (
           <img
             className="sh-player-photo"
-            src={player.headshot}
+            src={photo}
             alt={player.name}
             loading="lazy"
-            onError={() => setPhotoBroken(true)}
+            onError={() => setBroken(true)}
           />
         ) : (
           <div className="sh-player-mono" aria-hidden="true">{player.initials}</div>
@@ -85,7 +95,7 @@ function PlayerCard({ player, rank, linkBase }) {
   );
 }
 
-export function PlayerDetails({ leaders = [], title = "Player Details", note, linkBase, viewAllHref }) {
+export function PlayerDetails({ leaders = [], title = "Player Details", note, linkBase, viewAllHref, sport = "basketball" }) {
   if (!leaders.length) return null;
 
   return (
@@ -107,6 +117,7 @@ export function PlayerDetails({ leaders = [], title = "Player Details", note, li
             player={player}
             rank={index + 1}
             linkBase={linkBase}
+            sport={sport}
           />
         ))}
       </div>

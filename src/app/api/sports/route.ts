@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSportsBoard } from '@/lib/sports';
-import { ESPN_LEAGUES } from '@/lib/sports-catalog';
+import { SPORTS_BOARD_LEAGUES } from '@/lib/sports-catalog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(req: NextRequest) {
   const refresh = req.nextUrl.searchParams.get('refresh') === '1';
-  const known = new Set(ESPN_LEAGUES.map((item) => item.slug));
+  const known = new Set(SPORTS_BOARD_LEAGUES.map((item) => item.slug));
   const requested = [...new Set((req.nextUrl.searchParams.get('leagues') ?? '').split(',').map((item) => item.trim()))]
     .filter((slug) => known.has(slug));
   const board = await getSportsBoard({ bypassCache: refresh, leagues: requested.length ? requested : undefined });

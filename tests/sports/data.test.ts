@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ESPN_LEAGUES, SPORTS_COMPETITIONS, SPORTS_REGIONS, AVAILABLE_SPORTS } from '../../src/lib/sports-catalog';
+import { ESPN_LEAGUES, SPORTS_BOARD_LEAGUES, SPORTS_COMPETITIONS, SPORTS_REGIONS, AVAILABLE_SPORTS } from '../../src/lib/sports-catalog';
 import { filterSportsEvents, getSportsBoard, groupEventsByLeague, type SportsEvent } from '../../src/lib/sports';
 
 const fixture = (league: string, sport: SportsEvent['sport'], status: SportsEvent['status'] = 'upcoming'): SportsEvent => ({
@@ -53,14 +53,14 @@ test('all configured endpoints are requested, concurrency is bounded, and concur
     assert.equal(first, second);
     assert.equal(first.mode, 'live');
     assert.deepEqual(first.predictions, []);
-    assert.equal(first.events.length, ESPN_LEAGUES.length);
-    assert.equal(urls.length, ESPN_LEAGUES.length);
+    assert.equal(first.events.length, SPORTS_BOARD_LEAGUES.length);
+    assert.equal(urls.length, SPORTS_BOARD_LEAGUES.length);
     assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
-    assert.equal(first.sources.length, ESPN_LEAGUES.length);
+    assert.equal(first.sources.length, SPORTS_BOARD_LEAGUES.length);
     assert.ok(first.sources.every((source) => source.id.startsWith('espn:')));
     assert.ok(maximum <= 12);
     assert.ok(maximum > 1);
-    for (const competition of ESPN_LEAGUES) assert.ok(urls.some((url) => url.includes(`/${competition.sport}/${competition.league}/scoreboard`)));
+    for (const competition of SPORTS_BOARD_LEAGUES) assert.ok(urls.some((url) => url.includes(`/${competition.sport}/${competition.league}/scoreboard`)));
     assert.equal(first.events.find((event) => event.league === 'super-rugby')?.sport, 'rugby');
     const count = urls.length;
     assert.equal(await getSportsBoard(), first);
@@ -92,22 +92,22 @@ test('successful empty scoreboards stay empty rather than substituting fabricate
   }, async () => Response.json({ events: [] }));
 });
 
-test('ESPN NBA results preserve three-digit scores and final status without a secondary provider', async () => {
+test('ESPN results preserve three-digit scores and final status without a secondary provider', async () => {
   await withFetch(async () => {
     const board = await getSportsBoard({ bypassCache: true });
-    const basketball = board.events.find((event) => event.league === 'nba');
-    assert.equal(basketball?.source, 'espn');
-    assert.equal(basketball?.sport, 'basketball');
-    assert.equal(basketball?.status, 'final');
-    assert.equal(basketball?.home.score, 184);
-    assert.equal(basketball?.away.score, 183);
+    const baseball = board.events.find((event) => event.league === 'mlb');
+    assert.equal(baseball?.source, 'espn');
+    assert.equal(baseball?.sport, 'baseball');
+    assert.equal(baseball?.status, 'final');
+    assert.equal(baseball?.home.score, 184);
+    assert.equal(baseball?.away.score, 183);
   }, async (input) => {
     const payload = scoreboard('Home');
     const competition = payload.events[0].competitions[0];
     competition.status.type.state = 'post';
     competition.competitors[0].score = '184';
     competition.competitors[1].score = '183';
-    return Response.json(String(input).includes('/basketball/nba/') ? payload : { events: [] });
+    return Response.json(String(input).includes('/baseball/mlb/') ? payload : { events: [] });
   });
 });
 
@@ -118,7 +118,7 @@ test('total provider failure produces explicitly marked samples spanning the new
     assert.deepEqual(board.predictions, []);
     assert.ok(board.events.every((event) => event.source === 'demo'));
     assert.ok(board.events.every((event) => SPORTS_COMPETITIONS.some((league) => league.slug === event.league)));
-    assert.equal(board.sources.filter((source) => !source.ok).length, ESPN_LEAGUES.length);
+    assert.equal(board.sources.filter((source) => !source.ok).length, SPORTS_BOARD_LEAGUES.length);
     for (const slug of ['jleague', 'south-africa', 'brasileirao', 'mlb', 'nhl', 'super-rugby']) assert.ok(board.events.some((event) => event.league === slug));
   }, async () => { throw new Error('offline'); });
 });
@@ -172,7 +172,7 @@ test('legacy prediction credentials never trigger requests or affect ESPN feed s
       const board = await getSportsBoard({ bypassCache: true });
       assert.equal(board.mode, 'live');
       assert.deepEqual(board.predictions, []);
-      assert.equal(urls.length, ESPN_LEAGUES.length);
+      assert.equal(urls.length, SPORTS_BOARD_LEAGUES.length);
       assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com'));
       assert.ok(board.sources.every((source) => source.id.startsWith('espn:')));
     }, async (input) => { urls.push(String(input)); return Response.json({ events: [] }); });
@@ -189,7 +189,7 @@ test('score source reports retain exact upstream URLs and distinguish 404 from n
     assert.equal(missing.httpStatus, 404);
     assert.equal(missing.errorKind, 'http');
     assert.equal(missing.url, 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard');
-    const reset = board.sources.find((source) => source.id === 'espn:nba')!;
+    const reset = board.sources.find((source) => source.id === 'espn:nhl')!;
     assert.equal(reset.httpStatus, null);
     assert.equal(reset.errorKind, 'network');
     const healthy = board.sources.find((source) => source.id === 'espn:mlb')!;
@@ -198,7 +198,7 @@ test('score source reports retain exact upstream URLs and distinguish 404 from n
     assert.equal(board.mode, 'partial');
   }, async (input) => {
     if (String(input).includes('/soccer/eng.1/')) return new Response('', { status: 404 });
-    if (String(input).includes('/basketball/nba/')) throw new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } });
+    if (String(input).includes('/hockey/nhl/')) throw new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } });
     return Response.json({ events: [] });
   });
 });

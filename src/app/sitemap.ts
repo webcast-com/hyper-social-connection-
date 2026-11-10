@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
+import { dashboardSitemapRoutes } from "@/lib/dashboard-seo";
 
 /**
  * Sitemap generator — served at /sitemap.xml.
@@ -40,7 +41,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.6,
     },
-    ...['/sports/nba', '/sports/nfl'].map((path) => ({ url: `${baseUrl}${path}`, changeFrequency: 'hourly' as const, priority: 0.7 })),
+    // Basketball and NFL live in the standalone dashboard, which now serves
+    // per-route metadata; its hubs, sub-pages, teams and players are listed
+    // here so crawlers discover them.
+    ...dashboardSitemapRoutes().map((route) => ({ url: `${baseUrl}${route.path}`, changeFrequency: route.changeFrequency, priority: route.priority })),
     ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
       url: `${baseUrl}${path}`,
       changeFrequency: 'monthly' as const,

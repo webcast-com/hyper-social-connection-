@@ -15,7 +15,10 @@ const nextConfig: NextConfig = {
   // Canonical tags consolidate previews; this also prevents any preview route
   // (including pages overriding their robots metadata) from being indexed.
   async headers() {
-    const demoHeaders = ['/scorehub/:path*', '/nfl-basketball/:path*'].map((source) => ({ source, headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }));
+    // The dashboard is indexable: its routes serve per-route metadata and an
+    // X-Robots-Tag from src/app/nfl-basketball/**. ScoreHub stays out of the
+    // index because it keeps its own standalone layout.
+    const demoHeaders = ['/scorehub/:path*'].map((source) => ({ source, headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }));
     return process.env.VERCEL_ENV === 'preview' || process.env.VERCEL_ENV === 'development'
       ? [...demoHeaders, { source: '/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] }]
       : demoHeaders;

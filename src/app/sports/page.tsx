@@ -3,11 +3,13 @@ import { getPageMetadata } from '@/lib/seo';
 import SportsBoardView from '@/components/SportsBoard';
 import { sportsFiltersFromRecord, sportsFilterSearch } from '@/lib/sports-filters';
 import { emptyBrowserBoard } from '@/lib/espn-browser';
+import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Sports Scores and Fixtures',
-  description: 'Follow worldwide football, basketball, rugby, baseball, ice hockey, American football and motorsport scores and fixtures.',
+  description: 'Follow worldwide football, rugby, American football, baseball, ice hockey and motorsport scores and fixtures, with NBA, WNBA, NCAA and NFL scores in the Basketball & NFL dashboard.',
   path: '/sports',
+  keywords: SPORTS_BOARD_KEYWORDS,
 });
 
 export const dynamic = 'force-dynamic';
