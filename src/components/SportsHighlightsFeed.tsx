@@ -20,9 +20,11 @@ import type { SportsHighlightClip } from '@/lib/espn-highlights';
  * the match, and the Like / Comment / Share row works the same way it does on
  * a post.
  *
- * A clip only renders a player when ESPN published a media file. HLS needs
- * Safari, so those cards link to the ESPN clip page instead of pretending to
- * play; a clip with neither is shown as a card with a link out.
+ * The card stays on Hyper: clicking it opens the match on this site, never
+ * ESPN. ESPN is one click away behind a labelled link, and a clip whose file
+ * ESPN refuses to serve (their renditions are geo-restricted per competition)
+ * falls back to the thumbnail with that labelled link instead of a player that
+ * silently does nothing.
  */
 
 const mmss = (seconds: number | null) => {
@@ -35,6 +37,16 @@ const STATUS_LABEL: Record<SportsHighlightClip['status'], string> = {
   live: 'Live',
   final: 'Full time',
   upcoming: 'Upcoming',
+};
+
+/**
+ * Where the card goes. Basketball and American football live in the dashboard
+ * the rest of the site links to; everything else is the competition board.
+ */
+const matchHrefFor = (clip: SportsHighlightClip) => {
+  if (clip.sport === 'basketball') return '/nfl-basketball/basketball';
+  if (clip.sport === 'american-football') return '/nfl-basketball/nfl';
+  return `/sports?league=${encodeURIComponent(clip.league)}`;
 };
 
 /** The clip as the play card's own media descriptor. */
@@ -51,20 +63,25 @@ const clipMedia = (clip: SportsHighlightClip): LinkMedia | null =>
     : null;
 
 function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
-  // The competition board on /sports, the same target the match details use.
-  const matchHref = `/sports?league=${encodeURIComponent(clip.league)}`;
-  const href = clip.page ?? matchHref;
+  // Always somewhere on this site, so the card never navigates the reader away.
+  const cardHref = matchHrefFor(clip);
+  // ESPN's own clip page, offered as a labelled link rather than a redirect.
+  const espnHref = clip.page ?? cardHref;
+  // A file ESPN will not serve for this reader (their renditions are
+  // geo-restricted per competition) leaves the player and shows the thumbnail.
+  const [unplayable, setUnplayable] = useState(false);
 
-  const media = clip.mp4 ? (
+  const media = clip.mp4 && !unplayable ? (
     // Above the card-wide link, so the player's own controls stay clickable.
     <div className="relative z-10">
       <LinkMediaPlayer
-        url={href}
+        url={espnHref}
         media={clipMedia(clip)}
         poster={clip.thumbnail}
         // A board of cards must not pull a dozen streams on page load; the
         // poster carries the card until the reader presses play.
         preload="none"
+        onError={() => setUnplayable(true)}
       />
     </div>
   ) : (
@@ -85,22 +102,26 @@ function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
         <div className="font-bold text-white text-sm truncate">{clip.title}</div>
         <div className="text-xs text-white/85 truncate">{clip.eventName}</div>
       </div>
-      <Link
-        href={href}
-        className="absolute inset-0 z-10 flex items-center justify-center"
-        aria-label={`Watch ${clip.title} on ESPN`}
-      >
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-transform group-hover:scale-105">
-          <Play className="ml-0.5 h-6 w-6 fill-current" />
-        </span>
-      </Link>
+      {clip.page && (
+        <a
+          href={clip.page}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-10 flex items-center justify-center"
+          aria-label={`Watch ${clip.title} on ESPN`}
+        >
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-transform group-hover:scale-105">
+            <Play className="ml-0.5 h-6 w-6 fill-current" />
+          </span>
+        </a>
+      )}
     </div>
   );
 
   return (
     <SportsPostCard
-      href={href}
-      authorHref={matchHref}
+      href={cardHref}
+      authorHref={cardHref}
       authorImage={clip.homeLogo}
       authorName={clip.home}
       authorFallback={clip.home.slice(0, 3).toUpperCase()}
@@ -114,10 +135,13 @@ function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
         { label: 'State', value: STATUS_LABEL[clip.status] },
       ]}
       likeLabel={`Like ${clip.title}`}
-      menuLinks={[{ label: 'Open Competition', href: matchHref }]}
-      footnote={clip.mp4
+      menuLinks={[
+        { label: 'Open Competition', href: cardHref },
+        ...(clip.page ? [{ label: 'Watch on ESPN', href: clip.page }] : []),
+      ]}
+      footnote={clip.mp4 && !unplayable
         ? 'Highlights are ESPN clips. Comments stay in this browser.'
-        : 'This clip cannot play inline. Open it on ESPN to watch the full highlight.'}
+        : 'This clip cannot play here. Open it on ESPN to watch the full highlight.'}
     />
   );
 }

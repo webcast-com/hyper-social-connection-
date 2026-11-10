@@ -330,7 +330,7 @@ export function bundledHighlights(): SportsHighlightClip[] {
       description: 'ESPN did not answer, so this is a sample card rather than a real clip.',
     }),
     clip({
-      id: 'sample-nfl', title: 'NFL highlights', league: 'nfl', leagueName: 'NFL', sport: 'football',
+      id: 'sample-nfl', title: 'NFL highlights', league: 'nfl', leagueName: 'NFL', sport: 'american-football',
       eventName: 'Kansas City Chiefs vs Buffalo Bills', home: 'Kansas City Chiefs', away: 'Buffalo Bills',
       description: 'ESPN did not answer, so this is a sample card rather than a real clip.',
     }),

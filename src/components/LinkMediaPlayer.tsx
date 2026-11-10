@@ -22,6 +22,7 @@ export default function LinkMediaPlayer({
   media,
   poster,
   preload,
+  onError,
   onRemove,
 }: {
   url: string;
@@ -30,6 +31,8 @@ export default function LinkMediaPlayer({
   poster?: string | null;
   /** How much of a direct video file to fetch before it is played. */
   preload?: 'none' | 'metadata' | 'auto';
+  /** Called when the media itself fails to load, so the caller can fall back. */
+  onError?: () => void;
   onRemove?: () => void;
 }) {
   const resolved = useMemo(() => media ?? resolveLinkMedia(url), [media, url]);
@@ -76,7 +79,7 @@ export default function LinkMediaPlayer({
             playsInline
             preload={preload ?? 'metadata'}
             className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
-            onError={() => setFailed(true)}
+            onError={() => { setFailed(true); onError?.(); }}
           />
         )}
 
@@ -87,7 +90,7 @@ export default function LinkMediaPlayer({
             alt="Linked media"
             loading="lazy"
             className="block w-full object-contain max-h-[min(70vh,520px)] bg-gray-900/5 dark:bg-black/40"
-            onError={() => setFailed(true)}
+            onError={() => { setFailed(true); onError?.(); }}
           />
         )}
 
@@ -103,7 +106,7 @@ export default function LinkMediaPlayer({
               controls
               preload="metadata"
               className="w-full"
-              onError={() => setFailed(true)}
+              onError={() => { setFailed(true); onError?.(); }}
             />
           </div>
         )}
