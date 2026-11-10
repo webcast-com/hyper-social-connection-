@@ -21,13 +21,14 @@ test.beforeAll(async () => {
     plugins: [{ name: 'homepage-server-boundaries', setup(builder) {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
-      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed|espn-match-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
+      builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed|espn-match-feed|espn-leaders-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
       builder.onResolve({ filter: /^@\/app\/actions$/ }, () => ({ path: 'actions', namespace: 'home-data' }));
       builder.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'router', namespace: 'home-data' }));
       builder.onLoad({ filter: /.*/, namespace: 'home-data' }, (args) => ({ contents:
         args.path.endsWith('espn-match-feed') ? 'export const getMatchDetails = async () => window.matchReviewBoard;'
           : args.path.endsWith('espn-odds-feed') ? 'export const getEspnOdds = async () => window.oddsReviewBoard;'
           : args.path.endsWith('viewer') ? 'export const getViewer = async () => window.homeReviewUser;'
+          : args.path.endsWith('espn-leaders-feed') ? 'export const getSportsLeaderBoards = async () => window.homeReviewLeaders; export const getSportsLeaders = async (sport) => window.homeReviewLeaders[sport];'
           : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const prisma = {};'
             : args.path === 'router' ? 'const router = {refresh(){},push(){},replace(){}}; export const useRouter = () => router; export const usePathname = () => "/"; export const notFound = () => { throw new Error("Not found"); };'
               : names.map((name) => name === 'createPost' ? 'export const createPost = async (data) => { window.predictionPosts.push(Object.fromEntries(data.entries())); };' : `export const ${name} = async () => {};`).join('\n'),
@@ -852,4 +853,64 @@ test('odds browser deadline releases a hung refresh and allows a successful retr
   await page.getByRole('button', { name: 'Refresh matches', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(0);
+});
+
+test('homepage leaders board shows player cards that link to the dashboard profile', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await render(page);
+  const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
+  await expect(board).toBeVisible();
+  await expect(board.getByText('NBA season leaders from ESPN')).toBeVisible();
+  const cards = board.getByRole('article');
+  await expect(cards).toHaveCount(2);
+  const card = cards.filter({ hasText: 'Luka Dončić' });
+  await expect(card.getByText('Luka Dončić')).toBeVisible();
+  await expect(card.getByText('PG · DAL')).toBeVisible();
+  // The card carries a player image, not the initials fallback.
+  await expect(card.locator('img.sh-player-photo')).toHaveCount(1);
+  await expect(card.locator('.sh-player-mono')).toHaveCount(0);
+  const photo = card.locator('img.sh-player-photo');
+  expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  // Stats row matches the dashboard card: Team, Stat, Avg, Rank.
+  await expect(card.locator('.sh-player-stats i')).toHaveText(['Team', 'Stat', 'Avg', 'Rank']);
+  await expect(card.locator('.sh-player-stats b')).toHaveText(['DAL', 'PTS', '33.9', '01']);
+  const link = board.getByRole('link', { name: 'Player profile: Luka Dončić' });
+  await expect(link).toHaveAttribute('href', '/nfl-basketball/basketball/player/luka-doncic');
+  await assertFit(page);
+});
+
+test('homepage leaders board switches between basketball and NFL cards', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await render(page);
+  const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
+  await board.getByRole('button', { name: 'NFL', exact: true }).click();
+  await expect(board.getByText('NFL season leaders from ESPN')).toBeVisible();
+  const card = board.getByRole('article').filter({ hasText: 'Lamar Jackson' });
+  await expect(card.getByText('QB · BAL')).toBeVisible();
+  await expect(card.locator('.sh-player-stats b')).toHaveText(['BAL', 'PASS', '3,678', '01']);
+  await expect(board.getByRole('link', { name: 'Player profile: Lamar Jackson' })).toHaveAttribute('href', '/nfl-basketball/nfl/player/lamar-jackson');
+  // NFL cards use the NFL portrait artwork.
+  await expect(card.locator('img.sh-player-photo')).toHaveAttribute('src', /nfl-portrait-[1-5]\.jpg$/);
+  await expect(board.getByRole('button', { name: 'NFL', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(board.getByRole('link', { name: 'Open the NFL dashboard' })).toBeVisible();
+  // Football scores and predictions stay reachable from the homepage sports rail.
+  const more = board.getByRole('navigation', { name: 'More sports on Hyper' });
+  await expect(more.getByRole('link', { name: 'Football scores' })).toHaveAttribute('href', '/sports?sport=football');
+  await expect(more.getByRole('link', { name: 'Predictions' })).toHaveAttribute('href', '/sports/predictions');
+  await expect(more.getByRole('link', { name: 'All sports' })).toHaveAttribute('href', '/sports');
+  await assertFit(page);
+});
+
+test('homepage leaders board keeps the card layout inside the mobile rail at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await render(page);
+  const board = page.getByRole('region', { name: 'Players & top scorers' }).filter({ visible: true });
+  const card = board.getByRole('article').first();
+  await expect(card).toBeVisible();
+  const box = (await card.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  const stats = (await card.locator('.sh-player-stats').boundingBox())!;
+  expect(stats.width).toBeLessThanOrEqual(box.width);
+  await assertFit(page);
 });
