@@ -49,7 +49,9 @@ describe("BasketballPage live NCAA boards", () => {
       const target = String(url);
       const events = [];
       Object.entries(BOARD_GAMES).forEach(([league, count]) => {
-        if (!target.includes(league)) return;
+        // Match the whole path segment: "womens-college-basketball" also
+        // contains "mens-college-basketball".
+        if (!target.includes(`/${league}/scoreboard`)) return;
         for (let index = 0; index < count; index += 1) {
           events.push(espnGame(`${league}-${index}`));
         }
