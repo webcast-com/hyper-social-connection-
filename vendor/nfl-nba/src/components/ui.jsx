@@ -83,11 +83,11 @@ export function EmptyState({ title = "No matches match these filters.", hint }) 
 }
 
 export function TeamLogo({ src, code = "—", size = "md" }) {
-  const [broken, setBroken] = React.useState(false);
-  if (!src || broken) {
+  const [failedSrc, setFailedSrc] = React.useState(null);
+  if (!src || src === failedSrc) {
     return (
       <span className={`sh-crest sh-crest-${size}`} aria-hidden="true">
-        {code}
+        {typeof code === "string" && code.trim() ? code : "—"}
       </span>
     );
   }
@@ -97,7 +97,7 @@ export function TeamLogo({ src, code = "—", size = "md" }) {
       src={src}
       alt=""
       loading="lazy"
-      onError={() => setBroken(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }
