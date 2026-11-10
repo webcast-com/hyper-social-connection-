@@ -24,6 +24,35 @@ test('reported formation, starters, non-starters and unknown status remain disti
   assert.equal(match.lineups[0].players[1].didNotPlay, true);
   assert.equal(match.lineups[0].players[0].position, 'FW');
 });
+test('lineup photos are the reported href, or the NBA CDN when only a numeric athlete ID is present', () => {
+  const football = parseMatchDetails(summaryFixture(), reference);
+  assert.equal(football.lineups[0].players[0].headshot, 'https://a.espncdn.com/i/headshots/soccer/players/full/10.png');
+  const basketball = parseMatchDetails(summaryFixture('basketball'), { ...reference, league: 'nba' });
+  assert.equal(basketball.lineups[0].players[0].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/10.png');
+  assert.equal(basketball.lineups[0].players[1].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/11.png');
+});
+test('unsafe, ID-less and out-of-scope photo sources stay missing instead of being invented', () => {
+  const football = parseMatchDetails(summaryFixture(), reference);
+  assert.equal(football.lineups[0].players[1].headshot, null, 'an http href is never rendered');
+  assert.equal(football.lineups[0].players[2].headshot, null, 'soccer has no proven CDN folder, so nothing is synthesized');
+  // The rule the standings crest check already enforces, applied to a player photo.
+  for (const href of ['javascript:alert(1)', 'data:image/png;base64,bad', '//tracker.example/10.png', 'http://tracker.example/10.png', 'https://user:secret@tracker.example/10.png', 'x'.repeat(2049)]) {
+    assert.equal(parseMatchDetails(summaryFixture('football', '401234567', href), reference).lineups[0].players[0].headshot, null, href.slice(0, 48));
+  }
+  const basketball = parseMatchDetails(summaryFixture('basketball'), { ...reference, league: 'nba' });
+  const unnumbered = basketball.lineups[0].players.find((person) => person.name === 'Player Without A Reported Id');
+  assert.equal(unnumbered?.id, 'Player Without A Reported Id');
+  assert.equal(unnumbered?.headshot, null, 'a name standing in for an ID is not a CDN path');
+});
+test('the NFL summary builds NFL photo URLs and no other competition builds any', () => {
+  const nfl = parseMatchDetails(summaryFixture(), { ...reference, league: 'nfl' });
+  assert.equal(nfl.lineups[0].players[2].headshot, 'https://a.espncdn.com/i/headshots/nfl/players/full/12.png');
+  for (const league of ESPN_LEAGUES.filter((item) => item.kind !== 'motorsport' && item.slug !== 'nba' && item.slug !== 'nfl')) {
+    const players = parseMatchDetails(summaryFixture(), { league: league.slug, eventId: reference.eventId }).lineups[0].players;
+    // The reported href survives everywhere; only NBA and NFL add a CDN fallback.
+    assert.deepEqual(players.map((person) => person.headshot), ['https://a.espncdn.com/i/headshots/soccer/players/full/10.png', null, null], league.slug);
+  }
+});
 test('basketball boxscores provide player stats and reported starters without fabricated formations', () => {
   const match = parseMatchDetails(summaryFixture('basketball'), { ...reference, league: 'nba' });
   assert.equal(match.playerStats[0].players[0].values[1], '0');

@@ -1,4 +1,5 @@
 import { ESPN_LEAGUES } from './sports-catalog';
+import { safeProviderImage } from './espn-image';
 import { MatchInputError } from './espn-match';
 import type { EspnEndpointDetails } from './espn-endpoints';
 
@@ -22,13 +23,7 @@ const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 const text = (v: unknown): string | null => typeof v === 'string' && v.trim() ? v.trim().slice(0, 300) : typeof v === 'number' && Number.isFinite(v) ? String(v) : null;
 
 /** Only use provider-reported remote images; never infer a crest from a team ID. */
-export function safeStandingCrest(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 2048 || !value.trim()) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
-  } catch { return null; }
-}
+export const safeStandingCrest = safeProviderImage;
 
 // Bounded traversal avoids truncating the NCAA conference tables at 32 while
 // retaining limits for unexpectedly large provider responses.
