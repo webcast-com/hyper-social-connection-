@@ -7,7 +7,7 @@ import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Sports Scores and Fixtures',
-  description: 'Follow worldwide football, rugby, American football, baseball, ice hockey and motorsport scores and fixtures, with NBA, WNBA, NCAA and NFL scores in the Basketball & NFL dashboard.',
+  description: 'Follow worldwide football, NBA, WNBA and NCAA basketball, rugby, American football, baseball, ice hockey and motorsport scores and fixtures, with deeper basketball and NFL standings, top scorers and player pages in the Basketball & NFL dashboard.',
   path: '/sports',
   keywords: SPORTS_BOARD_KEYWORDS,
 });

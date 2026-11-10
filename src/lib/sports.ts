@@ -133,6 +133,19 @@ function demoBoard(): SportsBoard {
       away: { name: 'Chelsea', short: 'CHE', score: 1 },
     },
     {
+      id: 'demo-nba-live',
+      source: 'demo',
+      sport: 'basketball',
+      league: 'nba',
+      leagueName: 'NBA',
+      status: 'live',
+      startAt: iso(-40 * 60_000),
+      venue: 'Crypto.com Arena',
+      detail: 'Q3 4:52',
+      home: { name: 'Los Angeles Lakers', short: 'LAL', score: 78 },
+      away: { name: 'Boston Celtics', short: 'BOS', score: 74 },
+    },
+    {
       id: 'demo-ucl-up',
       source: 'demo',
       sport: 'football',
@@ -230,7 +243,7 @@ function demoBoard(): SportsBoard {
 let inFlight: Map<string, Promise<SportsBoard>> | null = null;
 
 /** Unknown or repeated slugs are ignored, so a caller can only narrow the set.
- * The default set is the board catalog: basketball lives in the dashboard. */
+ * The default set is the board catalog, which includes basketball. */
 function selectLeagues(requested?: string[]): EspnLeague[] {
   const known = SPORTS_BOARD_LEAGUES.filter((item) => requested?.includes(item.slug));
   return known.length ? known : SPORTS_BOARD_LEAGUES;
@@ -320,12 +333,54 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'final', label: 'Results' },
   { id: 'football', label: 'Football' },
+  { id: 'basketball', label: 'Basketball' },
   { id: 'american-football', label: 'American football' },
   { id: 'motorsport', label: 'Motorsport' },
   { id: 'rugby', label: 'Rugby' },
   { id: 'baseball', label: 'Baseball' },
   { id: 'ice-hockey', label: 'Ice hockey' },
 ];
+
+/**
+ * The matches a feed shows as cards.
+ *
+ * The board is ordered live first, then by kickoff, which on most days puts two
+ * football matches in front of everything else and leaves basketball off the
+ * feed entirely. So the first pass takes one match per sport, in that same
+ * order, and only then fills any remaining slots with the next best matches:
+ * a feed with football and basketball playing shows both, and a feed with only
+ * football playing still shows its two soonest.
+ */
+export function featuredSportsEvents(events: SportsEvent[], count = 2): SportsEvent[] {
+  const chosen: SportsEvent[] = [];
+  const shown = new Set<string>();
+  for (const event of events) {
+    if (chosen.length >= count) break;
+    if (shown.has(event.sport)) continue;
+    shown.add(event.sport);
+    chosen.push(event);
+  }
+  for (const event of events) {
+    if (chosen.length >= count) break;
+    if (chosen.includes(event)) continue;
+    chosen.push(event);
+  }
+  return chosen;
+}
+
+/**
+ * The options a match poll starts with. Basketball has no draw, so offering one
+ * would be a third outcome the game cannot produce.
+ */
+export function matchPollOptions(event: SportsEvent): string[] {
+  if (event.race) {
+    return [...event.race.entries.slice(0, 3).map((entry) => entry.name), 'Other']
+      .concat(event.race.entries.length ? [] : ['My pick'])
+      .slice(0, 4);
+  }
+  const teams = [event.away.short || event.away.name, event.home.short || event.home.name];
+  return event.sport === 'basketball' ? teams : [teams[0], 'Draw', teams[1]];
+}
 
 export function filterSportsEvents(
   events: SportsEvent[],

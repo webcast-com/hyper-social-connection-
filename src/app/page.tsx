@@ -14,7 +14,7 @@ import SportsLiveWidget from '@/components/SportsLiveWidget';
 import SportsScoresWidget from '@/components/SportsScoresWidget';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
-import { getSportsBoard } from '@/lib/sports';
+import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getSportsHighlights } from '@/lib/espn-highlights-feed';
 
@@ -319,7 +319,10 @@ export default async function Home() {
     }) || null;
   };
 
-  const sportsFeedPosts = sportsBoard.events.slice(0, 2).map((event, index) => ({
+  // Basketball shares the feed's match card with football, so the featured
+  // matches are picked across the sports that are actually playing rather than
+  // as the two soonest fixtures, which are almost always both football.
+  const sportsFeedPosts = featuredSportsEvents(sportsBoard.events).map((event, index) => ({
     id: `sports-${event.id}`,
     type: 'sports',
     event,

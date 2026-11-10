@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ESPN_LEAGUES, SPORTS_BOARD_LEAGUES, SPORTS_COMPETITIONS, SPORTS_REGIONS, AVAILABLE_SPORTS } from '../../src/lib/sports-catalog';
+import { espnSportsScoreboardUrl } from '../../src/lib/espn-endpoints';
 import { filterSportsEvents, getSportsBoard, groupEventsByLeague, type SportsEvent } from '../../src/lib/sports';
 
 const fixture = (league: string, sport: SportsEvent['sport'], status: SportsEvent['status'] = 'upcoming'): SportsEvent => ({
@@ -70,6 +71,27 @@ test('all configured endpoints are requested, concurrency is bounded, and concur
     urls.push(url); active++; maximum = Math.max(maximum, active);
     await new Promise((resolve) => setTimeout(resolve, 2));
     active--;
+    return Response.json(scoreboard('Home'));
+  });
+});
+
+test('basketball competitions are fetched and land on the board like any other sport', async () => {
+  const urls: string[] = [];
+  await withFetch(async () => {
+    const board = await getSportsBoard({ bypassCache: true });
+    for (const slug of ['nba', 'wnba', 'ncaam', 'ncaaw']) {
+      const meta = SPORTS_BOARD_LEAGUES.find((item) => item.slug === slug)!;
+      // The same scoreboard the dashboard reads, byte for byte: the NBA board
+      // is not asked for anything extra, and Division I keeps its broad group.
+      assert.ok(urls.some((url) => url === espnSportsScoreboardUrl(meta)), `${slug} scoreboard requested`);
+      const found = board.events.find((event) => event.league === slug);
+      assert.ok(found, `${slug} fixture is on the board`);
+      assert.equal(found!.sport, 'basketball');
+    }
+    assert.equal(urls.filter((url) => url === 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard').length, 1);
+    assert.ok(urls.some((url) => url === 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?groups=50&limit=500'));
+  }, async (input) => {
+    urls.push(String(input));
     return Response.json(scoreboard('Home'));
   });
 });
