@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { matchHref } from '@/lib/espn-match';
 import SportsRaceSummary from './SportsRaceSummary';
-import type { SportsEvent, SportsPrediction } from '@/lib/sports';
+import { matchPollOptions, type SportsEvent, type SportsPrediction } from '@/lib/sports';
+import { SPORT_LABELS } from '@/lib/sports-catalog';
 import { createPost } from '@/app/actions';
 
 type ActionMode = 'comment' | 'share' | 'poll';
@@ -88,10 +89,7 @@ export default function SportsFeedCard({
   const router = useRouter();
   const [mode, setMode] = useState<ActionMode | null>(null);
   const [text, setText] = useState('');
-  const [pollOptions, setPollOptions] = useState<string[]>([
-    event.away.short || event.away.name,
-    event.home.short || event.home.name,
-  ]);
+  const [pollOptions, setPollOptions] = useState<string[]>(() => matchPollOptions(event));
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
@@ -114,9 +112,7 @@ export default function SportsFeedCard({
     setError('');
     if (nextMode === 'poll' && !text.trim()) {
       setText(`Who wins: ${matchLine(event)}?`);
-      setPollOptions(event.race
-        ? [...event.race.entries.slice(0, 3).map((entry) => entry.name), 'Other'].concat(event.race.entries.length ? [] : ['My pick']).slice(0, 4)
-        : [event.away.short || event.away.name, 'Draw', event.home.short || event.home.name]);
+      setPollOptions(matchPollOptions(event));
     } else if (nextMode !== 'poll') {
       setText('');
     }
@@ -146,7 +142,7 @@ export default function SportsFeedCard({
       await createPost(data);
       setMode(null);
       setText('');
-      setPollOptions([event.away.short || event.away.name, event.home.short || event.home.name]);
+      setPollOptions(matchPollOptions(event));
       router.refresh();
     });
   };
@@ -164,7 +160,7 @@ export default function SportsFeedCard({
                 Hyper Sports
               </Link>
               <div className="truncate text-xs text-gray-500 dark:text-gray-400">
-                Featured match · in{' '}
+                {SPORT_LABELS[event.sport]} match · in{' '}
                 <Link href="/sports" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
                   Sports
                 </Link>

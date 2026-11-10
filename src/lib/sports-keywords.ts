@@ -25,9 +25,16 @@ export const OTHER_SPORT_KEYWORDS = [
   'Formula 1', 'NASCAR', 'MotoGP', 'American football',
 ];
 
+/** Basketball competitions the Hyper Sports board lists. */
+export const BASKETBALL_COMPETITION_KEYWORDS = [
+  'NBA', 'WNBA', 'NCAA Men\'s Basketball', 'NCAA Women\'s Basketball', 'March Madness',
+  'college basketball', 'NBA scores', 'basketball fixtures',
+];
+
 /** Sports keywords shared by the homepage and About page. */
 export const SPORTS_KEYWORDS = [...new Set([
   ...FOOTBALL_COMPETITION_KEYWORDS,
+  ...BASKETBALL_COMPETITION_KEYWORDS,
   ...OTHER_SPORT_KEYWORDS,
   'NBA', 'WNBA', 'NCAA basketball', 'NFL', 'college football',
   ...DASHBOARD_COMPETITIONS.slice(0, 40),
@@ -39,11 +46,12 @@ export const SPORTS_KEYWORDS = [...new Set([
 /** Keywords for the Hyper Sports board itself. */
 export const SPORTS_BOARD_KEYWORDS = [...new Set([
   ...FOOTBALL_COMPETITION_KEYWORDS,
+  ...BASKETBALL_COMPETITION_KEYWORDS,
   ...OTHER_SPORT_KEYWORDS,
   ...DASHBOARD_KEYWORDS.slice(0, 120),
-  'worldwide sports scores', 'live football scores', 'today\'s fixtures',
+  'worldwide sports scores', 'live football scores', 'live basketball scores', 'today\'s fixtures',
 ])];
 
 /** A compact, human-readable summary of what the sports pages cover. */
 export const SPORTS_COVERAGE_SENTENCE =
-  'Football from the Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS, Liga MX, the Brasileirao and the CAF Champions League, plus rugby, American football, baseball, ice hockey and motorsport, with NBA, WNBA, NCAA and NFL scores in the Basketball & NFL dashboard.';
+  'Football from the Premier League, Champions League, La Liga, Serie A, Bundesliga, MLS, Liga MX, the Brasileirao and the CAF Champions League, plus NBA, WNBA and NCAA basketball, rugby, American football, baseball, ice hockey and motorsport, with deeper basketball and NFL standings, top scorers and player pages in the Basketball & NFL dashboard.';

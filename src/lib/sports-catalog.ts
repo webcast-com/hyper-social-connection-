@@ -152,13 +152,14 @@ export const SPORTS_COMPETITIONS: Competition[] = ESPN_LEAGUES;
 /**
  * Competitions the Hyper Sports board lists.
  *
- * Basketball (NBA, WNBA and both NCAA Division I boards) moved to the
- * standalone Basketball & NFL dashboard at /nfl-basketball, so the board and
- * its filters never offer it. Match pages, standings, odds and diagnostics keep
- * using the full catalog above, so an existing basketball match link still
- * resolves instead of 404ing.
+ * The whole catalog, basketball included: an NBA, WNBA or NCAA Division I
+ * fixture appears in the same feed, in the same match card, as a football one,
+ * and the sport filter offers Basketball alongside the other sports. The
+ * standalone Basketball & NFL dashboard at /nfl-basketball remains the richer
+ * basketball experience - standings, top scorers, team and player pages - and
+ * keeps its own URLs; the two retired league URLs still hand off to it.
  */
-export const SPORTS_BOARD_LEAGUES: EspnLeague[] = ESPN_LEAGUES.filter((league) => league.kind !== 'basketball');
+export const SPORTS_BOARD_LEAGUES: EspnLeague[] = ESPN_LEAGUES;
 export const SPORTS_BOARD_COMPETITIONS: Competition[] = SPORTS_BOARD_LEAGUES;
 /** Sport filter options offered on the board (no Basketball). */
 export const SPORTS_BOARD_SPORTS = [...new Set(SPORTS_BOARD_LEAGUES.map((league) => league.kind))];
