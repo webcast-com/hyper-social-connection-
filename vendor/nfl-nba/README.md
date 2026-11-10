@@ -119,7 +119,7 @@ College is a first-class competition rather than a separate app:
 | Football | College Football (`cfb`) | `football/college-football` | SEC / Big Ten / ACC / Big 12 sample table, demo fixture Alabama–Georgia |
 
 - Both colleges sit in the North America continent and in the Men / Women gender filters, so the existing filters, search and status tabs apply unchanged.
-- The college scoreboards are **fetched on demand**: the default *All competitions* view still merges only the four flagship basketball leagues (and the NFL), so the dashboard never fills with 100+ college games. Selecting an NCAA competition re-queries ESPN for just that board and switches the standings panel to its conference table.
+- Both Division I college basketball boards ride along with the flagship leagues, so NCAA games are on the default *All competitions* view too. ESPN only returns its featured games for college basketball unless group 50 is requested, so those two boards are fetched with `groups=50&limit=500` — a full Division I day can be 100+ games. Selecting an NCAA competition keeps showing only its own games and switches the standings panel to its conference table.
 - On the football board, *College Football* replaces the NFL week rail (college has no preseason/week stages) and shows conference tables instead of AFC/NFC divisions.
 - Team pages resolve for college programmes too (`/basketball/team/duke-blue-devils`), and their ESPN lookups use the college league key rather than the NBA one. Rich detail still comes from the bundled data, since ESPN's college endpoints return a different shape.
 - The news / top scorers / upcoming screens stay per sport on the flagship league (`nba`, `nfl`); selecting a college competition changes the hub, not those screens. The commentary screen is the exception — it follows the game you opened, so a college fixture loads its own conference feed.
@@ -152,7 +152,7 @@ import "./styles.css";
 | NBA / WNBA / NBL / EuroLeague scores | `site.api.espn.com/apis/site/v2/sports/basketball/{nba,wnba,nbl,euroleague}/scoreboard` |
 | NBA standings | `site.api.espn.com/apis/v2/sports/basketball/nba/standings` |
 | NFL scores (preseason / regular / postseason) | `site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` |
-| NCAA basketball scores (men / women) | `site.api.espn.com/apis/site/v2/sports/basketball/{mens,womens}-college-basketball/scoreboard` |
+| NCAA basketball scores (men / women) | `site.api.espn.com/apis/site/v2/sports/basketball/{mens,womens}-college-basketball/scoreboard?limit=500&groups=50` |
 | College football scores | `site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard` |
 | NFL standings (AFC/NFC → divisions) | `site.api.espn.com/apis/v2/sports/football/nfl/standings` |
 | Season leaders (best effort) | `site.web.api.espn.com/apis/common/v3/sports/{basketball/nba,football/nfl}/leaders` |

@@ -109,16 +109,29 @@ export const ESPN_LEAGUES = {
   },
 };
 
-/** Leagues merged into the basketball scoreboard, in display order. */
-export const BASKETBALL_LIVE_LEAGUES = ["nba", "wnba", "nbl", "euroleague"];
+/**
+ * Leagues merged into the basketball scoreboard, in display order.
+ *
+ * The two Division I college boards are part of the default view. ESPN only
+ * returns its featured subset for college basketball unless the caller asks for
+ * group 50, so those boards are fetched with the wider parameters below.
+ */
+export const BASKETBALL_LIVE_LEAGUES = [
+  "nba",
+  "wnba",
+  "nbl",
+  "euroleague",
+  "mens-college-basketball",
+  "womens-college-basketball",
+];
 
 /** Leagues merged into the NFL scoreboard. */
 export const FOOTBALL_LIVE_LEAGUES = ["nfl"];
 
 /**
  * Competitions the hub can load on demand. The default "All competitions" view
- * keeps the four flagship basketball leagues; NCAA boards are only fetched once
- * that competition is selected, so the dashboard never floods with 100+ games.
+ * uses the basketball/football league lists above; a competition outside those
+ * lists (college football) is fetched on its own once it is selected.
  */
 export const LEAGUE_BY_COMPETITION = {
   nba: "nba",
@@ -297,13 +310,33 @@ function requireLeague(leagueKey) {
   return league;
 }
 
+/**
+ * Per-league scoreboard parameters. College basketball defaults to ESPN's
+ * featured games (roughly the top 25); asking for group 50 with a higher limit
+ * returns the whole Division I day, which is also a much bigger payload, so
+ * those boards get a longer request timeout. Every other league keeps
+ * `limit=100`.
+ */
+const SCOREBOARD_PARAMS = {
+  "mens-college-basketball": { limit: 500, groups: 50, timeout: 25 * 1000 },
+  "womens-college-basketball": { limit: 500, groups: 50, timeout: 25 * 1000 },
+};
+
+/** Parameters for one league's scoreboard request (URL + timeout). */
+export function scoreboardParams(leagueKey) {
+  const league = requireLeague(leagueKey);
+  return SCOREBOARD_PARAMS[league.key] ?? { limit: 100 };
+}
+
 export function scoreboardUrls(leagueKey, { date, week, seasonType, limit = 100 } = {}) {
   const league = requireLeague(leagueKey);
+  const board = SCOREBOARD_PARAMS[league.key];
   const path = `/apis/site/v2/sports/${league.path}/scoreboard${buildQuery({
-    limit,
+    limit: board?.limit ?? limit,
     dates: date,
     week,
     seasontype: seasonType,
+    groups: board?.groups,
   })}`;
   return withProxyFallback(ESPN_SITE_BASE, ESPN_SITE_PROXY, path);
 }
@@ -982,6 +1015,7 @@ export async function loadScoreboard(leagueKey, { date, week, seasonType, force 
   const data = await requestEspn(scoreboardUrls(leagueKey, { date, week, seasonType }), {
     ttl: SCOREBOARD_TTL,
     force,
+    timeout: scoreboardParams(leagueKey).timeout,
   });
   const league = requireLeague(leagueKey);
   return {

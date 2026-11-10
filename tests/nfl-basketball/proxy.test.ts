@@ -11,8 +11,20 @@ test('only documented dashboard leagues and endpoints reach the correct fixed ES
   for (const path of ['apis/site/v2/sports/soccer/eng-1/scoreboard', 'apis/site/v2/sports/football/nfl/anything', 'apis/site/v2/sports/football/nfl/teams/../news', 'apis/common/v3/sports/football/nfl/leaders']) {
     assert.equal(dashboardEspnUrl('site', parts(path), new URLSearchParams()), null);
   }
-  for (const query of ['limit=1000', 'limit=1&limit=2', 'url=https://evil.test', 'event=../../test', 'toString=x']) {
+  for (const query of ['limit=1000', 'limit=1&limit=2', 'url=https://evil.test', 'event=../../test', 'toString=x', 'groups=50']) {
     assert.equal(dashboardEspnUrl('site', parts('apis/site/v2/sports/football/nfl/scoreboard'), new URLSearchParams(query)), null);
+  }
+  // group parameters stay limited to the Division I college scoreboards
+  assert.equal(
+    dashboardEspnUrl('site', parts('apis/site/v2/sports/basketball/mens-college-basketball/scoreboard'), new URLSearchParams('limit=500&dates=20261110&groups=50')),
+    'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=500&dates=20261110&groups=50'
+  );
+  assert.equal(
+    dashboardEspnUrl('site', parts('apis/site/v2/sports/basketball/womens-college-basketball/scoreboard'), new URLSearchParams('limit=500&groups=50')),
+    'https://site.api.espn.com/apis/site/v2/sports/basketball/womens-college-basketball/scoreboard?limit=500&groups=50'
+  );
+  for (const query of ['limit=500', 'limit=100&groups=50', 'limit=100&groups=abc']) {
+    assert.equal(dashboardEspnUrl('site', parts('apis/site/v2/sports/basketball/nba/scoreboard'), new URLSearchParams(query)), null);
   }
 });
 
