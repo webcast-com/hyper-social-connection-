@@ -1,9 +1,10 @@
 import { ESPN_LEAGUES } from './sports-catalog';
+import { safeProviderImage } from './espn-image';
 import type { EspnEndpointDetails } from './espn-endpoints';
 
 export type MatchReference = { league: string; eventId: string };
 export type MatchTeam = { id: string; name: string; side: string | null; score: string | null };
-export type MatchPlayer = { id: string; name: string; position: string | null; jersey: string | null; starter: boolean | null; didNotPlay: boolean };
+export type MatchPlayer = { id: string; name: string; position: string | null; jersey: string | null; starter: boolean | null; didNotPlay: boolean; headshot: string | null };
 export type MatchStatistics = { name: string; label: string; values: { teamId: string; value: string | null }[] };
 export type MatchLineup = { teamId: string; formation: string | null; players: MatchPlayer[] };
 export type MatchPlayerStats = { teamId: string; label: string; columns: string[]; players: { id: string; name: string; values: (string | null)[] }[] };
@@ -45,7 +46,26 @@ const array = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
 const text = (v: unknown): string | null => typeof v === 'string' && v.trim() ? v.trim().slice(0, 4000) : typeof v === 'number' && Number.isFinite(v) ? String(v) : null;
 const display = (v: unknown): string | null => text(v) ?? text(at(v, 'displayValue')) ?? text(at(v, 'value'));
 
-function player(row: unknown): MatchPlayer | null {
+/**
+ * Reported photos only. ESPN publishes the `i/headshots/{league}/players/full/{id}.png`
+ * layout for the two boards this app already proves out — NBA and NFL, the same
+ * pair as `LEADER_LEAGUES` in `espn-leaders.ts`. For every other competition the
+ * CDN folder is not derivable from the sport, and athlete IDs are global, so a
+ * wrong folder can resolve to a different person's face rather than to a 404.
+ * Those players keep the feed's own href or show no photo.
+ */
+const HEADSHOT_CDN_LEAGUES: Record<string, string> = { nba: 'nba', nfl: 'nfl' };
+
+/** A reported photo uses the same provider-image rule as a standings crest. */
+function playerHeadshot(row: unknown, athlete: unknown, cdnLeague: string | null): string | null {
+  const reported = safeProviderImage(at(athlete, 'headshot', 'href')) ?? safeProviderImage(at(row, 'headshot', 'href'));
+  if (reported) return reported;
+  // `id` may be the player's name when ESPN omits it, so the CDN template needs a numeric athlete ID.
+  const id = text(at(athlete, 'id'));
+  return cdnLeague && id && /^\d{1,20}$/.test(id) ? `https://a.espncdn.com/i/headshots/${cdnLeague}/players/full/${id}.png` : null;
+}
+
+function player(row: unknown, cdnLeague: string | null): MatchPlayer | null {
   const athlete = at(row, 'athlete');
   const name = text(at(athlete, 'displayName')) ?? text(at(athlete, 'fullName'));
   if (!name) return null;
@@ -55,12 +75,18 @@ function player(row: unknown): MatchPlayer | null {
     jersey: text(at(row, 'jersey')) ?? text(at(athlete, 'jersey')),
     starter: typeof at(row, 'starter') === 'boolean' ? at(row, 'starter') as boolean : null,
     didNotPlay: at(row, 'didNotPlay') === true,
+    headshot: playerHeadshot(row, athlete, cdnLeague),
   };
 }
 
-/** Normalize Site summary data only; never dereference Core $refs or invent lineups/statistics. */
+/**
+ * Normalize Site summary data only; never dereference Core $refs or invent lineups/statistics.
+ * Player photos follow the same rule: the feed's own href, else the NBA/NFL CDN
+ * layout when a numeric athlete ID is reported, else no photo.
+ */
 export function parseMatchDetails(payload: unknown, reference: MatchReference): MatchDetails {
   const { meta } = resolveMatch(reference.league, reference.eventId);
+  const cdnLeague = HEADSHOT_CDN_LEAGUES[meta.league] ?? null;
   const header = at(payload, 'header');
   if (text(at(header, 'id')) !== reference.eventId) throw new Error('Invalid ESPN summary: event ID mismatch');
   const competition = array(at(header, 'competitions'))[0];
@@ -89,7 +115,7 @@ export function parseMatchDetails(payload: unknown, reference: MatchReference): 
   for (const row of array(at(payload, 'rosters')).slice(0, 2)) {
     const teamId = text(at(row, 'team', 'id'));
     if (!teamId || !teamIds.has(teamId)) continue;
-    const players = array(at(row, 'roster')).slice(0, 100).map(player).filter((item): item is MatchPlayer => !!item);
+    const players = array(at(row, 'roster')).slice(0, 100).map((entry) => player(entry, cdnLeague)).filter((item): item is MatchPlayer => !!item);
     if (players.length) lineups.set(teamId, { teamId, formation: text(at(row, 'formation')) ?? text(at(row, 'formation', 'displayName')), players });
   }
   const rosterTeams = new Set(lineups.keys());
@@ -105,7 +131,7 @@ export function parseMatchDetails(payload: unknown, reference: MatchReference): 
       const columns = (array(at(group, 'labels')).length ? array(at(group, 'labels')) : array(at(group, 'names'))).slice(0, 40).map((value) => text(value));
       const rows: MatchPlayerStats['players'] = [];
       for (const entry of array(at(group, 'athletes')).slice(0, 100)) {
-        const person = player(entry);
+        const person = player(entry, cdnLeague);
         if (!person) continue;
         listed.set(person.id, person);
         rows.push({ id: person.id, name: person.name, values: columns.map((_, index) => display(array(at(entry, 'stats'))[index])) });

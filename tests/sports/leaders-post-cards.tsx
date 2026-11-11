@@ -5,15 +5,23 @@ import { JSDOM } from 'jsdom';
  *
  * The board is a client component, and Chromium cannot be installed in this
  * sandbox, so the real component is mounted here with react-dom and driven the
- * way a reader would: click Like, write a comment, open Share. The markup under
+ * way a reader would: submit Like, write a comment, open Share. The markup under
  * test is the component's own, not a copy.
+ *
+ * A card's controls are server actions, and this harness has neither a request
+ * scope nor a database, so the app's own offline switch keeps them honest no-ops
+ * instead of reaching for a session. What is asserted here is the wiring and the
+ * rendered saved state; `anchor-db.test.ts` exercises the writes against a real
+ * database.
  */
+process.env.FORCE_OFFLINE_MODE = 'true';
 
 type Mount = {
   window: any;
   document: any;
   click: (element: any) => Promise<void>;
   type: (element: any, value: string) => Promise<void>;
+  submit: (form: any) => Promise<void>;
   unmount: () => void;
 };
 
@@ -29,6 +37,11 @@ Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, co
 (globalThis as any).HTMLElement = dom.window.HTMLElement;
 (globalThis as any).Element = dom.window.Element;
 (globalThis as any).Node = dom.window.Node;
+// React builds a form action's payload with `new FormData(formElement)`. Node's
+// own FormData cannot convert a jsdom element, so the jsdom implementations are
+// used instead — without this the action silently never fires here.
+(globalThis as any).FormData = dom.window.FormData;
+(globalThis as any).Event = dom.window.Event;
 (globalThis as any).getComputedStyle = dom.window.getComputedStyle;
 (globalThis as any).requestAnimationFrame = (callback: any) => setTimeout(callback, 0);
 (globalThis as any).cancelAnimationFrame = (id: any) => clearTimeout(id);
@@ -56,7 +69,7 @@ export async function boardsFor() {
   } as never;
 }
 
-export async function mountBoard(boards: unknown): Promise<Mount> {
+export async function mountBoard(boards: unknown, options: { engagement?: unknown; signedIn?: boolean } = {}): Promise<Mount> {
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
   const SportsLeadersBoard = (await import('../../src/components/SportsLeadersBoard')).default;
@@ -65,7 +78,11 @@ export async function mountBoard(boards: unknown): Promise<Mount> {
   const container = dom.window.document.getElementById('root')!;
   const root = createRoot(container);
   await act(async () => {
-    root.render(React.createElement(SportsLeadersBoard as never, { boards } as never));
+    root.render(React.createElement(SportsLeadersBoard as never, {
+      boards,
+      engagement: options.engagement ?? {},
+      signedIn: options.signedIn ?? false,
+    } as never));
   });
 
   return {
@@ -79,9 +96,44 @@ export async function mountBoard(boards: unknown): Promise<Mount> {
         element.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
       });
     },
+    // Form actions are how a post's controls reach the server, so the harness
+    // drives them the way a browser does: submit the form, not just click.
+    submit: async (form) => {
+      await act(async () => {
+        form.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+      });
+    },
     unmount: () => act(() => root.unmount()),
   };
 }
 
 export const findButton = (document: any, label: string) =>
   [...document.querySelectorAll('button')].find((button: any) => button.getAttribute('aria-label') === label);
+
+/**
+ * Saved engagement exactly as the page hands it to a card: keyed by the anchor's
+ * external key, holding the post id, the real counts, this viewer's own like and
+ * bookmark, and the visible end of the thread.
+ */
+export function engagementFixture(key: string, over: Record<string, unknown> = {}) {
+  return {
+    [key]: {
+      postId: 77,
+      likesCount: 3,
+      commentsCount: 2,
+      viewerLiked: true,
+      viewerSaved: false,
+      comments: [
+        { id: 11, content: 'Historic season', createdAt: '2026-11-08T18:05:00.000Z', author: { id: 2, name: 'Maya Patel', avatar: null } },
+        { id: 12, content: 'The efficiency is absurd', createdAt: '2026-11-08T18:09:00.000Z', author: { id: 3, name: 'Jordan Kim', avatar: 'https://example.test/jordan.png' } },
+      ],
+      ...over,
+    },
+  };
+}
+
+/** The external key a leaders card is anchored under. */
+export async function leaderKeyFor(boards: any, sport: 'basketball' | 'football', index = 0): Promise<string> {
+  const { anchorKey, leaderAnchorId } = await import('../../src/lib/sports-anchor');
+  return anchorKey({ kind: 'leader', id: leaderAnchorId(sport, boards[sport].rows[index]) });
+}

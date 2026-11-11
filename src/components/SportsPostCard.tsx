@@ -12,8 +12,11 @@ import {
   Copy,
   Check,
   Maximize2,
+  Send,
   X,
 } from 'lucide-react';
+import { commentOnSportsAnchor, likeSportsAnchor, saveSportsAnchor, shareSportsAnchor } from '@/app/sports-actions';
+import type { SportsAnchorEngagement, SportsAnchorRef } from '@/lib/sports-anchor';
 
 /**
  * A sports item as a post.
@@ -25,13 +28,25 @@ import {
  * highlights board both render through this component, so a card looks the same
  * wherever a sport appears on the site.
  *
+ * The engagement is real. A card is provider data with no post behind it, so the
+ * first like, comment, save or share creates its *anchor post* — one post per
+ * card, authored by the Hyper Sports desk — and from then on the counts, the
+ * thread, the Saved tab, the repost and the `/post/[id]` permalink are the same
+ * ones a member's post uses. Like `Post.tsx`, the controls are form actions: the
+ * server responds, the page revalidates, and the numbers come back from the
+ * database rather than from local state that a reload would erase.
+ *
+ * A card that cannot be anchored — a sample board while ESPN is unreachable, no
+ * database, or a signed-out visitor — keeps its layout and says so instead of
+ * pretending: the controls are disabled and the note under them explains why.
+ *
  * The whole card is clickable through a card-wide link; every control sits
  * above it and keeps its own behaviour.
  */
 
 export type SportsPostDetail = { label: string; value: string };
 
-type LocalComment = { id: string; body: string };
+const rowButton = 'flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 font-semibold transition-colors';
 
 export default function SportsPostCard({
   href,
@@ -48,6 +63,9 @@ export default function SportsPostCard({
   footnote,
   onExpand,
   menuLinks,
+  anchor = null,
+  engagement = null,
+  signedIn = false,
 }: {
   /** Where the card goes when it is clicked. */
   href: string;
@@ -71,15 +89,27 @@ export default function SportsPostCard({
   onExpand?: () => void;
   /** Extra destinations in the more menu, e.g. the player profile. */
   menuLinks?: { label: string; href: string }[];
+  /** The card's identity, so engagement can find or create its anchor post. */
+  anchor?: SportsAnchorRef | null;
+  /** Saved likes, comments and bookmark for this viewer, loaded by the page. */
+  engagement?: SportsAnchorEngagement | null;
+  /** Guests can read every card but cannot engage with one. */
+  signedIn?: boolean;
 }) {
-  const [cheered, setCheered] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<LocalComment[]>([]);
-  const [commentValue, setCommentValue] = useState('');
   const [showShare, setShowShare] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const postId = engagement?.postId ?? null;
+  const liked = engagement?.viewerLiked ?? false;
+  const cheers = engagement?.likesCount ?? 0;
+  const saved = engagement?.viewerSaved ?? false;
+  const comments = engagement?.comments ?? [];
+  const commentCount = engagement?.commentsCount ?? comments.length;
+  // A sample board has no anchor, and a guest has no account to attribute one
+  // to; both keep the card read-only rather than faking a result.
+  const canEngage = !!anchor && signedIn;
 
   const copyLink = async () => {
     const url = typeof window === 'undefined' ? href : `${window.location.origin}${href}`;
@@ -93,12 +123,13 @@ export default function SportsPostCard({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const addComment = () => {
-    const value = commentValue.trim();
-    if (!value) return;
-    setComments((prev) => [...prev, { id: `${href}-${prev.length}-${value.length}`, body: value }]);
-    setCommentValue('');
-  };
+  const engagementNote = !anchor
+    ? 'Engagement is unavailable on sample cards. It returns with the live feed.'
+    : !signedIn
+      ? 'Sign in to like, comment on, save and share this card.'
+      : postId
+        ? 'Likes and comments are saved to your account and visible to everyone.'
+        : 'Your first like, comment or save opens the discussion post for this card.';
 
   return (
     <article className="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
@@ -145,14 +176,16 @@ export default function SportsPostCard({
 
           {showMenu && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 z-30 animate-fade-in">
-              <button
-                type="button"
-                onClick={() => { setShowMenu(false); setSaved(!saved); }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                {saved ? <BookmarkCheck className="w-4 h-4 text-blue-600" /> : <Bookmark className="w-4 h-4 text-gray-500" />}
-                <span>{saved ? 'Remove Save' : 'Save'}</span>
-              </button>
+              {postId && (
+                <Link
+                  href={`/post/${postId}`}
+                  onClick={() => setShowMenu(false)}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                >
+                  <MessageCircle className="w-4 h-4 text-gray-500" />
+                  <span>Open discussion</span>
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => { setShowMenu(false); void copyLink(); }}
@@ -196,47 +229,65 @@ export default function SportsPostCard({
       </dl>
 
       {/* Post metrics row */}
-      <div className="px-4 py-2 flex items-center justify-between gap-3 text-gray-500 dark:text-gray-400 text-xs border-b border-gray-100 dark:border-gray-700">
+      <div className="relative z-10 px-4 py-2 flex items-center justify-between gap-3 text-gray-500 dark:text-gray-400 text-xs border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center space-x-1.5 min-w-0">
           <div className="bg-blue-600 rounded-full p-1 shadow-sm shrink-0">
             <ThumbsUp className="w-2.5 h-2.5 text-white fill-white" />
           </div>
           <span className="font-semibold text-gray-700 dark:text-gray-300 truncate">
-            {cheered ? 1 : 0} {cheered ? 'cheer' : 'cheers'}
+            {cheers} {cheers === 1 ? 'cheer' : 'cheers'}
           </span>
         </div>
         <div className="flex space-x-4 shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowComments(!showComments)}
-            className="hover:underline cursor-pointer font-medium"
-          >
-            {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
-          </button>
+          {postId ? (
+            <Link href={`/post/${postId}`} className="relative z-10 hover:underline cursor-pointer font-medium">
+              {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowComments(!showComments)}
+              className="hover:underline cursor-pointer font-medium"
+            >
+              {commentCount} {commentCount === 1 ? 'comment' : 'comments'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Action buttons row - Like, Comment, Share and save, as on a post. */}
       <div className="relative px-2 py-1 flex items-center justify-between text-sm">
-        <button
-          type="button"
-          onClick={() => setCheered(!cheered)}
-          aria-label={likeLabel}
-          aria-pressed={cheered}
-          className={`flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 font-semibold transition-colors ${
-            cheered ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'
-          }`}
-        >
-          <ThumbsUp className={`w-4 h-4 ${cheered ? 'fill-current' : ''}`} />
-          <span className="hidden min-[360px]:inline">Like</span>
-        </button>
+        {canEngage ? (
+          <form action={likeSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="flex-1 min-w-0">
+            <button
+              type="submit"
+              aria-label={likeLabel}
+              aria-pressed={liked}
+              className={`${rowButton} w-full ${liked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}
+            >
+              <ThumbsUp className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
+              <span className="hidden min-[360px]:inline">{liked ? 'Liked' : 'Like'}</span>
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            disabled
+            aria-label={likeLabel}
+            aria-pressed={liked}
+            className={`${rowButton} text-gray-400 dark:text-gray-500 disabled:cursor-not-allowed`}
+          >
+            <ThumbsUp className="w-4 h-4" />
+            <span className="hidden min-[360px]:inline">Like</span>
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => setShowComments(!showComments)}
           aria-label={`Comment on ${title}`}
           aria-expanded={showComments}
-          className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-600 dark:text-gray-300 font-semibold transition-colors"
+          className={`${rowButton} text-gray-600 dark:text-gray-300`}
         >
           <MessageCircle className="w-4 h-4" />
           <span className="hidden min-[360px]:inline">Comment</span>
@@ -247,28 +298,60 @@ export default function SportsPostCard({
           onClick={() => setShowShare(!showShare)}
           aria-label={`Share ${title}`}
           aria-expanded={showShare}
-          className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-600 dark:text-gray-300 font-semibold transition-colors"
+          className={`${rowButton} text-gray-600 dark:text-gray-300`}
         >
           <Share2 className="w-4 h-4" />
           <span className="hidden min-[360px]:inline">Share</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setSaved(!saved)}
-          title={saved ? 'Remove Save' : 'Save'}
-          className={`px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors ${
-            saved ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
-          }`}
-          aria-label={saved ? `Remove ${title} from saved` : `Save ${title}`}
-          aria-pressed={saved}
-        >
-          {saved ? <BookmarkCheck className="w-4 h-4 fill-current" /> : <Bookmark className="w-4 h-4" />}
-        </button>
+        {canEngage ? (
+          <form action={saveSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="shrink-0">
+            <button
+              type="submit"
+              title={saved ? 'Remove Save' : 'Save'}
+              aria-label={saved ? `Remove ${title} from saved` : `Save ${title}`}
+              aria-pressed={saved}
+              className={`px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors ${saved ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+            >
+              {saved ? <BookmarkCheck className="w-4 h-4 fill-current" /> : <Bookmark className="w-4 h-4" />}
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            disabled
+            title="Save"
+            aria-label={`Save ${title}`}
+            aria-pressed={saved}
+            className="px-3 py-2 rounded-lg text-gray-400 dark:text-gray-500 disabled:cursor-not-allowed"
+          >
+            <Bookmark className="w-4 h-4" />
+          </button>
+        )}
 
         {showShare && (
-          <div className="absolute right-2 bottom-full mb-1 z-30 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 animate-fade-in">
+          <div className="absolute right-2 bottom-full mb-1 z-30 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 animate-fade-in">
             <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Share this</p>
+            {canEngage && (
+              <form action={shareSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="px-3 pb-2">
+                <label className="sr-only" htmlFor={`share-note-${anchor!.id}`}>Add a note to your repost</label>
+                <input
+                  id={`share-note-${anchor!.id}`}
+                  name="note"
+                  type="text"
+                  maxLength={500}
+                  placeholder="Add a note (optional)"
+                  className="mb-1.5 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  className="flex w-full items-center justify-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Share to your feed</span>
+                </button>
+              </form>
+            )}
             <button
               type="button"
               onClick={() => void copyLink()}
@@ -299,55 +382,76 @@ export default function SportsPostCard({
         )}
       </div>
 
-      {/* Expandable comments section */}
+      {/* The saved thread, then the composer. Both belong to the anchor post, so
+          a comment written here is the one everyone else reads. `relative z-10`
+          keeps the thread and the input above the card-wide link. */}
       {showComments && (
-        <div className="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-900/30">
+        <div className="relative z-10 px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3 bg-gray-50/50 dark:bg-gray-900/30">
           <div className="space-y-3 mb-3">
             {comments.map((comment) => (
               <div key={comment.id} className="flex space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 mt-1">
-                  Y
-                </div>
+                {comment.author.avatar ? (
+                  <img src={comment.author.avatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" loading="lazy" />
+                ) : (
+                  <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 mt-1">
+                    {comment.author.name.charAt(0)}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="bg-gray-100 dark:bg-gray-700/80 rounded-2xl px-3.5 py-2 inline-block max-w-full">
-                    <div className="font-bold text-xs text-gray-900 dark:text-white">You</div>
-                    <div className="text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5">{comment.body}</div>
+                    <Link href={`/profile/${comment.author.id}`} className="relative z-10 font-bold text-xs text-gray-900 dark:text-white hover:underline">
+                      {comment.author.name}
+                    </Link>
+                    <div className="text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5">{comment.content}</div>
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-1 ml-2">Just now</div>
+                  <div className="text-[11px] text-gray-400 mt-1 ml-2">
+                    <Link href={postId ? `/post/${postId}` : href} className="relative z-10 hover:underline">
+                      {new Date(comment.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
             {comments.length === 0 && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">No comments on this card yet.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {postId ? 'No comments yet. Be the first to react to this.' : 'No comments on this card yet.'}
+              </p>
             )}
           </div>
 
-          <div className="flex space-x-2 items-center">
-            <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0">
-              Y
-            </div>
-            <div className="flex-1 flex items-center gap-1">
-              <input
-                type="text"
-                value={commentValue}
-                onChange={(event) => setCommentValue(event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addComment(); } }}
-                placeholder="Write a comment..."
-                aria-label={`Write a comment about ${title}`}
-                className="bg-gray-100 dark:bg-gray-700 rounded-full py-2 pl-4 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm text-gray-900 dark:text-white"
-              />
-              <button
-                type="button"
-                onClick={addComment}
-                disabled={!commentValue.trim()}
-                className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 disabled:text-gray-400 disabled:hover:bg-transparent dark:text-blue-400 dark:hover:bg-gray-700/60"
-              >
-                Post
-              </button>
-            </div>
-          </div>
+          {canEngage ? (
+            <form action={commentOnSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="flex space-x-2 items-center">
+              {/* A neutral marker, not an invented initial: the card is handed
+                  the feed's data, not the viewer's profile. */}
+              <div className="w-8 h-8 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white shrink-0">
+                <MessageCircle className="w-4 h-4" />
+              </div>
+              <div className="flex-1 flex items-center gap-1">
+                <input
+                  type="text"
+                  name="content"
+                  required
+                  maxLength={2000}
+                  placeholder="Write a comment..."
+                  aria-label={`Write a comment about ${title}`}
+                  className="bg-gray-100 dark:bg-gray-700 rounded-full py-2 pl-4 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm text-gray-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-gray-700/60"
+                >
+                  Post
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {signedIn ? 'Comments open when this card has a live feed behind it.' : 'Sign in to join this conversation.'}
+            </p>
+          )}
+          <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">{engagementNote}</p>
           {footnote && (
-            <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">{footnote}</p>
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{footnote}</p>
           )}
         </div>
       )}

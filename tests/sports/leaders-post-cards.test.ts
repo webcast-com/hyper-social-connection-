@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardsFor, mountBoard, findButton } from './leaders-post-cards';
+import { boardsFor, engagementFixture, leaderKeyFor, mountBoard, findButton } from './leaders-post-cards';
 
 /**
  * The homepage players board as posts: crest for the author image, player name,
@@ -56,47 +56,85 @@ test('a player card uses the post card layout with the team crest as the author 
   }
 });
 
-test('Like, Comment, Share and save all work on a player card', async () => {
-  const mount = await mountBoard(await boardsFor());
+test('a signed-in member sees the card\u2019s saved engagement and acts through form actions', async () => {
+  const boards = await boardsFor();
+  const key = await leaderKeyFor(boards, 'basketball');
+  const mount = await mountBoard(boards, { engagement: engagementFixture(key), signedIn: true });
   try {
-    const { document, click, type } = mount;
-    const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Dončić'))!;
-    const cheerCount = () => card.querySelector('.font-semibold.text-gray-700').textContent.trim();
+    const { document, click, submit, type } = mount;
+    const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Don\u010di\u0107'))!;
 
-    assert.equal(cheerCount(), '0 cheers');
-    const like = findButton(document, 'Like Luka Dončić');
-    await click(like);
+    // The count comes from the saved post, not from state a reload would erase.
+    assert.equal(card.querySelector('.font-semibold.text-gray-700').textContent.trim(), '3 cheers');
+
+    // Like is a form action, shown as pressed because this viewer liked it.
+    const like = findButton(document, 'Like Luka Don\u010di\u0107');
+    assert.equal(like.getAttribute('type'), 'submit');
+    assert.equal(like.disabled, false);
     assert.equal(like.getAttribute('aria-pressed'), 'true');
-    assert.equal(cheerCount(), '1 cheer');
-    await click(like);
-    assert.equal(like.getAttribute('aria-pressed'), 'false');
-    assert.equal(cheerCount(), '0 cheers');
+    const likeForm = like.closest('form')!;
+    assert.equal(likeForm, card.querySelector('form'));
+    await submit(likeForm);
 
-    // Comment opens the composer and posts the comment into the thread.
-    await click(findButton(document, 'Comment on Luka Dončić'));
-    const input = card.querySelector('input[type="text"]')!;
-    assert.ok(input, 'the comment composer opens');
-    await type(input, 'What a season');
-    await click([...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Post')!);
-    assert.match(card.textContent, /What a season/);
-    assert.equal(card.querySelector('.hover\\:underline.cursor-pointer').textContent.trim(), '1 comment');
-    // The card is honest about where a comment lives.
-    assert.match(card.textContent, /Comments stay in this browser/);
+    // The saved thread renders with its authors, and the composer posts into it.
+    await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
+    assert.match(card.textContent, /Historic season/);
+    assert.match(card.textContent, /Maya Patel/);
+    assert.match(card.textContent, /Likes and comments are saved to your account/);
+    const composer = card.querySelector('form input[name="content"]')!;
+    assert.ok(composer, 'the comment composer is a form action');
+    await type(composer, 'What a season');
+    await submit(composer.closest('form'));
 
-    // Share opens a menu that can copy the player link and expand the image.
-    await click(findButton(document, 'Share Luka Dončić'));
+    // Share offers a real repost with an optional note, plus link and lightbox.
+    await click(findButton(document, 'Share Luka Don\u010di\u0107'));
+    assert.ok(card.querySelector('form input[name="note"]'), 'reposting to the feed is a form action');
+    assert.match(card.textContent, /Share to your feed/);
     assert.match(card.textContent, /Copy Link/);
     assert.match(card.textContent, /Expand Image/);
-    await click([...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Close')!);
-    assert.doesNotMatch(card.textContent, /Copy Link/);
 
-    // Save toggles like a post bookmark.
-    const save = findButton(document, 'Save Luka Dončić');
-    await click(save);
-    assert.equal(save.getAttribute('aria-pressed'), 'true');
-    assert.equal(findButton(document, 'Remove Luka Dončić from saved').getAttribute('aria-pressed'), 'true');
+    // Save is a form action, and the more menu reaches the discussion post.
+    assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').getAttribute('type'), 'submit');
+    await click(findButton(document, 'More options'));
+    const discussion = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Open discussion')!;
+    assert.equal(discussion.getAttribute('href'), '/post/77');
   } finally {
     mount.unmount();
+  }
+});
+
+test('a guest, or a sample board, gets a read-only card that says why', async () => {
+  // Signed out on a live board: every control is present, none of them fake a result.
+  const boards = await boardsFor();
+  const mount = await mountBoard(boards);
+  try {
+    const { document, click } = mount;
+    const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Don\u010di\u0107'))!;
+    assert.equal(findButton(document, 'Like Luka Don\u010di\u0107').disabled, true);
+    assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').disabled, true);
+    assert.equal(card.querySelectorAll('form').length, 0, 'nothing to submit while signed out');
+    await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
+    assert.match(card.textContent, /Sign in to like, comment on, save and share this card\./);
+    assert.match(card.textContent, /Sign in to join this conversation\./);
+  } finally {
+    mount.unmount();
+  }
+
+  // Signed in, but the board is the bundled sample: placeholder values are never
+  // stored as though a member had posted them.
+  const sample: any = await boardsFor();
+  sample.basketball.status = 'unavailable';
+  const sampleMount = await mountBoard(sample, { signedIn: true });
+  try {
+    const { document, click } = sampleMount;
+    const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Don\u010di\u0107'))!;
+    assert.equal(findButton(document, 'Like Luka Don\u010di\u0107').disabled, true);
+    assert.equal(card.querySelectorAll('form').length, 0, 'a sample card has no anchor post');
+    await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
+    assert.match(card.textContent, /Engagement is unavailable on sample cards/);
+    assert.match(card.textContent, /Comments open when this card has a live feed behind it\./);
+  } finally {
+    sampleMount.unmount();
   }
 });
 

@@ -35,9 +35,14 @@ export async function ensureMigrated() {
 }
 
 async function runMigration() {
-  migrated = true;
-
+  // `migrated` is only raised once the DDL has actually run. Setting it first
+  // let a second cold-start caller return from `ensureMigrated()` while the
+  // statements were still in flight, and that caller then queried columns the
+  // database did not have yet (seen as "column users.age does not exist" during
+  // the seed on a fresh cluster). Callers that arrive mid-run await the shared
+  // `migrationPromise` instead.
   if (!hasDatabase) {
+    migrated = true;
     console.warn('[migrate] DATABASE_URL not set — skipping schema bootstrap (pages will use fallback/mock data)');
     return;
   }
@@ -437,6 +442,18 @@ async function runMigration() {
       CONSTRAINT "profile_shares_sharer_id_fk" FOREIGN KEY ("sharer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action
     )`,
     `CREATE INDEX IF NOT EXISTS "profile_shares_profile_id_created_at_idx" ON "profile_shares"("profile_id", "created_at")`,
+    // Sports anchor posts: one post per provider feed item, created the first
+    // time a member engages with it, so likes, comments, bookmarks, reposts,
+    // notifications and permalinks reuse the existing social graph rather than
+    // a parallel one. `external_key` is unique where present (Postgres allows
+    // any number of NULLs in a unique index), which is what makes the
+    // ensure-then-engage path race-safe under double submits.
+    `ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "kind" text DEFAULT 'post' NOT NULL`,
+    `ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "external_key" text`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "posts_external_key_key" ON "posts"("external_key")`,
+    // The system account that authors those posts is a real, followable author,
+    // but it is not a person to suggest, list as a contact or return in search.
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "account_type" text DEFAULT 'person' NOT NULL`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

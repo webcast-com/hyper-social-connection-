@@ -91,3 +91,48 @@
     local files (Range) or 302s to a short-lived presigned GET.
   - Client fail-fast size/type checks; avatar/cover/story/group URLs go
     through `isSafeMediaUrl`.
+
+- Phase 14: Sports cards become real social objects ✅
+  Constraint: **keep the current social layout and functionality**. Comments,
+  likes, follows and shares are reused, not reimplemented — sports content joins
+  the existing graph instead of getting a parallel one. See
+  [SPORTS_ANCHOR_POSTS.md](SPORTS_ANCHOR_POSTS.md).
+
+  - The leaders and highlights cards used to keep Like / Comment / Save in
+    `useState`: a visitor "liked" a stat card, reloaded, and it was gone. Each
+    card can now anchor a real `posts` row, created on first engagement by a
+    member and reused by everyone after, so counts, threads, bookmarks, reposts,
+    notifications and `/post/[id]` permalinks work as they already do.
+  - Additive schema: `posts.kind`, unique `posts.external_key`
+    (`sports:{kind}:{id}`), `users.account_type` — declared in
+    `prisma/schema.prisma`, applied by the boot DDL in `src/lib/migrate.ts`.
+    `INSERT … ON CONFLICT DO NOTHING` makes double submits and concurrent clicks
+    resolve to one post. Run `npm run db:generate` after pulling.
+  - Anchors are authored by **Hyper Sports** (`@hypersports`), a followable
+    `broadcaster` account that holds a hash of a discarded secret so it can never
+    sign in, has notifications off and messages closed, and is kept out of
+    people-you-may-know, both Contacts rails and `/discover`. Explicit search
+    still finds it.
+  - A client sends `{ kind, id }` only; the post's text and media are re-derived
+    server-side from this site's own feeds, so an anchor cannot be used to publish
+    arbitrary content as the desk. Sample boards (ESPN unreachable) refuse to
+    anchor: placeholder values are never stored as though they were reported.
+  - Cards that cannot be engaged with stay laid out and say why — disabled
+    controls plus "Sign in to like, comment on, save and share this card." for
+    guests and "Engagement is unavailable on sample cards." on sample data. The
+    stale "Comments stay in this browser" footnotes are gone.
+  - Engagement is read back in one bounded pass per homepage render
+    (`loadAnchorEngagement`, ≤60 refs, ≤12 comments per card), not a query per
+    card; cards nobody engaged with cost one key lookup.
+  - Fixed a cold-start race found while verifying: `runMigration()` marked the
+    process migrated before running any DDL, so a concurrent request queried
+    columns that did not exist yet and the first seed attempt failed. `migrated`
+    is now raised only after the DDL has run.
+  - Verified: `npm run typecheck`, `npm run test:sports` 271/271 (new
+    `tests/sports/anchor.test.ts`; the leaders and highlights card specs were
+    rewritten off the old fake behaviour and now drive real form actions), plus a
+    live-Postgres run proving desk idempotency, one post per key under concurrent
+    creates, engagement read-back with authors, refusal of unknown and sample
+    cards, and four concurrent cold starts all returning 200 with a single clean
+    seed. Not verified here: live ESPN boards (no egress), Playwright layout
+    (no browser binary), `npm run db:generate` (no route to `binaries.prisma.sh`).

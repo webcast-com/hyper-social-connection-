@@ -11,13 +11,42 @@ import { SportsMatchInformation } from './SportsMatchInformation';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry, statisticShare } from '@/lib/sports-navigation';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
-import { validMatchMetadata, type MatchBoard, type MatchLineup } from '@/lib/espn-match';
+import { validMatchMetadata, type MatchBoard, type MatchLineup, type MatchPlayer } from '@/lib/espn-match';
 import { browserMatchBoard } from '@/lib/espn-browser';
 
 const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table'], ['history', 'Form & H2H'], ['information', 'Match info'], ['insights', 'Predictions & odds']] as const;
 type Section = typeof sections[number][0];
 function EmptySection({ children }: { children: React.ReactNode }) {
   return <p className="rounded-2xl border border-dashed border-gray-300 p-5 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">{children}</p>;
+}
+/**
+ * One listed player. The portrait ladder matches the leaders board: the reported
+ * ESPN photo, then the player's initials when no photo was reported or the file
+ * did not load. The photo is decorative — the name sits beside it — so a missing
+ * CDN image drops the picture without hiding the player or shifting the row.
+ */
+function LineupPlayer({ person }: { person: MatchPlayer }) {
+  // Which photo failed, not whether the row is broken; the slot keeps its width either way.
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const initials = person.name.split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '').join('');
+  return <li className="flex min-w-0 items-center gap-2 text-sm">
+    {person.headshot && !photoFailed ? (
+      <img
+        src={person.headshot}
+        alt=""
+        className="h-8 w-8 shrink-0 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
+        loading="lazy"
+        onError={() => setPhotoFailed(true)}
+      />
+    ) : (
+      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+        {initials || person.name.charAt(0)}
+      </span>
+    )}
+    <span className="w-7 shrink-0 text-gray-500">{person.jersey ?? '—'}</span>
+    <span className="min-w-0 break-words">{person.name}{person.position && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-500">Did not play</span>}</span>
+  </li>;
 }
 function Lineup({ lineup, name }: { lineup: MatchLineup; name: string }) {
   return <article className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
@@ -26,10 +55,7 @@ function Lineup({ lineup, name }: { lineup: MatchLineup; name: string }) {
     {([[true, 'Starters'], [false, 'Non-starters'], [null, 'Listed players']] as const).map(([starter, label]) => {
       const people = lineup.players.filter((person) => person.starter === starter);
       return people.length ? <div key={label} className="mt-4"><h4 className="mb-2 text-xs font-bold uppercase text-blue-600 dark:text-blue-400">{label}</h4>
-        <ul className="space-y-2">{people.map((person) => <li key={person.id} className="flex min-w-0 gap-2 text-sm">
-          <span className="w-7 shrink-0 text-gray-500">{person.jersey ?? '—'}</span>
-          <span className="min-w-0 break-words">{person.name}{person.position && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-500">Did not play</span>}</span>
-        </li>)}</ul>
+        <ul className="space-y-2">{people.map((person) => <LineupPlayer key={person.id} person={person} />)}</ul>
       </div> : null;
     })}
   </article>;
