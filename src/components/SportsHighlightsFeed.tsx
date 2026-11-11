@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Play } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
 import LinkMediaPlayer from './LinkMediaPlayer';
+import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
 import type { LinkMedia } from '@/lib/link-media';
 import type { SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import type { SportsHighlightClip } from '@/lib/espn-highlights';
@@ -62,7 +63,13 @@ const clipMedia = (clip: SportsHighlightClip): LinkMedia | null =>
       }
     : null;
 
-function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
+function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
+  clip: SportsHighlightClip;
+  /** Null on a sample board: placeholder clips get no post to engage with. */
+  anchor: SportsAnchorRef | null;
+  engagement: SportsAnchorEngagement | null;
+  signedIn: boolean;
+}) {
   // Always somewhere on this site, so the card never navigates the reader away.
   const cardHref = matchHrefFor(clip);
   // ESPN's own clip page, offered as a labelled link rather than a redirect.
@@ -135,18 +142,28 @@ function HighlightPostCard({ clip }: { clip: SportsHighlightClip }) {
         { label: 'State', value: STATUS_LABEL[clip.status] },
       ]}
       likeLabel={`Like ${clip.title}`}
+      anchor={anchor}
+      engagement={engagement}
+      signedIn={signedIn}
       menuLinks={[
         { label: 'Open Competition', href: cardHref },
         ...(clip.page ? [{ label: 'Watch on ESPN', href: clip.page }] : []),
       ]}
       footnote={clip.mp4 && !unplayable
-        ? 'Highlights are ESPN clips. Comments stay in this browser.'
+        ? 'Highlights are ESPN clips.'
         : 'This clip cannot play here. Open it on ESPN to watch the full highlight.'}
     />
   );
 }
 
-export default function SportsHighlightsFeed({ board, limit = 4 }: { board: SportsHighlightsBoard; limit?: number }) {
+export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}, signedIn = false }: {
+  board: SportsHighlightsBoard;
+  limit?: number;
+  /** Saved likes, threads and bookmarks per clip, loaded once by the page. */
+  engagement?: SportsAnchorEngagementMap;
+  /** Guests read every card; only a member can engage with one. */
+  signedIn?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const clips = board.clips.slice(0, expanded ? board.clips.length : limit);
   if (!board.clips.length) return null;
@@ -171,9 +188,17 @@ export default function SportsHighlightsFeed({ board, limit = 4 }: { board: Spor
       </div>
 
       <div className="space-y-4">
-        {clips.map((clip) => (
-          <HighlightPostCard key={`${clip.eventId}-${clip.id}`} clip={clip} />
-        ))}
+        {clips.map((clip) => {
+          // A sample board is placeholder data, so it gets no anchor post.
+          const anchor = sample ? null : anchorRef('highlight', highlightAnchorId(clip));
+          return <HighlightPostCard
+            key={`${clip.eventId}-${clip.id}`}
+            clip={clip}
+            anchor={anchor}
+            engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
+            signedIn={signedIn}
+          />;
+        })}
       </div>
 
       {board.clips.length > limit && (

@@ -38,7 +38,11 @@ model User {
   relationship String  @default("single") @map("relationship_status")
   profileVisibility String @default("public") @map("profile_visibility")
   messagePrivacy    String @default("everyone") @map("message_privacy")
-  followPrivacy     String @default("everyone") @map("follow_privacy")
+  followPrivacy     String  @default("everyone") @map("follow_privacy")
+  // `person` for members. `broadcaster` marks the system account that authors
+  // sports anchor posts, so it stays out of people suggestions, Discover and
+  // member search while remaining a real, followable author.
+  accountType       String  @default("person") @map("account_type")
   notifyLikes       Int    @default(1) @map("notify_likes")
   notifyComments    Int    @default(1) @map("notify_comments")
   notifyFollows     Int    @default(1) @map("notify_follows")
@@ -93,6 +97,13 @@ model Post {
   groupId      Int?      @map("group_id")
   // Profile card attached to this post ("shared a profile" to a feed/group).
   sharedProfileId Int?   @map("shared_profile_id")
+  // Sports anchor posts. A feed item (a leader, a highlight clip, later a match
+  // or a news story) materialises exactly one post — the first time a member
+  // engages with it — so likes, comments, bookmarks, reposts, notifications and
+  // permalinks reuse the existing social graph instead of a parallel one.
+  // `kind` is `post` for everything a member wrote themselves.
+  kind          String   @default("post")
+  externalKey   String?  @unique @map("external_key")
   likesCount   Int       @default(0) @map("likes_count")
   commentsCount Int      @default(0) @map("comments_count")
   scheduledAt  DateTime? @map("scheduled_at") @db.Timestamp(6)

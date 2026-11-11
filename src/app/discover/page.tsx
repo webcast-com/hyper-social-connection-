@@ -6,6 +6,7 @@ import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
 import { Users, Sparkles, Trophy } from 'lucide-react';
 import DiscoveryTopScorers from '@/components/DiscoveryTopScorers';
+import { SPORTS_DESK } from '@/lib/sports-anchor';
 import { getSportsTopScorerBoards } from '@/lib/espn-leaders-feed';
 
 export const metadata: Metadata = getPageMetadata({
@@ -29,7 +30,9 @@ export default async function Discover() {
           })).map((f) => ({ id: f.followingId }))
         : [];
       discoverUsers = await prisma.user.findMany({
-        where: { id: { not: currentUser.id || 0 } },
+        // People to follow, so the sports desk that authors anchor posts is left
+        // out; members still reach it from any card it authored.
+        where: { id: { not: currentUser.id || 0 }, email: { not: SPORTS_DESK.email } },
         take: 20,
       });
       trendingPosts = (await prisma.post.findMany({

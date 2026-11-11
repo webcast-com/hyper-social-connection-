@@ -17,6 +17,7 @@ import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getSportsHighlights } from '@/lib/espn-highlights-feed';
+import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
@@ -131,6 +132,15 @@ export default async function Home() {
   // resolves to the bundled sample board and never blocks the page.
   const leaderBoards = await getSportsLeaderBoards();
   const highlightBoard = await getSportsHighlights();
+  // Every sports card can be liked, commented on, saved and shared like a post:
+  // the first interaction creates its anchor post, and this one bounded query
+  // reads back the saved state for the cards about to be rendered. Cards nobody
+  // has engaged with cost a key lookup and stay read-only until someone does.
+  const anchorEngagement = await loadAnchorEngagement(
+    [...leaderAnchorRefs(leaderBoards), ...highlightAnchorRefs(highlightBoard)],
+    viewer?.id ?? null,
+  );
+  const signedIn = !!viewer;
 
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -346,7 +356,9 @@ export default async function Home() {
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
   const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
-  const otherUsers = allUsers.filter((u) => u.id !== currentUser.id);
+  // The sports desk authors anchor posts, but it is not a person to suggest,
+  // list as a contact or invite anywhere.
+  const otherUsers = allUsers.filter((u) => u.id !== currentUser.id && u.email !== SPORTS_DESK.email);
   const mobileGroups = (viewerGroups.length > 0 ? viewerGroups : allGroups).slice(0, 6);
 
   // Live trending hashtags — computed from whatever posts we ended up with
@@ -462,11 +474,11 @@ export default async function Home() {
           <SportsScoresWidget board={sportsBoard} compact />
 
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
-            <SportsLeadersBoard boards={leaderBoards} />
+            <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
           </div>
 
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
-            <SportsHighlightsFeed board={highlightBoard} />
+            <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} />
           </div>
 
           <div id="groups" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
@@ -560,9 +572,9 @@ export default async function Home() {
           </div>
         </section>
 
-        <SportsLeadersBoard boards={leaderBoards} />
+        <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
 
-        <SportsHighlightsFeed board={highlightBoard} />
+        <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} />
 
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>

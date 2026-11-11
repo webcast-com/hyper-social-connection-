@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mountBoard, findButton } from './leaders-post-cards';
+import { engagementFixture, mountBoard, findButton } from './leaders-post-cards';
 import type { SportsHighlightsBoard } from '../../src/lib/espn-highlights-feed';
 
 /**
@@ -40,7 +40,13 @@ const board = (clips: unknown[], status: SportsHighlightsBoard['status'] = 'live
   source: { ok: true, url: 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=401111111', httpStatus: 200 },
 });
 
-async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard['status']) {
+/** The external key this clip's card is anchored under. */
+async function highlightKeyFor(clips: unknown[], index = 0): Promise<string> {
+  const { anchorKey, highlightAnchorId } = await import('../../src/lib/sports-anchor');
+  return anchorKey({ kind: 'highlight', id: highlightAnchorId(clips[index] as never) });
+}
+
+async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard['status'], options: { engagement?: unknown; signedIn?: boolean } = {}) {
   const React = await import('react');
   const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
   // An empty leaders board keeps the shared document clean for this section.
@@ -50,7 +56,11 @@ async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard[
   const container = mounted.document.createElement('div');
   mounted.document.body.appendChild(container);
   const root = createRoot(container);
-  await act(async () => { root.render(React.createElement(SportsHighlightsFeed as never, { board: board(clips, status) } as never)); });
+  await act(async () => { root.render(React.createElement(SportsHighlightsFeed as never, {
+    board: board(clips, status),
+    engagement: options.engagement ?? {},
+    signedIn: options.signedIn ?? false,
+  } as never)); });
   return {
     ...mounted,
     // Both roots come down, so the next test starts from an empty document.
@@ -111,28 +121,76 @@ test('a highlight clip is a post card with the home crest and a playable video',
   }
 });
 
-test('Like, Comment and Share work on a highlight card', async () => {
-  const mount = await mountHighlights([clip()]);
+test('a highlight card reads its saved thread and posts through form actions', async () => {
+  const clips = [clip()];
+  const key = await highlightKeyFor(clips);
+  const mount = await mountHighlights(clips, 'live', { engagement: engagementFixture(key, { postId: 91, likesCount: 12, commentsCount: 4, viewerLiked: false, viewerSaved: true }), signedIn: true });
   try {
-    const { document, click, type } = mount;
+    const { document, click, submit, type } = mount;
     const card = document.querySelector('article')!;
-    const cheerCount = () => card.querySelector('.font-semibold.text-gray-700').textContent.trim();
 
-    assert.equal(cheerCount(), '0 cheers');
-    await click(findButton(document, 'Like Saka opens the scoring'));
-    assert.equal(cheerCount(), '1 cheer');
+    // Counts come from the saved post, so a reload shows the same numbers.
+    assert.equal(card.querySelector('.font-semibold.text-gray-700').textContent.trim(), '12 cheers');
+    assert.equal(card.querySelector('.hover\\:underline.cursor-pointer').textContent.trim(), '4 comments');
 
+    // Like and Save are server actions: submit buttons, never local toggles.
+    const like = findButton(document, 'Like Saka opens the scoring');
+    assert.equal(like.getAttribute('type'), 'submit');
+    assert.equal(like.disabled, false);
+    assert.equal(like.getAttribute('aria-pressed'), 'false');
+    await submit(like.closest('form'));
+    const save = findButton(document, 'Remove Arsenal vs Chelsea from saved');
+    assert.equal(save.getAttribute('aria-pressed'), 'true', 'this viewer saved the clip');
+    await submit(save.closest('form'));
+
+    // The composer writes into the shared thread, and the thread names its authors.
     await click(findButton(document, 'Comment on Arsenal vs Chelsea'));
-    await type(card.querySelector('input[type="text"]')!, 'What a finish');
-    await click([...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Post')!);
-    assert.match(card.textContent, /What a finish/);
-    assert.equal(card.querySelector('.hover\\:underline.cursor-pointer').textContent.trim(), '1 comment');
+    assert.match(card.textContent, /Historic season/);
+    const composer = card.querySelector('form input[name="content"]')!;
+    await type(composer, 'What a finish');
+    await submit(composer.closest('form'));
 
+    // Sharing offers a real repost with an optional note, next to copy and expand.
     await click(findButton(document, 'Share Arsenal vs Chelsea'));
+    assert.ok(card.querySelector('form input[name="note"]'), 'reposting to the feed is a form action');
+    assert.match(card.textContent, /Share to your feed/);
     assert.match(card.textContent, /Copy Link/);
-    assert.match(card.textContent, /Highlights are ESPN clips\. Comments stay in this browser\./);
+    assert.match(card.textContent, /Highlights are ESPN clips\./);
+
+    // And the more menu links to the post every reader shares.
+    await click(findButton(document, 'More options'));
+    const discussion = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Open discussion')!;
+    assert.equal(discussion.getAttribute('href'), '/post/91');
   } finally {
     mount.unmount();
+  }
+});
+
+test('a highlight card stays read-only for a guest and for a sample board', async () => {
+  // Signed out: the controls are all there, none of them pretend to save.
+  const mount = await mountHighlights([clip()]);
+  try {
+    const { document, click } = mount;
+    const card = document.querySelector('article')!;
+    assert.equal(findButton(document, 'Like Saka opens the scoring').disabled, true);
+    assert.equal(findButton(document, 'Save Arsenal vs Chelsea').disabled, true);
+    assert.equal(card.querySelectorAll('form').length, 0, 'nothing to submit while signed out');
+    await click(findButton(document, 'Comment on Arsenal vs Chelsea'));
+    assert.match(card.textContent, /Sign in to like, comment on, save and share this card\./);
+  } finally {
+    mount.unmount();
+  }
+
+  // Signed in, but ESPN is unreachable: sample clips get no anchor post.
+  const sampleMount = await mountHighlights([clip()], 'unavailable', { signedIn: true });
+  try {
+    const { document, click } = sampleMount;
+    const card = document.querySelector('article')!;
+    assert.equal(card.querySelectorAll('form').length, 0, 'a sample card has no anchor post');
+    await click(findButton(document, 'Comment on Arsenal vs Chelsea'));
+    assert.match(card.textContent, /Comments open when this card has a live feed behind it\./);
+  } finally {
+    sampleMount.unmount();
   }
 });
 

@@ -6,6 +6,7 @@ import { Maximize2 } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
 import ImageLightbox from './ImageLightbox';
 import { portraitFor } from '@/lib/player-portraits';
+import { anchorKey, anchorRef, leaderAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
 import type { SportsLeaderBoard, SportsLeaderRow, SportsLeaderSport } from '@/lib/espn-leaders';
 
 /**
@@ -59,11 +60,18 @@ function LeaderPostCard({
   sport,
   league,
   sample,
+  anchor,
+  engagement,
+  signedIn,
 }: {
   player: SportsLeaderRow;
   sport: SportsLeaderSport;
   league: string;
   sample: boolean;
+  /** Null on a sample board: placeholder values get no post to engage with. */
+  anchor: SportsAnchorRef | null;
+  engagement: SportsAnchorEngagement | null;
+  signedIn: boolean;
 }) {
   // Which image failed, not whether the card is broken: when the ESPN headshot
   // arrives later the derived flag clears itself, with no effect to re-run.
@@ -137,7 +145,9 @@ function LeaderPostCard({
         { label: 'Value', value: player.value },
       ]}
       likeLabel={`Like ${player.name}`}
-      footnote="Comments stay in this browser. Open the player profile to follow the real conversation."
+      anchor={anchor}
+      engagement={engagement}
+      signedIn={signedIn}
       onExpand={() => setShowLightbox(true)}
       menuLinks={[{ label: 'Open Player Profile', href: playerHref }]}
     />
@@ -153,7 +163,13 @@ const SPORT_TABS: { id: SportsLeaderSport; label: string }[] = [
   { id: 'football', label: 'NFL' },
 ];
 
-export default function SportsLeadersBoard({ boards }: { boards: Record<SportsLeaderSport, SportsLeaderBoard> }) {
+export default function SportsLeadersBoard({ boards, engagement = {}, signedIn = false }: {
+  boards: Record<SportsLeaderSport, SportsLeaderBoard>;
+  /** Saved likes, threads and bookmarks per card, loaded once by the page. */
+  engagement?: SportsAnchorEngagementMap;
+  /** Guests read every card; only a member can engage with one. */
+  signedIn?: boolean;
+}) {
   const [sport, setSport] = useState<SportsLeaderSport>('basketball');
   const board = boards[sport] ?? boards.basketball;
   const tab = SPORT_TABS.find((entry) => entry.id === sport)!;
@@ -197,9 +213,21 @@ export default function SportsLeadersBoard({ boards }: { boards: Record<SportsLe
       </div>
 
       <div className="space-y-4">
-        {board.rows.map((player, index) => (
-          <LeaderPostCard key={`${player.key}-${index}`} player={player} sport={sport} league={board.league} sample={sample} />
-        ))}
+        {board.rows.map((player, index) => {
+          // A sample board is placeholder data, so it gets no anchor post: a
+          // like or comment there would store a value ESPN never reported.
+          const anchor = sample ? null : anchorRef('leader', leaderAnchorId(sport, player));
+          return <LeaderPostCard
+            key={`${player.key}-${index}`}
+            player={player}
+            sport={sport}
+            league={board.league}
+            sample={sample}
+            anchor={anchor}
+            engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
+            signedIn={signedIn}
+          />;
+        })}
       </div>
 
       {/* The rest of the sports experience lives on /sports; the homepage keeps a
