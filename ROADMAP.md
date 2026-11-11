@@ -136,3 +136,45 @@
     cards, and four concurrent cold starts all returning 200 with a single clean
     seed. Not verified here: live ESPN boards (no egress), Playwright layout
     (no browser binary), `npm run db:generate` (no route to `binaries.prisma.sh`).
+
+- Phase 15: League video news, as its own stack ✅
+  Constraint: **build it separately** — its own parser, feed, endpoints and play
+  card, sharing nothing with the match highlights stack
+  (`espn-highlights*.ts`, `/api/sports/highlights`, `SportsHighlightsFeed`,
+  `LinkMediaPlayer`) — and wire it into the feeds section **without breaking
+  anything**. See [ESPN_VIDEO_NEWS.md](ESPN_VIDEO_NEWS.md).
+
+  - The highlights board is fixture-driven and its own notes record the gap: the
+    Premier League and the NFL answer a finished match's video collection with an
+    empty list. This reader is feed-driven — it asks a competition's **news** feed
+    and keeps the articles ESPN itself marks as videos, which is where league
+    clips (goals, recaps, reactions) actually live.
+  - A news article carries a clip page and a clip id, not a media file, so the
+    listing costs one request per competition and the rendition is resolved only
+    when a reader presses play: `GET /api/sports/video-news` and
+    `GET /api/sports/video-news/clip?id={numeric}`. The clip route takes an id and
+    builds the host itself, so it cannot be pointed at an arbitrary URL.
+  - Renditions are classified by their own extension, so ESPN's auth-gated
+    `…/video/auth/…` URLs (no extension) are never handed to a player. The
+    progressive file wins; HLS is used only when this browser says it can play it,
+    and every unplayable path ends at a labelled "Watch it on ESPN" link rather
+    than a black rectangle.
+  - Nothing is invented: a league clip has no fixture, so team labels are only
+    ESPN's own article categories (never a guessed "Home vs Away"), and when ESPN
+    does not answer the board is empty — unlike the highlights board there are no
+    bundled sample clips here.
+  - Feed placement moved into `src/lib/feed-interleave.ts` so each card kind gets
+    its own pass: match and prediction cards keep `[1, 3, 5, 7]`, video clips take
+    `[2, 6]`, at most `MAX_FEED_CLIPS = 2` of them, and `FeedTabs` gained one
+    branch. With no clips the For You feed is identical to the feed before this
+    card kind existed, and the member posts list is never mutated.
+  - A cold fan-out cannot hold a render: `getSportsVideoNewsForRender()` races the
+    job against a 2.5s budget, resolves an empty `unavailable` board on timeout and
+    never cancels the work, so the next render is served from the cache.
+  - Verified: `npm run typecheck`, `npm run test:sports` 300/300 (271 existing
+    specs unchanged, 29 new across parser, feed, card and placement; the new feed
+    specs use their own `fetch` harness and never touch the highlights stubs),
+    `npm run build`, `npx eslint` clean, plus a live smoke of both new routes and
+    an unchanged `/api/sports/highlights`. Not verified here: live ESPN news feeds
+    and clip records (no egress), real browser playback and Playwright layout (no
+    Chromium binary).

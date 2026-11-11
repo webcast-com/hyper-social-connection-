@@ -5,7 +5,8 @@
 - ✅ **Movies API:** `/api/movies` — deterministic mock movie data with pagination and search
 - ✅ **Sports API:** `/api/sports` — live sports data with provider fallbacks
 - ✅ **Sports board:** `/sports` and the `SportsBoard` component display live and upcoming events
-- ⚠️ **Feed integration:** movies and sports are intentionally not inserted into the social feed yet
+- ✅ **Sports feed cards:** featured matches, predictions, the leaders board, the match highlights board and league video clips are interleaved into the For You feed by `FeedTabs`; placement lives in `src/lib/feed-interleave.ts`
+- ⚠️ **Movies feed integration:** movies are intentionally not inserted into the social feed yet
 
 ## Available endpoints
 
@@ -33,6 +34,29 @@ GET /api/sports?refresh=1
 ```
 
 The sports endpoint aggregates its configured providers on the server and falls back to demo fixtures when they are unavailable. Use `refresh=1` to bypass the short-lived in-process cache.
+
+### Sports video
+
+```http
+GET /api/sports/highlights
+GET /api/sports/highlights?refresh=1
+GET /api/sports/video-news
+GET /api/sports/video-news?refresh=1
+GET /api/sports/video-news/clip?id=49983806
+```
+
+Two separate clip stacks, deliberately not sharing code, caches or cards:
+
+| Endpoint | Source | Carries media? |
+| --- | --- | --- |
+| `/api/sports/highlights` | fixture-driven: finished matches, then each match's own video collection | yes (`mp4`, `hls`, `playable`); falls back to a labelled **sample** card when ESPN is unreachable |
+| `/api/sports/video-news` | feed-driven: each competition's news feed, keeping articles ESPN marks as videos | no — a clip page and a numeric id only; empty board when ESPN is unreachable, **never** a sample clip |
+| `/api/sports/video-news/clip?id=` | one clip's record, resolved when a reader presses play | yes: `mp4`, `hls`, `page`, `thumbnail`, `duration`, `playable` |
+
+The clip route accepts a numeric ESPN id and builds the upstream URL itself, so it
+cannot be used as a proxy for an arbitrary host. A non-numeric id is a `400`. See
+[ESPN_VIDEO_NEWS.md](ESPN_VIDEO_NEWS.md) for the card, playback and placement
+rules.
 
 ## Integration options
 

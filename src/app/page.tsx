@@ -18,6 +18,8 @@ import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getSportsHighlights } from '@/lib/espn-highlights-feed';
 import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
+import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
+import { interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
@@ -126,12 +128,17 @@ export default async function Home() {
     bio: null,
     createdAt: new Date(),
   };
+  // Started before the other feeds so its render budget overlaps theirs instead
+  // of adding to them. League video news is its own stack: its own endpoints,
+  // cache and card, sharing nothing with the match highlights board.
+  const videoNewsPromise = getSportsVideoNewsForRender();
   const sportsBoard = await getSportsBoard();
   // Players and top scorers are the sports content visitors ask for most, so the
   // homepage renders the leaders board next to the scores. A failed leaders feed
   // resolves to the bundled sample board and never blocks the page.
   const leaderBoards = await getSportsLeaderBoards();
   const highlightBoard = await getSportsHighlights();
+  const videoNewsBoard = await videoNewsPromise;
   // Every sports card can be liked, commented on, saved and shared like a post:
   // the first interaction creates its anchor post, and this one bounded query
   // reads back the saved state for the cards about to be rendered. Cards nobody
@@ -347,12 +354,26 @@ export default async function Home() {
     // eslint-disable-next-line react-hooks/purity
     createdAt: new Date(Date.now() - (index + 1) * 120_000),
   }));
-  const forYouPosts = [...visiblePosts];
-  [...sportsFeedPosts, ...predictionFeedPosts].forEach((feedCard, index) => {
-    const slots = [1, 3, 5, 7];
-    const insertAt = Math.min(slots[index] ?? forYouPosts.length, forYouPosts.length);
-    forYouPosts.splice(insertAt, 0, feedCard);
-  });
+  // League video news is a separate stack from the match highlights board: its
+  // own feed, endpoints and card. It joins the For You feed the same way the
+  // match and prediction cards do, in its own pass below so their slots stay
+  // exactly where they were. A feed ESPN did not answer contributes nothing —
+  // there are no sample clips here to stand in for it.
+  const videoNewsFeedPosts = videoNewsBoard.clips.slice(0, MAX_FEED_CLIPS).map((clip, index) => ({
+    id: `video-news-${clip.id}`,
+    type: 'video-news',
+    clip,
+    // eslint-disable-next-line react-hooks/purity
+    createdAt: new Date(Date.now() - (index + 1) * 100_000),
+  }));
+
+  // Each card kind gets its own pass over the feed, so adding league video news
+  // cannot move the match and prediction cards that were already there.
+  const forYouPosts = interleaveFeedCards(
+    interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
+    videoNewsFeedPosts,
+    VIDEO_NEWS_FEED_SLOTS,
+  );
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
   const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
