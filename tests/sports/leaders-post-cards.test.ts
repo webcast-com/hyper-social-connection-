@@ -24,11 +24,12 @@ test('a player card uses the post card layout with the team crest as the author 
     assert.equal(crest.getAttribute('src'), 'https://a.espncdn.com/i/teamlogos/nba/500/dal.png');
     assert.match(crest.className, /w-10 h-10 rounded-full object-cover ring-1/);
     const teamLink = crest.closest('a')!;
-    assert.equal(teamLink.getAttribute('href'), '/nfl-basketball/basketball/team/dallas-mavericks');
+    assert.equal(teamLink.getAttribute('href'), '/nfl-basketball/basketball/team/dallas-mavericks',
+      'a crest with no reported ESPN team id keeps the dashboard route');
 
     // Player name next to it, with the position, team and metric underneath.
     const name = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Luka Dončić')!;
-    assert.equal(name.getAttribute('href'), '/nfl-basketball/basketball/player/luka-doncic');
+    assert.equal(name.getAttribute('href'), '/sports/athletes/nba/3945274');
     assert.match(name.className, /font-bold text-gray-900 dark:text-white hover:underline text-sm truncate block/);
     assert.match(card.textContent, /PG · DAL · Points Per Game/);
 
@@ -47,7 +48,7 @@ test('a player card uses the post card layout with the team crest as the author 
 
     // The card itself is clickable, with the controls above the link.
     const overlay = card.querySelector('a.absolute.inset-0')!;
-    assert.equal(overlay.getAttribute('href'), '/nfl-basketball/basketball/player/luka-doncic');
+    assert.equal(overlay.getAttribute('href'), '/sports/athletes/nba/3945274');
     assert.match(overlay.className, /absolute inset-0 z-0/);
     // The controls sit above the card-wide link, so they keep their behaviour.
     assert.match(card.querySelector('.group.cursor-pointer').className, /relative z-10/);
@@ -151,7 +152,7 @@ test('the card image opens the post lightbox and the NFL tab swaps the whole boa
     assert.equal(nfl.querySelector('img[src*="teamlogos"]').getAttribute('src'), 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png');
     assert.equal(nfl.querySelector('img.w-full').getAttribute('src'), 'https://a.espncdn.com/i/headshots/nfl/players/full/3916387.png');
     assert.match(nfl.textContent, /QB · BAL · Passing Yards/);
-    assert.equal(nfl.querySelector('a.absolute.inset-0').getAttribute('href'), '/nfl-basketball/nfl/player/lamar-jackson');
+    assert.equal(nfl.querySelector('a.absolute.inset-0').getAttribute('href'), '/sports/athletes/nfl/3916387');
     assert.match(document.body.textContent, /NFL season leaders from ESPN/);
   } finally {
     mount.unmount();
@@ -174,5 +175,49 @@ test('the more menu reaches the player profile and every card fits its column', 
     }
   } finally {
     mount.unmount();
+  }
+});
+
+test('a card links to a native page only where ESPN reported an id', async () => {
+  const boards: any = await boardsFor();
+  // The bundled fixture reports an athlete id but no team id, so this adds the
+  // team id the leaders payload carries in production.
+  const withTeamId = {
+    ...boards,
+    basketball: {
+      ...boards.basketball,
+      rows: boards.basketball.rows.map((row: any, index: number) => (index === 0 ? { ...row, teamId: '1001' } : row)),
+    },
+  };
+
+  const first = await mountBoard(withTeamId);
+  let crestHref: string | null = null;
+  let nameHref: string | null = null;
+  try {
+    const card = [...first.document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Dončić'))!;
+    crestHref = card.querySelector('img[src*="teamlogos"]')!.closest('a')!.getAttribute('href');
+    nameHref = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Luka Dončić')!.getAttribute('href');
+  } finally {
+    await first.unmount();
+  }
+  assert.equal(crestHref, '/sports/teams/nba/1001', 'a reported team id links to that team’s own page');
+  assert.equal(nameHref, '/sports/athletes/nba/3945274', 'a reported athlete id links to that player’s own page');
+
+  // Without an id there is nothing to address a page by, so the card keeps the
+  // dashboard route it has always used rather than guessing an entity from a name.
+  const withoutIds = {
+    ...withTeamId,
+    basketball: {
+      ...withTeamId.basketball,
+      rows: withTeamId.basketball.rows.map((row: any, index: number) => (index === 0 ? { ...row, athleteId: null, teamId: null } : row)),
+    },
+  };
+  const second = await mountBoard(withoutIds);
+  try {
+    const card = [...second.document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Dončić'))!;
+    assert.equal(card.querySelector('img[src*="teamlogos"]')!.closest('a')!.getAttribute('href'), '/nfl-basketball/basketball/team/dallas-mavericks');
+    assert.equal([...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Luka Dončić')!.getAttribute('href'), '/nfl-basketball/basketball/player/luka-doncic');
+  } finally {
+    await second.unmount();
   }
 });

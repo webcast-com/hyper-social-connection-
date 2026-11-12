@@ -39,6 +39,10 @@ const bundledRows = (sport: SportsLeaderSport): SportsLeaderRow[] => {
   }[];
   return leaders.slice(0, 6).map((player) => ({
     key: slugify(player.name),
+    // A bundled sample has no ESPN identity, so it links to no player or team
+    // page: an invented id would open somebody else's profile.
+    athleteId: null,
+    teamId: null,
     name: player.name,
     team: player.team ?? '—',
     teamAbbr: player.teamAbbr ?? null,

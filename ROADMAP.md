@@ -178,3 +178,59 @@
     an unchanged `/api/sports/highlights`. Not verified here: live ESPN news feeds
     and clip records (no egress), real browser playback and Playwright layout (no
     Chromium binary).
+
+- Phase 16: Native team and player pages, as their own stack ✅
+  Constraint: **build it separately** — its own parsers, feeds, endpoints, pages
+  and components, sharing nothing with the match/standings/leaders/highlights
+  stacks — then wire links in **everywhere** without breaking anything. Covers
+  both entity kinds and all 121 `ESPN_LEAGUES` competitions, not just the NBA and
+  the NFL. See [ESPN_TEAM_ATHLETE_DETAILS.md](ESPN_TEAM_ATHLETE_DETAILS.md).
+
+  - The vendored NFL/NBA SPA already knew how to ask ESPN for a team and a player
+    (`teamUrls`, `athleteUrls`, `normalizeTeamInfo`, `normalizeRoster`,
+    `normalizeAthlete`) but had no consumer here and no route, so those entities
+    were only reachable under `/nfl-basketball/…`. They now have native pages at
+    `/sports/teams/{league}/{teamId}` and `/sports/athletes/{league}/{athleteId}`,
+    served by `GET /api/sports/teams/…` and `GET /api/sports/athletes/…`.
+  - A team page is three ESPN parts settled together — identity, `/schedule`,
+    `/roster` — so one refusal never hides the other two: the board reports
+    `ready|partial|unavailable` with per-part `sources` (url, httpStatus,
+    errorKind, error) and the page names the missing part.
+  - A player page tries the site endpoint and falls back to the common endpoint
+    only when it must, because some competitions publish a player through the
+    common one alone. Statistics stay grouped as ESPN groups them, capped at
+    `MAX_STAT_GROUPS = 3` × `MAX_STATS_PER_GROUP = 12`, and values that are really
+    identifiers (the player's own name/id, a bare ≥5-digit number) are dropped.
+  - Fixtures are split by the **state ESPN reports** (`status.type.state`), never
+    by comparing a date with the clock, so a postponed match is not relabelled as
+    a result; `"-"`, `"--"` and `"—"` are "no score reported", not zero.
+  - Six things the paste does were deliberately not ported: headshot synthesis for
+    every sport (here a frozen map allows only `basketball/nba` and
+    `football/nfl`, everything else uses the provider's photo or initials, and the
+    board says so via `portraitsFromCdn`); missing id validation (`validEntityId`
+    gates every URL and CDN path, and a payload whose own id differs from the one
+    requested is refused outright); unvalidated `src`/`href` (`safeProviderImage`,
+    `safeExternalUrl` — https, no credentials, ≤2048 else rejected);
+    `position: … ?? "—"` inventing data (every optional field is `null`); demo
+    data always winning (no sample team or player exists — an `unavailable` board
+    renders an honest empty state); and throwing on total failure.
+  - Linking is gated on an id ESPN actually reported — a name is never turned into
+    an id. `SportsLeaderRow` gained optional `athleteId`/`teamId` (null for
+    bundled rows), so leader cards, standings rows and match lineups each become
+    links only where `validEntityId` passes, and otherwise render exactly as they
+    did before.
+  - Bounds and caching follow the existing feeds: 300 s ready / 15 s failure TTL,
+    an 8 s per-request timeout, ≤8 in-flight boards, ≤100 cached boards, one
+    shared promise per entity, `?refresh=1` to bypass, `Cache-Control: no-store`,
+    and a failed refresh keeps the data already on screen. Clients re-validate a
+    payload with `validTeamBoard`/`validAthleteBoard` before replacing state.
+  - Verified: `npm run typecheck`, `npm run test:sports` 329/329 (300 existing
+    specs unchanged in behaviour, 29 new across parser, feed and two mounted
+    pages; the existing leader-card href expectations were updated to the native
+    routes and extended with an id-less case), `npm run build` with both routes
+    dynamic, `npx eslint` clean on every touched file, plus a live smoke of both
+    endpoints, both pages, a 404 competition, a 400 id and unchanged
+    `/sports`, `/sports/matches/epl/1` and `/`. Not verified here: live ESPN team,
+    roster, schedule and athlete payloads (no egress — see
+    [ESPN_ACCESS_DENIED.md](ESPN_ACCESS_DENIED.md)) and Playwright layout (no
+    Chromium binary).

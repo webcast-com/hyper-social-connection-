@@ -8,6 +8,8 @@ import ImageLightbox from './ImageLightbox';
 import { portraitFor } from '@/lib/player-portraits';
 import { anchorKey, anchorRef, leaderAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
 import type { SportsLeaderBoard, SportsLeaderRow, SportsLeaderSport } from '@/lib/espn-leaders';
+import { athleteHref } from '@/lib/espn-athlete';
+import { teamHref as teamPageHref } from '@/lib/espn-team';
 
 /**
  * Players & top scorers on the homepage, laid out as posts.
@@ -80,8 +82,16 @@ function LeaderPostCard({
   const [showLightbox, setShowLightbox] = useState(false);
 
   const hub = hubFor(sport);
-  const playerHref = `${hub}/player/${player.key}`;
-  const teamHref = `${hub}/team/${slugify(player.team || player.teamAbbr || player.name)}`;
+  // A player or team page is addressed by ESPN's own id. Where the leaders
+  // payload reported one, the card links there; where it did not, the dashboard's
+  // slug route stays as it was, because a name-derived id would open somebody
+  // else's profile.
+  const playerHref = player.athleteId
+    ? athleteHref({ league, athleteId: player.athleteId })
+    : `${hub}/player/${player.key}`;
+  const teamHref = player.teamId
+    ? teamPageHref({ league, teamId: player.teamId })
+    : `${hub}/team/${slugify(player.team || player.teamAbbr || player.name)}`;
   const photo = player.headshot ?? portraitFor(sport, player.name);
   const brokenPhoto = failedSource === photo;
   const crest = crestFor(player, sport);

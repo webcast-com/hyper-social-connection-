@@ -17,6 +17,13 @@ export type SportsLeaderSport = 'basketball' | 'football';
 
 export type SportsLeaderRow = {
   key: string;
+  /**
+   * ESPN's own ids, when the leaders payload reports them. They are what a
+   * player or team page is addressed by; both stay null rather than being
+   * derived from a name, so a card only links where ESPN identified the entity.
+   */
+  athleteId: string | null;
+  teamId: string | null;
   name: string;
   team: string;
   teamAbbr: string | null;
@@ -80,6 +87,13 @@ function findLeaderLists(node: unknown, out: { label: string; entries: unknown[]
   return out;
 }
 
+/** A provider entity id: digits, no leading zero, bounded. Numbers arrive too. */
+const entityIdOf = (value: unknown): string | null => {
+  const raw = typeof value === 'number' && Number.isFinite(value) ? String(value)
+    : typeof value === 'string' ? value.trim() : null;
+  return raw !== null && /^[1-9]\d{0,19}$/.test(raw) ? raw : null;
+};
+
 const teamLogoUrl = (team: Record<string, unknown>) => {
   const logos = asArray(team.logos);
   const first = logos[0] as Record<string, unknown> | undefined;
@@ -106,6 +120,8 @@ export function normalizeLeaders(payload: unknown, sport: SportsLeaderSport, lim
     seen.add(metric);
     rows.push({
       key: slugify(name),
+      athleteId: entityIdOf(athlete.id),
+      teamId: entityIdOf(team.id),
       name,
       team: String(team.displayName ?? '—'),
       teamAbbr: typeof team.abbreviation === 'string' ? team.abbreviation : null,

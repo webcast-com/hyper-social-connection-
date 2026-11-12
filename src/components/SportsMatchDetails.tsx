@@ -12,6 +12,8 @@ import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry, statisticShare } from '@/lib/sports-navigation';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { validMatchMetadata, type MatchBoard, type MatchLineup, type MatchPlayer } from '@/lib/espn-match';
+import { athleteHref } from '@/lib/espn-athlete';
+import { teamHref, validEntityId } from '@/lib/espn-team';
 import { browserMatchBoard } from '@/lib/espn-browser';
 
 const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table'], ['history', 'Form & H2H'], ['information', 'Match info'], ['insights', 'Predictions & odds']] as const;
@@ -25,7 +27,7 @@ function EmptySection({ children }: { children: React.ReactNode }) {
  * did not load. The photo is decorative — the name sits beside it — so a missing
  * CDN image drops the picture without hiding the player or shifting the row.
  */
-function LineupPlayer({ person }: { person: MatchPlayer }) {
+function LineupPlayer({ person, league }: { person: MatchPlayer; league: string }) {
   // Which photo failed, not whether the row is broken; the slot keeps its width either way.
   const [photoFailed, setPhotoFailed] = useState(false);
   const initials = person.name.split(/\s+/).filter(Boolean).slice(0, 2)
@@ -45,17 +47,23 @@ function LineupPlayer({ person }: { person: MatchPlayer }) {
       </span>
     )}
     <span className="w-7 shrink-0 text-gray-500">{person.jersey ?? '—'}</span>
-    <span className="min-w-0 break-words">{person.name}{person.position && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-500">Did not play</span>}</span>
+    {/* A listed player links to their own page only when ESPN reported a
+        numeric id for them; a name is never turned into one. */}
+    <span className="min-w-0 break-words">{validEntityId(person.id)
+      ? <Link href={athleteHref({ league, athleteId: person.id })} prefetch={false} className="font-semibold text-blue-600 hover:underline dark:text-blue-400">{person.name}</Link>
+      : person.name}{person.position && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-500">Did not play</span>}</span>
   </li>;
 }
-function Lineup({ lineup, name }: { lineup: MatchLineup; name: string }) {
+function Lineup({ lineup, name, league }: { lineup: MatchLineup; name: string; league: string }) {
   return <article className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
-    <h3 className="break-words font-bold">{name}</h3>
+    <h3 className="break-words font-bold">{validEntityId(lineup.teamId)
+      ? <Link href={teamHref({ league, teamId: lineup.teamId })} prefetch={false} className="inline-flex min-h-11 items-center text-blue-600 hover:underline dark:text-blue-400">{name}</Link>
+      : name}</h3>
     {lineup.formation && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Reported formation: {lineup.formation}</p>}
     {([[true, 'Starters'], [false, 'Non-starters'], [null, 'Listed players']] as const).map(([starter, label]) => {
       const people = lineup.players.filter((person) => person.starter === starter);
       return people.length ? <div key={label} className="mt-4"><h4 className="mb-2 text-xs font-bold uppercase text-blue-600 dark:text-blue-400">{label}</h4>
-        <ul className="space-y-2">{people.map((person) => <LineupPlayer key={person.id} person={person} />)}</ul>
+        <ul className="space-y-2">{people.map((person) => <LineupPlayer key={person.id} person={person} league={league} />)}</ul>
       </div> : null;
     })}
   </article>;
@@ -119,7 +127,9 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
         <p className="mt-2 break-words text-sm text-gray-600 dark:text-gray-300">{match.statusText ?? 'Status not reported'}{match.kickoff ? ` · ${formatPredictionKickoff(match.kickoff)}` : ''}</p>
         {match.venue && <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-400">{match.venue}</p>}
         <div className="mt-4 grid grid-cols-2 gap-3">{match.teams.map((team) => <div key={team.id} className="min-w-0 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900">
-          <p className="break-words text-sm font-bold">{team.name}</p>
+          <p className="break-words text-sm font-bold">{validEntityId(team.id)
+            ? <Link href={teamHref({ league: reference.league, teamId: team.id })} prefetch={false} className="text-blue-600 hover:underline dark:text-blue-400">{team.name}</Link>
+            : team.name}</p>
           {team.side && <p className="text-xs capitalize text-gray-500 dark:text-gray-400">{team.side}</p>}
           {match.state !== 'pre' && <p className="mt-2 break-all text-4xl font-black tabular-nums sm:text-5xl">{team.score ?? '—'}</p>}
         </div>)}</div>
@@ -143,7 +153,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
             </th>{match.teams.map((team, index) => <td key={team.id} className="break-all p-2 text-center tabular-nums">{values[index] ?? '—'}</td>)}</tr>;
           })}</tbody>
         </table></> : <EmptySection>Team statistics have not been provided by ESPN for this match yet.</EmptySection>)}
-        {section === 'lineups' && (match.lineups.length ? <div className="grid min-w-0 gap-3 md:grid-cols-2">{match.teams.map((team) => { const lineup = match.lineups.find((item) => item.teamId === team.id); return lineup ? <Lineup key={team.id} lineup={lineup} name={team.name} /> : <article key={team.id} className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700"><h3 className="break-words font-bold">{team.name}</h3><p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No roster reported for this team.</p></article>; })}</div> : <EmptySection>Lineups and rosters have not been provided by ESPN. Starting lineups are often published closer to kickoff.</EmptySection>)}
+        {section === 'lineups' && (match.lineups.length ? <div className="grid min-w-0 gap-3 md:grid-cols-2">{match.teams.map((team) => { const lineup = match.lineups.find((item) => item.teamId === team.id); return lineup ? <Lineup key={team.id} lineup={lineup} name={team.name} league={reference.league} /> : <article key={team.id} className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700"><h3 className="break-words font-bold">{team.name}</h3><p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No roster reported for this team.</p></article>; })}</div> : <EmptySection>Lineups and rosters have not been provided by ESPN. Starting lineups are often published closer to kickoff.</EmptySection>)}
         {section === 'players' && (match.playerStats.length ? <div className="space-y-5">{match.playerStats.map((group, index) => <div key={index} className="min-w-0">
           <h3 className="mb-2 break-words font-bold">{teamName(group.teamId)} · {group.label}</h3>
           <div role="region" aria-label={`${teamName(group.teamId)} ${group.label} statistics`} tabIndex={0} className="max-w-full overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700"><table className="w-full whitespace-nowrap text-sm">
