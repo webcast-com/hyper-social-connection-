@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { MatchDetails } from '@/lib/espn-match';
+import { teamHref, validEntityId } from '@/lib/espn-team';
 import type { StandingsBoard } from '@/lib/espn-standings';
 import { browserStandingsBoard } from '@/lib/espn-browser';
 
@@ -73,7 +75,10 @@ export function SportsLeagueTable({ match }: { match: MatchDetails }) {
           <thead className="bg-gray-100 dark:bg-slate-800 text-xs text-gray-600 dark:text-slate-300"><tr><th scope="col" className="px-3 py-3">Pos</th><th scope="col" className="sticky left-0 z-10 min-w-40 bg-gray-100 dark:bg-slate-800 px-3 py-3">Team</th>{group.columns.map((column) => <th key={column.name} scope="col" className="whitespace-nowrap px-3 py-3 text-right"><abbr title={column.description} className="no-underline">{column.label}</abbr></th>)}</tr></thead>
           <tbody>{group.rows.map((row) => {
             const involved = teams.includes(row.teamId); const background = involved ? 'bg-blue-50 dark:bg-sky-950' : 'bg-white dark:bg-slate-900';
-            return <tr key={row.teamId} className={`${background} border-t border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200`}><td className="px-3 py-3 tabular-nums">{row.rank ?? '—'}</td><th scope="row" className={`sticky left-0 z-10 max-w-52 px-3 py-3 font-medium ${background}`}><span className="flex items-center gap-2"><TeamCrest key={`${row.teamId}-${row.logo ?? 'missing'}`} url={row.logo} name={row.team} /><span className="min-w-0 break-words">{row.team}</span></span>{involved && <span className="mt-1 block text-xs text-blue-700 dark:text-sky-300">In this match</span>}{row.note && <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-slate-400">{row.note}</span>}</th>{group.columns.map((column) => <td key={column.name} className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{row.values[column.name] ?? '—'}</td>)}</tr>;
+            // A table row links to that team's own page only when ESPN reported a
+            // numeric id for it; a name is never turned into one.
+            const href = validEntityId(row.teamId) ? teamHref({ league: match.reference.league, teamId: row.teamId }) : null;
+            return <tr key={row.teamId} className={`${background} border-t border-gray-200 dark:border-slate-700 text-gray-800 dark:text-slate-200`}><td className="px-3 py-3 tabular-nums">{row.rank ?? '—'}</td><th scope="row" className={`sticky left-0 z-10 max-w-52 px-3 py-3 font-medium ${background}`}>{href ? <Link href={href} prefetch={false} className="flex min-w-0 items-center gap-2 hover:underline"><TeamCrest key={`${row.teamId}-${row.logo ?? 'missing'}`} url={row.logo} name={row.team} /><span className="min-w-0 break-words text-blue-600 dark:text-blue-400">{row.team}</span></Link> : <span className="flex items-center gap-2"><TeamCrest key={`${row.teamId}-${row.logo ?? 'missing'}`} url={row.logo} name={row.team} /><span className="min-w-0 break-words">{row.team}</span></span>}{involved && <span className="mt-1 block text-xs text-blue-700 dark:text-sky-300">In this match</span>}{row.note && <span className="mt-1 block text-xs font-normal text-gray-500 dark:text-slate-400">{row.note}</span>}</th>{group.columns.map((column) => <td key={column.name} className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{row.values[column.name] ?? '—'}</td>)}</tr>;
           })}</tbody>
         </table>
       </div>
