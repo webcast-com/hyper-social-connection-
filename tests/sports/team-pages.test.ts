@@ -7,11 +7,14 @@ import type { AthleteBoard } from '../../src/lib/espn-athlete';
 /**
  * The team and player pages, mounted.
  *
- * The parsers and feeds have their own specs; this is the wiring a reader meets:
- * the page asks this site's own endpoint, validates what comes back before it
- * replaces what is on screen, and lays out only what ESPN reported. A refused
- * part says which part is missing, and nothing here substitutes a sample squad,
- * record or biography.
+ * The parsers, feeds and the browser transport have their own specs; this is the
+ * wiring a reader meets. The pages are browser-first, so every spec here stubs
+ * ESPN as unreachable and lets the page fall back to this site's own endpoint —
+ * which is what a blocked browser shows. They assert that the page validates
+ * what comes back before replacing what is on screen, lays out only what ESPN
+ * reported, says which part is missing and which route answered it, and never
+ * substitutes a sample squad, record or biography. The one spec where ESPN does
+ * answer in the browser is at the end, and it never reaches this site's endpoint.
  */
 
 const teamReference = { league: 'epl', teamId: '359' };
@@ -82,7 +85,18 @@ async function mountTeam(respond: (url: string) => Response | Promise<Response>,
 
   const original = globalThis.fetch;
   const urls: string[] = [];
-  globalThis.fetch = ((input: any) => { urls.push(String(input)); return Promise.resolve(respond(String(input))); }) as typeof fetch;
+  globalThis.fetch = ((input: any) => {
+    const url = String(input);
+    urls.push(url);
+    // ESPN itself is refused here, as it is in this sandbox, so the page has to
+    // fall back to this site's own endpoint — which `respond` answers.
+    if (url.startsWith('/api/')) return Promise.resolve(respond(url));
+    return Promise.resolve(new Response('blocked', { status: 403 }));
+  }) as typeof fetch;
+  /** The calls made to this site's own endpoint, in order. */
+  const apiCalls = () => urls.filter((url) => url.startsWith('/api/'));
+  /** The ESPN URLs this browser tried before falling back. */
+  const espnCalls = () => urls.filter((url) => url.startsWith('https://'));
 
   // Let the mount effect's request settle before anything is asserted.
   const settle = async () => { await act(async () => { await new Promise((done) => setTimeout(done, 0)); }); };
@@ -92,6 +106,8 @@ async function mountTeam(respond: (url: string) => Response | Promise<Response>,
   return {
     ...mounted,
     urls,
+    apiCalls,
+    espnCalls,
     settle,
     container,
     text: () => container.textContent ?? '',
@@ -109,7 +125,12 @@ async function mountTeam(respond: (url: string) => Response | Promise<Response>,
 test('a team page asks this site\u2019s own endpoint and lays out only what ESPN reported', async () => {
   const page = await mountTeam(() => Response.json(readyTeam));
   try {
-    assert.deepEqual(page.urls, ['/api/sports/teams/epl/359'], 'one request, to this site\u2019s own team endpoint');
+    assert.deepEqual(page.espnCalls(), [
+      'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/359',
+      'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/359/schedule',
+      'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/teams/359/roster',
+    ], 'the three parts are asked of ESPN in this browser first');
+    assert.deepEqual(page.apiCalls(), ['/api/sports/teams/epl/359'], 'and of this site\u2019s own endpoint when ESPN refuses');
     assert.match(page.text(), /Arsenal/);
     assert.match(page.text(), /Record 12-3-2/);
     assert.match(page.text(), /3rd in Premier League/);
@@ -185,6 +206,7 @@ test('a team page says which part ESPN refused, and keeps the rest', async () =>
     assert.match(details.textContent, /the squad: not reported/);
     assert.match(details.textContent, /HTTP 403 · http/);
     assert.match(details.textContent, /team identity: reported/);
+    assert.match(details.textContent, /Asked by this site’s server/, 'the fallback says which route answered');
   } finally {
     await page.unmount();
   }
@@ -220,14 +242,18 @@ test('an unanswered team page holds no data and says no sample is substituted', 
 });
 
 test('a response about another team is rejected and the previous data is kept', async () => {
+  // The refresh answers with Chelsea's identity under Arsenal's reference. The
+  // transport refuses it as a broken response rather than as this team's data.
   const page = await mountTeam((url) => Response.json(url.includes('refresh=1') ? { ...readyTeam, team: { ...readyTeam.team, id: '364' } } : readyTeam));
   try {
     assert.match(page.text(), /Arsenal/);
     await page.click(page.button('Refresh details')!);
     await page.settle();
-    assert.deepEqual(page.urls, ['/api/sports/teams/epl/359', '/api/sports/teams/epl/359?refresh=1'], 'the refresh button bypasses the server cache');
-    assert.match(page.text(), /Could not load team details\. Keeping the previous data\. Please try again\./);
+    assert.deepEqual(page.apiCalls(), ['/api/sports/teams/epl/359', '/api/sports/teams/epl/359?refresh=1'], 'the refresh button bypasses the server cache');
+    assert.match(page.text(), /Unable to update team details\. Keeping the previous data\. Please try again\./);
     assert.match(page.text(), /Arsenal/, 'the data already on screen survives a bad response');
+    assert.ok(!page.text().includes('364'), 'the other team\u2019s identity is never rendered here');
+    assert.match(page.text(), /Asked by this browser/, 'and the page reports the route it did reach');
   } finally {
     await page.unmount();
   }
@@ -275,7 +301,14 @@ async function mountAthlete(respond: (url: string) => Response | Promise<Respons
 
   const original = globalThis.fetch;
   const urls: string[] = [];
-  globalThis.fetch = ((input: any) => { urls.push(String(input)); return Promise.resolve(respond(String(input))); }) as typeof fetch;
+  globalThis.fetch = ((input: any) => {
+    const url = String(input);
+    urls.push(url);
+    if (url.startsWith('/api/')) return Promise.resolve(respond(url));
+    return Promise.resolve(new Response('blocked', { status: 403 }));
+  }) as typeof fetch;
+  const apiCalls = () => urls.filter((url) => url.startsWith('/api/'));
+  const espnCalls = () => urls.filter((url) => url.startsWith('https://'));
   const settle = async () => { await act(async () => { await new Promise((done) => setTimeout(done, 0)); }); };
   await act(async () => { root.render(React.createElement(SportsAthleteDetails as never, { initial: initialAthlete, reference: athleteReference, returnTo: '/sports' } as never)); });
   await settle();
@@ -283,6 +316,8 @@ async function mountAthlete(respond: (url: string) => Response | Promise<Respons
   return {
     ...mounted,
     urls,
+    apiCalls,
+    espnCalls,
     settle,
     container,
     text: () => container.textContent ?? '',
@@ -300,7 +335,11 @@ async function mountAthlete(respond: (url: string) => Response | Promise<Respons
 test('a player page shows the reported biography, team link and statistics', async () => {
   const page = await mountAthlete(() => Response.json(readyAthlete));
   try {
-    assert.deepEqual(page.urls, ['/api/sports/athletes/nba/3945274']);
+    assert.deepEqual(page.espnCalls(), [
+      'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/athletes/3945274',
+      'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3945274',
+    ], 'both player endpoints are tried in this browser before falling back');
+    assert.deepEqual(page.apiCalls(), ['/api/sports/athletes/nba/3945274']);
     assert.match(page.text(), /Luka Dončić/);
     assert.match(page.text(), /#77 · PG · Active/);
     assert.match(page.text(), /ESPN · NBA/);
@@ -351,5 +390,54 @@ test('an unanswered player page says so, and a player without statistics shows n
     assert.match(noStats.text(), /LD/);
   } finally {
     await noStats.unmount();
+  }
+});
+
+test('a page ESPN answers in the browser never asks this site\u2019s endpoint', async () => {
+  // The smallest payloads the parsers accept: an identity that confirms its own
+  // id, a schedule with no events, a squad with no entries. Nothing is invented
+  // for the two empty parts — the page says ESPN reported none.
+  const espn = (url: string) => {
+    if (url.endsWith('/teams/359')) return Response.json({ team: { id: '359', displayName: 'Arsenal', abbreviation: 'ARS' } });
+    if (url.endsWith('/schedule')) return Response.json({ events: [] });
+    if (url.endsWith('/roster')) return Response.json({ roster: [] });
+    return new Response('blocked', { status: 403 });
+  };
+
+  const React = await import('react');
+  const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
+  const empty = { sport: 'basketball', league: 'nba', rows: [], status: 'live', source: { ok: true, url: '', httpStatus: 200 } };
+  const mounted = await mountBoard({ basketball: empty, football: empty });
+  const SportsTeamDetails = (await import('../../src/components/SportsTeamDetails')).default;
+  const { createRoot } = await import('react-dom/client');
+  const container = mounted.document.createElement('div');
+  mounted.document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = ((input: any) => { urls.push(String(input)); return Promise.resolve(espn(String(input))); }) as typeof fetch;
+  try {
+    await act(async () => { root.render(React.createElement(SportsTeamDetails as never, { initial: initialTeam, reference: teamReference, returnTo: '/sports' } as never)); });
+    await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
+
+    assert.equal(urls.filter((url) => url.startsWith('/api/')).length, 0, 'a browser that reaches ESPN needs no server round trip');
+    assert.equal(urls.filter((url) => url.startsWith('https://')).length, 3, 'the three parts, and only those');
+    const text = container.textContent ?? '';
+    assert.match(text, /Arsenal/);
+    assert.match(text, /Asked by this browser/);
+    assert.ok(!text.includes('Asked by this site\u2019s server'), 'no part needed the server');
+
+    // An empty schedule and an empty squad are reported as empty, not filled in.
+    const fixturesTab = [...container.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Fixtures & results')!;
+    await act(async () => { fixturesTab.click(); });
+    assert.match(container.textContent ?? '', /ESPN has not reported fixtures for this team/);
+    const squadTab = [...container.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Squad')!;
+    await act(async () => { squadTab.click(); });
+    assert.match(container.textContent ?? '', /ESPN has not reported a squad for this team/);
+    await act(() => root.unmount());
+  } finally {
+    globalThis.fetch = original;
+    container.remove();
+    await mounted.unmount();
   }
 });

@@ -22,6 +22,7 @@ It was built apart on purpose, and stays apart:
 | Route | `/sports/teams/{league}/{teamId}` | `/sports/athletes/{league}/{athleteId}` |
 | Component | `SportsTeamDetails` | `SportsAthleteDetails` |
 | Asks ESPN for | team info **+** `/schedule` **+** `/roster`, all three settled together | the site endpoint, then the common endpoint only if it must |
+| Transport | browser-first, server for whatever the browser could not reach | the same |
 | Statuses | `ready \| partial \| unavailable` | `ready \| unavailable` |
 | When ESPN is unreachable | empty board, per-part reasons; **no sample squad or fixtures** | empty board; **no sample biography or statistics** |
 
@@ -102,6 +103,37 @@ that team's page. Statistics are grouped as ESPN groups them, capped at
 that are really identifiers — the player's own name or id, or a bare ≥5-digit
 number. A category ESPN did not report is absent rather than zero.
 
+## How a page gets its data: browser-first, like a match page
+
+The server feed owns the first paint, the cache and the in-flight guard. Once the
+page mounts, `SportsTeamDetails` and `SportsAthleteDetails` load through
+`browserTeamBoard` / `browserAthleteBoard` in `src/lib/espn-browser.ts` — the same
+transport the scoreboard, match and league-table surfaces already use:
+
+1. **The reader's own browser asks ESPN first.** A team page asks all three parts
+   together; a player page asks the site endpoint and, only if it must, the common
+   one. When everything answers, this site's endpoint is never called.
+2. **Only what failed is asked of the server.** `/api/sports/teams/...` (or
+   `/api/sports/athletes/...`) is called once, and only the parts the browser could
+   not reach are taken from it. A part ESPN answered in the browser is never
+   replaced by a second opinion, and for a part neither route reached the server's
+   own explanation is kept when it has one.
+3. **Every part records its route.** `transport: 'browser' | 'server'` on each
+   source, printed in the diagnostics panel as "Asked by this browser" / "Asked by
+   this site's server". The ESPN URL is identical either way, so without the label
+   a reader could not tell who answered — and a page that says "not reported"
+   should be able to say who was asked.
+4. **A broken server route is not an ESPN outage.** A 404/500 from `/api/sports/...`
+   itself with nothing from the browser throws `SportsApiError`, and the component
+   keeps the data already on screen. With at least one part from the browser, the
+   page keeps what ESPN answered and reports the rest as refused.
+
+Both routes build their board through the same `teamBoardOf` / `athleteBoardOf`
+assembler in the parser modules, so the browser and the server cannot disagree
+about a page's shape or its status. `?refresh=1` is passed through to the server
+fallback when the page's own Refresh button is used. See
+[ESPN_BROWSER_TRANSPORT.md](ESPN_BROWSER_TRANSPORT.md).
+
 ## Bounds and caching
 
 Both feeds: `READY_TTL` 300 s, `FAILURE_TTL` 15 s (so a refused page is not
@@ -142,12 +174,12 @@ which report no ids — renders exactly as it did before this change.
 
 ## Verified
 
-`npm run typecheck` 0 · `npm run test:sports` **329/329** (300 existing specs
-unchanged in behaviour; 29 new across `team-detail`, `athlete-detail`,
-`team-athlete-feed` and `team-pages`, the last mounting both components in the
-jsdom harness) · `npm run build` 0, both routes present as dynamic ·
-`npx eslint` on every touched file 0 errors (two pre-existing `<img>` warnings) ·
-live smoke on the dev server: `/api/sports/teams/epl/359` and
+`npm run typecheck` 0 · `npm run test:sports` **344/344** (300 existing specs
+unchanged in behaviour; 44 new across `team-detail`, `athlete-detail`,
+`team-athlete-feed`, `team-athlete-browser` and `team-pages`, the last mounting
+both components in the jsdom harness) · `npm run build` 0, both routes present as
+dynamic · `npx eslint` on every touched file 0 errors (two pre-existing `<img>`
+warnings) · live smoke on the dev server: `/api/sports/teams/epl/359` and
 `/api/sports/athletes/nba/3945274` → 200 with an honest `unavailable` board and
 per-part `network` sources, `/api/sports/teams/not-a-league/359` → 404,
 `/api/sports/teams/epl/abc` and `/0359` → 400, both pages → 200, a bad id or
@@ -160,3 +192,11 @@ this sandbox has no egress to `site.api.espn.com`, `site.web.api.espn.com` or
 runs against fixtures, and which competitions actually publish rosters, common-
 endpoint-only players or CDN headshots is unconfirmed. Playwright layout was not
 run (no Chromium binary).
+
+Because these pages are browser-first, that gap closes in a real browser: the
+preview's own dev log shows the scoreboard transport reaching ESPN directly for
+most catalog competitions and asking the server only for the few that failed, so
+a reader whose browser can reach ESPN will see these pages filled from ESPN
+rather than from the server fallback. What still needs a human eye is which
+competitions publish a roster, which players exist only on the common endpoint,
+and whether CDN headshots appear only for the NBA and the NFL.

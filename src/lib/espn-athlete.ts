@@ -14,7 +14,7 @@
 import type { EspnLeague } from './sports-catalog';
 import { ESPN_LEAGUES } from './sports-catalog';
 import type { EspnEndpointDetails } from './espn-endpoints';
-import { athletePortrait, entityLinks, safeExternalUrl, teamCrest, validEntityId, type TeamLink } from './espn-team';
+import { athletePortrait, cdnPortraits, entityLinks, safeExternalUrl, teamCrest, validEntityId, type TeamLink } from './espn-team';
 
 export class AthleteInputError extends Error {
   constructor(message: string, readonly httpStatus: number) {
@@ -229,7 +229,40 @@ export function parseAthlete(payload: unknown, meta: EspnLeague, reference: Athl
 }
 
 /** `error` is present only when the endpoint did not report the player. */
-export type AthleteSource = EspnEndpointDetails & { ok: boolean; error?: string };
+/**
+ * One endpoint attempt's report. `transport` says which route answered — the
+ * reader's own browser or this site's server — because both ask the same ESPN
+ * URL and the difference is worth recording. The server feed leaves it unset.
+ */
+export type AthleteSource = EspnEndpointDetails & {
+  ok: boolean;
+  error?: string;
+  transport?: 'browser' | 'server';
+};
+
+/**
+ * One board from the attempts that were made — the single place the player
+ * board's shape and status are decided, so the server feed and the browser
+ * transport cannot drift apart. A player ESPN reported nowhere is `unavailable`,
+ * never a sample biography.
+ */
+export function athleteBoardOf(
+  meta: EspnLeague,
+  reference: AthleteReference,
+  athlete: AthleteDetail | null,
+  sources: AthleteSource[],
+): AthleteBoard {
+  return {
+    reference,
+    leagueName: meta.name,
+    sport: meta.kind,
+    portraitsFromCdn: cdnPortraits(meta),
+    athlete,
+    status: athlete ? 'ready' : 'unavailable',
+    fetchedAt: new Date().toISOString(),
+    sources,
+  };
+}
 
 export type AthleteBoard = {
   reference: AthleteReference;

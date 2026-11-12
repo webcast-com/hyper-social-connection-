@@ -13,8 +13,7 @@
  * board and the page says ESPN did not report this player.
  */
 import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnErrorMessage, espnFailureDetails, espnResponseMetadata } from './espn-endpoints';
-import { parseAthlete, resolveAthlete, type AthleteBoard, type AthleteDetail, type AthleteSource } from './espn-athlete';
-import { cdnPortraits } from './espn-team';
+import { athleteBoardOf, parseAthlete, resolveAthlete, type AthleteBoard, type AthleteDetail, type AthleteSource } from './espn-athlete';
 
 const READY_TTL = 300_000;
 const FAILURE_TTL = 15_000;
@@ -64,16 +63,9 @@ async function fetchAthlete(league: string, athleteId: string): Promise<AthleteB
     }
   }
 
-  return {
-    reference,
-    leagueName: meta.name,
-    sport: meta.kind,
-    portraitsFromCdn: cdnPortraits(meta),
-    athlete,
-    status: athlete ? 'ready' : 'unavailable',
-    fetchedAt: new Date().toISOString(),
-    sources,
-  };
+  // The board's shape and status come from the one assembler the browser
+  // transport uses too, so the two routes cannot disagree about a player page.
+  return athleteBoardOf(meta, reference, athlete, sources);
 }
 
 /** One player's detail, with bounded shared cache and no fabricated biography. */

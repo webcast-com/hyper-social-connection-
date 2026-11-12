@@ -63,7 +63,11 @@ const clipMedia = (clip: SportsHighlightClip): LinkMedia | null =>
       }
     : null;
 
-function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
+/**
+ * One clip as a post card. Exported for the highlights page, which lays the same
+ * cards out full-width with filters; the homepage feed below is unchanged.
+ */
+export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
   clip: SportsHighlightClip;
   /** Null on a sample board: placeholder clips get no post to engage with. */
   anchor: SportsAnchorRef | null;
