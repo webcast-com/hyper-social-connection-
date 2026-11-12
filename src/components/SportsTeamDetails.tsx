@@ -10,6 +10,7 @@ import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { matchHref } from '@/lib/espn-match';
 import { athleteHref } from '@/lib/espn-athlete';
 import { teamHref, validEntityId, validTeamBoard, type TeamBoard, type TeamFixture, type TeamRosterEntry, type TeamSide } from '@/lib/espn-team';
+import { browserTeamBoard } from '@/lib/espn-browser';
 
 /**
  * One team's page: identity, fixtures and squad.
@@ -18,13 +19,23 @@ import { teamHref, validEntityId, validTeamBoard, type TeamBoard, type TeamFixtu
  * match details card, the league table or the leaders board, and none of them
  * render it. The only thing they share is where a link points.
  *
- * Data arrives from this site's own endpoint rather than a direct browser call
- * to ESPN, so the server feed owns the cache, the timeout and the honest
- * reporting of which part of the page ESPN answered. The board is validated
- * before it replaces what is on screen, a failed refresh keeps the previous
- * data, and nothing here substitutes a sample squad: when ESPN does not report
- * a part, that part says so.
+ * Data arrives browser-first, exactly as the match details card does: this
+ * reader's own browser asks ESPN for the three parts of the page, and whatever
+ * it could not reach is asked of this site's own endpoint, which has the
+ * server's cache, timeout and egress. `browserTeamBoard` reports which route
+ * answered each part, the board is validated before it replaces what is on
+ * screen, a failed refresh keeps the previous data, and nothing here
+ * substitutes a sample squad: when ESPN does not report a part, that part says
+ * so whichever route was used.
  */
+
+/**
+ * Which route answered a part. Both ask the same ESPN URL, so the label is the
+ * only way a reader can tell; a board this page was rendered with came from the
+ * server feed, which records no transport of its own.
+ */
+const transportLabel = (transport: 'browser' | 'server' | undefined) =>
+  transport === 'browser' ? 'Asked by this browser' : 'Asked by this site’s server';
 
 const sections = [['overview', 'Overview'], ['fixtures', 'Fixtures & results'], ['squad', 'Squad']] as const;
 type Section = typeof sections[number][0];
@@ -136,13 +147,8 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
     const controller = new AbortController();
     request.current = controller; setLoading(true); setError('');
     try {
-      const response = await fetch(`/api/sports/teams/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.teamId)}${force ? '?refresh=1' : ''}`, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error(`Team details HTTP ${response.status}`);
-      const next = await response.json() as TeamBoard;
+      // ESPN in this browser first, this site's endpoint for whatever failed.
+      const next = await browserTeamBoard(reference, controller.signal, force);
       if (!validTeamBoard(next, reference)) throw new Error('Invalid team response');
       if (controller.signal.aborted) return;
       if (next.status === 'unavailable' && board.team) {
@@ -286,6 +292,7 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
       <ul className="mt-2 space-y-2">{sources.map((source) => <li key={`${source.part}-${source.url}`} className="min-w-0">
         <p className="break-words font-semibold capitalize">{partLabel(source.part)}: {source.ok ? 'reported' : 'not reported'}</p>
         <p className="break-words">{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`}{source.errorKind ? ` · ${source.errorKind}` : ''}{source.error ? ` · ${source.error}` : ''}</p>
+        <p className="break-words">{transportLabel(source.transport)}</p>
         <EspnResponseDetails metadata={source.responseMetadata} />
         <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>
       </li>)}</ul>

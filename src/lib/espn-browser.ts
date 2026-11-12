@@ -1,7 +1,20 @@
 /** Browser-first ESPN access for Hyper Sports. Catalog-backed URLs only; the
- * same-origin APIs remain the fallback when a browser blocks ESPN/CORS. */
+ * same-origin APIs remain the fallback when a browser blocks ESPN/CORS.
+ *
+ * Scoreboards, a match, a league table, one team and one player all follow the
+ * same rule: the reader's own browser asks ESPN first, and whatever it could not
+ * reach is asked of this site's server, whose explanation is kept for the parts
+ * that failed. Nothing here invents data for a part neither route answered. */
 import { ESPN_LEAGUES, SPORTS_CORE_LEAGUES, type EspnLeague } from './sports-catalog';
-import { espnSportsScoreboardUrl, espnFailureDetails, EspnEndpointError } from './espn-endpoints';
+import { espnSportsScoreboardUrl, espnFailureDetails, espnErrorMessage, EspnEndpointError } from './espn-endpoints';
+import {
+  parseTeamFixtures, parseTeamInfo, parseTeamRoster, resolveTeam, teamBoardOf, validTeamBoard,
+  type TeamBoard, type TeamFixture, type TeamIdentity, type TeamPart, type TeamReference, type TeamRosterEntry, type TeamSource,
+} from './espn-team';
+import {
+  athleteBoardOf, parseAthlete, resolveAthlete, validAthleteBoard,
+  type AthleteBoard, type AthleteDetail, type AthleteReference, type AthleteSource,
+} from './espn-athlete';
 import { parseEspnEvents } from './espn';
 import { parseMatchDetails, resolveMatch, type MatchBoard, type MatchReference } from './espn-match';
 import { isStandingsBoard, parseStandings, resolveStandings, type StandingsBoard } from './espn-standings';
@@ -231,4 +244,121 @@ export async function browserStandingsBoard(league: string, season: number | nul
     if (!isStandingsBoard(result, league, season)) throw new Error('Invalid standings response');
     return result;
   }
+}
+
+/** One part of a team page, fetched in the browser and reported either way. */
+async function browserTeamPart<T>(
+  url: string,
+  part: TeamSource['part'],
+  parse: (payload: unknown) => T,
+  empty: T,
+  signal?: AbortSignal,
+): Promise<TeamPart<T>> {
+  try {
+    const response = await requestJson(url, signal);
+    try {
+      // A payload about a different team throws in the parser and is reported as
+      // an invalid response rather than rendered under this team's name.
+      return { source: { ok: true, part, url, httpStatus: response.status, transport: 'browser' }, value: parse(response.data) };
+    } catch (error) {
+      return { source: { ok: false, part, url, httpStatus: response.status, errorKind: 'invalid-response', error: espnErrorMessage(error), transport: 'browser' }, value: empty };
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return { source: { ok: false, part, ...espnFailureDetails(error, url), transport: 'browser' }, value: empty };
+  }
+}
+
+/**
+ * For a part the browser could not reach, the server's answer wins when it has
+ * one and its explanation wins when it does not — the same rule the scoreboard
+ * transport uses per league. A part ESPN answered in the browser is never
+ * replaced, so a working browser is not made slower by a second opinion.
+ */
+function mergeTeamPart<T>(browser: TeamPart<T>, serverValue: T | undefined, serverSource: TeamSource | undefined): TeamPart<T> {
+  if (browser.source.ok || !serverSource) return browser;
+  if (!serverSource.ok || serverValue === undefined) return { source: { ...serverSource, part: browser.source.part, transport: 'server' }, value: browser.value };
+  return { source: { ...serverSource, part: browser.source.part, transport: 'server' }, value: serverValue };
+}
+
+/**
+ * One team's page, browser-first: identity, `/schedule` and `/roster` are asked
+ * of ESPN together, and only the parts that failed are asked of
+ * `/api/sports/teams/...`. A missing app route with nothing from the browser is
+ * a deployment problem, so it is thrown rather than reported as an ESPN outage.
+ */
+export async function browserTeamBoard(reference: TeamReference, signal?: AbortSignal, force = false): Promise<TeamBoard> {
+  const { meta, reference: resolved, urls } = resolveTeam(reference.league, reference.teamId);
+  const [info, schedule, roster] = await Promise.all([
+    browserTeamPart<TeamIdentity | null>(urls.info, 'info', (payload) => parseTeamInfo(payload, resolved), null, signal),
+    browserTeamPart<TeamFixture[]>(urls.schedule, 'schedule', (payload) => parseTeamFixtures(payload, resolved), [], signal),
+    browserTeamPart<TeamRosterEntry[]>(urls.roster, 'roster', (payload) => parseTeamRoster(payload, meta), [], signal),
+  ]);
+  if (info.source.ok && schedule.source.ok && roster.source.ok) return teamBoardOf(meta, resolved, { info, schedule, roster });
+
+  const browserGotSomething = info.source.ok || schedule.source.ok || roster.source.ok;
+  let server: TeamBoard | null = null;
+  try {
+    const result = await serverJson(`/api/sports/teams/${encodeURIComponent(resolved.league)}/${encodeURIComponent(resolved.teamId)}${force ? '?refresh=1' : ''}`, signal);
+    // A response that fails validation is a broken response, not this team's data.
+    if (validTeamBoard(result, resolved)) server = result as TeamBoard;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error instanceof SportsApiError && !browserGotSomething) throw error;
+  }
+  const serverPart = (part: TeamSource['part']) => server?.sources.find((source) => source.part === part);
+  return teamBoardOf(meta, resolved, {
+    info: mergeTeamPart(info, server?.team ?? undefined, serverPart('info')),
+    schedule: mergeTeamPart(schedule, server?.fixtures, serverPart('schedule')),
+    roster: mergeTeamPart(roster, server?.roster, serverPart('roster')),
+  });
+}
+
+/**
+ * One player's page, browser-first: the site endpoint ESPN.com itself reads,
+ * then the common v3 endpoint only if it must — sequentially, never both — and
+ * this site's own endpoint when neither answered in the browser.
+ */
+export async function browserAthleteBoard(reference: AthleteReference, signal?: AbortSignal, force = false): Promise<AthleteBoard> {
+  const { meta, reference: resolved, urls } = resolveAthlete(reference.league, reference.athleteId);
+  const sources: AthleteSource[] = [];
+  let athlete: AthleteDetail | null = null;
+
+  for (const url of [urls.site, urls.common]) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    try {
+      const response = await requestJson(url, signal);
+      try {
+        athlete = parseAthlete(response.data, meta, resolved);
+        sources.push({ ok: true, url, httpStatus: response.status, transport: 'browser' });
+        break;
+      } catch (error) {
+        sources.push({ ok: false, url, httpStatus: response.status, errorKind: 'invalid-response', error: espnErrorMessage(error), transport: 'browser' });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      sources.push({ ok: false, ...espnFailureDetails(error, url), transport: 'browser' });
+    }
+  }
+  if (athlete) return athleteBoardOf(meta, resolved, athlete, sources);
+
+  try {
+    const result = await serverJson(`/api/sports/athletes/${encodeURIComponent(resolved.league)}/${encodeURIComponent(resolved.athleteId)}${force ? '?refresh=1' : ''}`, signal);
+    if (validAthleteBoard(result, resolved)) {
+      const board = result as AthleteBoard;
+      // The server reached a player the browser could not: its board is the
+      // answer, labelled with the route that produced it.
+      if (board.athlete) return { ...board, sources: board.sources.map((source) => ({ ...source, transport: 'server' as const })) };
+      // Neither route found this player. Where the server explains the same
+      // endpoint's refusal, keep its explanation; otherwise keep the browser's.
+      return athleteBoardOf(meta, resolved, null, sources.map((source) => {
+        const serverSource = board.sources.find((candidate) => candidate.url === source.url);
+        return serverSource && !serverSource.ok ? { ...serverSource, transport: 'server' as const } : source;
+      }));
+    }
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error instanceof SportsApiError) throw error;
+  }
+  return athleteBoardOf(meta, resolved, null, sources);
 }

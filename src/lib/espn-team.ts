@@ -386,7 +386,53 @@ export function parseTeamRoster(payload: unknown, meta: EspnLeague, limit = 60):
 }
 
 /** `error` is present only when a part was not reported, as `espnFailureDetails` returns it. */
-export type TeamSource = EspnEndpointDetails & { ok: boolean; part: 'info' | 'schedule' | 'roster'; error?: string };
+/**
+ * One part's report. `transport` says which route answered it — the reader's own
+ * browser talking to ESPN directly, or this site's server — because the ESPN URL
+ * is the same either way and a page should not be mysterious about it. The
+ * server feed leaves it unset; the browser transport sets it on every part.
+ */
+export type TeamSource = EspnEndpointDetails & {
+  ok: boolean;
+  part: 'info' | 'schedule' | 'roster';
+  error?: string;
+  transport?: 'browser' | 'server';
+};
+
+/** One settled part: what ESPN said, and what it is worth on the page. */
+export type TeamPart<T> = { source: TeamSource; value: T };
+
+/**
+ * One board from three settled parts — the single place the team board's shape
+ * and status are decided, so the server feed and the browser transport cannot
+ * drift apart. The status counts the parts ESPN answered: `ready` when all three
+ * did, `partial` when some did, `unavailable` when none did. There is no fourth
+ * value and no sample team behind any of them.
+ */
+export function teamBoardOf(
+  meta: EspnLeague,
+  reference: TeamReference,
+  parts: {
+    info: TeamPart<TeamIdentity | null>;
+    schedule: TeamPart<TeamFixture[]>;
+    roster: TeamPart<TeamRosterEntry[]>;
+  },
+): TeamBoard {
+  const sources = [parts.info.source, parts.schedule.source, parts.roster.source];
+  const answered = sources.filter((source) => source.ok).length;
+  return {
+    reference,
+    leagueName: meta.name,
+    sport: meta.kind,
+    portraitsFromCdn: cdnPortraits(meta),
+    team: parts.info.value,
+    fixtures: parts.schedule.value,
+    roster: parts.roster.value,
+    status: answered === 0 ? 'unavailable' : answered === sources.length ? 'ready' : 'partial',
+    fetchedAt: new Date().toISOString(),
+    sources,
+  };
+}
 
 export type TeamBoard = {
   reference: TeamReference;

@@ -234,3 +234,46 @@
     roster, schedule and athlete payloads (no egress — see
     [ESPN_ACCESS_DENIED.md](ESPN_ACCESS_DENIED.md)) and Playwright layout (no
     Chromium binary).
+
+- Phase 17: Team and player pages become browser-first ✅
+  Constraint: the new detail pages should be **clickable with real data in the
+  preview**, which the server route alone cannot deliver from a sandbox with no
+  ESPN egress. Solution: give them the transport the scoreboard, match and
+  league-table surfaces already use, leaving the server feed and its endpoints
+  exactly as they were. See
+  [ESPN_BROWSER_TRANSPORT.md](ESPN_BROWSER_TRANSPORT.md) and
+  [ESPN_TEAM_ATHLETE_DETAILS.md](ESPN_TEAM_ATHLETE_DETAILS.md).
+
+  - `browserTeamBoard` asks ESPN for a team's three parts together and calls
+    `/api/sports/teams/...` **once** only when some part failed, taking just the
+    failed parts from it. A part ESPN answered in the browser is never replaced by
+    a second opinion, and for a part neither route reached the server's own
+    explanation is kept — the rule the scoreboard transport already follows per
+    competition.
+  - `browserAthleteBoard` keeps the two-endpoint order (site, then common only if
+    it must) in the browser and falls back to `/api/sports/athletes/...` when
+    neither answered, accepting a server board only if it passes
+    `validAthleteBoard` for the same reference.
+  - Every source now carries `transport: 'browser' | 'server'`, printed in both
+    pages' diagnostics panels. The ESPN URL is identical for both routes, so
+    without the label a reader could not tell who answered — and a page that says
+    "not reported" should be able to say who was asked.
+  - Both routes build their board through one shared assembler (`teamBoardOf`,
+    `athleteBoardOf`) in the parser modules, so the browser and the server cannot
+    drift apart on a page's shape or its status; the server feeds were refactored
+    onto it with no behaviour change.
+  - A broken server route with nothing from the browser throws `SportsApiError` (a
+    deployment problem, not an ESPN outage) and the component keeps the data on
+    screen; with at least one part from the browser the page keeps what ESPN
+    answered. Cancellation is never reported as an unavailable board, and an
+    already-aborted request runs no fallback at all. `?refresh=1` is passed through
+    to the server fallback for a manual refresh.
+  - Verified: `npm run typecheck`, `npm run test:sports` 344/344 (15 new: 14 for
+    the transport — direct success with no server call, per-part merge, refresh
+    passthrough, server explanation preferred, broken route thrown or tolerated,
+    wrong-entity refusal, cancellation, bad ids never reaching the network, and
+    the player endpoint order — plus one mounted spec proving a page ESPN answers
+    in the browser never asks this site's endpoint), `npm run build`, `npx eslint`
+    clean on every touched file, and a live smoke of both pages plus unchanged
+    `/sports`, `/sports/matches/epl/1` and `/`. Not verified here: live ESPN
+    payloads (no sandbox egress) and Playwright layout (no Chromium binary).

@@ -13,14 +13,15 @@
  */
 import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnErrorMessage, espnFailureDetails, espnResponseMetadata } from './espn-endpoints';
 import {
-  cdnPortraits,
   parseTeamFixtures,
   parseTeamInfo,
   parseTeamRoster,
   resolveTeam,
+  teamBoardOf,
   type TeamBoard,
   type TeamFixture,
   type TeamIdentity,
+  type TeamPart,
   type TeamRosterEntry,
   type TeamSource,
 } from './espn-team';
@@ -36,7 +37,7 @@ const cache = new Map<string, { at: number; board: TeamBoard }>();
 const pending = new Map<string, Promise<TeamBoard>>();
 
 /** One part of the page: fetch, parse, and report what happened either way. */
-async function readPart<T>(url: string, part: TeamSource['part'], parse: (payload: unknown) => T, empty: T): Promise<{ source: TeamSource; value: T }> {
+async function readPart<T>(url: string, part: TeamSource['part'], parse: (payload: unknown) => T, empty: T): Promise<TeamPart<T>> {
   const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   let httpStatus: number | null = null;
   try {
@@ -71,20 +72,9 @@ async function fetchTeam(league: string, teamId: string): Promise<TeamBoard> {
     readPart<TeamRosterEntry[]>(urls.roster, 'roster', (payload) => parseTeamRoster(payload, meta), []),
   ]);
 
-  const sources = [info.source, schedule.source, roster.source];
-  const answered = sources.filter((source) => source.ok).length;
-  return {
-    reference,
-    leagueName: meta.name,
-    sport: meta.kind,
-    portraitsFromCdn: cdnPortraits(meta),
-    team: info.value,
-    fixtures: schedule.value,
-    roster: roster.value,
-    status: answered === 0 ? 'unavailable' : answered === sources.length ? 'ready' : 'partial',
-    fetchedAt: new Date().toISOString(),
-    sources,
-  };
+  // The board's shape and status come from the one assembler the browser
+  // transport uses too, so the two routes cannot disagree about a team page.
+  return teamBoardOf(meta, reference, { info, schedule, roster });
 }
 
 /** One team's detail, with bounded shared cache and no fabricated data. */

@@ -4,7 +4,7 @@ The Sports, NBA and NFL **Hyper** scoreboard pages start with a loading state in
 
 If browser access fails or returns invalid data, the existing `/api/sports` server feed is requested for the failed leagues, and only those leagues with successful server responses are merged. A league the browser could not reach keeps the server's own explanation (HTTP status and metadata) when it has one. ESPN successes from either route are retained; demo fixtures are not mixed into live scores. When both routes are unavailable the existing clearly marked sample fallback or an error is shown, and a refresh does not replace previously loaded ESPN games with samples. Diagnostics indicate browser/server transport when available. The server fallback deadline scales with the number of competitions it must cover, and a 404 from `/api/sports` itself is reported as a deployment problem rather than an ESPN outage. Scores refresh every 45 seconds when the page is visible.
 
-On a Hyper match page the browser likewise tries the ESPN summary first, then `/api/sports/matches/...`; the League table tries ESPN standings first, then `/api/sports/standings/...`. Existing parsers, validation, cancellation, unknown-value handling and server routes remain in place. Match metadata is now generic and noindex because the server no longer fetches a match before the browser loads. History, odds/insights, the homepage sports widget and standalone ScoreHub still use their existing server-backed paths; this change does not alter the separate NFL–NBA dashboard or its endpoints. The native team and player detail pages are server-backed too — their browser components call only this site's own `/api/sports/teams/...` and `/api/sports/athletes/...` endpoints and never ESPN directly (see [ESPN_TEAM_ATHLETE_DETAILS.md](ESPN_TEAM_ATHLETE_DETAILS.md)).
+On a Hyper match page the browser likewise tries the ESPN summary first, then `/api/sports/matches/...`; the League table tries ESPN standings first, then `/api/sports/standings/...`. Existing parsers, validation, cancellation, unknown-value handling and server routes remain in place. Match metadata is now generic and noindex because the server no longer fetches a match before the browser loads. History, odds/insights, the homepage sports widget and standalone ScoreHub still use their existing server-backed paths; this change does not alter the separate NFL–NBA dashboard or its endpoints. The native team and player detail pages are browser-first too, on the same rule and with the same fallbacks — see [Team and player detail pages](#team-and-player-detail-pages) below and [ESPN_TEAM_ATHLETE_DETAILS.md](ESPN_TEAM_ATHLETE_DETAILS.md).
 
 Browser success depends on the user's network, ESPN availability and CORS; a successful mocked test or accessible browser in one location does not prove production availability for all visitors. A blocked browser and blocked server cannot be worked around by this fallback.
 
@@ -76,3 +76,42 @@ League standings stay on the match page and always follow the competition of the
 match that was opened from the filtered board, together with the season ESPN
 reported for that match. No fixed league table is substituted, and the section
 states which competition's table is shown.
+
+## Team and player detail pages
+
+`/sports/teams/{league}/{teamId}` and `/sports/athletes/{league}/{athleteId}` follow
+the same rule as a match page, through `browserTeamBoard` and `browserAthleteBoard`
+in `espn-browser.ts`:
+
+- **A team page** asks ESPN for its three parts together — team info, `/schedule`
+  and `/roster` — with the shared per-request deadline, retry-on-transient and
+  cancellation behaviour. When all three answer, this site's endpoint is never
+  called. When any part fails, `/api/sports/teams/{league}/{teamId}` is asked once
+  and only the failed parts are taken from it: a part ESPN answered in the browser
+  is never replaced by a second opinion. For a part neither route reached, the
+  server's own explanation is kept when it has one, exactly as the scoreboard
+  transport keeps the server's explanation per competition.
+- **A player page** asks the site endpoint first and the common v3 endpoint only if
+  it must, then `/api/sports/athletes/{league}/{athleteId}` when neither answered.
+  A server board is accepted only if it passes `validAthleteBoard` for the same
+  reference, so a payload about another player is dropped rather than rendered.
+- `?refresh=1` is passed through to the server fallback when the page's own Refresh
+  button is used, so a manual refresh still bypasses the server cache.
+- Every part carries `transport: 'browser' | 'server'`, and both pages' diagnostics
+  panel prints it ("Asked by this browser" / "Asked by this site's server"). The
+  ESPN URL is identical for both routes, so without the label a reader could not
+  tell which one answered, and a page that says "not reported" should be able to
+  say who was asked.
+- A broken server route (a 404/500 from `/api/sports/...` itself) with nothing from
+  the browser is thrown as `SportsApiError` — a deployment problem, not an ESPN
+  outage — and the component keeps the data already on screen. With at least one
+  part from the browser, the same broken route is not thrown: the page keeps what
+  ESPN answered and reports the rest as refused.
+- Cancellation is never reported as an unavailable board, and an already-aborted
+  request runs no server fallback at all.
+
+The server feed (`espn-team-feed.ts`, `espn-athlete-feed.ts`) is unchanged and still
+owns the cache, the in-flight guard and the server-rendered first paint; the browser
+transport only changes what happens after the page mounts. Both routes build their
+board through the same `teamBoardOf` / `athleteBoardOf` assembler in the parser
+modules, so the two cannot disagree about a page's shape or its status.

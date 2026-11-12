@@ -9,6 +9,7 @@ import { competitionCountry } from '@/lib/sports-navigation';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { teamHref, validEntityId } from '@/lib/espn-team';
 import { validAthleteBoard, type AthleteBoard } from '@/lib/espn-athlete';
+import { browserAthleteBoard } from '@/lib/espn-browser';
 
 /**
  * One player's page: biography, team and the season statistics ESPN reports.
@@ -17,11 +18,19 @@ import { validAthleteBoard, type AthleteBoard } from '@/lib/espn-athlete';
  * leaders board, the match lineups or the highlights feed renders it, and it
  * renders none of them. They only agree on where a link points.
  *
+ * Data arrives browser-first, exactly as the team page does: this reader's own
+ * browser asks ESPN's site endpoint and, only if it must, the common endpoint,
+ * and this site's own endpoint is asked when neither answered.
+ *
  * Statistics are shown exactly as ESPN grouped and labelled them, bounded to a
  * few groups and a few rows, and a category that cannot be read is dropped
  * rather than padded. There is no sample biography: an unanswered request says
- * ESPN did not report this player.
+ * ESPN did not report this player, whichever route was used.
  */
+
+/** Which route answered: both ask the same ESPN URL. */
+const transportLabel = (transport: 'browser' | 'server' | undefined) =>
+  transport === 'browser' ? 'Asked by this browser' : 'Asked by this site’s server';
 
 const sections = [['overview', 'Overview'], ['stats', 'Season statistics']] as const;
 type Section = typeof sections[number][0];
@@ -68,13 +77,8 @@ export default function SportsAthleteDetails({ initial, reference, returnTo }: {
     const controller = new AbortController();
     request.current = controller; setLoading(true); setError('');
     try {
-      const response = await fetch(`/api/sports/athletes/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.athleteId)}${force ? '?refresh=1' : ''}`, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error(`Player details HTTP ${response.status}`);
-      const next = await response.json() as AthleteBoard;
+      // ESPN in this browser first, this site's endpoint when it could not reach.
+      const next = await browserAthleteBoard(reference, controller.signal, force);
       if (!validAthleteBoard(next, reference)) throw new Error('Invalid player response');
       if (controller.signal.aborted) return;
       if (next.status === 'unavailable' && board.athlete) {
@@ -206,6 +210,7 @@ export default function SportsAthleteDetails({ initial, reference, returnTo }: {
       <summary className="min-h-11 cursor-pointer font-semibold">ESPN player feed details</summary>
       <ul className="mt-2 space-y-2">{sources.map((source) => <li key={source.url} className="min-w-0">
         <p className="break-words">{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`}{source.errorKind ? ` · ${source.errorKind}` : ''}{source.error ? ` · ${source.error}` : ''}</p>
+        <p className="break-words">{transportLabel(source.transport)}</p>
         <EspnResponseDetails metadata={source.responseMetadata} />
         <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>
       </li>)}</ul>
