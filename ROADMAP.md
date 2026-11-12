@@ -277,3 +277,44 @@
     clean on every touched file, and a live smoke of both pages plus unchanged
     `/sports`, `/sports/matches/epl/1` and `/`. Not verified here: live ESPN
     payloads (no sandbox egress) and Playwright layout (no Chromium binary).
+
+- Phase 18: A page for every match highlight ✅
+  Constraint: highlights already existed as an API and a homepage card, but there
+  was no page — no `/sports/highlights` route, no highlights section on the sports
+  board or the match page, and none in the vendored NFL/NBA SPA. Add the page
+  **without asking ESPN for anything new**. See
+  [SPORTS_HIGHLIGHTS_PAGE.md](SPORTS_HIGHLIGHTS_PAGE.md).
+
+  - `/sports/highlights` renders the board the homepage already loads
+    (`getSportsHighlights`) and refreshes through the endpoint that already
+    existed (`/api/sports/highlights?refresh=1`). No parser, feed, cache, endpoint
+    or ESPN request was added, and the homepage card renders exactly as before.
+  - It lists **every** clip rather than four behind a "Show all" control, and adds
+    the two filters the sports board already speaks — competition and match state.
+    Chips are derived from the board, so a competition or state with no clips is
+    never offered and a filter cannot empty the page by construction; each chip
+    carries its count and the state counts follow the chosen competition.
+  - `?league=` and `?status=` are validated server-side before becoming a filter:
+    a slug must be in `ESPN_LEAGUES`, a state must be one of the three, and
+    anything else is ignored rather than turned into a request or an empty page.
+  - It reuses the very same post card (`HighlightPostCard`, now exported from
+    `SportsHighlightsFeed`), so a clip looks, plays and engages identically on the
+    homepage and here — including the sample rules: a sample board stays labelled,
+    contributes no anchor refs, and shows no engagement form at all.
+  - Where the homepage card returns `null` for an empty board, the page says "No
+    highlight clips right now", why, and prints the feed's own source report; a
+    filter combination with nothing in it names the filters and offers "Show every
+    clip". The header states that ESPN publishes per-game clips for some
+    competitions and not others, so a missing competition reads as provider
+    coverage rather than a broken page.
+  - A refresh is one guarded request whose response must pass a local board
+    validation before replacing anything; a malformed or refused response keeps the
+    clips already on screen and says so.
+  - Verified: `npm run typecheck`, `npm run test:sports` 350/350 (6 new specs
+    mounting the page: whole board with no request on load, chip derivation,
+    filtering and the no-match/clear path, query-string filters, sample vs live
+    engagement, the empty-board state and source report, and refresh
+    replace/keep), `npm run build` with `/sports/highlights` dynamic, `npx eslint`
+    clean on every touched file, and a live smoke of the page, its filter
+    variants, the new sports-board pill and four unchanged routes. Not verified
+    here: live clips (no sandbox egress, so the labelled sample board renders).

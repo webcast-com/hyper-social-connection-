@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
+import { Clapperboard, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { DEFAULT_SPORTS_FILTERS, sportsFilterHref, type SportsFilters } from '@/lib/sports-filters';
@@ -170,6 +170,13 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           {board.predictions?.length > 0 && (
             <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px]">{board.predictions.length}</span>
           )}
+        </Link>
+        <Link
+          href="/sports/highlights"
+          className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none sm:px-4 rounded-full border border-rose-200 bg-white px-2 py-2 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:bg-gray-800 dark:text-rose-400 dark:hover:bg-rose-950/40"
+        >
+          <Clapperboard aria-hidden="true" className="h-4 w-4" />
+          Match highlights
         </Link>
       </div>
 

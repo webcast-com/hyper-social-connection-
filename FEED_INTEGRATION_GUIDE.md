@@ -5,7 +5,7 @@
 - ✅ **Movies API:** `/api/movies` — deterministic mock movie data with pagination and search
 - ✅ **Sports API:** `/api/sports` — live sports data with provider fallbacks
 - ✅ **Sports board:** `/sports` and the `SportsBoard` component display live and upcoming events
-- ✅ **Sports feed cards:** featured matches, predictions, the leaders board, the match highlights board and league video clips are interleaved into the For You feed by `FeedTabs`; placement lives in `src/lib/feed-interleave.ts`
+- ✅ **Sports feed cards:** featured matches, predictions and league video clips are interleaved into the For You feed by `FeedTabs`; placement lives in `src/lib/feed-interleave.ts`. The leaders board and the match highlights board are **homepage sections**, not interleaved cards — the highlights board also has its own page at `/sports/highlights` (see [SPORTS_HIGHLIGHTS_PAGE.md](SPORTS_HIGHLIGHTS_PAGE.md))
 - ⚠️ **Movies feed integration:** movies are intentionally not inserted into the social feed yet
 
 ## Available endpoints
