@@ -549,3 +549,41 @@
   - Not verified here: no pick has been taken against live ESPN odds, because this
     sandbox has no egress to ESPN and the odds board is empty — which the action
     reports correctly rather than storing a pick it cannot check.
+
+- Phase 24: The feed carries every fixture, and the DOM stays bounded ✅
+  For You showed **two** matches and the Live tab **six**, whichever the board
+  reported. Both caps are gone: the feed now carries every fixture on the board —
+  live, upcoming and finished, from any of the 121 configured competitions and any
+  sport. Detail in
+  [SPORTS_CHECKS.md](SPORTS_CHECKS.md#how-many-matches-the-feed-carries).
+
+  - **The list is unbounded; the DOM is not.** A match card is a client component
+    with its own state, poll and share affordances, and a busy day across the whole
+    catalog can report a thousand fixtures, so a tab materialises
+    `FEED_RENDER_BATCH = 24` cards and offers the rest with a control that states
+    what is left ("Show 24 more · 276 remaining in this tab"). Every card the page
+    built is reachable, the control disappears when nothing is left, and switching
+    tab starts from the first batch again. Nothing was removed from the feed to make
+    the page fast — only from the initial render.
+  - For You asks `featuredSportsEvents(events, events.length)`, keeping the rule it
+    already had rather than adding a second one: one fixture per sport first, so the
+    four cards interleaved at slots 1, 3, 5, 7 are not four football matches on a
+    football-heavy day, then every remaining fixture in the board's own order. The
+    rest follow the member posts instead of displacing them, so the feed still reads
+    as a feed for its first screenful.
+  - The Live tab uses `orderCentreEvents` directly — the board's own order, whole and
+    unranked, because a list that shows everything has no scarce rows to spend on one
+    fixture per competition. `LIVE_TAB_MATCHES` is deleted.
+  - The centre surfaces keep their bounds (2 compact, 4 rail). Now that the feed
+    carries every fixture, the rail's fresh tier is the live ones and the rest fill
+    from the board; it still never drops a fixture, so a quiet day still fills its
+    rows.
+  - No extra ESPN cost: the board was already fetched once per render, so this spends
+    data that was in memory and changes only what is rendered from it.
+  - Verified: `npm run typecheck`, `npm run test:sports` **447/447** (8 new: every
+    fixture returned when asked for every fixture with the sport-diverse head kept, an
+    uncapped Live tab ordering, a 1,000-fixture board listed whole by the tab and still
+    bounded to four rows in the rail, and five batching specs — one batch rendered with
+    an honest remaining count, the whole list reachable, a partial last batch, no
+    control when nothing is withheld, and the batch resetting on tab switch),
+    changed-file ESLint, `npm run build`, and the rendered homepage DOM.

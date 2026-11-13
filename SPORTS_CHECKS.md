@@ -67,14 +67,47 @@ The rail also carries a count of what ESPN reports as in play (`2 live`), which 
 computed only from `source: 'espn'` fixtures, so a sample board still says "Sample
 fixtures" and never claims a live sport.
 
+### How many matches the feed carries
+
+**Every fixture the board reports** — live, upcoming and finished, from any of the
+121 configured competitions and any sport. Neither For You nor the Live tab caps
+how many matches it carries; the two matches For You used to show and the six the
+Live tab used to show are both gone.
+
+What is bounded is the **DOM, not the list**. A match card is a client component
+with its own state, poll and share affordances, and a busy day across the whole
+catalog can report a thousand fixtures, so a tab materialises
+`FEED_RENDER_BATCH = 24` cards at a time and offers the rest with a control that
+states exactly how many are left ("Show 24 more · 276 remaining in this tab").
+Every card the page built is reachable, the control disappears when nothing is
+left, and switching tab starts from the first batch again so one tab's scrolling
+does not decide another's. This is why the number on that button is a rendering
+fact and never a claim about how much sport is happening.
+
+Ordering, and what each surface does with it:
+
+- **For You** asks `featuredSportsEvents(events, events.length)`, which keeps the
+  rule it already had instead of adding a second one: one fixture per sport first,
+  so the cards interleaved at slots 1, 3, 5 and 7 among the member posts are not
+  four football matches on a day when football dominates the board, and then every
+  remaining fixture in the board's own order — live first, then by kickoff. Those
+  first four keep their slots; the rest follow the member posts rather than
+  displacing them, so the feed still reads as a feed for its first screenful.
+- **The Live tab** uses `orderCentreEvents` directly: the board's own order, whole
+  and unranked, because a list that shows everything has no scarce rows to spend on
+  one fixture per competition.
+- **The centre surfaces keep their bounds** — 2 rows in the compact mobile summary,
+  4 in the desktop rail — and now that the feed carries every fixture, rule 3 above
+  means the rail's fresh tier is the live ones, with the rest filled from the
+  board. It still never drops a fixture, so a quiet day still fills its rows.
+
 ### The feed's Live tab
 
 `FeedTabs` has a fourth tab beside For You, Following and Saved. It is the sports
-desk on its own: up to `LIVE_TAB_MATCHES = 6` fixtures chosen by the same centre
-rule, then predictions, then league video news. A prediction already attached to
-one of those fixtures is not repeated beside it as a second card for the same
-match, and For You keeps its own two featured cards at their own slots — the tab
-is additive and moves nothing.
+desk on its own: every fixture the board reports, live first, then predictions,
+then league video news. A prediction already attached to one of those fixtures is
+not repeated beside it as a second card for the same match, and For You keeps its
+own slots — the tab is additive and moves nothing.
 
 The tab says what it is showing, counted by `summariseLiveCards` rather than by
 the component: a fixture this site invented is listed but never counted as live,
