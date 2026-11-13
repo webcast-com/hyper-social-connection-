@@ -82,6 +82,12 @@ export type IndexedHighlights = {
   reason?: 'no-database' | 'query-failed';
   match: SportsHighlightClip[];
   league: SportsVideoNewsClip[];
+  /**
+   * The endpoint that produced the newest row on this page, so a board assembled
+   * from stored clips can name where they came from instead of borrowing a URL
+   * this read never asked. `null` when nothing matched, or the row stored none.
+   */
+  sourceUrl?: string | null;
   /** Rows matching the same filters after this page, for a Load more button. */
   remaining: number;
   /**
@@ -114,7 +120,7 @@ export const INDEX_UNAVAILABLE: HighlightsIndexSummary = {
 };
 
 export const INDEX_EMPTY: IndexedHighlights = {
-  ok: false, reason: 'no-database', match: [], league: [], remaining: 0,
+  ok: false, reason: 'no-database', match: [], league: [], remaining: 0, sourceUrl: null,
   byLeague: [], byStatus: [], summary: INDEX_UNAVAILABLE,
 };
 
@@ -633,6 +639,7 @@ async function queryRead(query: HighlightsIndexQuery): Promise<IndexedHighlights
     ok: true,
     match,
     league,
+    sourceUrl: rows[0]?.source_url ?? null,
     remaining: Math.max(0, total - resolved.offset - rows.length),
     byLeague,
     byStatus,

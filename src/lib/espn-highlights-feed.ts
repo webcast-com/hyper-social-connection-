@@ -34,6 +34,15 @@ export type SportsHighlightsBoard = {
   /** How many ESPN video collections answered with a clip. */
   games: number;
   source: { ok: boolean; url: string; httpStatus: number | null; error?: string; errorKind?: string };
+  /**
+   * Which read filled this board, stamped only by `getHighlightsBoardForRender`.
+   *
+   * Optional so every producer that predates the stored index — this feed, the
+   * bundled sample board, a page's empty board — stays valid untouched. It exists
+   * for diagnostics and tests: the cards are the same shape either way, so no
+   * consumer has to branch on it.
+   */
+  provenance?: 'live' | 'stored';
 };
 
 /**

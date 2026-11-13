@@ -16,7 +16,8 @@ import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
-import { getSportsHighlights } from '@/lib/espn-highlights-feed';
+import { getHighlightsBoardForRender } from '@/lib/highlights-board';
+import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
 import { interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
@@ -137,7 +138,17 @@ export default async function Home() {
   // homepage renders the leaders board next to the scores. A failed leaders feed
   // resolves to the bundled sample board and never blocks the page.
   const leaderBoards = await getSportsLeaderBoards();
-  const highlightBoard = await getSportsHighlights();
+  // Stored clips first: a Postgres read with no ESPN request, filled by the
+  // sweeper. Only when storage cannot answer in time, or holds too few clips to
+  // make a card, does this fall back to the live feed — the same cached board,
+  // the same sample fallback, the same cards. Started where the live feed used to
+  // be started, so nothing else on this page competes with it any differently.
+  const highlightBoard = await getHighlightsBoardForRender();
+  // The homepage is the busiest surface on the site, so it is also where coverage
+  // grows: one bounded pass, scheduled past this response with `after` so it is
+  // not frozen when the page finishes streaming, and rate-limited to one per ten
+  // minutes per process. Never awaited, never able to fail the render.
+  nudgeHighlightsSweep();
   const videoNewsBoard = await videoNewsPromise;
   // Every sports card can be liked, commented on, saved and shared like a post:
   // the first interaction creates its anchor post, and this one bounded query
