@@ -32,6 +32,11 @@
  * Nothing here reads a database or a network. It orders and bounds a list it is
  * given, so the same rule serves the mobile summary, the desktop rail and the
  * feed's Live tab, and a caller cannot get a different answer by accident.
+ *
+ * The Live tab itself lists every fixture the board reports, so it uses
+ * `orderCentreEvents` directly and not this selection: a list that shows
+ * everything has no scarce rows to spend on one fixture per competition. What it
+ * shares with the centre is the order — live first, then upcoming, then results.
  */
 import type { SportsEvent } from './sports';
 
@@ -39,8 +44,6 @@ import type { SportsEvent } from './sports';
 export const MATCH_CENTRE_ROWS = 4;
 /** Rows in the compact mobile summary, which shares a column with the feed. */
 export const MATCH_CENTRE_ROWS_COMPACT = 2;
-/** Match cards in the feed's Live tab, which has a whole column to itself. */
-export const LIVE_TAB_MATCHES = 6;
 /** Hard ceiling on rows, so a caller cannot ask for the whole board. */
 export const MAX_CENTRE_ROWS = 12;
 

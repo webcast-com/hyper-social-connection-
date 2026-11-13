@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mountBoard } from './leaders-post-cards';
+import { FEED_RENDER_BATCH } from '../../src/lib/feed-interleave';
 import type { SportsVideoNewsClip } from '../../src/lib/espn-video-news';
 
 /**
@@ -138,5 +139,80 @@ test('For You is unchanged by what the Live tab was given', async () => {
   assert.equal(view.note(), null, 'the summary sentence belongs to the Live tab alone');
   assert.match(view.container.textContent!, /Saka curls Arsenal ahead at Brighton/);
   assert.doesNotMatch(view.container.textContent!, /Curry beats the buzzer in Denver/);
+  await view.unmount();
+});
+
+/* ── The batched reveal ─────────────────────────────────────────────────── */
+
+/** Many cards, cheaply: the tab's own list is what is under test, not the card. */
+const manyPosts = (count: number) => Array.from({ length: count }, (_, index) =>
+  videoPost(`bulk-${index}`, { id: `espn-video-epl-${index}`, clipId: String(index), title: `Clip number ${index}` }));
+
+const showMore = (container: any) =>
+  [...container.querySelectorAll('button')].find((button: any) => button.textContent.includes('remaining in this tab'));
+
+test('a tab with more cards than one batch renders one batch and says how many are left', async () => {
+  const total = FEED_RENDER_BATCH * 3 + 5;
+  const view = await mountTabs({ livePosts: manyPosts(total) });
+  await view.press('Live');
+
+  const rendered = view.container.querySelectorAll('article').length;
+  assert.equal(rendered, FEED_RENDER_BATCH, 'only one batch is in the DOM');
+  const button = showMore(view.container)!;
+  assert.ok(button, 'a control offers the rest');
+  assert.match(button.textContent!, new RegExp(`Show ${FEED_RENDER_BATCH} more`));
+  assert.match(button.textContent!, new RegExp(`${total - FEED_RENDER_BATCH} remaining in this tab`),
+    'the count is honest about what is still to come');
+  await view.unmount();
+});
+
+test('pressing it reveals another batch, and the whole list is reachable', async () => {
+  const total = FEED_RENDER_BATCH * 2 + 3;
+  const view = await mountTabs({ livePosts: manyPosts(total) });
+  await view.press('Live');
+  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH);
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH * 2);
+
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.equal(view.container.querySelectorAll('article').length, total, 'every card the page built is reachable');
+  assert.equal(showMore(view.container), undefined, 'and the control goes away when nothing is left');
+  await view.unmount();
+});
+
+test('the last batch offers what is actually left, not a full one', async () => {
+  const view = await mountTabs({ livePosts: manyPosts(FEED_RENDER_BATCH + 4) });
+  await view.press('Live');
+  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH + 4);
+  assert.equal(showMore(view.container), undefined);
+  await view.unmount();
+});
+
+test('a tab that fits in one batch shows no control at all', async () => {
+  const view = await mountTabs({ livePosts: manyPosts(3) });
+  await view.press('Live');
+
+  assert.equal(view.container.querySelectorAll('article').length, 3);
+  assert.equal(showMore(view.container), undefined, 'nothing is withheld, so nothing offers more');
+  await view.unmount();
+});
+
+test('switching tab starts from the first batch again', async () => {
+  // Two full batches and a tail, so the second press still has a batch to give.
+  const total = FEED_RENDER_BATCH * 2 + 6;
+  const view = await mountTabs({ forYouPosts: manyPosts(total), livePosts: manyPosts(total) });
+  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH * 2, 'For You was expanded');
+
+  await view.press('Live');
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH,
+    'one tab\u2019s scrolling does not decide another\u2019s');
   await view.unmount();
 });

@@ -26,6 +26,22 @@ export const SPORTS_FEED_SLOTS: readonly number[] = [1, 3, 5, 7];
  */
 export const VIDEO_NEWS_FEED_SLOTS: readonly number[] = [2, 6];
 
+/**
+ * How many cards a tab puts in the DOM at once.
+ *
+ * This is not a cap on what the feed carries: every fixture the board reports is
+ * in the list, and the reader reaches the rest with the tab's own "show more".
+ * It is a cap on how many are *materialised*, because a match card is a client
+ * component with its own state, poll and share affordances, and a busy day across
+ * the whole competition catalog can report a thousand of them. Shipping a thousand
+ * interactive cards in one response would be megabytes of HTML and seconds of
+ * hydration on a phone, for a feed the reader scrolls past.
+ *
+ * Bounded DOM, unbounded list: the number says how much is on screen, never how
+ * much exists.
+ */
+export const FEED_RENDER_BATCH = 24;
+
 /** Cards placed at `slots` among `posts`, returning a new list. */
 export function interleaveFeedCards<T>(posts: readonly T[], cards: readonly T[], slots: readonly number[]): T[] {
   const feed = [...posts];

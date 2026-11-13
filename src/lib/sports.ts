@@ -342,14 +342,20 @@ export const SPORT_FILTERS: { id: 'all' | EventStatus | SportKind; label: string
 ];
 
 /**
- * The matches a feed shows as cards.
+ * The matches a feed shows as cards, in the order it shows them.
  *
- * The board is ordered live first, then by kickoff, which on most days puts two
- * football matches in front of everything else and leaves basketball off the
- * feed entirely. So the first pass takes one match per sport, in that same
- * order, and only then fills any remaining slots with the next best matches:
- * a feed with football and basketball playing shows both, and a feed with only
- * football playing still shows its two soonest.
+ * `count` is the caller's decision, not a property of this rule. The homepage asks
+ * for `events.length` — every fixture the board reports, live, upcoming and
+ * finished, from any competition and any sport — so nothing is withheld; the
+ * default of two is for a caller that wants a bounded headline set.
+ *
+ * Either way the ordering is the same, and it exists because the board is ordered
+ * live first then by kickoff, which on most days puts football in front of
+ * everything else and leaves basketball off the top of the feed entirely. So the
+ * first pass takes one match per sport, in that same order, and only then fills the
+ * remaining places with the next best matches: a feed with football and basketball
+ * playing leads with both, and a feed carrying the whole board still leads with one
+ * match per sport rather than four football matches.
  */
 export function featuredSportsEvents(events: SportsEvent[], count = 2): SportsEvent[] {
   const chosen: SportsEvent[] = [];
