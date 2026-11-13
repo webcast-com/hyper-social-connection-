@@ -27,6 +27,20 @@ export const SPORTS_FEED_SLOTS: readonly number[] = [1, 3, 5, 7];
 export const VIDEO_NEWS_FEED_SLOTS: readonly number[] = [2, 6];
 
 /**
+ * Slots for match highlight clips.
+ *
+ * Their own pass, last, so neither the desk's scores nor the league video move
+ * when highlights join the feed. Slightly deeper than both: a highlight is a
+ * video a reader chooses to sit and watch, while a score is a glance — but still
+ * inside the first screenful, so the feed does not read as if it has no video.
+ *
+ * Like the match cards, only the first few land at slots. Every other clip the
+ * window holds follows the member posts in the same newest-to-oldest order, and
+ * the tab reveals them in batches.
+ */
+export const HIGHLIGHTS_FEED_SLOTS: readonly number[] = [4, 9];
+
+/**
  * How many cards a tab puts in the DOM at once.
  *
  * This is not a cap on what the feed carries: every fixture the board reports is

@@ -632,3 +632,68 @@
     score card, tone `soon`, crests LAL/BOS, home-first rows 78 and 74, `TV TBD`,
     linking to `/sports` because a sample has no match page — and the other 15 fixtures
     unchanged.
+
+- Phase 26: Highlights are in the feed, all of them, newest first ✅
+  Match highlights lived in their own section beside the feed, at most 12 clips, and
+  the feed itself carried none. For You now carries **every** stored clip in the
+  window, newest to oldest, each one the same card the section renders — a highlight
+  is something a reader can like, comment on and save, not a panel they have to leave
+  the feed for. Detail in
+  [SPORTS_CHECKS.md](SPORTS_CHECKS.md#highlights-in-the-for-you-feed).
+
+  - **The list is unbounded; the DOM is not**, by the rule Phase 24 set for match
+    cards: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest are
+    offered by the control that states how many remain. Clips get their own
+    interleave pass at `HIGHLIGHTS_FEED_SLOTS = [4, 9]` — last, so the desk's score
+    cards and the league video keep the slots they already had, and nothing is
+    removed from the feed to make room for a highlight.
+  - The two surfaces are now deliberately different, and say so by what they show:
+    the section stays a bounded summary of 12 with a link to `/sports/highlights`,
+    and the feed is the whole seven-day window. `STORED_BOARD_CLIPS`, `MAX_GAMES`
+    and `MAX_CLIPS` are untouched — the feed's "no max" comes from its own read, not
+    from loosening the board's.
+  - A new lean read, `readFeedClips`: two indexed queries, the rows and a
+    `count(*)`. It cannot reuse the index page's `read()`, which spends five queries
+    building summaries, per-competition totals and per-state counts a feed never
+    looks at. Its ceiling is the feed's own `FEED_INDEX_LIMIT = 300` rather than 60
+    rows per page, and `remaining` reports what the ceiling withheld, so a ceiling is
+    never silent. Only `kind = 'match'` rows; league video is a separate stack.
+  - **One order, two sources.** Clips come from stored rows and from a live board
+    the sweep has not stored yet, deduplicated by id and ordered by the clip's own
+    time with the index's `id DESC` tiebreak — `orderHighlightClips` in memory is the
+    same rule as `ORDER BY occurred_at DESC NULLS LAST, id DESC` in SQL, so a feed
+    assembled from either source runs the same way and the two surfaces cannot
+    disagree about what is newest. A clip with no reported time goes last rather than
+    jumping to the front.
+  - **Honesty rule kept:** a board ESPN did not answer contributes nothing to the
+    feed. The section dresses sample clips in a heading that says what they are; a
+    card in the middle of the feed has no such heading, so a sample there would read
+    as a real highlight nobody can play. No clips is the honest answer when there are
+    none.
+  - No extra ESPN cost and no new failure mode: the read is raced against
+    `FEED_BUDGET_MS = 1200` and never throws, so storage that is missing, slow or
+    broken leaves the feed with the board the page already had — what it showed before
+    this existed. The player keeps `preload="none"`, so carrying 300 clips does not
+    mean fetching 300 clips.
+  - Engagement for every card, not just the first 60: the anchor lookup takes a
+    `maxRefs` (ceiling `MAX_ENGAGEMENT_REFS = 400`, sized so a full feed plus the
+    boards beside it fit one query), and `dedupeAnchorRefs` orders the groups so a
+    ceiling would cut the oldest card deep in a batch rather than a card always on
+    screen. A cut ref would render a Like count of zero over a clip that has likes —
+    a wrong number rather than a missing one.
+  - Verified: `npm run typecheck`, `npm run test:sports` **479/479** (15 new: the
+    order rule, the merge, a sample board contributing nothing, every way storage can
+    fail degrading to the board, the window and ceiling asked for, `remaining`, the
+    interleave leaving existing cards where they were, and the ref ordering),
+    changed-file ESLint, `npm run build`, five routes at 200.
+  - Proved against a **real PostgreSQL 18 cluster**, because this sandbox has no
+    egress to ESPN and the index stays empty here: 8 rows through the real store path,
+    then the window, the kind filter, the order, the clamps, `remaining`, the feed's
+    provenance and a budget miss all read back as specified — **15/15** — with an
+    anchor post created from a stored clip reachable at ref 90 of 90 under `maxRefs`
+    while the old bound of 60 could not reach it. Every seeded row was deleted
+    afterwards; a temporary 30-clip seed confirmed the rendered page carries all 30
+    with the two newest carded in the first batch, then left no trace.
+  - Not verified here: no clip has been stored by a live sweep against real ESPN,
+    because this sandbox cannot reach it. The rules that decide what a reader sees
+    when it can are the ones tested above.

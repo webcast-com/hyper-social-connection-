@@ -168,6 +168,96 @@ short name, or null. It costs no extra request, because the scoreboard response 
 board already fetches carries it; a card and the page it links to cannot disagree
 about who is showing a game.
 
+### Highlights in the For You feed
+
+Match highlight clips are **in the feed**, not only in the "Match highlights"
+section beside it. For You carries every stored clip in the window — there is no
+cap on the list — ordered newest to oldest, each one the same `HighlightPostCard`
+the section renders, so a reader can like, comment on and save a highlight exactly
+as they can a post. The two surfaces are now deliberately different: the section
+stays a bounded list of at most 12 (it is a summary with a link to `/sports/highlights`),
+and the feed is the whole window.
+
+What is bounded is the **DOM, not the list**, by the same rule the match cards
+follow: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest are
+offered by the control that says how many remain. Clips are interleaved by their
+own pass at `HIGHLIGHTS_FEED_SLOTS = [4, 9]` — the last pass, so neither the desk's
+score cards (`[1, 3, 5, 7]`) nor the league video (`[2, 6]`) moves when highlights
+join — and every clip past the first two simply follows the member posts, newest
+first.
+
+**Where the clips come from.** `readFeedClips(days, limit)` in `highlights-index.ts`:
+two indexed queries, the rows and a `count(*)`, and nothing else. It cannot reuse
+`read()`, which also builds the index page's summary, per-competition totals and
+per-state counts — five queries, four of which a feed never looks at. The window is
+`STORED_BOARD_DAYS = 7`, the same one the board and the sweep already use, and the
+per-query ceiling is the feed's own `FEED_INDEX_LIMIT = 300`, not `read()`'s 60
+rows per page. `remaining` reports how many clips the ceiling withheld, so a
+ceiling is never silent. Only `kind = 'match'` rows come back: league video is a
+separate stack with its own cards.
+
+**Order.** Newest to oldest by the clip's own time, with the index's own tiebreak —
+`ORDER BY occurred_at DESC NULLS LAST, id DESC` in SQL, and `orderHighlightClips`
+in memory for clips that arrive from a live board rather than from storage. Both
+are the same rule, so a feed built from stored rows, from a board, or from both
+runs the same way and the two surfaces cannot disagree about what is newest. A clip
+with no reported time sorts last inside a merged list rather than jumping to the
+front; with a window it does not appear at all, because `occurred_at >= $since`
+excludes a NULL — the same behaviour the index read has always had.
+
+**Merge.** `getHighlightClipsForFeed` reads storage first, then adds any real clip
+on the board the sweep has not stored yet, deduplicated by clip id and keeping the
+stored copy. A board ESPN did not answer (`status: 'unavailable'`) contributes
+nothing: its clips are the bundled samples, and the section dresses those in a
+heading that says so while a card in the middle of the feed has no such heading.
+No clips is the honest answer when there are none.
+
+**Cost and failure.** No extra ESPN request: the board is already fetched for the
+section, and the feed spends stored rows. The read is raced against
+`FEED_BUDGET_MS = 1200` — above the board's own 900ms because it happens after it,
+and a ceiling for a cold pooled connection rather than an expected cost — and never
+throws. Storage that is missing, slow or broken leaves the feed with the board the
+page already had, which is what it showed before this existed, so the feed is never
+the reason the homepage waits or fails.
+
+**Engagement.** Each card's like/comment/save state comes from the anchor post
+lookup the page already runs. That lookup is bounded (`MAX_REFS = 60` covered two
+leader boards and the highlights list), so a feed rendering up to 300 cards asks
+for its own refs with `maxRefs`, up to `MAX_ENGAGEMENT_REFS = 400` — sized so a
+full feed plus the boards beside it fit in one lookup. A card whose ref was cut off
+would render a Like count of zero over a clip that has likes: a wrong number rather
+than a missing one. `dedupeAnchorRefs` therefore orders the groups by priority —
+the cards always on screen first, then the feed's clips newest to oldest — so a
+ceiling, if one ever bites, cuts the oldest card deep in a batch rather than an
+arbitrary one.
+
+**Playing 300 clips does not mean fetching 300 clips.** The card's player keeps
+`preload="none"`, so nothing is requested until a reader presses play, and a stream
+that will not play falls back to the clip's thumbnail.
+
+Verified: `npm run typecheck`, `npm run test:sports` **479/479** (15 new: the order
+rule including clips with no time and the `id DESC` tiebreak, the merge keeping one
+card per clip, a sample board contributing nothing, every way storage can fail
+degrading to the board, the window and ceiling the read is asked for, `remaining`,
+the interleave leaving existing cards where they were, and the ref ordering),
+changed-file ESLint, `npm run build`, and five routes at 200.
+
+Because this sandbox has no egress to ESPN, the sweep refuses and the index stays
+empty, so the read was also proved against a **real PostgreSQL 18 cluster**
+(`scripts/dev-db.sh`): 8 rows written through the real store path, then the 7-day
+window returning exactly the five clips inside it newest first, the league row
+excluded by kind, the older clip excluded, a smaller ceiling carrying three and
+reporting the two it withheld, no window meaning no date filter with the timeless
+clip last, an absurd window clamped to a year, the feed's provenance reading
+`stored`, a read that misses its budget degrading to no clips rather than an error,
+and an anchor post created from a stored clip reachable at ref 90 of 90 with
+`maxRefs` while the default bound of 60 cannot reach it — **15/15**, with every
+seeded row deleted afterwards and the table back to zero. A temporary 30-clip seed
+then confirmed the rendered page: all 30 clips serialized to the client with no cap,
+the first batch showing the two newest as cards at their slots ahead of 24 more,
+both "Match highlights" sections still showing their own four, and the page at 200
+with no trace of them once the seed was removed.
+
 ## Verification
 
 ```sh

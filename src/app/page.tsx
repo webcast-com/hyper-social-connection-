@@ -16,12 +16,13 @@ import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { orderCentreEvents } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
-import { getHighlightsBoardForRender } from '@/lib/highlights-board';
+import { getHighlightsBoardForRender, getHighlightClipsForFeed } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 import { nudgePickGrading } from '@/lib/sports-picks-grader';
-import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
+import { dedupeAnchorRefs, highlightAnchorRefs, highlightClipsAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
+import { anchorKey, anchorRef, highlightAnchorId } from '@/lib/sports-anchor';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
-import { interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
+import { HIGHLIGHTS_FEED_SLOTS, interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
@@ -145,6 +146,13 @@ export default async function Home() {
   // the same sample fallback, the same cards. Started where the live feed used to
   // be started, so nothing else on this page competes with it any differently.
   const highlightBoard = await getHighlightsBoardForRender();
+  // The For You feed carries every highlight clip in the window, not the handful
+  // the highlights list beside it shows. The same stored rows and the same zero
+  // ESPN cost, read with the lean query — rows and a count, none of the index
+  // page's summaries — and merged with any real clip on the board the sweep has
+  // not stored yet. A board ESPN did not answer contributes nothing: its clips
+  // are samples, and a card in the middle of the feed has no heading to say so.
+  const feedHighlights = await getHighlightClipsForFeed({ board: highlightBoard });
   // The homepage is the busiest surface on the site, so it is also where coverage
   // grows: one bounded pass, scheduled past this response with `after` so it is
   // not frozen when the page finishes streaming, and rate-limited to one per ten
@@ -161,10 +169,20 @@ export default async function Home() {
   // the first interaction creates its anchor post, and this one bounded query
   // reads back the saved state for the cards about to be rendered. Cards nobody
   // has engaged with cost a key lookup and stay read-only until someone does.
-  const anchorEngagement = await loadAnchorEngagement(
-    [...leaderAnchorRefs(leaderBoards), ...highlightAnchorRefs(highlightBoard)],
-    viewer?.id ?? null,
+  // Refs for every card about to be rendered, deduplicated and ordered so the
+  // lookup's ceiling cuts the right thing: the cards that are always on screen
+  // first — the leader boards and the highlights list — then the feed's clips
+  // newest to oldest. A clip the ceiling does cut shows a Like count of zero over
+  // a clip that may have likes, a wrong number rather than a missing one, so the
+  // oldest card deep in the feed is the one that carries it.
+  const engagementRefs = dedupeAnchorRefs(
+    leaderAnchorRefs(leaderBoards),
+    highlightAnchorRefs(highlightBoard),
+    highlightClipsAnchorRefs(feedHighlights.clips, feedHighlights.clips.length),
   );
+  const anchorEngagement = await loadAnchorEngagement(engagementRefs, viewer?.id ?? null, {
+    maxRefs: engagementRefs.length,
+  });
   const signedIn = !!viewer;
 
   let allPosts: any[] = [];
@@ -394,12 +412,32 @@ export default async function Home() {
     createdAt: new Date(Date.now() - (index + 1) * 100_000),
   }));
 
+  // Every highlight clip the window holds, newest first, each one a post card a
+  // reader can like, comment on and save like anything else in the feed. There is
+  // no cap on how many the feed carries; the tab reveals them in batches.
+  const highlightFeedPosts = feedHighlights.clips.map((clip, index) => {
+    const anchor = anchorRef('highlight', highlightAnchorId(clip));
+    return {
+      id: `highlight-${clip.id}`,
+      type: 'highlight',
+      clip,
+      anchor,
+      engagement: anchor ? anchorEngagement[anchorKey(anchor)] ?? null : null,
+      // eslint-disable-next-line react-hooks/purity
+      createdAt: new Date(Date.now() - (index + 1) * 80_000),
+    };
+  });
+
   // Each card kind gets its own pass over the feed, so adding league video news
-  // cannot move the match and prediction cards that were already there.
+  // or highlights cannot move the match and prediction cards already there.
   const forYouPosts = interleaveFeedCards(
-    interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
-    videoNewsFeedPosts,
-    VIDEO_NEWS_FEED_SLOTS,
+    interleaveFeedCards(
+      interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
+      videoNewsFeedPosts,
+      VIDEO_NEWS_FEED_SLOTS,
+    ),
+    highlightFeedPosts,
+    HIGHLIGHTS_FEED_SLOTS,
   );
 
   // The Live tab is the sports desk on its own: every fixture the board reports,

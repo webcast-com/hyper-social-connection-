@@ -26,7 +26,7 @@
  */
 import type { SportsHighlightClip } from './espn-highlights';
 import { getSportsHighlights, type SportsHighlightsBoard } from './espn-highlights-feed';
-import { highlightsStore, type HighlightsStore } from './highlights-index';
+import { FEED_INDEX_LIMIT, highlightsStore, readFeedClips, type FeedClipsRead, type HighlightsStore } from './highlights-index';
 
 /** The ESPN root, when no stored endpoint is known. Same fallback the feeds use. */
 const ESPN_ROOT = 'https://site.api.espn.com/apis/site/v2/sports';
@@ -144,4 +144,128 @@ export async function getHighlightsBoardForRender(options: {
   // The live board is already the shape every consumer expects, so it is passed
   // through untouched apart from the provenance stamp and any top-up.
   return clips === live.clips ? { ...live, provenance: 'live' } : { ...live, clips, provenance: 'live' };
+}
+
+/* ── The For You feed's highlights ──────────────────────────────────────── */
+
+/**
+ * How long the feed waits for its clip read.
+ *
+ * Two indexed queries, so this is a ceiling for a cold pooled connection rather
+ * than an expected cost — and it is deliberately a little above the board's own
+ * budget, because the feed's read happens after the board's and must not be the
+ * reason the page is slow. On timeout the feed shows the board's clips, which is
+ * what it showed before this existed.
+ */
+export const FEED_BUDGET_MS = 1_200;
+
+/** The index's own tiebreak: `"id" DESC`, newest row first. */
+const byIdDesc = (a: string, b: string) => (a === b ? 0 : a < b ? 1 : -1);
+
+/**
+ * Newest to oldest, the way the index orders stored rows.
+ *
+ * `startAt` is a match clip's own time — the column the index sorts on is written
+ * from it — so sorting on it here and `ORDER BY "occurred_at" DESC` in SQL are the
+ * same rule, and a feed assembled from a stored read, from a live board, or from
+ * both reads the same way. A clip with no time reported goes last, as `NULLS LAST`
+ * does, rather than jumping to the front of the feed.
+ */
+export function orderHighlightClips(clips: readonly SportsHighlightClip[]): SportsHighlightClip[] {
+  return [...clips].sort((a, b) => {
+    const left = a.startAt ? Date.parse(a.startAt) : Number.NaN;
+    const right = b.startAt ? Date.parse(b.startAt) : Number.NaN;
+    const leftMissing = !Number.isFinite(left);
+    const rightMissing = !Number.isFinite(right);
+    if (leftMissing && rightMissing) return byIdDesc(a.id, b.id);
+    if (leftMissing) return 1;
+    if (rightMissing) return -1;
+    return left === right ? byIdDesc(a.id, b.id) : right - left;
+  });
+}
+
+/**
+ * The clips the For You feed carries: every stored clip in the window plus any
+ * real clip on the board the sweep has not stored yet, deduplicated, newest first.
+ *
+ * A board ESPN did not answer contributes nothing. Its clips are the bundled
+ * samples, and the highlights surface dresses those in a heading that says so —
+ * a card in the middle of the For You feed has no such heading, so a sample clip
+ * there would look like a real highlight nobody can play. No clips is the honest
+ * answer when there are none.
+ */
+export function feedHighlightClips(
+  stored: readonly SportsHighlightClip[],
+  board: SportsHighlightsBoard | null | undefined,
+): SportsHighlightClip[] {
+  const real = board && (board.status === 'live' || board.status === 'partial') ? board.clips : [];
+  const seen = new Set<string>();
+  const merged: SportsHighlightClip[] = [];
+  for (const clip of [...stored, ...real]) {
+    if (!clip?.id || seen.has(clip.id)) continue;
+    seen.add(clip.id);
+    merged.push(clip);
+  }
+  return orderHighlightClips(merged);
+}
+
+export type FeedHighlights = {
+  /** Every clip the feed carries, newest first. */
+  clips: SportsHighlightClip[];
+  /** Clips in the window the read did not carry, so a ceiling is never silent. */
+  remaining: number;
+  /** Which read filled the list, for diagnostics and tests. */
+  provenance: 'stored' | 'board' | 'none';
+};
+
+/**
+ * The highlights for one render of the For You feed.
+ *
+ * Storage first, exactly like the board: a Postgres read with no ESPN request.
+ * The read is the lean one — rows and a count, not the index page's summaries —
+ * because the feed renders every clip it is given and cannot spend five queries
+ * doing it. Storage that is missing, slow or broken degrades to the board the
+ * page already fetched, so the feed is never the reason the homepage fails or
+ * waits.
+ *
+ * There is no cap on what the feed is willing to show. `FEED_INDEX_LIMIT` bounds
+ * one query and one payload; the seven-day window bounds what a reader sees, and
+ * `remaining` says when the ceiling, not the window, was what stopped the read.
+ */
+export async function getHighlightClipsForFeed(options: {
+  board?: SportsHighlightsBoard | null;
+  budgetMs?: number;
+  days?: number;
+  limit?: number;
+  read?: (days: number, limit: number) => Promise<FeedClipsRead>;
+} = {}): Promise<FeedHighlights> {
+  const board = options.board ?? null;
+  const budgetMs = options.budgetMs ?? FEED_BUDGET_MS;
+  const days = options.days ?? STORED_BOARD_DAYS;
+  const limit = options.limit ?? FEED_INDEX_LIMIT;
+  const read = options.read ?? ((readDays: number, readLimit: number) => readFeedClips(readDays, readLimit));
+
+  let stored: FeedClipsRead | null = null;
+  try {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), budgetMs);
+    });
+    // On timeout the query is left running rather than cancelled: there is
+    // nothing to abort, and the read costs no ESPN request.
+    stored = await Promise.race([read(days, limit).catch(() => null), timeout]);
+    if (timer) clearTimeout(timer);
+  } catch {
+    stored = null;
+  }
+
+  if (stored?.ok) {
+    return {
+      clips: feedHighlightClips(stored.clips, board),
+      remaining: stored.remaining,
+      provenance: 'stored',
+    };
+  }
+  const clips = feedHighlightClips([], board);
+  return { clips, remaining: 0, provenance: clips.length ? 'board' : 'none' };
 }
