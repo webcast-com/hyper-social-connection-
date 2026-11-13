@@ -454,6 +454,79 @@ async function runMigration() {
     // The system account that authors those posts is a real, followable author,
     // but it is not a person to suggest, list as a contact or return in search.
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "account_type" text DEFAULT 'person' NOT NULL`,
+    // ── The stored highlights index (src/lib/highlights-index.ts) ───────────
+    // Every clip this site has read from ESPN, kept permanently. ESPN has no
+    // bulk highlights endpoint and no date range, so a bounded sweeper walks the
+    // catalog a slice at a time and writes what it finds here; a page then reads
+    // this table with no ESPN fan-out at all.
+    // `discovered_at` is when this site first saw a clip and never changes (that
+    // is the "kept for days" record); `seen_at` is the last sweep that still
+    // found it. Nothing deletes a row: retention is permanent by design, and
+    // growth is bounded by what ESPN publishes, because `external_key` makes a
+    // re-read of the same collection an update rather than a duplicate.
+    `CREATE TABLE IF NOT EXISTS "sports_highlight_clips" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "external_key" text NOT NULL,
+      "kind" text NOT NULL,
+      "clip_id" text NOT NULL,
+      "title" text NOT NULL,
+      "description" text,
+      "duration" integer,
+      "thumbnail" text,
+      "mp4" text,
+      "hls" text,
+      "page" text,
+      "playable" boolean DEFAULT false NOT NULL,
+      "event_id" text,
+      "event_name" text,
+      "sport" text,
+      "league" text NOT NULL,
+      "league_name" text NOT NULL,
+      "home" text,
+      "away" text,
+      "home_logo" text,
+      "away_logo" text,
+      "teams" text,
+      "occurred_at" timestamptz,
+      "source_url" text,
+      "status" text,
+      "anchor_key" text,
+      "discovered_at" timestamptz DEFAULT now() NOT NULL,
+      "seen_at" timestamptz DEFAULT now() NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sports_highlight_clips_external_key_key" ON "sports_highlight_clips"("external_key")`,
+    // The reads a page makes: newest first, within one competition, one kind or
+    // one match state. `occurred_at` is nullable (a clip ESPN reported no date
+    // for), which is why the ordering says NULLS LAST rather than dropping it.
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_occurred_at_idx" ON "sports_highlight_clips"("occurred_at" DESC NULLS LAST)`,
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_league_idx" ON "sports_highlight_clips"("league", "occurred_at" DESC NULLS LAST)`,
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_kind_idx" ON "sports_highlight_clips"("kind", "occurred_at" DESC NULLS LAST)`,
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_status_idx" ON "sports_highlight_clips"("status")`,
+    // Engagement on a stored clip is resolved by anchor id, not by clip id.
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_anchor_key_idx" ON "sports_highlight_clips"("anchor_key")`,
+    // One row per game collection asked, so a collection that answered with clips
+    // is never asked again and one that answered empty is retried only after
+    // ESPN has had time to publish (highlights appear hours after full time).
+    `CREATE TABLE IF NOT EXISTS "sports_highlight_probes" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "external_key" text NOT NULL,
+      "clips_found" integer DEFAULT 0 NOT NULL,
+      "attempts" integer DEFAULT 1 NOT NULL,
+      "probed_at" timestamptz DEFAULT now() NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sports_highlight_probes_external_key_key" ON "sports_highlight_probes"("external_key")`,
+    // One row per competition per UTC day walked. This is the sweeper's cursor:
+    // it survives a deploy, is shared by every instance, and makes coverage
+    // resumable instead of restarting at the first league on every boot.
+    `CREATE TABLE IF NOT EXISTS "sports_highlight_sweeps" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "external_key" text NOT NULL,
+      "games" integer DEFAULT 0 NOT NULL,
+      "clips" integer DEFAULT 0 NOT NULL,
+      "swept_at" timestamptz DEFAULT now() NOT NULL
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sports_highlight_sweeps_external_key_key" ON "sports_highlight_sweeps"("external_key")`,
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_sweeps_swept_at_idx" ON "sports_highlight_sweeps"("swept_at")`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

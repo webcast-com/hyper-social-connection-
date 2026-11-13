@@ -278,6 +278,16 @@ const contextFor = (event: SportsEvent) => ({
   status: event.status,
 });
 
+/**
+ * The collection URL and fixture context, exported for the stored-index sweeper
+ * (`highlights-sweep.ts`) so that a clip found by the sweeper is addressed and
+ * described exactly as one found by the live board: same URL shape, same
+ * provider-id gate, same namespaced event id. Two readers that derive these
+ * separately would eventually disagree about what a clip is.
+ */
+export const matchVideosUrl = videosUrl;
+export const highlightContextFor = contextFor;
+
 async function readClips(event: SportsEvent) {
   const url = videosUrl(event);
   if (!url) return { url: null, httpStatus: null, clips: [] as SportsHighlightClip[] };

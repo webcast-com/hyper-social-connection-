@@ -172,3 +172,18 @@ Not verified here, with reasons:
 - **`npm run db:generate`.** No route to `binaries.prisma.sh`, so the committed
   client is stale. Regenerate locally before relying on `kind` / `externalKey` /
   `accountType` through Prisma.
+
+
+## Update (November 2026): drafts can now resolve from the stored index
+
+Phase 19 added a permanent clip index (`SPORTS_HIGHLIGHTS_INDEX.md`), which stores
+clips that have left the live board's ≤12. `resolveAnchorDraft` used to look a
+highlight ref up **only** on that board, so engagement on a stored clip would
+silently create no post. It now falls back to `findStoredHighlightClip(anchorKey)`,
+which is inert without a database. A stored clip and the same clip on the board
+derive the **same** anchor id from the same clip id, so they share one post and one
+set of counts — a like on the homepage card is a like on the page card.
+`highlightClipsAnchorRefs(clips)` was split out of `highlightAnchorRefs(board)` so a
+page can load engagement for clips the board does not hold; the board variant keeps
+its rule that a sample board contributes no refs at all. League video clips still
+create no anchor posts, which is the video-news card's own existing rule.
