@@ -504,6 +504,10 @@ async function runMigration() {
     `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_status_idx" ON "sports_highlight_clips"("status")`,
     // Engagement on a stored clip is resolved by anchor id, not by clip id.
     `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_anchor_key_idx" ON "sports_highlight_clips"("anchor_key")`,
+    // A league video's playable rendition is looked up by ESPN's own clip id when
+    // a reader presses play, and the listing that stored the row carries no media
+    // URL. Partial, because only league rows are ever asked this way.
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_league_clip_id_idx" ON "sports_highlight_clips"("clip_id") WHERE "kind" = 'league'`,
     // One row per game collection asked, so a collection that answered with clips
     // is never asked again and one that answered empty is retried only after
     // ESPN has had time to publish (highlights appear hours after full time).

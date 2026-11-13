@@ -39,7 +39,7 @@ import { parseEspnEvents } from './espn';
 import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnSportsScoreboardUrl } from './espn-endpoints';
 import { highlightContextFor, matchVideosUrl } from './espn-highlights-feed';
 import { normalizeHighlights, type SportsHighlightClip } from './espn-highlights';
-import { VIDEO_NEWS_SLUGS, getSportsVideoNews } from './espn-video-news-feed';
+import { VIDEO_NEWS_SLUGS, getSportsVideoNews, hasResolvedNewsMedia, mediaProbeKey, resolveVideoNewsMedia } from './espn-video-news-feed';
 import {
   INDEX_UNAVAILABLE, highlightsStore, probeKey, sweepCellKey,
   type HighlightsIndexSummary, type HighlightsStore, type StoredClip,
@@ -80,6 +80,15 @@ export const EXPLICIT_INTERVAL_MS = 30_000;
 export const LEAGUE_INTERVAL_MS = 5 * 60_000;
 /** League video news has its own fan-out; it joins a pass at most this often. */
 const NEWS_TTL = 15 * 60_000;
+/**
+ * Renditions one pass may pre-warm for stored league clips that have none.
+ *
+ * Each costs one ESPN request, so this is a ceiling rather than a target: the
+ * media column fills over successive passes, and any clip a reader actually
+ * presses play on is resolved and stored regardless. Pre-warming what readers see
+ * first is the point — not resolving everything.
+ */
+export const MEDIA_WARM_PER_PASS = 6;
 
 /* ── Result ─────────────────────────────────────────────────────────────── */
 
@@ -95,6 +104,8 @@ export type SweepPass = {
   clips: number;
   /** League video clips written. */
   leagueClips: number;
+  /** League clips whose playable rendition this pass resolved and stored. */
+  mediaWarmed: number;
   /** Upstream requests this pass made, so its cost is never a guess. */
   requests: number;
   /** The deadline ran out before the slice was finished; the rest waits. */
@@ -117,7 +128,7 @@ export type SweepPassOptions = {
 };
 
 const EMPTY_PASS = {
-  cells: 0, games: 0, clips: 0, leagueClips: 0, requests: 0, truncated: false, durationMs: 0,
+  cells: 0, games: 0, clips: 0, leagueClips: 0, mediaWarmed: 0, requests: 0, truncated: false, durationMs: 0,
 };
 
 /* ── Plan ───────────────────────────────────────────────────────────────── */
@@ -383,6 +394,7 @@ async function sweep(options: SweepPassOptions, store: HighlightsStore, slug: st
 
   /* 4. League video news, when it is due. */
   let leagueClips = 0;
+  let mediaWarmed = 0;
   if (startedAt - lastNewsAt >= NEWS_TTL) {
     lastNewsAt = startedAt;
     try {
@@ -395,6 +407,33 @@ async function sweep(options: SweepPassOptions, store: HighlightsStore, slug: st
     } catch {
       // The news feed reports its own failures; a pass does not fail for it.
     }
+
+    /* 4b. Pre-warm renditions for stored league clips that have none.
+     *
+     * The listing carries no media URL, so a stored league clip could only ever
+     * play by asking ESPN again — and the in-memory answer died on each deploy.
+     * Resolving here writes the rendition onto the row, which then stops appearing
+     * in this query at all, so the work converges instead of repeating.
+     *
+     * Bounded three ways: at most MEDIA_WARM_PER_PASS clips, only inside the
+     * pass's own deadline, and only for clips that have not already refused within
+     * the same 24 h the collection rule uses — a geofenced rendition must not eat
+     * the budget on every pass. Each request is counted, so the report is exact.
+     */
+    const needing = deadline() ? [] : await store.newsClipsNeedingMedia(MEDIA_WARM_PER_PASS);
+    if (needing.length) {
+      const keys = needing.map((row) => mediaProbeKey(row.clipId));
+      const askable = await store.probeable(keys, REPROBE_EMPTY_AFTER_MS);
+      for (const row of needing) {
+        if (deadline()) { truncated = true; break; }
+        // Already answered in memory, or already refused recently: no request, so
+        // nothing to count and nothing to resolve.
+        if (!askable.has(mediaProbeKey(row.clipId)) || hasResolvedNewsMedia(row.clipId)) continue;
+        requests += 1;
+        const media = await resolveVideoNewsMedia(row.clipId, store);
+        if (media.mp4 || media.hls) mediaWarmed += 1;
+      }
+    }
   }
 
   const durationMs = Date.now() - startedAt;
@@ -404,6 +443,7 @@ async function sweep(options: SweepPassOptions, store: HighlightsStore, slug: st
     games: collections.length,
     clips,
     leagueClips,
+    mediaWarmed,
     requests,
     truncated,
     startedAt: new Date(startedAt).toISOString(),

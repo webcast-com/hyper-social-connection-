@@ -12,6 +12,10 @@ export const dynamic = 'force-dynamic';
  * clip id, builds the clip-record URL itself and returns whatever ESPN serves —
  * an MP4, an HLS playlist, both, or nothing.
  *
+ * The stored index is asked first, and an answer ESPN gives is written back to it,
+ * so a rendition is resolved once per clip rather than once per process: it plays
+ * after a deploy, on another instance, and with ESPN unreachable.
+ *
  * Accepting only an id (never a URL) is what keeps this from being an open
  * proxy: the host it contacts is decided here, from a validated pattern, not by
  * the caller. A clip ESPN will not serve resolves to `{ playable: false }` with

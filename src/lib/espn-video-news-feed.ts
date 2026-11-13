@@ -14,10 +14,14 @@
  *   1. **No invented clips.** When ESPN does not answer, the board is empty and
  *      marked `unavailable`. There is no bundled sample list here: a feeds
  *      section that shows a fake goal clip is worse than one that shows nothing.
- *   2. **No media until a reader asks.** A league's news feed yields clip pages
- *      and ids, not files. The playable rendition is resolved per clip on demand
- *      (`resolveVideoNewsMedia`), so listing 12 leagues costs 12 requests and
- *      watching one clip costs one more.
+ *   2. **No media in the listing.** A league's news feed yields clip pages and
+ *      ids, not files, so listing 12 leagues costs 12 requests. The playable
+ *      rendition is resolved per clip (`resolveVideoNewsMedia`) — when a reader
+ *      presses play, or when a sweep pre-warms a bounded few — and is then stored
+ *      beside the clip in the index, so it is asked for once rather than once per
+ *      process lifetime. The feed still reads nothing from
+ *      `espn-highlights-feed.ts` and writes nothing to the highlights board: the
+ *      index is shared storage, not a shared feed.
  *
  * A league that answers with no videos is a normal answer, not a failure: ESPN
  * publishes video for some competitions and not for others.
@@ -35,6 +39,7 @@ import {
   type SportsVideoNewsMedia,
   type VideoNewsLeague,
 } from './espn-video-news';
+import { highlightsStore, type HighlightsStore } from './highlights-index';
 
 /**
  * The competitions asked for league video, by catalog slug.
@@ -218,14 +223,28 @@ const mediaPending = new Map<string, Promise<SportsVideoNewsMedia>>();
 const NO_MEDIA: SportsVideoNewsMedia = { mp4: null, hls: null, page: null, thumbnail: null, duration: null };
 
 /**
- * The playable rendition for one clip, fetched when a reader presses play.
+ * The playable rendition for one clip.
  *
  * Accepts only a numeric ESPN clip id and builds the record URL itself, so this
  * can never be pointed at an arbitrary host. A clip ESPN will not serve — a
  * geofenced rendition, a removed clip, an offline API — resolves to no media,
  * and the card falls back to its labelled ESPN link instead of a dead player.
+ *
+ * The stored index is asked before ESPN, and answered renditions are written back
+ * to it. In memory a rendition lived 15 minutes and died on every deploy, so the
+ * same clip was resolved again forever; stored beside the clip it is resolved
+ * once, plays for as long as the row is kept, and costs the next reader nothing.
+ * A refusal is still not cached — a reader who presses play again gets a fresh
+ * attempt — but it is recorded as a probe, so a sweep's pre-warm does not spend
+ * its budget re-asking a clip that has already said no.
+ *
+ * `store` is injectable for tests; every call is inert without a database, so the
+ * behaviour with no storage is exactly what it was before.
  */
-export async function resolveVideoNewsMedia(clipId: string): Promise<SportsVideoNewsMedia> {
+export async function resolveVideoNewsMedia(
+  clipId: string,
+  store: HighlightsStore = highlightsStore,
+): Promise<SportsVideoNewsMedia> {
   const url = espnClipRecordUrl(clipId);
   if (!url || !isEspnClipRecordUrl(url)) return NO_MEDIA;
 
@@ -234,20 +253,39 @@ export async function resolveVideoNewsMedia(clipId: string): Promise<SportsVideo
   const inflight = mediaPending.get(url);
   if (inflight) return inflight;
 
+  /** One probe row per rendition asked for: 1 when it plays, 0 when it does not. */
+  const remember = (resolved: boolean) => {
+    void store.recordProbes([{ key: mediaProbeKey(clipId), clips: resolved ? 1 : 0 }]);
+  };
+
   const job = (async () => {
+    const stored = await store.findNewsMedia(clipId);
+    if (stored) {
+      mediaCache.set(url, { at: Date.now(), media: stored });
+      return stored;
+    }
     try {
       const response = await fetch(url, {
         headers: ESPN_REQUEST_HEADERS,
         cache: 'no-store',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      if (!response.ok) return NO_MEDIA;
+      if (!response.ok) {
+        remember(false);
+        return NO_MEDIA;
+      }
       const media = parseVideoNewsMedia(await response.json());
       // Only a clip that actually plays is worth remembering; a refusal may be
       // transient and should be asked again.
-      if (media.mp4 || media.hls) mediaCache.set(url, { at: Date.now(), media });
+      if (media.mp4 || media.hls) {
+        mediaCache.set(url, { at: Date.now(), media });
+        void store.storeNewsMedia(clipId, media).then((rows) => { if (rows) remember(true); });
+      } else {
+        remember(false);
+      }
       return media;
     } catch {
+      remember(false);
       return NO_MEDIA;
     } finally {
       mediaPending.delete(url);
@@ -256,6 +294,30 @@ export async function resolveVideoNewsMedia(clipId: string): Promise<SportsVideo
 
   mediaPending.set(url, job);
   return job;
+}
+
+/**
+ * The probe key for one clip's rendition.
+ *
+ * Namespaced apart from a game collection's `probe:{league}:{sourceId}` so the two
+ * never collide in the same table, and so the sweeper can ask which renditions are
+ * worth pre-warming without disturbing the never-ask-twice rule for collections.
+ */
+export const mediaProbeKey = (clipId: string) => `media:${clipId}`;
+
+/**
+ * True when this clip's rendition is already in memory, so resolving it again
+ * would make no request.
+ *
+ * Exists so a sweep's pre-warm can count its cost exactly: the pass report is a
+ * claim about how many upstream requests were made, and a clip served from memory
+ * is not one of them.
+ */
+export function hasResolvedNewsMedia(clipId: string): boolean {
+  const url = espnClipRecordUrl(clipId);
+  if (!url) return false;
+  const cached = mediaCache.get(url);
+  return !!cached && Date.now() - cached.at < MEDIA_TTL && !!(cached.media.mp4 || cached.media.hls);
 }
 
 /** Test seam: forget the board and every resolved rendition. */

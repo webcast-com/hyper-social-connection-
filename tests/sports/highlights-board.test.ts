@@ -102,6 +102,10 @@ function fakeStore(options: { available?: boolean; read?: FakeRead } = {}) {
     recordProbes: async () => {},
     freshCells: async () => new Set<string>(),
     recordCells: async () => {},
+    // The board read never touches renditions; the sweep's pre-warm does.
+    findNewsMedia: async () => null,
+    storeNewsMedia: async () => 0,
+    newsClipsNeedingMedia: async () => [],
   };
   return { store, queries };
 }
