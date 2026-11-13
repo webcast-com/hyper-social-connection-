@@ -113,23 +113,53 @@ Rules that keep it honest:
 
 ### What triggers a pass
 
-1. A page load of `/sports/highlights`, or a read of `?index=1` — `void
-   runHighlightsSweep({})`, never awaited, at most once per 10 min per process.
+1. A load of the **homepage**, of `/sports/highlights`, or a read of `?index=1` —
+   `nudgeHighlightsSweep()`, never awaited, at most once per 10 min per process.
 2. The page's **Sweep more competitions** button → `?force=1` (30 s interval), or
    `?force=1&league=epl` to walk one competition's whole week (5 min interval).
-3. A scheduler hitting the same route. There is no cron in this repo yet (no
-   `vercel.json`); adding one is the way to make coverage advance without traffic.
+3. Optionally, a scheduler hitting the same route. There is no `vercel.json` in
+   this repo and none is needed — see *No scheduler* below.
+
+**No scheduler.** Every trigger calls `nudgeHighlightsSweep()`, which schedules the
+pass with Next's `after()` — work that is allowed to continue once the response has
+been sent — rather than a bare `void`. That distinction is why traffic-driven
+coverage works on a serverless host at all: a fire-and-forget call can be frozen the
+moment its response leaves, so requests start and nothing is stored, while an
+`after()` callback runs to completion. Outside a request scope `after()` throws, so
+the nudge falls back to the fire-and-forget call it replaced and a pass is still
+launched — which is the branch a unit test drives, and the reason the nudge can
+never throw into a render.
 
 **Consequence, stated plainly:** a complete first pass over 121 competitions × 7
-days takes many passes — hours of traffic, or of a scheduler. It is not instant
-and cannot be made instant without the unbounded fan-out this module exists to
-avoid. After that it is incremental: 24 new cells and 24 new games per pass.
+days is ~36 passes — roughly six hours if something loads a triggering page at
+least once every ten minutes, or ~18 minutes of a reader pressing the button every
+30 s. It is not instant and cannot be made instant without the unbounded fan-out
+this module exists to avoid. After that it is incremental: 24 new cells and 24 new
+games per pass. A quiet period stops growth and breaks nothing — stored clips are
+permanent, and the first load after a lull starts a pass again.
 
 ## Reading it
 
 `GET /api/sports/highlights` **without** `index=1` returns exactly what it always
 has — the bounded live board, `public, max-age=120, stale-while-revalidate=300`.
-The homepage is untouched.
+
+The **homepage** reads the stored clips first (`getHighlightsBoardForRender`, in
+`highlights-board.ts`): one Postgres query for `kind=match` over the last seven
+days, at most twelve clips, inside a 900 ms budget, and **zero ESPN requests**.
+With four or more stored clips that is the board, stamped `provenance: 'stored'`,
+with `games` counted as the distinct fixtures its clips name and `source.url` the
+endpoint that produced the newest row (`httpStatus` stays `null`: this render
+received no HTTP response, and claiming a borrowed 200 would be a lie). Fewer than
+four stored clips is a thinner card than twelve live ones, so the live board
+answers as it did before — and the stored clips it is missing are appended,
+deduplicated by clip id, live clips first in their own order. `provenance` is
+optional on the board type, so the feed, the sample board and a page's empty board
+are all still valid untouched, and no consumer has to branch on it.
+
+A stored board reports `status: 'live'`, because that is what it is. The feed only
+dresses cards as samples — and strips their anchor post, so no Like button — when a
+board is neither live nor partial, and a board of real stored clips that reported
+anything else would show playable video as placeholder data.
 
 `GET /api/sports/highlights?index=1` returns `{ board, index }`, `no-store`, and
 costs **no ESPN request for the `index` half**:
@@ -175,6 +205,8 @@ was truncated — including when the pass did nothing because one ran recently.
 | Postgres down mid-pass | The pass stores nothing and reports it; nothing throws into a render |
 | ESPN refuses a pass | `ok: true` with `cells: 0` and the request count; the cell is not recorded, so it is retried after the rate limit |
 | A malformed `index` in a refresh | The client's `validIndex` rejects it and the clips on screen stay |
+| Fewer than four stored match clips | The homepage falls back to the live board and appends the stored clips it is missing |
+| Storage over the 900 ms homepage budget, or throwing | The homepage renders the live board verbatim; the query is left running rather than cancelled, and nothing throws into the render |
 
 ## Engagement on a stored clip
 
@@ -189,8 +221,9 @@ video-news card's own existing rule.
 
 ## Verified here
 
-- `npm run typecheck` clean; `npm run test:sports` **374/374** (24 new: 8 index,
-  11 sweep, 5 page).
+- `npm run typecheck` clean; `npm run test:sports` **386/386** (24 new in phase 19:
+  8 index, 11 sweep, 5 page; plus 11 for the homepage board read and 1 for the
+  midnight rule below).
 - **Real Postgres smoke** (local cluster on `127.0.0.1:55432`, throwaway script,
   deleted afterwards): DDL creates the three tables and 12 indexes; a batch insert
   writes 3 clips; **writing the same 3 again leaves 3 rows** with `discovered_at`
@@ -211,6 +244,48 @@ video-news card's own existing rule.
   `/api/sports/highlights` unchanged; `/sports/highlights` and its filter
   variants, `/sports` and `/` all 200.
 
+**Verified since, for the homepage read and the `after()` nudge:**
+
+- `highlights-board.test.ts`, 11 specs: a stored board makes **zero** ESPN requests
+  (the stub throws if anything asks), counts `games` as distinct fixtures, carries
+  the stored endpoint as its source and claims no `httpStatus`; the read is bounded
+  to `kind=match`, seven days, twelve clips, and a store that ignores the limit
+  still cannot put more than twelve on the card; three stored clips fall back to the
+  live board and top it up without duplicates or reordering; storage that is slow,
+  throwing, `ok: false` or absent each land on the live board verbatim, and an
+  absent store is not even queried. Mounting the real `SportsHighlightsFeed` with a
+  stored board shows "Highlights from 2 ESPN games" — never "Sample cards" — and
+  both clips keep their Like buttons.
+- That `after()` is really what runs: a throwaway route (created and deleted in one
+  command) whose marker store writes a line when a pass starts. The handler's own
+  line is written **first**, and `store.available()` is called synchronously by a
+  pass, so a pass that starts after the handler returned can only have come from
+  `after()` — the fallback would have reversed the two lines.
+- That the homepage is a trigger: with the sweep's own 30 s limit expired, a forced
+  sweep runs a pass (`requests: 36`); after loading **only** `/`, the same forced
+  sweep returns `rate-limited` with `requests: 0`.
+- Real Postgres, seeded and then deleted in the same run: 6 match clips across 5
+  fixtures plus 2 league clips → `getHighlightsBoardForRender()` answered
+  `provenance: stored`, `status: live`, `games: 5`, 6 clips, `httpStatus: null`, in
+  **84 ms**, with **no league clip** on the board; `read()` returned the newest
+  row's endpoint in the new `sourceUrl` field. The running homepage rendered those
+  stored titles and "Highlights from 5 ESPN games". After deleting the rows the
+  summary went back to 0 clips, the board answered `provenance: live` with the
+  bundled samples (ESPN is unreachable here), and the homepage rendered its
+  "Sample cards · ESPN highlight videos are unreachable right now" copy exactly as
+  before — no probe clip left anywhere on the page.
+
+**A pre-existing flake, fixed here:** `tests/sports/highlights-feed.test.ts`'s "a day
+already remembered is not asked for again" seeded the finished-fixture pool 16
+minutes in the past and then asserted against `day(1)`/`day(2)` computed from
+`Date.now()` at assert time. The feed remembers the day before the *seeded* instant,
+so for the first 16 minutes of each UTC day the two derivations disagree and both
+assertions flipped: the suite failed at 00:05 and passed at 00:17 with nothing in
+`src/` changing. Both expectations now come from the bracketed seed instant, and a
+second spec locks the rule with fixed timestamps instead of waiting for midnight.
+Verified by shifting the process clock to 00:05:00 UTC with a loader outside the
+repo: the previous spec fails with "yesterday was asked again", the new one passes.
+
 **Not verified here:** real clips being stored, because this sandbox has no egress
 to `site.api.espn.com` (`ESPN_ACCESS_DENIED.md`). Every sweep in the sandbox asks
 and is refused. On a deployment that can reach ESPN, the first passes will fill
@@ -218,9 +293,10 @@ the index; the sweep report on the page is how to watch that happen.
 
 ## Natural next steps (not built)
 
-- A **cron** entry (`vercel.json`) hitting `/api/sports/highlights/sweep?force=1`
-  every few minutes, so coverage advances without traffic.
-- Letting the **homepage card** read stored clips, which would cut its render-time
-  fan-out entirely. Deliberately not done here: the homepage's shape, cache
-  headers and tests are unchanged by this feature.
+- A **scheduler**, if coverage should advance with no traffic at all. The route
+  already accepts `?force=1`, so this is a `vercel.json` cron plus a `CRON_SECRET`
+  check — and on a Hobby plan at most one invocation a day, which is why the
+  traffic triggers above are the primary mechanism and `passes=N` looping would be
+  needed to make a daily run worthwhile. Deliberately not built: the same coverage
+  arrives from the homepage, `/sports/highlights` and the button.
 - Per-competition "ask now" on `/sports` league pages, reusing `?league=`.

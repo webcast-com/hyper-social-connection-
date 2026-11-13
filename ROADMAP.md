@@ -382,5 +382,55 @@
     could not — and a live smoke in which a forced sweep honestly reported
     `{ok: true, cells: 0, requests: 36, truncated: true}` because this sandbox has
     no ESPN egress. Not verified here: real clips being stored, for the same
-    reason. A cron entry is the natural next step so coverage advances without
-    traffic.
+    reason. Coverage advancing without traffic is phase 20, and needs no cron.
+
+- Phase 20: Coverage without a scheduler, and a homepage that reads what it stored ✅
+  Two follow-ups to phase 19, both about making the stored index earn its keep on
+  the render path. See
+  [SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md).
+
+  - **No cron, and no `vercel.json`.** Every trigger now calls
+    `nudgeHighlightsSweep()`, which schedules the pass with Next's `after()` instead
+    of a bare `void`. That distinction is the whole reason traffic-driven coverage
+    works on a serverless host: a fire-and-forget call can be frozen the moment its
+    response leaves — requests started, nothing stored — while an `after()` callback
+    runs to completion. Outside a request scope `after()` throws, so the nudge falls
+    back to the call it replaced and can never throw into a render. Triggers are the
+    homepage, `/sports/highlights`, `?index=1` and the sweep button, so a first
+    rotation of 847 cells (~36 passes) is about six hours of ordinary traffic; a
+    quiet period stops growth and breaks nothing, because stored clips are
+    permanent.
+  - **The homepage reads stored clips first.** `getHighlightsBoardForRender()` asks
+    Postgres for `kind=match` over the last seven days — the live board's own
+    window, so the card's copy still holds — at most twelve clips, inside a 900 ms
+    budget, and costs **zero ESPN requests**. Four or more stored clips is the board
+    (`provenance: 'stored'`, `games` counted as the distinct fixtures its clips
+    name, `source.url` the endpoint that produced the newest row, `httpStatus` left
+    `null` because this render received no HTTP response). Fewer than four is a
+    thinner card than twelve live clips, so the live board answers as before and the
+    stored clips it is missing are appended, deduplicated by clip id, live clips
+    first in their own order.
+  - A stored board reports `status: 'live'`, because that is what it is: the feed
+    only dresses cards as samples — and strips their anchor post, so no Like button
+    — when a board is neither live nor partial. `provenance` is optional on the
+    board type, so the feed, the bundled sample board and a page's empty board are
+    all still valid untouched, and no consumer branches on it.
+  - Storage that is missing, slow, empty, throwing or reporting a failed query
+    degrades to exactly the board the homepage rendered before this phase, sample
+    cards included.
+  - Also fixed a **pre-existing** flake in `highlights-feed.test.ts`: a spec that
+    seeded the finished-fixture pool 16 minutes old and then asserted against
+    `Date.now()` at assert time, so it failed for the first 16 minutes of every UTC
+    day and passed again at 00:17 with nothing in `src/` changing. Both expectations
+    now come from the bracketed seed instant, and a second spec locks the rule with
+    fixed timestamps instead of waiting for midnight.
+  - Verified: `npm run typecheck`, `npm run test:sports` **386/386** (12 new: 11 for
+    the board read, 1 for the midnight rule), `npm run build`, changed-file ESLint,
+    a **real-Postgres seed-and-delete** in which 6 stored match clips across 5
+    fixtures made the homepage board `provenance: stored` with `games: 5` in 84 ms
+    and no league clip on it, then went back to the bundled sample board once the
+    rows were deleted — a **marker route** proving a pass starts *after* the handler
+    returns, so `after()` and not the fallback ran — and a control/experiment on the
+    running preview in which a forced sweep ran a pass with no recent traffic and
+    returned `rate-limited` after loading only the homepage, proving the homepage is
+    a trigger. Not verified here: real clips being stored, no sandbox ESPN egress.
