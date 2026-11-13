@@ -22,6 +22,26 @@ function team(competitor: any): SportsTeam | null {
   };
 }
 
+/**
+ * The broadcaster a scoreboard names for one fixture.
+ *
+ * Mirrors the NFL & basketball dashboard's own reading of the same payload, so a
+ * card in the feed and the match page it links to cannot disagree about who is
+ * showing a game. ESPN reports either a list of broadcast names or, failing that,
+ * a media short name; when it reports neither this is null and the card says the
+ * broadcast is not listed rather than inventing one.
+ */
+function broadcastName(competition: any): string | null {
+  const broadcasts = Array.isArray(competition?.broadcasts) ? competition.broadcasts : [];
+  const names = broadcasts
+    .flatMap((entry: any) => (Array.isArray(entry?.names) ? entry.names : []))
+    .filter((name: unknown): name is string => typeof name === 'string' && !!name.trim());
+  if (names.length) return names[0].trim();
+  const shortName = competition?.media?.shortName;
+  const first = Array.isArray(shortName) ? shortName[0] : shortName;
+  return typeof first === 'string' && first.trim() ? first.trim() : null;
+}
+
 /** Normalize scoreboards, not standings; missing/invalid payloads are failures. */
 export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
   if (!Array.isArray(payload?.events)) throw new Error('Invalid ESPN scoreboard response: events array missing');
@@ -48,6 +68,7 @@ export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
         leagueName: payload.leagues?.[0]?.name || meta.name,
         startAt: new Date(date).toISOString(), status, detail,
         venue: competition.venue?.fullName || competition.circuit?.fullName || null,
+        broadcast: broadcastName(competition),
         url: event.links?.[0]?.href || null,
       };
       if (meta.kind === 'motorsport') {

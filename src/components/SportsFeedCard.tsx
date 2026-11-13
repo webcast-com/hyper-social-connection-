@@ -16,7 +16,9 @@ import {
   X,
 } from 'lucide-react';
 import { matchHref } from '@/lib/espn-match';
+import { scoreCardLabel, scoreCardTarget, usesScoreCard } from '@/lib/score-card';
 import SportsRaceSummary from './SportsRaceSummary';
+import SportsScoreCard from './SportsScoreCard';
 import { matchPollOptions, type SportsEvent, type SportsPrediction } from '@/lib/sports';
 import { SPORT_LABELS } from '@/lib/sports-catalog';
 import { createPost } from '@/app/actions';
@@ -97,6 +99,12 @@ export default function SportsFeedCard({
   const score = event.status === 'upcoming'
     ? 'vs'
     : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
+  // Basketball and American football are drawn as the NFL & basketball
+  // dashboard's score card, which carries its own competition, clock and
+  // broadcaster, so the league row, the kickoff row and the separate match link
+  // are not repeated beside it: the card itself is the one destination.
+  const scoreCard = usesScoreCard(event);
+  const bodyHref = scoreCard ? scoreCardTarget(event) : '/sports';
   const predictionLabel = prediction
     ? `${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`
     : null;
@@ -174,23 +182,30 @@ export default function SportsFeedCard({
         </div>
       </div>
 
-      <Link href="/sports" className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          <span className="min-w-0 break-words">{event.leagueName}</span>
-          <span suppressHydrationWarning>{new Date(event.startAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-        </div>
+      <Link
+        href={bodyHref}
+        prefetch={bodyHref === '/sports' ? undefined : false}
+        aria-label={scoreCard ? scoreCardLabel(event) : undefined}
+        className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40"
+      >
+        {scoreCard ? <SportsScoreCard event={event} /> : <>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <span className="min-w-0 break-words">{event.leagueName}</span>
+            <span suppressHydrationWarning>{new Date(event.startAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          </div>
 
-        <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-slate-900/60 dark:ring-slate-700/70">
-          {event.race ? <SportsRaceSummary race={event.race} /> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-            <TeamBadge team={event.away} />
-            <div className="rounded-2xl bg-white px-3 py-2 text-center text-lg font-black tabular-nums text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
-              {score}
-            </div>
-            <TeamBadge team={event.home} align="right" />
-          </div>}
-        </div>
+          <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-slate-900/60 dark:ring-slate-700/70">
+            {event.race ? <SportsRaceSummary race={event.race} /> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+              <TeamBadge team={event.away} />
+              <div className="rounded-2xl bg-white px-3 py-2 text-center text-lg font-black tabular-nums text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
+                {score}
+              </div>
+              <TeamBadge team={event.home} align="right" />
+            </div>}
+          </div>
 
-        {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="my-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
+          {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="my-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
+        </>}
 
         {predictionLabel && (
           <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300">
@@ -199,18 +214,20 @@ export default function SportsFeedCard({
           </div>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <span className="inline-flex items-center gap-1">
-            <CalendarClock className="h-3.5 w-3.5" />
-            <span suppressHydrationWarning>{new Date(event.startAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-          </span>
-          {event.venue && (
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{event.venue}</span>
+        {!scoreCard && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <span className="inline-flex items-center gap-1">
+              <CalendarClock className="h-3.5 w-3.5" />
+              <span suppressHydrationWarning>{new Date(event.startAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
             </span>
-          )}
-        </div>
+            {event.venue && (
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{event.venue}</span>
+              </span>
+            )}
+          </div>
+        )}
       </Link>
 
       <div className="grid grid-cols-3 border-t border-gray-100 px-2 py-1 text-sm dark:border-gray-700">

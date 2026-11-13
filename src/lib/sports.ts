@@ -39,6 +39,8 @@ export type SportsEvent = {
   startAt: string;
   venue?: string | null;
   detail?: string | null;
+  /** The first broadcaster the provider names for this fixture, if it names one. */
+  broadcast?: string | null;
   home: SportsTeam;
   away: SportsTeam;
   url?: string | null;
