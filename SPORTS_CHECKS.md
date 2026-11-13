@@ -67,14 +67,47 @@ The rail also carries a count of what ESPN reports as in play (`2 live`), which 
 computed only from `source: 'espn'` fixtures, so a sample board still says "Sample
 fixtures" and never claims a live sport.
 
+### How many matches the feed carries
+
+**Every fixture the board reports** — live, upcoming and finished, from any of the
+121 configured competitions and any sport. Neither For You nor the Live tab caps
+how many matches it carries; the two matches For You used to show and the six the
+Live tab used to show are both gone.
+
+What is bounded is the **DOM, not the list**. A match card is a client component
+with its own state, poll and share affordances, and a busy day across the whole
+catalog can report a thousand fixtures, so a tab materialises
+`FEED_RENDER_BATCH = 24` cards at a time and offers the rest with a control that
+states exactly how many are left ("Show 24 more · 276 remaining in this tab").
+Every card the page built is reachable, the control disappears when nothing is
+left, and switching tab starts from the first batch again so one tab's scrolling
+does not decide another's. This is why the number on that button is a rendering
+fact and never a claim about how much sport is happening.
+
+Ordering, and what each surface does with it:
+
+- **For You** asks `featuredSportsEvents(events, events.length)`, which keeps the
+  rule it already had instead of adding a second one: one fixture per sport first,
+  so the cards interleaved at slots 1, 3, 5 and 7 among the member posts are not
+  four football matches on a day when football dominates the board, and then every
+  remaining fixture in the board's own order — live first, then by kickoff. Those
+  first four keep their slots; the rest follow the member posts rather than
+  displacing them, so the feed still reads as a feed for its first screenful.
+- **The Live tab** uses `orderCentreEvents` directly: the board's own order, whole
+  and unranked, because a list that shows everything has no scarce rows to spend on
+  one fixture per competition.
+- **The centre surfaces keep their bounds** — 2 rows in the compact mobile summary,
+  4 in the desktop rail — and now that the feed carries every fixture, rule 3 above
+  means the rail's fresh tier is the live ones, with the rest filled from the
+  board. It still never drops a fixture, so a quiet day still fills its rows.
+
 ### The feed's Live tab
 
 `FeedTabs` has a fourth tab beside For You, Following and Saved. It is the sports
-desk on its own: up to `LIVE_TAB_MATCHES = 6` fixtures chosen by the same centre
-rule, then predictions, then league video news. A prediction already attached to
-one of those fixtures is not repeated beside it as a second card for the same
-match, and For You keeps its own two featured cards at their own slots — the tab
-is additive and moves nothing.
+desk on its own: every fixture the board reports, live first, then predictions,
+then league video news. A prediction already attached to one of those fixtures is
+not repeated beside it as a second card for the same match, and For You keeps its
+own slots — the tab is additive and moves nothing.
 
 The tab says what it is showing, counted by `summariseLiveCards` rather than by
 the component: a fixture this site invented is listed but never counted as live,
@@ -84,6 +117,56 @@ offers `/sports` instead of filling the gap.
 Four tabs do not fit a 320px column with icons and labels, so the icons — which are
 decorative, the label carries the meaning — render from `sm` up and labels truncate
 rather than push the strip wider than the viewport.
+
+### Basketball and American football: the dashboard's score card
+
+Fixtures in `SCORE_CARD_SPORTS` — basketball and American football, which today
+means the NBA, WNBA, NCAA men's and women's basketball and the NFL — are drawn in
+the feed as the NFL & basketball dashboard's own match card: two crests either side
+of a `V/S`, a competition chip carrying that league's colour from the dashboard's
+catalog, a clock pill, one row per side with its score, and a footer naming the
+broadcaster. A race is never drawn this way; it has no two sides to put either side
+of a `V/S`.
+
+The card is the dashboard's, styled for this feed rather than copied pixel for
+pixel: the same structure and the same words, in the app's own light and dark
+palette, so it sits beside the other cards instead of punching a dark hole in the
+column. Home is first, as it is on the dashboard — the rest of the feed's match card
+shows away first, and that difference is deliberate rather than an oversight.
+
+It replaces the league and date row, the two-badge score box, the separate "View
+match details" link and the kickoff and venue row, because the card carries the
+competition, the clock and the broadcaster instead and the page it links to carries
+the venue. What it does *not* replace is the rest of the post: the author header
+with its status chip, any prediction, and Comment / Poll / Share all stay, so a
+basketball fixture is still something a reader can talk about and not only a
+scoreboard row.
+
+**Where the click goes.** The dashboard's match page,
+`/nfl-basketball/basketball/match/{id}` or `/nfl-basketball/nfl/match/{id}`, with
+`?competition=` for every league that is not that board's flagship — WNBA and both
+NCAA divisions — exactly as the dashboard's own `matchPath` decides it, so its
+commentary asks the right ESPN feed. Two fallbacks keep the card from ever being a
+dead click or a wrong one: a league the dashboard does not serve goes to this app's
+own `/sports/matches/{league}/{id}`, and a fixture with no ESPN-reported numeric id
+goes to `/sports`. Only a numeric id is ever put in a match URL. A spec walks every
+basketball and American football league in the catalog and fails if one has
+nowhere to send a reader, so a league added later cannot quietly lose its link.
+
+**What it refuses to claim.** A fixture this site invented never wears a live clock
+or a `Final`: it shows its kickoff in the neutral tone while the card's own chip
+still says "Sample fixture", and it links to the board rather than to a match page
+that cannot answer for it. A score the provider did not report is an em dash — a
+fixture that has not started has no score, and none is invented — while a real zero
+stays a zero. A broadcaster the provider did not name is "TV TBD". A logo that fails
+to load falls back to the team's code on a crest rather than leaving a broken image
+in the layout.
+
+The broadcaster is new data: `SportsEvent.broadcast`, parsed the way the dashboard
+reads the same payload — the first name in `broadcasts`, or failing that the media
+short name, or null. It costs no extra request, because the scoreboard response the
+board already fetches carries it; a card and the page it links to cannot disagree
+about who is showing a game.
 
 ## Verification
 

@@ -14,7 +14,7 @@ import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
-import { LIVE_TAB_MATCHES, selectMatchCentreRows } from '@/lib/match-centre';
+import { orderCentreEvents } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getHighlightsBoardForRender } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
@@ -354,10 +354,19 @@ export default async function Home() {
     }) || null;
   };
 
-  // Basketball shares the feed's match card with football, so the featured
-  // matches are picked across the sports that are actually playing rather than
-  // as the two soonest fixtures, which are almost always both football.
-  const sportsFeedPosts = featuredSportsEvents(sportsBoard.events).map((event, index) => ({
+  // Every fixture the board reports — live, upcoming and finished, from any
+  // competition and any sport — becomes a card. There is no cap on how many the
+  // feed carries.
+  //
+  // Asking `featuredSportsEvents` for as many as exist keeps the ordering rule it
+  // already had rather than adding a second one: one fixture per sport first, so
+  // the cards interleaved at the top of the feed are not four football matches on
+  // a day when football dominates the board, and then every remaining fixture in
+  // the board's own order, which is live first, then by kickoff. Those first four
+  // land at their usual slots among the member posts; the rest follow the posts,
+  // and `FeedTabs` reveals them in batches so a 1,000-fixture day does not put
+  // 1,000 interactive cards in the DOM at once.
+  const sportsFeedPosts = featuredSportsEvents(sportsBoard.events, sportsBoard.events.length).map((event, index) => ({
     id: `sports-${event.id}`,
     type: 'sports',
     event,
@@ -393,13 +402,14 @@ export default async function Home() {
     VIDEO_NEWS_FEED_SLOTS,
   );
 
-  // The Live tab is the sports desk on its own: the same cards For You
-  // interleaves, but every fixture the centre rule allows rather than the two
-  // featured ones, live first, and no member posts. One card per fixture, and a
-  // prediction already attached to one of those cards is not repeated beside it
-  // as a second card for the same match. For You is untouched: it keeps its own
-  // two featured cards at their own slots.
-  const liveMatchPosts = selectMatchCentreRows(sportsBoard.events, { limit: LIVE_TAB_MATCHES }).map((event, index) => ({
+  // The Live tab is the sports desk on its own: every fixture the board reports,
+  // live first and then upcoming and results, in the board's own order, with no
+  // member posts and no cap. One card per fixture, and a prediction already attached to
+  // one of those cards is not repeated beside it as a second card for the same
+  // match. This is the board's own ordering, so nothing here re-ranks what ESPN
+  // reported; the centre's distinct-competition rule is deliberately not applied,
+  // because a tab that lists everything has no scarce rows to spend.
+  const liveMatchPosts = orderCentreEvents(sportsBoard.events).map((event, index) => ({
     id: `sports-${event.id}`,
     type: 'sports',
     event,

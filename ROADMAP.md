@@ -549,3 +549,86 @@
   - Not verified here: no pick has been taken against live ESPN odds, because this
     sandbox has no egress to ESPN and the odds board is empty — which the action
     reports correctly rather than storing a pick it cannot check.
+
+- Phase 24: The feed carries every fixture, and the DOM stays bounded ✅
+  For You showed **two** matches and the Live tab **six**, whichever the board
+  reported. Both caps are gone: the feed now carries every fixture on the board —
+  live, upcoming and finished, from any of the 121 configured competitions and any
+  sport. Detail in
+  [SPORTS_CHECKS.md](SPORTS_CHECKS.md#how-many-matches-the-feed-carries).
+
+  - **The list is unbounded; the DOM is not.** A match card is a client component
+    with its own state, poll and share affordances, and a busy day across the whole
+    catalog can report a thousand fixtures, so a tab materialises
+    `FEED_RENDER_BATCH = 24` cards and offers the rest with a control that states
+    what is left ("Show 24 more · 276 remaining in this tab"). Every card the page
+    built is reachable, the control disappears when nothing is left, and switching
+    tab starts from the first batch again. Nothing was removed from the feed to make
+    the page fast — only from the initial render.
+  - For You asks `featuredSportsEvents(events, events.length)`, keeping the rule it
+    already had rather than adding a second one: one fixture per sport first, so the
+    four cards interleaved at slots 1, 3, 5, 7 are not four football matches on a
+    football-heavy day, then every remaining fixture in the board's own order. The
+    rest follow the member posts instead of displacing them, so the feed still reads
+    as a feed for its first screenful.
+  - The Live tab uses `orderCentreEvents` directly — the board's own order, whole and
+    unranked, because a list that shows everything has no scarce rows to spend on one
+    fixture per competition. `LIVE_TAB_MATCHES` is deleted.
+  - The centre surfaces keep their bounds (2 compact, 4 rail). Now that the feed
+    carries every fixture, the rail's fresh tier is the live ones and the rest fill
+    from the board; it still never drops a fixture, so a quiet day still fills its
+    rows.
+  - No extra ESPN cost: the board was already fetched once per render, so this spends
+    data that was in memory and changes only what is rendered from it.
+  - Verified: `npm run typecheck`, `npm run test:sports` **447/447** (8 new: every
+    fixture returned when asked for every fixture with the sport-diverse head kept, an
+    uncapped Live tab ordering, a 1,000-fixture board listed whole by the tab and still
+    bounded to four rows in the rail, and five batching specs — one batch rendered with
+    an honest remaining count, the whole list reachable, a partial last batch, no
+    control when nothing is withheld, and the batch resetting on tab switch),
+    changed-file ESLint, `npm run build`, and the rendered homepage DOM.
+
+- Phase 25: Basketball and NFL fixtures wear the dashboard's match card ✅
+  The feed's match card was one shape for every sport. Basketball and American
+  football — the NBA, WNBA, both NCAA basketball divisions and the NFL — are now
+  drawn as the NFL & basketball dashboard's own score card, so a fixture reads the
+  same in the feed and on the page the feed sends a reader to. Detail in
+  [SPORTS_CHECKS.md](SPORTS_CHECKS.md#basketball-and-american-football-the-dashboards-score-card).
+
+  - Two crests either side of a `V/S`, a competition chip in that league's colour
+    from the dashboard's catalog, a clock pill, one row per side with its score, and
+    a footer naming the broadcaster. The dashboard's structure and words, in this
+    app's light and dark palette rather than its dark panel, so the card sits beside
+    the others instead of punching a hole in the column. Home is first, as it is on
+    the dashboard.
+  - The card replaces the league and date row, the badge-and-score box, the separate
+    match link and the kickoff and venue row. It does **not** replace the rest of the
+    post: the author header and its status chip, any prediction, and Comment / Poll /
+    Share all stay, so a basketball fixture is still something a reader can talk
+    about. Every other sport keeps the card it had, byte for byte.
+  - It links to the dashboard's match page — `/nfl-basketball/{basketball|nfl}/match/{id}`,
+    with `?competition=` for every league that is not that board's flagship — exactly
+    as the dashboard's own `matchPath` decides it. A league the dashboard does not
+    serve falls back to this app's `/sports/matches/{league}/{id}`; a fixture with no
+    ESPN-reported numeric id falls back to `/sports`. Never a dead click, never a link
+    to a page that cannot answer for the fixture.
+  - Honesty rules kept, and moved into `score-card.ts` so they cannot drift: a sample
+    fixture never wears a live clock or a `Final` (it shows its kickoff, neutral tone,
+    while its chip still says "Sample fixture"); a score the provider did not report is
+    an em dash, while a real zero stays a zero; an unnamed broadcaster is "TV TBD"; a
+    logo that fails to load falls back to the team's code.
+  - New data: `SportsEvent.broadcast`, read from the scoreboard the board already
+    fetches the same way the dashboard reads it — first broadcast name, else media
+    short name, else null. No extra request anywhere.
+  - Verified: `npm run typecheck`, `npm run test:sports` **464/464** (17 new, including
+    five that mount the real card in jsdom and read it — home first, both scores,
+    crests for missing logos, a logo that fails to load falling back to its code, a
+    sample fixture showing scores but never a live clock, a finished fixture reading
+    "Final"), a spec that walks every basketball and American football league in the
+    catalog and fails if one has nowhere to send a reader, changed-file ESLint,
+    `npm run build`, all six dashboard routes at 200, a client-bundle audit (the card's
+    own strings and league colours ship to the client; no Prisma, `next/server` or
+    query fingerprints), and the rendered homepage DOM: the NBA sample fixture as one
+    score card, tone `soon`, crests LAL/BOS, home-first rows 78 and 74, `TV TBD`,
+    linking to `/sports` because a sample has no match page — and the other 15 fixtures
+    unchanged.

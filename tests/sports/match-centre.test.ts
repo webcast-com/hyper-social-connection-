@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  LIVE_TAB_MATCHES, MATCH_CENTRE_ROWS, MATCH_CENTRE_ROWS_COMPACT, MAX_CENTRE_ROWS,
+  MATCH_CENTRE_ROWS, MATCH_CENTRE_ROWS_COMPACT, MAX_CENTRE_ROWS,
   liveFixtureCount, orderCentreEvents, pickableEvents, selectMatchCentreRows, summariseLiveCards,
 } from '../../src/lib/match-centre';
 import type { SportsEvent } from '../../src/lib/sports';
@@ -94,17 +94,38 @@ test('the limit is clamped, so a caller cannot ask for the whole board', () => {
   assert.equal(selectMatchCentreRows(board, { limit: 2.7 }).length, 2);
 });
 
-test('the two surfaces the homepage renders share one rule at their own bounds', () => {
+test('the two centre surfaces share one rule at their own bounds', () => {
   const board = busyBoard();
   const compact = selectMatchCentreRows(board, { limit: MATCH_CENTRE_ROWS_COMPACT });
   const rail = selectMatchCentreRows(board, { limit: MATCH_CENTRE_ROWS });
-  const tab = selectMatchCentreRows(board, { limit: LIVE_TAB_MATCHES });
 
   assert.equal(compact.length, 2);
   assert.equal(rail.length, 4);
-  assert.equal(tab.length, 6);
   assert.deepEqual(compact, rail.slice(0, 2), 'the compact summary is the rail, shorter');
-  assert.deepEqual(rail, tab.slice(0, 4), 'the rail is the Live tab, shorter');
+});
+
+test('the Live tab lists every fixture, in the centre\u2019s own order and with nothing left out', () => {
+  const board = busyBoard();
+  const listed = orderCentreEvents(board);
+
+  assert.equal(listed.length, board.length, 'a tab that lists everything drops nothing');
+  assert.deepEqual(listed.map((event) => event.id), ['nba-1', 'epl-2', 'epl-3', 'epl-4', 'nfl-1', 'ucl-1', 'epl-1'],
+    'live first, then upcoming, then results — the board\u2019s own order, not re-ranked');
+  assert.deepEqual(selectMatchCentreRows(board, { limit: MATCH_CENTRE_ROWS }), listed.slice(0, 1).concat(
+    selectMatchCentreRows(board, { limit: MATCH_CENTRE_ROWS }).slice(1)),
+    'the rail still spends its four scarce rows on four competitions');
+});
+
+test('a board of a thousand fixtures is listed whole by the tab and still bounded in the rail', () => {
+  const huge = Array.from({ length: 1000 }, (_, index) => event({
+    id: `evt-${index}`, sourceId: String(401200000 + index),
+    league: `league-${index % 40}`, leagueName: `League ${index % 40}`,
+    status: index % 7 === 0 ? 'live' : index % 3 === 0 ? 'final' : 'upcoming',
+  }));
+
+  assert.equal(orderCentreEvents(huge).length, 1000, 'nothing is capped on the way to the tab');
+  assert.equal(orderCentreEvents(huge)[0]!.status, 'live', 'and the live ones come first');
+  assert.equal(selectMatchCentreRows(huge, { limit: MATCH_CENTRE_ROWS }).length, 4, 'the rail stays four rows');
 });
 
 test('a live count describes fixtures ESPN reports as in play, never samples', () => {

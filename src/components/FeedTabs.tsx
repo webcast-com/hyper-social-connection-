@@ -9,6 +9,7 @@ import { Sparkles, Users, Bookmark, Compass, Radio } from 'lucide-react';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import { summariseLiveCards } from '@/lib/match-centre';
+import { FEED_RENDER_BATCH } from '@/lib/feed-interleave';
 
 type Tab = 'for-you' | 'following' | 'live' | 'saved';
 
@@ -41,6 +42,13 @@ export default function FeedTabs({
   viewerFollowIds?: number[];
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('for-you');
+  // How many of this tab's cards are in the DOM. Every card the page built is in
+  // `postsToRender`; this only decides how many are materialised at once, because
+  // a match card is a client component with its own state and a busy day can
+  // report a thousand fixtures. Switching tab starts from the first batch again,
+  // so one tab's scrolling does not silently decide another's.
+  const [revealed, setRevealed] = useState(FEED_RENDER_BATCH);
+  const select = (tab: Tab) => { setActiveTab(tab); setRevealed(FEED_RENDER_BATCH); };
 
   const bookmarkedSet = new Set(bookmarkedPostIds);
 
@@ -48,6 +56,8 @@ export default function FeedTabs({
     activeTab === 'for-you' ? forYouPosts :
     activeTab === 'following' ? followingPosts :
     activeTab === 'live' ? livePosts : savedPosts;
+  const shown = postsToRender.slice(0, revealed);
+  const remaining = postsToRender.length - shown.length;
 
   // What the Live tab can say about itself, counted from the cards it was given
   // by the one rule that decides it (`summariseLiveCards`), so a sample fixture
@@ -64,7 +74,7 @@ export default function FeedTabs({
       <div role="group" aria-label="Feed sections" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-16 z-20 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
         <button
           type="button"
-          onClick={() => setActiveTab('for-you')}
+          onClick={() => select('for-you')}
           aria-pressed={activeTab === 'for-you'}
           className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'for-you'
@@ -78,7 +88,7 @@ export default function FeedTabs({
 
         <button
           type="button"
-          onClick={() => setActiveTab('following')}
+          onClick={() => select('following')}
           aria-pressed={activeTab === 'following'}
           className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'following'
@@ -94,7 +104,7 @@ export default function FeedTabs({
             so the strip never advertises a live sport that is not. */}
         <button
           type="button"
-          onClick={() => setActiveTab('live')}
+          onClick={() => select('live')}
           aria-pressed={activeTab === 'live'}
           className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'live'
@@ -109,7 +119,7 @@ export default function FeedTabs({
 
         <button
           type="button"
-          onClick={() => setActiveTab('saved')}
+          onClick={() => select('saved')}
           aria-pressed={activeTab === 'saved'}
           className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'saved'
@@ -182,7 +192,7 @@ export default function FeedTabs({
                       : 'No fixtures or league video are listed right now.'}
               </p>
             )}
-            {postsToRender.map((post) => (
+            {shown.map((post) => (
               post.type === 'sports' ? (
                 <SportsFeedCard key={post.id} event={post.event} prediction={post.prediction} currentUser={currentUser} />
               ) : post.type === 'prediction' ? (
@@ -199,6 +209,16 @@ export default function FeedTabs({
                 />
               )
             ))}
+            {remaining > 0 && (
+              <button
+                type="button"
+                onClick={() => setRevealed((count) => count + FEED_RENDER_BATCH)}
+                className="min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-blue-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700/60"
+              >
+                Show {Math.min(FEED_RENDER_BATCH, remaining)} more
+                <span className="font-semibold text-gray-500 dark:text-gray-400"> · {remaining} remaining in this tab</span>
+              </button>
+            )}
           </>
         )}
       </div>

@@ -29,6 +29,32 @@ test('the board catalog lists basketball alongside every other sport', () => {
   assert.ok(SPORTS_BOARD_SPORTS.includes('basketball'), 'the sport filter offers Basketball');
 });
 
+test('asking for every fixture returns every fixture, one per sport first', () => {
+  // The For You feed carries every match the board reports rather than two, so
+  // the same function is asked for as many as exist. What has to hold is that it
+  // returns all of them, that the ones landing in the feed's first slots are
+  // still spread across the sports actually playing, and that the rest keep the
+  // board's own order rather than being re-ranked here.
+  const events = [
+    football('epl', '2026-11-09T18:00:00Z'),
+    football('laliga', '2026-11-09T18:30:00Z'),
+    basketball('nba', '2026-11-09T19:00:00Z'),
+    football('mls', '2026-11-09T19:30:00Z'),
+    basketball('wnba', '2026-11-09T20:00:00Z'),
+  ];
+
+  const all = featuredSportsEvents(events, events.length);
+  assert.equal(all.length, events.length, 'nothing is dropped by asking for all of them');
+  assert.deepEqual(new Set(all.map((entry) => entry.id)).size, events.length, 'and nothing is duplicated');
+  assert.deepEqual(all.slice(0, 2).map((entry) => entry.sport), ['football', 'basketball'],
+    'the two that land in the feed\u2019s first slots are still one per sport');
+  assert.deepEqual(all.slice(2).map((entry) => entry.league), ['laliga', 'mls', 'wnba'],
+    'the rest follow in the board\u2019s own order');
+
+  assert.equal(featuredSportsEvents([], 0).length, 0, 'an empty board yields an empty feed, not a placeholder');
+  assert.equal(featuredSportsEvents(events, 99).length, events.length, 'asking for more than exist returns what exists');
+});
+
 test('a feed with football and basketball playing shows both', () => {
   const events = [
     football('epl', '2026-11-09T18:00:00Z'),
