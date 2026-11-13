@@ -21,11 +21,13 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { hasDatabase, prisma } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
+import { findStoredHighlightClip } from '@/lib/highlights-index';
 import { isSafeMediaUrl } from '@/lib/media-url';
 import { getSportsLeaderBoards } from './espn-leaders-feed';
 import { getSportsHighlights } from './espn-highlights-feed';
 import type { SportsLeaderBoard, SportsLeaderSport } from './espn-leaders';
 import type { SportsHighlightsBoard } from './espn-highlights-feed';
+import type { SportsHighlightClip } from './espn-highlights';
 import {
   anchorKey,
   anchorRef,
@@ -114,9 +116,16 @@ export async function resolveAnchorDraft(ref: SportsAnchorRef): Promise<SportsAn
     return null;
   }
   const board = await getSportsHighlights();
-  if (board.status === 'unavailable') return null;
-  const clip = board.clips.find((candidate) => highlightAnchorId(candidate) === ref.id);
-  return clip ? highlightAnchorDraft(clip) : null;
+  if (board.status !== 'unavailable') {
+    const clip = board.clips.find((candidate) => highlightAnchorId(candidate) === ref.id);
+    if (clip) return highlightAnchorDraft(clip);
+  }
+  // A clip that has left the live board is still a real clip: the stored index
+  // keeps every clip this site has read, so engagement on it resolves from there
+  // instead of silently failing. Inert without a database, exactly like the rest
+  // of this module.
+  const stored = await findStoredHighlightClip(ref.id);
+  return stored ? highlightAnchorDraft(stored) : null;
 }
 
 /** The anchor post for a card, created on first use from this site's own feed. */
@@ -254,10 +263,21 @@ export function leaderAnchorRefs(boards: Record<SportsLeaderSport, SportsLeaderB
   return refs;
 }
 
-/** Refs for the highlights board, real clips only. */
-export function highlightAnchorRefs(board: SportsHighlightsBoard, limit = MAX_REFS): SportsAnchorRef[] {
-  if (board.status === 'unavailable') return [];
-  return board.clips.slice(0, limit)
+/**
+ * Refs for a list of highlight clips, real clips only.
+ *
+ * Split out from the board because a page can render clips the board does not
+ * hold: the stored index keeps every clip this site has read, and each of those
+ * cards engages through the same anchor as the homepage card for the same clip.
+ */
+export function highlightClipsAnchorRefs(clips: Pick<SportsHighlightClip, 'id'>[], limit = MAX_REFS): SportsAnchorRef[] {
+  return clips.slice(0, limit)
     .map((clip) => anchorRef('highlight', highlightAnchorId(clip)))
     .filter((ref): ref is SportsAnchorRef => ref !== null);
+}
+
+/** Refs for the highlights board, real clips only. A sample board has none. */
+export function highlightAnchorRefs(board: SportsHighlightsBoard, limit = MAX_REFS): SportsAnchorRef[] {
+  if (board.status === 'unavailable') return [];
+  return highlightClipsAnchorRefs(board.clips, limit);
 }
