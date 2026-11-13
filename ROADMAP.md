@@ -475,3 +475,77 @@
     ESPN egress where `clip?id=…` returned `playable: true` with the stored mp4 (an
     answer that could only have come from Postgres), a clip with no stored rendition
     returned `playable: false` with `no-store`, and id validation still returned 400.
+
+- Phase 22: One match centre, and a Live tab that collects the desk ✅
+  The homepage rendered the same fixtures from **two different boards**: a compact
+  summary in the mobile column and a rail in the desktop column, where the second
+  component called `getSportsBoard()` itself. A cold cache paid for the
+  121-competition fan-out twice per render, and — worse — the two surfaces could
+  disagree, because they were two snapshots taken at different moments. On top of
+  that, a fixture the For You feed already carried as a card was repeated beside it.
+  Detail in [SPORTS_CHECKS.md](SPORTS_CHECKS.md#the-homepage-match-centre).
+
+  - `SportsMatchCentre` replaces `SportsScoresWidget` **and** `SportsLiveWidget`
+    (both deleted). It cannot fetch: both surfaces take the page's board as a prop,
+    so one render pays for one board and the two surfaces cannot disagree.
+  - One row rule in `src/lib/match-centre.ts`: live first, then one fixture per
+    competition before a second from any, and a fixture the feed already shows as a
+    card is **deprioritised rather than dropped** — never deprioritised while live.
+    Dropping every mentioned fixture would empty the centre on a quiet day, which is
+    a hole rather than a deduplication, so rows fill from fresh fixtures first and
+    only then repeat.
+  - The rail carries a count of what ESPN reports as in play, computed only from
+    `source: 'espn'` fixtures, so a sample board still says "Sample fixtures".
+  - A fourth `FeedTabs` tab collects the desk: up to six fixtures by the same rule,
+    then predictions, then league video news, with a prediction already attached to
+    a fixture not repeated beside it. For You keeps its own cards at their own
+    slots. The tab's own summary is counted by `summariseLiveCards`, so a fixture
+    this site invented is listed but never counted as live.
+  - Verified: `npm run typecheck`, `npm run test:sports` **439/439** (12 new centre
+    specs, 5 new tab specs driven in jsdom), changed-file ESLint, `npm run build`.
+    The Playwright spec lost the `SportsLiveWidget` substitution it needed only
+    because that widget fetched its own board; its invariants are unchanged
+    (exactly one visible "Sports scores" region, both competitions named, no "LIVE"
+    on a sample board) but it cannot run in this sandbox.
+
+- Phase 23: A pick is a pick, and it gets graded ✅
+  A pick used to become a post — free text with the odds pasted in — which no
+  surface could ever answer, so a prediction was decoration. Detail in
+  [SPORTS_PICKS.md](SPORTS_PICKS.md).
+
+  - New `sports_picks` table: a side, the price ESPN reported when it was taken,
+    both team names as reported then, the kickoff, and — once a result arrives — an
+    outcome, a point and the score that decided it. Unique per reader per fixture,
+    with a partial index for the grader's read.
+  - Three rules hold it honest: a pick is addressed by **league slug plus ESPN's
+    event id**, never a team name; it **locks at kickoff**, decided server-side from
+    the kickoff the odds board reported rather than a browser clock, and the first
+    pick stands; and it is **graded only from a result ESPN reported** — a missing or
+    fractional score leaves it awaiting a result instead of being rounded into one,
+    and a sample fixture is never a result.
+  - One point per correct pick, ranked `points DESC, graded ASC`, with the record
+    shown beside the score. A price-weighted total would compare readers who picked
+    at different prices and cannot be computed when no price was reported. The
+    viewer's rank is counted with the same comparison the ordering uses, so a rail
+    cannot say "3rd" above a list that disagrees.
+  - Grading rides on traffic — no cron: `nudgePickGrading()` schedules a pass with
+    `after()` behind **the homepage only**, rate-limited to one per ten minutes per
+    process, reading the board that page has just fetched with no cache bypass, so a
+    pass normally costs **zero ESPN requests**. The predictions page does not nudge,
+    because it reads odds and a pass there would pay for a full scoreboard fan-out.
+    At most 12 picks per pass, oldest kickoff first; graded rows leave the read, so
+    the work converges.
+  - With no database there is no rail at all rather than an empty one: "no graded
+    picks yet" and "picks are not being stored" are different claims.
+  - Verified: `npm run typecheck`, `npm run test:sports` **439/439** (24 new specs,
+    including seven pass specs against an injected store), changed-file ESLint,
+    `npm run build`, and a **real-Postgres probe** (deleted in the same run) covering
+    all four indexes, a second pick refused by the unique index with the original
+    returned, the multi-array `unnest` grading UPDATE and its idempotence, the
+    leaderboard's ordering, record, reader count and both readers' ranks, the clamped
+    window, and convergence. The probe caught a bug no spec could: `JOIN "users" AS
+    user` is a **syntax error in Postgres** (`user` is reserved), so the leaderboard
+    query had never run — the alias is now `reader`.
+  - Not verified here: no pick has been taken against live ESPN odds, because this
+    sandbox has no egress to ESPN and the odds board is empty — which the action
+    reports correctly rather than storing a pick it cannot check.

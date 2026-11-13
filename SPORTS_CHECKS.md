@@ -31,10 +31,59 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 
 - Sport, status, region, competition and team/league search filters combine. Changing sport/region resets incompatible competition selections. All configured competitions remain discoverable, including those without fixtures.
 - Phone sport chips scroll horizontally; filters use two columns. On the prior 320px running-page review, this moved the first sample competition card from approximately 988px down to 700px. The browser fixture asserts that cards begin within the first 700px of a 900px viewport.
-- Mobile homepage summaries show two distinct competitions near the top, sharing presentation/data with the desktop rail's three-competition summary.
+- Mobile homepage summaries show two distinct competitions near the top, sharing one component and one board with the desktop rail's four-competition summary — see [the match centre](#the-homepage-match-centre).
 - Team names get their own row below logos and the central score. Three-digit basketball scores, long names/status labels and poll inputs fit narrow cards. Comment/Poll/Share controls have at least 44px height.
 - Sample fixtures are labeled consistently across summaries and event cards. Unrelated predictions are not attached by array index.
 - Shared header/navigation and safe-area-aware page padding remain available to signed-in and signed-out visitors.
+
+## The homepage match centre
+
+One component, `src/components/SportsMatchCentre.tsx`, renders both homepage
+surfaces — the compact summary in the mobile column and the rail in the desktop
+column — from the board the page already fetched. It replaced
+`SportsScoresWidget` plus `SportsLiveWidget`, and the second of those called
+`getSportsBoard()` itself: a cold cache paid for the 121-competition fan-out
+twice per render, and because the two calls were two snapshots taken at different
+moments, the mobile summary and the desktop rail could disagree about the same
+fixture. Neither component can fetch now; both take `board` as a prop.
+
+Which rows they show is one rule in `src/lib/match-centre.ts`, tested without a
+browser:
+
+1. live first, then upcoming, then results — the board's own order;
+2. within that, one fixture per competition before a second fixture from any
+   competition, so four rows read as four competitions;
+3. a fixture the For You feed already carries as a card is **deprioritised, not
+   dropped**, and never deprioritised while it is live.
+
+Rule 3 is a preference on purpose. Dropping every fixture the feed mentions would
+empty the centre on a quiet day, when the two or three fixtures that exist are
+exactly the ones a reader wants scores for — a centre that shows nothing because
+the feed is showing it is a hole, not a deduplication. So rows are filled from
+fixtures the reader has not just seen, and only then repeated; a quiet day still
+fills its rows, and a live score is never treated as a repeat.
+
+The rail also carries a count of what ESPN reports as in play (`2 live`), which is
+computed only from `source: 'espn'` fixtures, so a sample board still says "Sample
+fixtures" and never claims a live sport.
+
+### The feed's Live tab
+
+`FeedTabs` has a fourth tab beside For You, Following and Saved. It is the sports
+desk on its own: up to `LIVE_TAB_MATCHES = 6` fixtures chosen by the same centre
+rule, then predictions, then league video news. A prediction already attached to
+one of those fixtures is not repeated beside it as a second card for the same
+match, and For You keeps its own two featured cards at their own slots — the tab
+is additive and moves nothing.
+
+The tab says what it is showing, counted by `summariseLiveCards` rather than by
+the component: a fixture this site invented is listed but never counted as live,
+and a card that is not a fixture never counts as one. With nothing on the desk it
+offers `/sports` instead of filling the gap.
+
+Four tabs do not fit a 320px column with icons and labels, so the icons — which are
+decorative, the label carries the meaning — render from `sm` up and labels truncate
+rather than push the strip wider than the viewport.
 
 ## Verification
 
