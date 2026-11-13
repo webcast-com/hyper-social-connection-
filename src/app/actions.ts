@@ -3,6 +3,10 @@
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
+import { getEspnOdds } from '@/lib/espn-odds-feed';
+import type { OddsMatch } from '@/lib/espn-odds';
+import { pickFromFixture, type MatchPick } from '@/lib/sports-picks';
+import { placePick } from '@/lib/sports-picks-store';
 import { isSafeMediaUrl } from '@/lib/media-url';
 import bcrypt from 'bcryptjs';
 import {
@@ -1122,4 +1126,59 @@ export async function editPost(postId: number, content: string) {
   revalidatePath(`/post/${postId}`);
   revalidatePath(`/profile/${userId}`);
   return { success: true };
+}
+
+/**
+ * Record a reader's pick on one fixture.
+ *
+ * The request says which fixture and which side; everything else comes from the
+ * odds board that listed it — the league slug, ESPN's event id, both team names,
+ * the kickoff and the price. So a reader cannot pick a fixture that is not
+ * listed, cannot backdate a kickoff to pick after the match has started, and
+ * cannot attach a price ESPN did not report.
+ *
+ * The kickoff lock and the "first pick stands" rule are enforced in
+ * `pickFromFixture` and by the table's unique index, both server-side.
+ */
+export async function placeMatchPick(input: { league?: unknown; eventId?: unknown; side?: unknown }): Promise<
+  { ok: true; pick: MatchPick; stored: boolean } | { ok: false; message: string }
+> {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, message: 'Sign in to record a pick.' };
+
+  const league = typeof input?.league === 'string' ? input.league.trim() : '';
+  const eventId = typeof input?.eventId === 'string' ? input.eventId.trim() : '';
+  if (!league || !eventId) return { ok: false, message: 'That fixture cannot be picked.' };
+
+  let match: OddsMatch | undefined;
+  try {
+    // The same cached board the predictions page rendered from, so taking a pick
+    // costs no extra ESPN fan-out.
+    const board = await getEspnOdds();
+    match = board.matches.find((candidate) => candidate.details?.league === league && candidate.details?.eventId === eventId);
+  } catch (error) {
+    console.warn('[action:placeMatchPick] odds feed unavailable:', (error as Error)?.message);
+    return { ok: false, message: 'The odds feed could not be reached, so this fixture cannot be checked. Please try again.' };
+  }
+  if (!match?.details) return { ok: false, message: 'That fixture is no longer listed with ESPN odds.' };
+
+  const wanted = input?.side;
+  const candidate = pickFromFixture({
+    league: match.details.league,
+    eventId: match.details.eventId,
+    side: wanted,
+    sport: match.sport,
+    home: match.home_team,
+    away: match.away_team,
+    kickoff: match.kickoff,
+    price: wanted === 'draw' ? match.odds.draw : wanted === 'away' ? match.odds.away : match.odds.home,
+  });
+  if (!candidate.ok) return { ok: false, message: candidate.message };
+
+  const stored = await placePick(userId, candidate.pick);
+  if (!stored.ok) return { ok: false, message: 'Could not record your pick. Please try again.' };
+
+  revalidatePath('/sports/predictions');
+  revalidatePath('/');
+  return { ok: true, pick: stored.pick, stored: stored.stored };
 }

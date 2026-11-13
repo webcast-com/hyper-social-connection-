@@ -18,6 +18,7 @@ import { LIVE_TAB_MATCHES, selectMatchCentreRows } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getHighlightsBoardForRender } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
+import { nudgePickGrading } from '@/lib/sports-picks-grader';
 import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
 import { interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
@@ -149,6 +150,12 @@ export default async function Home() {
   // not frozen when the page finishes streaming, and rate-limited to one per ten
   // minutes per process. Never awaited, never able to fail the render.
   nudgeHighlightsSweep();
+  // Picks are graded from results the board already reports, so the pass belongs
+  // behind the one page that has just fetched that board: scheduled past this
+  // response, rate-limited, and reading the cached board rather than asking ESPN
+  // again. The predictions page deliberately does not nudge — it reads odds, not
+  // a board, so a pass there would pay for a full scoreboard fan-out.
+  nudgePickGrading();
   const videoNewsBoard = await videoNewsPromise;
   // Every sports card can be liked, commented on, saved and shared like a post:
   // the first interaction creates its anchor post, and this one bounded query

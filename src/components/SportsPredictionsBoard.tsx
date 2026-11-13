@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { matchHref } from '@/lib/espn-match';
 import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from 'lucide-react';
@@ -11,7 +11,8 @@ import { decimalToAmerican, ODDS_SPORTS, type OddsBoard, type OddsMatch } from '
 import { refreshEspnOdds, SportsRequestError } from '@/lib/espn-odds-client';
 import { SPORT_LABELS, type SportKind } from '@/lib/sports-catalog';
 import { formatPredictionKickoff } from '@/lib/sports';
-import { createPost } from '@/app/actions';
+import { pickedName, pickSidesFor, type MatchPick, type PickSide } from '@/lib/sports-picks';
+import { createPost, placeMatchPick } from '@/app/actions';
 
 function matchText(match: OddsMatch, note: string) {
   const odds = match.odds;
@@ -30,10 +31,49 @@ function matchText(match: OddsMatch, note: string) {
   ].filter(Boolean).join('\n');
 }
 
-function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?: number }) {
+/**
+ * The price a reader would have picked at, read from the same odds ESPN reported
+ * on this card. `null` when ESPN reported no price for that side, which the card
+ * says plainly rather than filling in.
+ */
+function priceFor(match: OddsMatch, side: PickSide): number | null {
+  const price = side === 'home' ? match.odds.home : side === 'away' ? match.odds.away : match.odds.draw;
+  return typeof price === 'number' && Number.isFinite(price) ? price : null;
+}
+
+function MatchCard({ match, currentUserId, pick = null }: { match: OddsMatch; currentUserId?: number; pick?: MatchPick | null }) {
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
+  // A pick is its own transition: sharing one would let a reader's pick disable
+  // the Share button and read as the same action.
+  const [pickPending, startPickTransition] = useTransition();
+  const [pickError, setPickError] = useState('');
+  const [justPicked, setJustPicked] = useState<MatchPick | null>(null);
+  const recorded = pick ?? justPicked;
+  const sides = pickSidesFor(match.sport);
+
+  /**
+   * Take a pick. Everything that decides whether it may be taken — the fixture,
+   * the kickoff lock, the sides on offer, the price — is checked server-side
+   * against what ESPN reported, so this only reports the answer.
+   */
+  const takePick = (side: PickSide) => {
+    if (!currentUserId || pickPending || recorded || !match.details) return;
+    setPickError('');
+    const reference = match.details;
+    startPickTransition(async () => {
+      try {
+        const result = await placeMatchPick({ league: reference.league, eventId: reference.eventId, side });
+        // The browser layout harness stubs every server action to return
+        // nothing, so an absent answer is not treated as a refusal.
+        if (result && !result.ok) setPickError(result.message);
+        else if (result?.ok) setJustPicked(result.pick);
+      } catch {
+        setPickError('Could not record your pick. Please try again.');
+      }
+    });
+  };
   const publish = (poll: boolean) => {
     if (!currentUserId || pending) return;
     setError('');
@@ -75,6 +115,63 @@ function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?:
         {match.odds.spread !== null && <div className="min-w-0"><dt className="text-gray-500 dark:text-gray-400">Spread</dt><dd className="break-all font-bold text-gray-900 dark:text-white">{match.odds.spread}</dd></div>}
       </dl>
       <p className="mt-2 break-words text-[11px] text-gray-500 dark:text-gray-400">Decimal odds · {match.odds.provider || 'Provider not specified'} · via ESPN</p>
+
+      {/* A pick is recorded against the fixture ESPN reported, at the price this
+          card shows, and graded only from a result ESPN reports. A fixture with
+          no ESPN match id cannot be graded later, so it cannot be picked. */}
+      {match.details ? (
+        <div className="mt-3 min-w-0 rounded-2xl border border-violet-100 bg-violet-50/60 p-3 dark:border-violet-900/50 dark:bg-violet-950/20">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">Your pick</p>
+          {recorded ? (
+            <div className="min-w-0">
+              <p className="break-words text-xs font-bold text-gray-900 dark:text-white" aria-label={`Your pick: ${pickedName(recorded)}`}>
+                {pickedName(recorded)}
+                {recorded.price !== null ? <span className="font-semibold tabular-nums text-gray-600 dark:text-gray-300"> at {recorded.price.toFixed(2)}</span>
+                  : <span className="font-normal text-gray-500 dark:text-gray-400"> · no price was reported</span>}
+              </p>
+              <p className="mt-1 break-words text-[11px] text-gray-600 dark:text-gray-300">
+                {recorded.outcome === 'won' ? `Graded: won, +1 point (${recorded.homeScore}–${recorded.awayScore})`
+                  : recorded.outcome === 'lost' ? `Graded: lost (${recorded.homeScore}–${recorded.awayScore})`
+                    : 'Awaiting a result — graded once ESPN reports the final score.'}
+              </p>
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">The first pick on a fixture stands.</p>
+            </div>
+          ) : currentUserId ? (
+            <>
+              <div role="group" aria-label={`Pick a side for ${match.home_team} against ${match.away_team}`}
+                className={`grid min-w-0 gap-2 ${sides.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                {sides.map((side) => {
+                  const price = priceFor(match, side);
+                  return (
+                    <button key={side} type="button" disabled={pickPending} onClick={() => takePick(side)}
+                      className="inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-white px-1.5 py-1.5 ring-1 ring-violet-200 transition-colors hover:bg-violet-100 disabled:opacity-60 dark:bg-gray-800 dark:ring-violet-900/60 dark:hover:bg-gray-700">
+                      <span className="w-full min-w-0 truncate text-center text-[11px] font-bold text-gray-900 dark:text-white">
+                        {side === 'home' ? match.home_team : side === 'away' ? match.away_team : 'Draw'}
+                      </span>
+                      <span className="w-full min-w-0 truncate text-center text-[10px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+                        {price !== null ? price.toFixed(2) : 'no price'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                Picks lock at kickoff, are graded when ESPN reports the result, and the first pick stands.
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              Log in to record a pick — it is graded when ESPN reports the result.
+            </p>
+          )}
+          {pickError && <p role="alert" className="mt-2 break-words text-xs text-red-700 dark:text-red-300">{pickError}</p>}
+        </div>
+      ) : (
+        <p className="mt-2 break-words text-[11px] text-gray-500 dark:text-gray-400">
+          ESPN reported no match id for this fixture, so a pick on it could not be graded.
+        </p>
+      )}
+
       {match.details && <Link href={matchHref(match.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
       {match.details && <SportsPredictionInsights key={`${match.details.league}-${match.details.eventId}`} reference={match.details} />}
       {currentUserId ? <>
@@ -90,7 +187,25 @@ function MatchCard({ match, currentUserId }: { match: OddsMatch; currentUserId?:
   );
 }
 
-export default function SportsPredictionsBoard({ initial, currentUserId }: { initial: OddsBoard; currentUserId?: number }) {
+/**
+ * The predictions page: odds, insights, and a reader's pick on each fixture.
+ *
+ * `picksByMatchId` is keyed by the odds board's own match id, which the page
+ * resolved from the viewer's stored picks, so this component never has to build
+ * a fixture key or reach for the module that holds the database.
+ *
+ * `leaderboard` is a server-rendered slot. The rail reads the picks table, and a
+ * client component that imported it would pull the database module into the
+ * browser bundle; passed as a node it is rendered on the server and placed here.
+ */
+export default function SportsPredictionsBoard({
+  initial, currentUserId, picksByMatchId = {}, leaderboard = null,
+}: {
+  initial: OddsBoard;
+  currentUserId?: number;
+  picksByMatchId?: Record<string, MatchPick>;
+  leaderboard?: ReactNode;
+}) {
   const [board, setBoard] = useState(initial);
   const [sport, setSport] = useState('');
   const [perLeague, setPerLeague] = useState(0);
@@ -150,7 +265,8 @@ export default function SportsPredictionsBoard({ initial, currentUserId }: { ini
       </p>}
       {board.status === 'unavailable' && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{deniedCount ? 'Access to ESPN odds was refused. No sample odds are shown.' : 'ESPN odds could not be reached. No sample odds are shown.'}</p>}
       {board.status === 'partial' && <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">Some ESPN feeds are unavailable or the search time limit was reached. {board.matches.length ? 'Showing matches from responding feeds.' : 'No qualifying matches were found in responding feeds.'}</p>}
-      {board.matches.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{board.matches.map((match) => <MatchCard key={match.id} match={match} currentUserId={currentUserId} />)}</div>
+      {leaderboard}
+      {board.matches.length ? <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">{board.matches.map((match) => <MatchCard key={match.id} match={match} currentUserId={currentUserId} pick={picksByMatchId[match.id] ?? null} />)}</div>
         : <EmptyState variant="search" title="No upcoming matches with odds">Only scheduled home/away fixtures with reported ESPN odds appear here. Markets may be unavailable for some leagues or dates.</EmptyState>}
       {board.sources.length > 0 && <details className="mt-4 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
         <summary className="min-h-11 cursor-pointer font-semibold">Feed details ({board.sources.filter((source) => source.ok).length}/{board.sources.length} responding)</summary>

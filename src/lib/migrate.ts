@@ -531,6 +531,49 @@ async function runMigration() {
     )`,
     `CREATE UNIQUE INDEX IF NOT EXISTS "sports_highlight_sweeps_external_key_key" ON "sports_highlight_sweeps"("external_key")`,
     `CREATE INDEX IF NOT EXISTS "sports_highlight_sweeps_swept_at_idx" ON "sports_highlight_sweeps"("swept_at")`,
+    // ── Graded match picks (src/lib/sports-picks.ts) ───────────────────────
+    // A reader's pick on one fixture, kept as a pick rather than as a post: it
+    // has a side, the price ESPN reported when it was made, and — once ESPN
+    // reports a result — an outcome and a point. Nothing else on the site can
+    // answer "was I right?", because a post holds free text.
+    // `league` is a catalog slug and `event_id` is ESPN's own numeric id for the
+    // fixture, which is the only way this app addresses a match; a pick is never
+    // recorded against a team name. The unique index makes one pick per reader
+    // per fixture, so a double submit stores one row, and the first pick stands:
+    // a reader cannot swap sides after a price moves or after a result becomes
+    // likely. `graded_at` is null until ESPN reports the final score, and a pick
+    // that ESPN never reports a result for stays ungraded forever rather than
+    // being guessed at — an honest "awaiting result" beats an invented one.
+    // `price` is a float, not a numeric: the pg driver returns a numeric column
+    // as a string, and a price here is a label for what the reader saw, not an
+    // account balance to be summed.
+    `CREATE TABLE IF NOT EXISTS "sports_picks" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "user_id" integer NOT NULL,
+      "league" text NOT NULL,
+      "event_id" text NOT NULL,
+      "side" text NOT NULL,
+      "home" text NOT NULL,
+      "away" text NOT NULL,
+      "price" double precision,
+      "kickoff_at" timestamptz,
+      "created_at" timestamptz DEFAULT now() NOT NULL,
+      "graded_at" timestamptz,
+      "outcome" text,
+      "points" integer,
+      "home_score" integer,
+      "away_score" integer,
+      CONSTRAINT "sports_picks_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "sports_picks_user_league_event_key" ON "sports_picks"("user_id", "league", "event_id")`,
+    // The grader's read: picks still awaiting a result, addressed the way the
+    // board addresses a fixture. Partial, because a graded pick is never asked
+    // again — grading is idempotent by construction, not by checking.
+    `CREATE INDEX IF NOT EXISTS "sports_picks_ungraded_idx" ON "sports_picks"("league", "event_id") WHERE "graded_at" IS NULL`,
+    // A reader's own picks, newest first, for the predictions page.
+    `CREATE INDEX IF NOT EXISTS "sports_picks_user_created_idx" ON "sports_picks"("user_id", "created_at" DESC)`,
+    // The leaderboard's window: graded picks, most recently graded first.
+    `CREATE INDEX IF NOT EXISTS "sports_picks_graded_at_idx" ON "sports_picks"("graded_at" DESC NULLS LAST)`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,
