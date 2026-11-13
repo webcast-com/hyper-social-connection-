@@ -118,6 +118,56 @@ Four tabs do not fit a 320px column with icons and labels, so the icons — whic
 decorative, the label carries the meaning — render from `sm` up and labels truncate
 rather than push the strip wider than the viewport.
 
+### Basketball and American football: the dashboard's score card
+
+Fixtures in `SCORE_CARD_SPORTS` — basketball and American football, which today
+means the NBA, WNBA, NCAA men's and women's basketball and the NFL — are drawn in
+the feed as the NFL & basketball dashboard's own match card: two crests either side
+of a `V/S`, a competition chip carrying that league's colour from the dashboard's
+catalog, a clock pill, one row per side with its score, and a footer naming the
+broadcaster. A race is never drawn this way; it has no two sides to put either side
+of a `V/S`.
+
+The card is the dashboard's, styled for this feed rather than copied pixel for
+pixel: the same structure and the same words, in the app's own light and dark
+palette, so it sits beside the other cards instead of punching a dark hole in the
+column. Home is first, as it is on the dashboard — the rest of the feed's match card
+shows away first, and that difference is deliberate rather than an oversight.
+
+It replaces the league and date row, the two-badge score box, the separate "View
+match details" link and the kickoff and venue row, because the card carries the
+competition, the clock and the broadcaster instead and the page it links to carries
+the venue. What it does *not* replace is the rest of the post: the author header
+with its status chip, any prediction, and Comment / Poll / Share all stay, so a
+basketball fixture is still something a reader can talk about and not only a
+scoreboard row.
+
+**Where the click goes.** The dashboard's match page,
+`/nfl-basketball/basketball/match/{id}` or `/nfl-basketball/nfl/match/{id}`, with
+`?competition=` for every league that is not that board's flagship — WNBA and both
+NCAA divisions — exactly as the dashboard's own `matchPath` decides it, so its
+commentary asks the right ESPN feed. Two fallbacks keep the card from ever being a
+dead click or a wrong one: a league the dashboard does not serve goes to this app's
+own `/sports/matches/{league}/{id}`, and a fixture with no ESPN-reported numeric id
+goes to `/sports`. Only a numeric id is ever put in a match URL. A spec walks every
+basketball and American football league in the catalog and fails if one has
+nowhere to send a reader, so a league added later cannot quietly lose its link.
+
+**What it refuses to claim.** A fixture this site invented never wears a live clock
+or a `Final`: it shows its kickoff in the neutral tone while the card's own chip
+still says "Sample fixture", and it links to the board rather than to a match page
+that cannot answer for it. A score the provider did not report is an em dash — a
+fixture that has not started has no score, and none is invented — while a real zero
+stays a zero. A broadcaster the provider did not name is "TV TBD". A logo that fails
+to load falls back to the team's code on a crest rather than leaving a broken image
+in the layout.
+
+The broadcaster is new data: `SportsEvent.broadcast`, parsed the way the dashboard
+reads the same payload — the first name in `broadcasts`, or failing that the media
+short name, or null. It costs no extra request, because the scoreboard response the
+board already fetches carries it; a card and the page it links to cannot disagree
+about who is showing a game.
+
 ## Verification
 
 ```sh
