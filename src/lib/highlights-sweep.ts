@@ -34,6 +34,7 @@
  * simply stays empty on the match side — its league video news, swept from the
  * existing video-news feed, is what fills it.
  */
+import { after } from 'next/server';
 import { parseEspnEvents } from './espn';
 import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnSportsScoreboardUrl } from './espn-endpoints';
 import { highlightContextFor, matchVideosUrl } from './espn-highlights-feed';
@@ -254,6 +255,28 @@ export function runHighlightsSweep(options: SweepPassOptions = {}): Promise<Swee
   ).finally(() => { passJob = null; });
   passJob = job;
   return job;
+}
+
+/**
+ * Advance coverage once the current response has been sent, without waiting for it.
+ *
+ * This is what makes traffic-driven coverage real. A bare fire-and-forget call can
+ * be frozen the moment its response leaves on a serverless host — requests started,
+ * nothing stored — whereas `after` is Next's supported way to keep background work
+ * running past the response, and it needs no scheduler and no cron entry to do it.
+ *
+ * Outside a request scope (a unit test, a script, or a host with no such scope)
+ * `after` throws, so the nudge falls back to the fire-and-forget call it replaces:
+ * identical behaviour, never a throw for the caller. A pass never rejects, reports
+ * its own reason when it is refused or rate-limited, and is bounded to one per ten
+ * minutes per process, so a page load can never turn into a fan-out.
+ */
+export function nudgeHighlightsSweep(options: SweepPassOptions = {}): void {
+  try {
+    after(() => runHighlightsSweep(options));
+  } catch {
+    void runHighlightsSweep(options);
+  }
 }
 
 async function sweep(options: SweepPassOptions, store: HighlightsStore, slug: string | null): Promise<SweepPass> {

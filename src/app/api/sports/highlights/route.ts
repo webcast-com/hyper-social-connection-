@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSportsHighlights } from '@/lib/espn-highlights-feed';
 import { highlightsStore, type HighlightsIndexQuery } from '@/lib/highlights-index';
 import type { SportsHighlightStatus } from '@/lib/espn-highlights';
-import { runHighlightsSweep } from '@/lib/highlights-sweep';
+import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,9 +66,9 @@ export async function GET(req: NextRequest) {
   };
   const index = await highlightsStore.read(query);
 
-  // Not awaited: the response does not wait for upstream work, and a sweep
-  // resolves rather than rejects, so there is nothing to catch here either.
-  void runHighlightsSweep({});
+  // Not awaited: the response does not wait for upstream work. Scheduled past the
+  // response with `after`, so a pass is not frozen mid-flight when this body leaves.
+  nudgeHighlightsSweep();
 
   return NextResponse.json({ board, index }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -3,7 +3,7 @@ import { getPageMetadata } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
 import { getSportsHighlights, type SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import { highlightsStore } from '@/lib/highlights-index';
-import { runHighlightsSweep } from '@/lib/highlights-sweep';
+import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 import { highlightAnchorRefs, highlightClipsAnchorRefs, loadAnchorEngagement } from '@/lib/sports-anchor-store';
 import { ESPN_LEAGUES } from '@/lib/sports-catalog';
 import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
@@ -68,9 +68,10 @@ export default async function SportsHighlightsRoute({ searchParams }: { searchPa
   ]);
 
   // Coverage grows with traffic: one bounded pass, never awaited by this render.
-  // A pass resolves rather than rejects, and is rate-limited to one per ten
-  // minutes per process, so a page load can never turn into a fan-out.
-  void runHighlightsSweep({});
+  // Scheduled past the response with `after` so the pass is not frozen mid-flight
+  // when this page finishes streaming, and rate-limited to one per ten minutes per
+  // process, so a page load can never turn into a fan-out.
+  nudgeHighlightsSweep();
 
   const viewer = await getViewer();
   // One bounded read of the saved likes, threads and bookmarks for the clips
