@@ -2,12 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_INDEX_LIMIT, INDEX_EMPTY, INDEX_UNAVAILABLE, MAX_INDEX_DAYS, MAX_INDEX_LIMIT,
-  clipKey, clipRow, findStoredHighlightClip, highlightsStore, insertSql, leagueRow, matchRow,
+  clipKey, clipRow, findStoredHighlightClip, findStoredNewsMedia, highlightsStore, insertSql, leagueRow, matchRow,
+  newsClipsNeedingMedia, storeNewsMedia,
   probeKey, resolveIndexQuery, rowToLeagueClip, rowToMatchClip, sweepCellKey, uniqueRows,
   type ClipRow, type StoredClip, type StoredMatchClip,
 } from '../../src/lib/highlights-index';
 import type { SportsHighlightClip } from '../../src/lib/espn-highlights';
-import type { SportsVideoNewsClip } from '../../src/lib/espn-video-news';
+import type { SportsVideoNewsClip, SportsVideoNewsMedia } from '../../src/lib/espn-video-news';
 
 /**
  * The stored highlights index: keys, rows, the INSERT that writes them, the
@@ -173,6 +174,82 @@ test('a league clip is stored without a fixture, because it has none', () => {
   // A clip kind is decided by the caller, and `clipRow` routes it.
   assert.equal(clipRow(stored(matchClip()))!.kind, 'match');
   assert.equal(clipRow({ kind: 'league', clip: leagueClip() })!.kind, 'league');
+});
+
+test('a league clip stores the rendition resolved for it, and plays', () => {
+  const media: SportsVideoNewsMedia = {
+    mp4: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1108/31053444_3600k.mp4',
+    hls: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1108/31053444.m3u8',
+    page: 'https://www.espn.com/video/clip/_/id/31053444',
+    thumbnail: 'https://a.espncdn.com/media/2026/1108/31053444-resolved.jpg',
+    duration: 94,
+  };
+  const row = leagueRow({ kind: 'league', clip: leagueClip(), sourceUrl: null, media })!;
+  assert.equal(row.mp4, media.mp4, 'the rendition is stored beside the clip, not left in memory to die on deploy');
+  assert.equal(row.hls, media.hls);
+  assert.equal(row.duration, 94);
+  assert.equal(row.playable, true, 'playable exactly when a rendition was resolved, the rule a match row uses');
+  assert.equal(row.thumbnail, 'https://a.espncdn.com/media/2026/1108/31053444.jpg', 'the listing’s own thumbnail wins');
+  assert.equal(row.page, 'https://www.espn.com/video/clip/_/id/31053444', 'and so does its page');
+  // Still no fixture, still no match state, still no anchor: storing a rendition
+  // does not turn a league clip into a match clip.
+  assert.equal(row.kind, 'league');
+  assert.equal(row.event_id, null);
+  assert.equal(row.status, null);
+  assert.equal(row.anchor_key, null);
+
+  // A listing with no thumbnail or page of its own takes the rendition’s.
+  const bare = leagueRow({
+    kind: 'league',
+    clip: leagueClip({ thumbnail: null, page: 'https://www.espn.com/video/clip/_/id/31053444' }),
+    sourceUrl: null,
+    media,
+  })!;
+  assert.equal(bare.thumbnail, media.thumbnail);
+
+  // A rendition that cannot play stores nothing worth keeping, and the row says so.
+  const refused = leagueRow({ kind: 'league', clip: leagueClip(), sourceUrl: null, media: { mp4: null, hls: null, page: null, thumbnail: null, duration: null } })!;
+  assert.equal(refused.mp4, null);
+  assert.equal(refused.playable, false);
+  assert.equal(refused.duration, null);
+});
+
+test('re-storing a league clip never wipes the rendition already on the row', () => {
+  // The trap this guards: a sweep re-reads the league listing every 15 minutes and
+  // that listing carries no media URL. A plain assignment would null the mp4 a
+  // reader's play had resolved and stored — losing it on every join, forever.
+  const batch = insertSql([
+    leagueRow({ kind: 'league', clip: leagueClip(), sourceUrl: 'https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/news' })!,
+  ])!;
+  const conflict = batch.sql.slice(batch.sql.indexOf('ON CONFLICT'));
+  for (const column of ['mp4', 'hls', 'duration', 'thumbnail', 'page']) {
+    assert.ok(
+      conflict.includes(`"${column}" = COALESCE(EXCLUDED."${column}", "sports_highlight_clips"."${column}")`),
+      `${column} must keep what is stored when the incoming row has none`,
+    );
+    assert.ok(!conflict.includes(`"${column}" = EXCLUDED."${column}"`), `${column} must not be overwritten with nothing`);
+  }
+  assert.match(conflict, /"playable" = COALESCE\(EXCLUDED\."mp4", "sports_highlight_clips"\."mp4"\) IS NOT NULL/,
+    'derived from the merged media, so it cannot disagree with the columns beside it');
+  // The columns a listing is authoritative about are still corrected on re-read.
+  assert.match(conflict, /"title" = EXCLUDED\."title"/);
+  assert.match(conflict, /"status" = EXCLUDED\."status"/);
+  assert.match(conflict, /"seen_at" = now\(\)/);
+});
+
+test('the rendition lookups are inert without a database', async () => {
+  assert.equal(highlightsStore.available(), false, 'this suite runs with no DATABASE_URL');
+  assert.equal(await findStoredNewsMedia('31053444'), null, 'a miss, not a throw');
+  assert.equal(await storeNewsMedia('31053444', { mp4: 'https://espnmedia-cdn.akamaized.net/a.mp4', hls: null, page: null, thumbnail: null, duration: 10 }), 0, 'no rows updated');
+  assert.deepEqual(await newsClipsNeedingMedia(6), [], 'nothing to pre-warm');
+  // The store surface agrees, so an injected store behaves the same way.
+  assert.equal(await highlightsStore.findNewsMedia('31053444'), null);
+  assert.equal(await highlightsStore.storeNewsMedia('31053444', null), 0);
+  assert.deepEqual(await highlightsStore.newsClipsNeedingMedia(6), []);
+  // A rendition that cannot play is not written even with a database: nothing
+  // worth keeping permanently, and the probe table remembers the refusal.
+  assert.equal(await storeNewsMedia('31053444', { mp4: null, hls: null, page: null, thumbnail: null, duration: null }), 0);
+  assert.equal(await storeNewsMedia('', { mp4: 'https://espnmedia-cdn.akamaized.net/a.mp4', hls: null, page: null, thumbnail: null, duration: null }), 0);
 });
 
 test('one batch is one statement, with every value bound', () => {

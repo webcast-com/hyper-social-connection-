@@ -39,7 +39,7 @@ import { ensureMigrated } from '@/lib/migrate';
 import { ESPN_LEAGUES } from './sports-catalog';
 import { highlightAnchorId } from './sports-anchor';
 import type { SportsHighlightClip, SportsHighlightStatus } from './espn-highlights';
-import type { SportsVideoNewsClip } from './espn-video-news';
+import type { SportsVideoNewsClip, SportsVideoNewsMedia } from './espn-video-news';
 
 export type IndexedClipKind = 'match' | 'league';
 
@@ -258,8 +258,30 @@ const instant = (value: unknown): Date | null => {
 
 /** A match clip plus where it came from, ready to store. */
 export type StoredMatchClip = { kind: 'match'; clip: SportsHighlightClip; sourceUrl?: string | null };
-/** A league video clip plus where it came from, ready to store. */
-export type StoredLeagueClip = { kind: 'league'; clip: SportsVideoNewsClip; sourceUrl?: string | null };
+/**
+ * A league video clip plus where it came from, ready to store.
+ *
+ * `media` is the playable rendition, which the ESPN listing does not carry: it is
+ * resolved per clip, when a reader presses play or when a sweep pre-warms one. It
+ * is optional so a sweep that only read the listing still stores the clip.
+ */
+export type StoredLeagueClip = {
+  kind: 'league';
+  clip: SportsVideoNewsClip;
+  sourceUrl?: string | null;
+  media?: SportsVideoNewsMedia | null;
+};
+
+/** One stored league row that a rendition could be resolved for. */
+export type NewsClipRef = { clipId: string; externalKey: string };
+
+/**
+ * How many stored league rows one pass may pre-warm a rendition for. Each costs
+ * one ESPN request, so this is a hard ceiling inside the pass's own budget rather
+ * than a target: coverage of the media column converges over successive passes,
+ * and anything a reader actually presses play on is resolved and stored anyway.
+ */
+export const MAX_MEDIA_WARM = 12;
 export type StoredClip = StoredMatchClip | StoredLeagueClip;
 
 /**
@@ -324,7 +346,14 @@ export function leagueRow(stored: StoredLeagueClip): ClipRow | null {
   const key = clipKey('league', clip);
   const title = text(clip.title);
   const league = knownLeague(clip.league);
-  const page = url(clip.page);
+  // The rendition, when one is known. The listing never carries a media URL, so
+  // it arrives separately — resolved when a reader pressed play, or pre-warmed by
+  // a pass — and is stored here beside the clip. Keeping it only in memory would
+  // lose it on the next deploy, which is the whole reason this table exists.
+  const media = stored.media ?? null;
+  const mp4 = url(media?.mp4 ?? null);
+  const hls = url(media?.hls ?? null);
+  const page = url(clip.page) || url(media?.page ?? null);
   if (!key || !title || !league || !page) return null;
   const teams = Array.isArray(clip.teams)
     ? clip.teams.filter((team): team is string => typeof team === 'string' && !!team.trim()).slice(0, 8).map((team) => team.trim().slice(0, 120))
@@ -335,14 +364,15 @@ export function leagueRow(stored: StoredLeagueClip): ClipRow | null {
     clip_id: text(clip.clipId, 64) ?? clip.id.slice(0, MAX_TEXT),
     title,
     description: text(clip.description, 1000),
-    duration: null,
-    thumbnail: url(clip.thumbnail),
-    mp4: null,
-    hls: null,
+    duration: seconds(media?.duration ?? null),
+    thumbnail: url(clip.thumbnail) || url(media?.thumbnail ?? null),
+    mp4,
+    hls,
     page,
-    // The listing carries no media URL: the rendition is resolved when a reader
-    // presses play, so a stored league clip is never marked playable.
-    playable: false,
+    // Playable exactly when a rendition was resolved, the same rule a match row
+    // uses. A league clip with no media stored yet is listed and linked, and the
+    // card resolves it when a reader presses play.
+    playable: !!mp4,
     event_id: null,
     event_name: null,
     sport: text(clip.sport, 40),
@@ -402,12 +432,18 @@ export function insertSql(rows: ClipRow[]): { sql: string; params: unknown[] } |
        ON CONFLICT ("external_key") DO UPDATE SET
          "title" = EXCLUDED."title",
          "description" = EXCLUDED."description",
-         "duration" = EXCLUDED."duration",
-         "thumbnail" = EXCLUDED."thumbnail",
-         "mp4" = EXCLUDED."mp4",
-         "hls" = EXCLUDED."hls",
-         "page" = EXCLUDED."page",
-         "playable" = EXCLUDED."playable",
+         -- Media, and the URLs that carry it, are never overwritten with nothing.
+         -- A sweep re-reads the league listing every 15 minutes and that listing
+         -- has no rendition on it, so a plain assignment would wipe the mp4 a
+         -- reader's play resolved and stored — losing it on every join, forever.
+         "duration" = COALESCE(EXCLUDED."duration", "sports_highlight_clips"."duration"),
+         "thumbnail" = COALESCE(EXCLUDED."thumbnail", "sports_highlight_clips"."thumbnail"),
+         "mp4" = COALESCE(EXCLUDED."mp4", "sports_highlight_clips"."mp4"),
+         "hls" = COALESCE(EXCLUDED."hls", "sports_highlight_clips"."hls"),
+         "page" = COALESCE(EXCLUDED."page", "sports_highlight_clips"."page"),
+         -- Derived from the merged media, never taken from the incoming row, so it
+         -- cannot disagree with the columns beside it.
+         "playable" = COALESCE(EXCLUDED."mp4", "sports_highlight_clips"."mp4") IS NOT NULL,
          "event_name" = EXCLUDED."event_name",
          "league_name" = EXCLUDED."league_name",
          "home" = EXCLUDED."home",
@@ -527,6 +563,106 @@ export async function findStoredHighlightClip(anchorKey: string): Promise<Sports
   }
 }
 
+/**
+ * The stored rendition for one league video, or null when it has none.
+ *
+ * This is the durable half of the media cache in `espn-video-news-feed`. ESPN's
+ * league listing carries no media URL, so a rendition is resolved per clip; in
+ * memory that answer lived 15 minutes and died on every deploy, which meant the
+ * same clip was asked again forever. Stored here it is asked once.
+ *
+ * A row with no rendition is **not** an answer — the caller asks ESPN and stores
+ * what comes back. Inert without a database.
+ */
+export async function findStoredNewsMedia(clipId: string): Promise<SportsVideoNewsMedia | null> {
+  const id = text(clipId, 64);
+  if (!hasDatabase || !id) return null;
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<{
+      mp4: string | null; hls: string | null; page: string | null; thumbnail: string | null; duration: number | null;
+    }[]>(
+      `SELECT "mp4", "hls", "page", "thumbnail", "duration" FROM "sports_highlight_clips"
+        WHERE "kind" = 'league' AND "clip_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      id,
+    );
+    const row = rows[0];
+    const mp4 = url(row?.mp4 ?? null);
+    const hls = url(row?.hls ?? null);
+    if (!mp4 && !hls) return null;
+    return {
+      mp4,
+      hls,
+      page: url(row?.page ?? null),
+      thumbnail: url(row?.thumbnail ?? null),
+      duration: seconds(row?.duration ?? null),
+    };
+  } catch (error) {
+    failed('query-failed', error);
+    return null;
+  }
+}
+
+/**
+ * Store a resolved rendition onto its league row. Returns the rows updated.
+ *
+ * Nothing is written for a rendition that cannot play: a refusal is not a fact
+ * worth keeping permanently, and the probe table is what remembers that a clip
+ * was asked and answered with nothing.
+ *
+ * The rendition supplies the media columns and fills any gap beside them, but
+ * never replaces a value the listing already stored — `leagueRow` gives the
+ * listing's own thumbnail and page precedence, and a row's thumbnail must not
+ * depend on which of the two write paths happened to run last.
+ */
+export async function storeNewsMedia(clipId: string, media: SportsVideoNewsMedia | null): Promise<number> {
+  const id = text(clipId, 64);
+  const mp4 = url(media?.mp4 ?? null);
+  const hls = url(media?.hls ?? null);
+  if (!hasDatabase || !id || (!mp4 && !hls)) return 0;
+  try {
+    await ensureMigrated();
+    return await prisma.$executeRawUnsafe(
+      `UPDATE "sports_highlight_clips"
+          SET "mp4" = $2,
+              "hls" = $3,
+              "duration" = COALESCE($4, "duration"),
+              "playable" = $5,
+              "thumbnail" = COALESCE("thumbnail", $6),
+              "page" = COALESCE("page", $7)
+        WHERE "kind" = 'league' AND "clip_id" = $1`,
+      id, mp4, hls, seconds(media?.duration ?? null), !!mp4, url(media?.thumbnail ?? null), url(media?.page ?? null),
+    );
+  } catch (error) {
+    failed('query-failed', error);
+    return 0;
+  }
+}
+
+/**
+ * Stored league rows with no rendition yet, newest first — what a pass pre-warms.
+ *
+ * Clamped here as well as at the call site, so a sweep can never become one
+ * request per stored clip. Inert without a database.
+ */
+export async function newsClipsNeedingMedia(limit: number = MAX_MEDIA_WARM): Promise<NewsClipRef[]> {
+  if (!hasDatabase) return [];
+  const max = Math.max(1, Math.min(MAX_MEDIA_WARM, Math.trunc(limit) || MAX_MEDIA_WARM));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<{ clip_id: string; external_key: string }[]>(
+      `SELECT "clip_id", "external_key" FROM "sports_highlight_clips"
+        WHERE "kind" = 'league' AND "mp4" IS NULL AND "hls" IS NULL
+        ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC LIMIT $1`,
+      max,
+    );
+    return rows.map((row) => ({ clipId: row.clip_id, externalKey: row.external_key }));
+  } catch (error) {
+    failed('query-failed', error);
+    return [];
+  }
+}
+
 const failed = (reason: 'query-failed', error: unknown) => {
   console.warn('[highlights-index] query failed:', (error as Error)?.message);
   return reason;
@@ -551,6 +687,12 @@ export type HighlightsStore = {
   /** Sweep cells walked recently enough to skip. */
   freshCells(keys: string[], cellTtlMs: number): Promise<Set<string>>;
   recordCells(entries: { key: string; games: number; clips: number }[]): Promise<void>;
+  /** The stored rendition for one league video, or null when it has none. */
+  findNewsMedia(clipId: string): Promise<SportsVideoNewsMedia | null>;
+  /** Write a resolved rendition onto its league row. Returns the rows updated. */
+  storeNewsMedia(clipId: string, media: SportsVideoNewsMedia | null): Promise<number>;
+  /** Stored league rows with no rendition yet, newest first, for a pre-warm. */
+  newsClipsNeedingMedia(limit: number): Promise<NewsClipRef[]>;
 };
 
 async function querySummary(): Promise<HighlightsIndexSummary> {
@@ -824,4 +966,10 @@ export const highlightsStore: HighlightsStore = {
       failed('query-failed', error);
     }
   },
+
+  findNewsMedia: (clipId) => findStoredNewsMedia(clipId),
+
+  storeNewsMedia: (clipId, media) => storeNewsMedia(clipId, media),
+
+  newsClipsNeedingMedia: (limit) => newsClipsNeedingMedia(limit),
 };

@@ -4,11 +4,15 @@ import {
   espnLeagueNewsUrl,
   getSportsVideoNews,
   getSportsVideoNewsForRender,
+  hasResolvedNewsMedia,
   MAX_FEED_CLIPS,
+  mediaProbeKey,
   resolveVideoNewsMedia,
   resetVideoNewsCaches,
   videoNewsLeagues,
 } from '../../src/lib/espn-video-news-feed';
+import { INDEX_EMPTY, INDEX_UNAVAILABLE, type HighlightsStore } from '../../src/lib/highlights-index';
+import type { SportsVideoNewsMedia } from '../../src/lib/espn-video-news';
 import { ESPN_LEAGUES } from '../../src/lib/sports-catalog';
 
 /**
@@ -231,5 +235,151 @@ test('a clip\u2019s media is fetched only from ESPN\u2019s clip-record host, and
       ? new Response('geofenced', { status: 403 })
       : Response.json({ links: { source: { href: 'https://espnmedia-cdn.akamaized.net/late.mp4' } } });
   });
+  resetVideoNewsCaches();
+});
+
+/**
+ * A store for the rendition path only: it remembers what was looked up, written
+ * and probed, and is inert everywhere else. The write mirrors the real one — a
+ * rendition that cannot play stores nothing and updates no row.
+ */
+function mediaStore(seed: Map<string, SportsVideoNewsMedia> = new Map()) {
+  const stored = seed;
+  const lookups: string[] = [];
+  const writes: { clipId: string; media: SportsVideoNewsMedia | null }[] = [];
+  const probes: { key: string; clips: number }[] = [];
+  const store: HighlightsStore = {
+    available: () => true,
+    summary: async () => INDEX_UNAVAILABLE,
+    read: async () => INDEX_EMPTY,
+    store: async () => 0,
+    probeable: async (keys) => new Set(keys),
+    recordProbes: async (entries) => { probes.push(...entries); },
+    freshCells: async () => new Set<string>(),
+    recordCells: async () => {},
+    findNewsMedia: async (clipId) => { lookups.push(clipId); return stored.get(clipId) ?? null; },
+    storeNewsMedia: async (clipId, media) => {
+      writes.push({ clipId, media });
+      if (!media || (!media.mp4 && !media.hls)) return 0;
+      stored.set(clipId, media);
+      return 1;
+    },
+    newsClipsNeedingMedia: async () => [],
+  };
+  return { store, stored, lookups, writes, probes };
+}
+
+const rendition = (over: Partial<SportsVideoNewsMedia> = {}): SportsVideoNewsMedia => ({
+  mp4: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1108/49983806_3600k.mp4',
+  hls: null,
+  page: 'https://www.espn.com/video/clip/_/id/49983806',
+  thumbnail: 'https://a.espncdn.com/media/2026/1108/49983806.jpg',
+  duration: 94,
+  ...over,
+});
+
+/** Let the un-awaited write-back and probe land before asserting on them. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test('a rendition already stored plays without asking ESPN at all', async () => {
+  resetVideoNewsCaches();
+  const fake = mediaStore(new Map([['49983806', rendition()]]));
+  const urls: string[] = [];
+  await withFetch(async () => {
+    const media = await resolveVideoNewsMedia('49983806', fake.store);
+    assert.deepEqual(media, rendition(), 'the stored rendition is the answer');
+    assert.equal(fake.lookups.length, 1);
+    assert.equal(hasResolvedNewsMedia('49983806'), true, 'and it seeds the in-memory cache, so a sweep counts no request for it');
+    // A second reader, and a second deploy, cost nothing either.
+    const again = await resolveVideoNewsMedia('49983806', fake.store);
+    assert.deepEqual(again, rendition());
+  }, async (input) => {
+    urls.push(String(input));
+    return Response.json({});
+  });
+  assert.deepEqual(urls, [], 'zero requests: the clip was resolved once, before this reader arrived');
+  assert.deepEqual(fake.writes, [], 'nothing to write back for a rendition that was already stored');
+  assert.deepEqual(fake.probes, [], 'and nothing to probe: ESPN was not asked');
+  resetVideoNewsCaches();
+});
+
+test('a rendition resolved for a reader is stored beside the clip, so the next one is free', async () => {
+  resetVideoNewsCaches();
+  const fake = mediaStore();
+  let requests = 0;
+  await withFetch(async () => {
+    const media = await resolveVideoNewsMedia('49983806', fake.store);
+    assert.equal(media.mp4, 'https://espnmedia-cdn.akamaized.net/a/b.mp4');
+    await settle();
+    assert.equal(fake.writes.length, 1, 'written back onto its row');
+    assert.equal(fake.writes[0]!.clipId, '49983806');
+    assert.equal(fake.writes[0]!.media?.mp4, 'https://espnmedia-cdn.akamaized.net/a/b.mp4');
+    assert.deepEqual(fake.probes, [{ key: mediaProbeKey('49983806'), clips: 1 }], 'remembered as answered');
+  }, async () => {
+    requests += 1;
+    return Response.json({ links: { source: { href: 'https://espnmedia-cdn.akamaized.net/a/b.mp4' } }, duration: 47 });
+  });
+  assert.equal(requests, 1);
+
+  // The round trip that matters: with the in-memory cache gone — a deploy, a new
+  // instance — the stored rendition answers and ESPN is not asked again.
+  resetVideoNewsCaches();
+  let after = 0;
+  await withFetch(async () => {
+    const media = await resolveVideoNewsMedia('49983806', fake.store);
+    assert.equal(media.mp4, 'https://espnmedia-cdn.akamaized.net/a/b.mp4', 'still the rendition that was resolved');
+    assert.equal(media.duration, 47);
+  }, async () => {
+    after += 1;
+    return Response.json({});
+  });
+  assert.equal(after, 0, 'one clip is resolved once per row, not once per process');
+  resetVideoNewsCaches();
+});
+
+test('a refusal is stored nowhere, but is remembered so a sweep stops re-asking', async () => {
+  resetVideoNewsCaches();
+  const fake = mediaStore();
+  let attempts = 0;
+  await withFetch(async () => {
+    const first = await resolveVideoNewsMedia('55555555', fake.store);
+    assert.equal(first.mp4, null);
+    await settle();
+    assert.deepEqual(fake.writes, [], 'a rendition that cannot play is not worth keeping permanently');
+    assert.deepEqual(fake.probes, [{ key: mediaProbeKey('55555555'), clips: 0 }], 'but the refusal is recorded');
+
+    // A reader who presses play again still gets a fresh attempt: the probe steers
+    // a sweep's pre-warm, it does not lock a reader out.
+    const second = await resolveVideoNewsMedia('55555555', fake.store);
+    assert.equal(second.mp4, 'https://espnmedia-cdn.akamaized.net/late.mp4', 'a refusal is not remembered as unplayable');
+    await settle();
+    assert.equal(attempts, 2);
+    assert.equal(fake.writes.length, 1, 'and the late answer is stored');
+    assert.deepEqual(fake.probes.map((entry) => entry.clips), [0, 1]);
+  }, async () => {
+    attempts += 1;
+    return attempts === 1
+      ? new Response('geofenced', { status: 403 })
+      : Response.json({ links: { source: { href: 'https://espnmedia-cdn.akamaized.net/late.mp4' } } });
+  });
+  resetVideoNewsCaches();
+});
+
+test('an invalid clip id reaches neither the network nor the database', async () => {
+  resetVideoNewsCaches();
+  const fake = mediaStore();
+  const urls: string[] = [];
+  await withFetch(async () => {
+    for (const bad of ['', 'abc', '../../etc/passwd', 'https://evil.test/v1/video/clips/1', '1'.repeat(21)]) {
+      const media = await resolveVideoNewsMedia(bad, fake.store);
+      assert.deepEqual(media, { mp4: null, hls: null, page: null, thumbnail: null, duration: null });
+    }
+  }, async (input) => {
+    urls.push(String(input));
+    return Response.json({});
+  });
+  assert.deepEqual(urls, [], 'no request');
+  assert.deepEqual(fake.lookups, [], 'and no query: the id is refused before anything is touched');
+  assert.deepEqual(fake.probes, []);
   resetVideoNewsCaches();
 });

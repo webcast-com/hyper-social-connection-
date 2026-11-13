@@ -1,33 +1,48 @@
 import Link from 'next/link';
 import { matchHref } from '@/lib/espn-match';
 import { Trophy } from 'lucide-react';
+import {
+  liveFixtureCount, selectMatchCentreRows,
+  MATCH_CENTRE_ROWS, MATCH_CENTRE_ROWS_COMPACT,
+} from '@/lib/match-centre';
 import type { SportsBoard } from '@/lib/sports';
 
-/** Shared homepage presentation: compact mobile summary and desktop rail. */
-export default function SportsScoresWidget({ board, compact = false }: { board: SportsBoard; compact?: boolean }) {
-  const limit = compact ? 2 : 3;
-  const ordered = [...board.events].sort((a, b) => {
-    const priority = { live: 0, upcoming: 1, final: 2 };
-    return priority[a.status] - priority[b.status];
+/**
+ * The homepage's one live-sport surface: the compact mobile summary and the
+ * desktop rail are this component, given the same board the page already
+ * fetched. It never calls `getSportsBoard()` itself, so a render pays for the
+ * board once and both surfaces cannot disagree about a score.
+ *
+ * `shownEventIds` names the fixtures the feed already carries as cards, which
+ * the centre deprioritises rather than drops — see `match-centre.ts` for why a
+ * quiet day must still fill its rows.
+ */
+export default function SportsMatchCentre({
+  board, compact = false, shownEventIds = [],
+}: {
+  board: SportsBoard;
+  compact?: boolean;
+  shownEventIds?: readonly string[];
+}) {
+  const rows = selectMatchCentreRows(board.events, {
+    limit: compact ? MATCH_CENTRE_ROWS_COMPACT : MATCH_CENTRE_ROWS,
+    shownEventIds,
   });
-  // Prefer distinct competitions, then fill from the remaining fixtures.
-  const rows = ordered.filter((event, index) => ordered.findIndex((other) => other.league === event.league) === index).slice(0, limit);
-  for (const event of ordered) {
-    if (rows.length >= limit) break;
-    if (!rows.includes(event)) rows.push(event);
-  }
   if (rows.length === 0) return null;
   const sample = board.mode === 'demo';
   const hasLive = rows.some((event) => event.status === 'live' && event.source !== 'demo');
+  const live = sample ? 0 : liveFixtureCount(rows);
 
   return (
-    <section aria-label="Sports scores" data-sports-summary className={compact
+    <section aria-label="Sports scores" data-sports-summary data-match-centre className={compact
       ? 'min-w-0 border-t border-gray-100 px-3 py-3 dark:border-slate-800'
       : 'min-w-0 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60'}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide flex items-center gap-1.5">
           <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
           {sample ? 'Sample fixtures' : hasLive ? 'Live scores' : 'Sports scores'}
+          {/* A count of what ESPN reports as live, never a claim about a sample. */}
+          {live > 0 && <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-black tabular-nums text-red-700 dark:bg-red-950/60 dark:text-red-300">{live} live</span>}
         </h3>
         <Link href="/sports" className="inline-flex min-h-11 items-center text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
           All competitions

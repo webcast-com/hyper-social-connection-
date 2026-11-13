@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CELLS_PER_PASS, GAMES_PER_PASS, LEAGUE_GAMES_MAX, REPROBE_EMPTY_AFTER_MS,
+  CELLS_PER_PASS, GAMES_PER_PASS, LEAGUE_GAMES_MAX, MEDIA_WARM_PER_PASS, REPROBE_EMPTY_AFTER_MS,
   candidateGames, cellPlan, espnDate, resetHighlightsSweep, runHighlightsSweep,
 } from '../../src/lib/highlights-sweep';
-import { leagueRow, matchRow, probeKey, sweepCellKey, type HighlightsStore, type StoredClip } from '../../src/lib/highlights-index';
+import {
+  leagueRow, matchRow, probeKey, sweepCellKey,
+  type HighlightsStore, type NewsClipRef, type StoredClip,
+} from '../../src/lib/highlights-index';
+import { mediaProbeKey, resetVideoNewsCaches } from '../../src/lib/espn-video-news-feed';
+import type { SportsVideoNewsMedia } from '../../src/lib/espn-video-news';
 import type { SportsEvent } from '../../src/lib/sports';
 
 /**
@@ -76,6 +81,10 @@ type Fake = HighlightsStore & {
   probes: { key: string; clips: number }[];
   cells: { key: string; games: number; clips: number }[];
   reprobeAfter: number[];
+  /** The limits each pre-warm asked for, so the ceiling is asserted not assumed. */
+  needingLimits: number[];
+  /** Renditions written back, by clip id. */
+  media: { clipId: string; mp4: string | null; hls: string | null }[];
 };
 
 /**
@@ -86,14 +95,27 @@ type Fake = HighlightsStore & {
  * again; one at zero was asked and found empty, and is askable again only once it
  * is older than the reprobe window.
  */
-function fakeStore(options: { available?: boolean; probed?: Map<string, number>; probedAge?: number; fresh?: string[] } = {}): Fake {
+function fakeStore(options: {
+  available?: boolean;
+  probed?: Map<string, number>;
+  probedAge?: number;
+  fresh?: string[];
+  /** Stored league rows with no rendition yet, which a pass may pre-warm. */
+  needing?: NewsClipRef[];
+  /** Renditions already stored, by clip id. */
+  storedMedia?: Map<string, SportsVideoNewsMedia>;
+} = {}): Fake {
   const written: StoredClip[] = [];
   const probes: { key: string; clips: number }[] = [];
   const cells: { key: string; games: number; clips: number }[] = [];
   const reprobeAfter: number[] = [];
+  const needingLimits: number[] = [];
+  const media: { clipId: string; mp4: string | null; hls: string | null }[] = [];
   const probed = options.probed ?? new Map<string, number>();
   const probedAt = Date.now() - (options.probedAge ?? 0);
   const fresh = new Set(options.fresh ?? []);
+  const needing = options.needing ?? [];
+  const storedMedia = options.storedMedia ?? new Map<string, SportsVideoNewsMedia>();
 
   const summary = async () => ({
     ok: true, clips: written.length, matchClips: written.filter((clip) => clip.kind === 'match').length,
@@ -102,7 +124,7 @@ function fakeStore(options: { available?: boolean; probed?: Map<string, number>;
   });
 
   return {
-    written, probes, cells, reprobeAfter,
+    written, probes, cells, reprobeAfter, needingLimits, media,
     available: () => options.available ?? true,
     summary,
     read: async () => ({ ok: true, match: [], league: [], remaining: 0, byLeague: [], byStatus: [], summary: await summary() }),
@@ -120,6 +142,21 @@ function fakeStore(options: { available?: boolean; probed?: Map<string, number>;
     recordProbes: async (entries) => { probes.push(...entries); for (const entry of entries) probed.set(entry.key, entry.clips); },
     freshCells: async (keys) => new Set(keys.filter((key) => fresh.has(key))),
     recordCells: async (entries) => { cells.push(...entries); },
+    findNewsMedia: async (clipId) => storedMedia.get(clipId) ?? null,
+    storeNewsMedia: async (clipId, resolved) => {
+      // The real write refuses a rendition that cannot play, and reports the rows
+      // it updated — a probe is only recorded when something was stored.
+      if (!resolved || (!resolved.mp4 && !resolved.hls)) return 0;
+      media.push({ clipId, mp4: resolved.mp4, hls: resolved.hls });
+      storedMedia.set(clipId, resolved);
+      return 1;
+    },
+    // A row stops appearing here the moment its rendition is stored, which is what
+    // makes the pre-warm converge instead of repeating the same clips each pass.
+    newsClipsNeedingMedia: async (limit) => {
+      needingLimits.push(limit);
+      return needing.filter((row) => !storedMedia.has(row.clipId)).slice(0, Math.max(1, limit));
+    },
   };
 }
 
@@ -143,6 +180,34 @@ const eventIdFor = (url: string) => `4011${url.match(/dates=(\d{8})/)?.[1] ?? '0
 const scoreboards = (urls: string[]) => urls.filter((url) => url.includes('/scoreboard'));
 const collections = (urls: string[]) => urls.filter((url) => url.includes('/videos?event='));
 const news = (urls: string[]) => urls.filter((url) => url.includes('/news?'));
+const mediaRecords = (urls: string[]) => urls.filter((url) => url.includes('/v1/video/clips/'));
+
+/** Stored league rows with no rendition yet, which a pass may pre-warm. */
+const needingMedia = (count: number, from = 49900001): NewsClipRef[] =>
+  Array.from({ length: count }, (_, index) => ({
+    clipId: String(from + index),
+    externalKey: `league:espn-video-epl-${from + index}`,
+  }));
+
+/**
+ * Answers the league listing with one clip and every clip-record request with a
+ * playable rendition, so a pre-warm has something to resolve.
+ */
+function answerMedia(status = 200): Responder {
+  return (url) => {
+    if (url.includes('/v1/video/clips/')) {
+      const id = url.split('/').pop() ?? '0';
+      return status === 200
+        ? Response.json({ links: { source: { href: `https://espnmedia-cdn.akamaized.net/espn/media/16x9/2026/1108/${id}_3600k.mp4` } }, duration: 62 })
+        : new Response('geofenced', { status });
+    }
+    if (url.includes('/news?')) {
+      return url.includes('/soccer/eng.1/news') ? Response.json({ articles: [newsArticle(49983806)] }) : Response.json({ articles: [] });
+    }
+    if (url.includes('/videos?event=')) return Response.json({ videos: [] });
+    return Response.json(scoreboard(eventIdFor(url), 'Arsenal', 'post'));
+  };
+}
 
 /**
  * One finished game per competition, each with its own event id, so a pass has
@@ -419,6 +484,115 @@ test('league video news is stored as league clips, with no fixture attached', as
     if (url.includes('/videos?event=')) return Response.json({ videos: [] });
     return Response.json(scoreboard(eventIdFor(url), 'Arsenal', 'post'));
   });
+});
+
+test('a pass pre-warms a bounded few renditions, and counts every request it makes', async () => {
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  // Twenty stored league clips have no rendition; the ceiling says six may be
+  // resolved per pass, and the rest wait for the next one.
+  const store = fakeStore({ needing: needingMedia(20) });
+  let pass: Awaited<ReturnType<typeof runHighlightsSweep>> | null = null;
+  const urls = await withFetch(async () => {
+    pass = await runHighlightsSweep({ store, league: 'epl' });
+    assert.equal(pass.ok, true);
+    assert.equal(pass.leagueClips, 1, 'the listing is stored exactly as before');
+    assert.equal(pass.mediaWarmed, MEDIA_WARM_PER_PASS, 'six renditions resolved and written onto their rows');
+    assert.deepEqual(store.needingLimits, [MEDIA_WARM_PER_PASS], 'the ceiling is asked for, not assumed');
+    assert.equal(store.media.length, MEDIA_WARM_PER_PASS, 'each written back beside its clip');
+    assert.deepEqual(store.media.map((entry) => entry.clipId), needingMedia(MEDIA_WARM_PER_PASS).map((row) => row.clipId), 'newest first, in the order the store returned');
+  }, answerMedia());
+
+  const asked = mediaRecords(urls);
+  assert.equal(asked.length, MEDIA_WARM_PER_PASS, 'six clip-record requests for twenty clips that need one');
+  assert.equal(pass!.requests, scoreboards(urls).length + collections(urls).length + news(urls).length + asked.length,
+    'the report counts exactly the requests made, pre-warm included');
+  // Each resolved rendition is remembered as answered, so nothing asks twice.
+  const mediaProbes = store.probes.filter((entry) => entry.key.startsWith('media:'));
+  assert.equal(mediaProbes.length, MEDIA_WARM_PER_PASS);
+  assert.deepEqual(mediaProbes.map((entry) => entry.clips), Array.from({ length: MEDIA_WARM_PER_PASS }, () => 1));
+  resetVideoNewsCaches();
+});
+
+test('a clip that already refused a rendition is not asked again until the window passes', async () => {
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  // The first clip said no an hour ago; the second has never been asked.
+  const refused = mediaProbeKey('49900001');
+  const store = fakeStore({ needing: needingMedia(2), probed: new Map([[refused, 0]]), probedAge: 60 * 60_000 });
+  const urls = await withFetch(async () => {
+    const pass = await runHighlightsSweep({ store, league: 'epl' });
+    assert.equal(pass.mediaWarmed, 1, 'only the clip that has not refused is resolved');
+  }, answerMedia());
+  assert.deepEqual(mediaRecords(urls).map((url) => url.split('/').pop()), ['49900002'],
+    'a geofenced rendition must not eat the budget on every pass');
+
+  // The same rule the collection probe uses: after 24 h a refusal is worth one
+  // more attempt, because ESPN may have lifted it.
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  const aged = fakeStore({ needing: needingMedia(2), probed: new Map([[refused, 0]]), probedAge: 25 * 60 * 60_000 });
+  const later = await withFetch(async () => {
+    const pass = await runHighlightsSweep({ store: aged, league: 'epl' });
+    assert.equal(pass.mediaWarmed, 2);
+  }, answerMedia());
+  assert.equal(mediaRecords(later).length, 2, 'both asked once the window has passed');
+  resetVideoNewsCaches();
+});
+
+test('the pre-warm converges: a rendition once stored is never resolved again', async () => {
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  const store = fakeStore({ needing: needingMedia(2) });
+  await withFetch(async () => {
+    const first = await runHighlightsSweep({ store, league: 'epl' });
+    assert.equal(first.mediaWarmed, 2);
+  }, answerMedia());
+
+  // A deploy, or simply the next pass: the in-memory cache is gone and the news
+  // window has reopened, so this is the moment the old design would ask again.
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  const second = await withFetch(async () => {
+    const pass = await runHighlightsSweep({ store, league: 'epl' });
+    assert.equal(pass.mediaWarmed, 0, 'both rows already carry a rendition');
+  }, answerMedia());
+  assert.deepEqual(mediaRecords(second), [], 'no clip-record request at all');
+  assert.equal(store.media.length, 2, 'and nothing was written twice');
+  resetVideoNewsCaches();
+});
+
+test('a rendition ESPN refuses does not fail the pass, and is not counted as warmed', async () => {
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  const store = fakeStore({ needing: needingMedia(2) });
+  const urls = await withFetch(async () => {
+    const pass = await runHighlightsSweep({ store, league: 'epl' });
+    assert.equal(pass.ok, true, 'a refusal upstream is an answer, not a failure');
+    assert.equal(pass.mediaWarmed, 0);
+    assert.equal(pass.leagueClips, 1, 'the listing itself is still stored');
+  }, answerMedia(403));
+  assert.equal(mediaRecords(urls).length, 2, 'both were asked, and both are counted in the report');
+  assert.deepEqual(store.media, [], 'a rendition that cannot play is stored nowhere');
+  const probes = store.probes.filter((entry) => entry.key.startsWith('media:'));
+  assert.deepEqual(probes.map((entry) => [entry.key, entry.clips]), [[mediaProbeKey('49900001'), 0], [mediaProbeKey('49900002'), 0]],
+    'recorded as refused, so the next pass skips them for 24 h');
+  resetVideoNewsCaches();
+});
+
+test('with nowhere to store a rendition, a pass asks for none', async () => {
+  resetHighlightsSweep();
+  resetVideoNewsCaches();
+  const store = fakeStore({ available: false, needing: needingMedia(6) });
+  const urls = await withFetch(async () => {
+    const pass = await runHighlightsSweep({ store });
+    assert.equal(pass.ok, false);
+    assert.equal(pass.reason, 'no-database');
+    assert.equal(pass.mediaWarmed, 0);
+    assert.equal(pass.requests, 0);
+  }, answerMedia());
+  assert.deepEqual(urls, []);
+  resetVideoNewsCaches();
 });
 
 test('a pass is rate-limited, and the limit applies after a failure too', async () => {

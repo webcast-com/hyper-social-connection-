@@ -10,14 +10,15 @@ import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
 import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } from 'lucide-react';
-import SportsLiveWidget from '@/components/SportsLiveWidget';
-import SportsScoresWidget from '@/components/SportsScoresWidget';
+import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
+import { LIVE_TAB_MATCHES, selectMatchCentreRows } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { getHighlightsBoardForRender } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
+import { nudgePickGrading } from '@/lib/sports-picks-grader';
 import { highlightAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
 import { interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
@@ -149,6 +150,12 @@ export default async function Home() {
   // not frozen when the page finishes streaming, and rate-limited to one per ten
   // minutes per process. Never awaited, never able to fail the render.
   nudgeHighlightsSweep();
+  // Picks are graded from results the board already reports, so the pass belongs
+  // behind the one page that has just fetched that board: scheduled past this
+  // response, rate-limited, and reading the cached board rather than asking ESPN
+  // again. The predictions page deliberately does not nudge — it reads odds, not
+  // a board, so a pass there would pay for a full scoreboard fan-out.
+  nudgePickGrading();
   const videoNewsBoard = await videoNewsPromise;
   // Every sports card can be liked, commented on, saved and shared like a post:
   // the first interaction creates its anchor post, and this one bounded query
@@ -385,6 +392,37 @@ export default async function Home() {
     videoNewsFeedPosts,
     VIDEO_NEWS_FEED_SLOTS,
   );
+
+  // The Live tab is the sports desk on its own: the same cards For You
+  // interleaves, but every fixture the centre rule allows rather than the two
+  // featured ones, live first, and no member posts. One card per fixture, and a
+  // prediction already attached to one of those cards is not repeated beside it
+  // as a second card for the same match. For You is untouched: it keeps its own
+  // two featured cards at their own slots.
+  const liveMatchPosts = selectMatchCentreRows(sportsBoard.events, { limit: LIVE_TAB_MATCHES }).map((event, index) => ({
+    id: `sports-${event.id}`,
+    type: 'sports',
+    event,
+    prediction: findPredictionForEvent(event),
+    // eslint-disable-next-line react-hooks/purity
+    createdAt: new Date(Date.now() - (index + 1) * 90_000),
+  }));
+  const attachedPredictions = new Set(liveMatchPosts.map((post) => post.prediction?.id).filter(Boolean));
+  const livePredictionPosts = (sportsBoard.predictions || [])
+    .filter((prediction) => !attachedPredictions.has(prediction.id))
+    .slice(0, 2)
+    .map((prediction, index) => ({
+      id: `prediction-${prediction.id}`,
+      type: 'prediction',
+      prediction,
+      // eslint-disable-next-line react-hooks/purity
+      createdAt: new Date(Date.now() - (index + 1) * 120_000),
+    }));
+  const livePosts = [...liveMatchPosts, ...livePredictionPosts, ...videoNewsFeedPosts];
+  // Fixtures the feed already puts in front of the reader as cards, which both
+  // match-centre surfaces deprioritise (never drop) so the rail is not a repeat
+  // of the card beside it.
+  const feedEventIds = sportsFeedPosts.map((post) => post.event.id);
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
   const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
@@ -503,7 +541,7 @@ export default async function Home() {
             </a>
           </div>
 
-          <SportsScoresWidget board={sportsBoard} compact />
+          <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
 
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
@@ -648,6 +686,7 @@ export default async function Home() {
           forYouPosts={forYouPosts}
           followingPosts={followingPosts}
           savedPosts={savedPosts}
+          livePosts={livePosts}
           currentUser={currentUser}
           bookmarkedPostIds={bookmarkedPostIds}
           viewerFollowIds={Array.from(followingIds)}
@@ -659,7 +698,7 @@ export default async function Home() {
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
 
-        <SportsLiveWidget />
+        <SportsMatchCentre board={sportsBoard} shownEventIds={feedEventIds} />
 
         {/* Suggested People */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">

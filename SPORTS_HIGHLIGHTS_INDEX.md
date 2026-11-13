@@ -64,9 +64,16 @@ with parameterised `$queryRawUnsafe`/`$executeRawUnsafe`, exactly like the
   `slugify(clip.id)`, so engagement can find a stored clip. `discovered_at` is
   when this site first saw the clip and **never changes**; `seen_at` is the last
   sweep that still found it.
-- **`sports_highlight_probes`** — one row per game collection asked
-  (`probe:{league}:{eventId}`) with `clips_found` and `attempts`. This is what
-  stops the same collection being read on every pass.
+  A league row also carries its **playable rendition** (`mp4`, `hls`, `duration`,
+  `playable`) once one has been resolved — ESPN's news listing reports a clip page
+  and an id, never a file, so those columns start null and are filled by whichever
+  comes first: a reader pressing play, or a pass pre-warming a bounded few. A
+  partial index (`… WHERE "kind" = 'league'`) serves that lookup by ESPN's clip id.
+- **`sports_highlight_probes`** — one row per upstream question asked, with
+  `clips_found` and `attempts`: a game collection (`probe:{league}:{eventId}`) and
+  a clip rendition (`media:{clipId}`). This is what stops the same collection being
+  read on every pass, and stops a pre-warm spending its budget re-asking a clip
+  whose rendition ESPN has already refused.
 - **`sports_highlight_sweeps`** — one row per competition per UTC day walked
   (`sweep:{slug}:{date}`). This is the **cursor**: it survives a deploy and is
   shared by every instance, so coverage resumes instead of restarting at the
@@ -93,6 +100,7 @@ One pass, at most:
 | An **empty** collection re-asked after | `REPROBE_EMPTY_AFTER_MS = 24 h` |
 | Passes per process | 10 min opportunistic, 30 s explicit, 5 min per named competition |
 | League video news fan-out | joins a pass at most every 15 min |
+| Renditions pre-warmed | `MEDIA_WARM_PER_PASS = 6` per pass, inside the same deadline |
 
 Rules that keep it honest:
 
@@ -110,6 +118,16 @@ Rules that keep it honest:
   from, not hammered on every page load.
 - Concurrent callers **share** one in-flight pass.
 - `truncated` says when the deadline or the slice cut a pass short.
+- A rendition is resolved **once per clip, not once per process**: the pre-warm
+  asks only for stored league rows whose media columns are still null, skips any
+  clip that refused within 24 h, skips any already answered in memory (so the pass
+  report's request count stays exact), and stops at the deadline. The row then
+  stops appearing in that query at all, so the work converges instead of repeating.
+- **Re-storing a clip never wipes what is already known.** A pass re-reads the
+  league listing every 15 minutes and that listing carries no media URL, so the
+  upsert merges the media and URL columns with `COALESCE(EXCLUDED.x, table.x)` and
+  derives `playable` from the merged `mp4`. A plain assignment would have nulled
+  every resolved rendition on the next join — the bug a real-Postgres probe caught.
 
 ### What triggers a pass
 
@@ -285,6 +303,21 @@ assertions flipped: the suite failed at 00:05 and passed at 00:17 with nothing i
 second spec locks the rule with fixed timestamps instead of waiting for midnight.
 Verified by shifting the process clock to 00:05:00 UTC with a loader outside the
 repo: the previous spec fails with "yesterday was asked again", the new one passes.
+
+**Verified since, for stored renditions** (detail in
+[ESPN_VIDEO_NEWS.md](ESPN_VIDEO_NEWS.md)): 12 new specs — a stored rendition served
+with zero requests, the write-back and its probe, a refusal stored nowhere but
+remembered, an invalid id touching neither network nor database, the pre-warm's
+bound and exact request accounting, its 24 h refusal skip, its convergence, and its
+behaviour with no database. Plus a **real-Postgres probe** (deleted in the same run)
+that created the partial index, round-tripped a rendition through
+`storeNewsMedia`/`findStoredNewsMedia`, kept the listing's thumbnail and page while
+filling a gap from the rendition, **re-stored the same clip with no media and found
+the rendition still intact** with `discovered_at` unchanged and `seen_at` advanced,
+refused to write a rendition that cannot play, and clamped
+`newsClipsNeedingMedia(9999)` to 12 newest-first. And a live check where
+`clip?id=…` returned `playable: true` with the stored mp4 in a sandbox that cannot
+reach ESPN — an answer that could only have come from Postgres.
 
 **Not verified here:** real clips being stored, because this sandbox has no egress
 to `site.api.espn.com` (`ESPN_ACCESS_DENIED.md`). Every sweep in the sandbox asks

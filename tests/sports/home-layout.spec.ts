@@ -37,10 +37,10 @@ test.beforeAll(async () => {
         contents: (await fs.readFile(args.path, 'utf8')).replace('export async function getSportsBoard(', 'async function unusedServerSportsBoard(')
           + '\nexport const getSportsBoard = async () => window.homeReviewBoard;', loader: 'ts',
       }));
-      builder.onLoad({ filter: /src\/components\/SportsLiveWidget\.tsx$/ }, (args) => ({
-        contents: 'import View from "./SportsScoresWidget"; export default function Widget(){ return <View board={window.homeReviewBoard} />; }',
-        loader: 'tsx', resolveDir: path.dirname(args.path),
-      }));
+      // The match centre takes the board as a prop, so it needs no substitution:
+      // the page's single `getSportsBoard()` call above already feeds both the
+      // compact summary and the desktop rail. (This used to stub
+      // `SportsLiveWidget`, which fetched its own second board.)
     } }],
   });
   javascript = result.outputFiles[0].text;
