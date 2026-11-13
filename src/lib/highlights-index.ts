@@ -107,6 +107,16 @@ export const DEFAULT_INDEX_LIMIT = 24;
 export const MAX_INDEX_LIMIT = 60;
 /** How far back `?days=` may reach. Permanent storage, bounded querying. */
 export const MAX_INDEX_DAYS = 365;
+/**
+ * Clips one feed read carries.
+ *
+ * A page of the index is 60 rows because a page is what a reader scrolls; the
+ * feed asks for every stored clip in its window, so it has its own ceiling. This
+ * bounds one query and one payload, not what the feed is willing to show — the
+ * window does that — and `remaining` reports when the ceiling was the thing that
+ * stopped the read rather than the window.
+ */
+export const FEED_INDEX_LIMIT = 300;
 /** Rows in one INSERT. Pooled Postgres prefers a few fat statements to many. */
 const MAX_INSERT_ROWS = 100;
 /** A row that cannot be rendered is dropped rather than shown broken. */
@@ -787,6 +797,71 @@ async function queryRead(query: HighlightsIndexQuery): Promise<IndexedHighlights
     byStatus,
     summary,
   };
+}
+
+/* ── The feed's read ────────────────────────────────────────────────────── */
+
+export type FeedClipsRead = {
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  /** Stored match clips in the window, newest first. */
+  clips: SportsHighlightClip[];
+  /** Clips in the window this read did not carry, so a ceiling is never silent. */
+  remaining: number;
+  /** The endpoint that produced the newest row, as `read()` reports it. */
+  sourceUrl: string | null;
+};
+
+/**
+ * Every stored match clip in a window, newest first, in two indexed queries.
+ *
+ * The homepage feed carries all of them, so it cannot use `read()`: that also
+ * builds the index page's summary, its per-competition totals and its per-state
+ * counts — five queries, four of which a feed never looks at. This reads the rows
+ * and how many are left, ordered exactly as `read()` orders them
+ * (`occurred_at DESC NULLS LAST, id DESC`), so a feed built from stored rows runs
+ * newest to oldest the same way the index does and the two cannot disagree.
+ *
+ * The bounds are `resolveIndexQuery`'s, except the per-page one: a feed read is
+ * capped by `FEED_INDEX_LIMIT` rather than `MAX_INDEX_LIMIT`.
+ *
+ * Never throws. Storage that is missing, slow or broken leaves the caller with
+ * whatever board it already had, which is the rule this index has always kept.
+ */
+export async function readFeedClips(days: number, limit: number = FEED_INDEX_LIMIT): Promise<FeedClipsRead> {
+  const empty: FeedClipsRead = { ok: false, reason: 'no-database', clips: [], remaining: 0, sourceUrl: null };
+  if (!hasDatabase) return empty;
+  const asked = Number.isFinite(days) ? Math.trunc(days) : 0;
+  const boundedDays = asked > 0 ? Math.min(MAX_INDEX_DAYS, asked) : null;
+  const since = boundedDays ? new Date(Date.now() - boundedDays * 86_400_000) : null;
+  const bounded = Number.isFinite(limit) ? Math.trunc(limit) : FEED_INDEX_LIMIT;
+  const wanted = Math.max(1, Math.min(FEED_INDEX_LIMIT, bounded));
+  try {
+    await ensureMigrated();
+    const where = `WHERE "kind" = 'match' AND ($1::timestamptz IS NULL OR "occurred_at" >= $1)`;
+    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+      `SELECT ${COLUMNS}, "id" FROM "sports_highlight_clips"
+         ${where}
+         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
+         LIMIT $2`,
+      since, wanted,
+    );
+    const counted = await prisma.$queryRawUnsafe<{ total: number }[]>(
+      `SELECT count(*)::int AS "total" FROM "sports_highlight_clips" ${where}`,
+      since,
+    );
+    const clips: SportsHighlightClip[] = [];
+    for (const row of rows) {
+      const clip = rowToMatchClip(row);
+      // A row that cannot be rendered is dropped, as it is everywhere else: a
+      // card with nothing to play is worse than one clip fewer.
+      if (clip) clips.push(clip);
+    }
+    const total = counted[0]?.total ?? 0;
+    return { ok: true, clips, remaining: Math.max(0, total - rows.length), sourceUrl: rows[0]?.source_url ?? null };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
 }
 
 /**

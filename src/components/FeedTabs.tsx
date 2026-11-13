@@ -5,6 +5,7 @@ import Post from '@/components/Post';
 import SportsFeedCard from '@/components/SportsFeedCard';
 import SportsPredictionFeedCard from '@/components/SportsPredictionFeedCard';
 import SportsVideoNewsCard from '@/components/SportsVideoNewsCard';
+import { HighlightPostCard } from '@/components/SportsHighlightsFeed';
 import { Sparkles, Users, Bookmark, Compass, Radio } from 'lucide-react';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
@@ -15,6 +16,11 @@ type Tab = 'for-you' | 'following' | 'live' | 'saved';
 
 /**
  * The tabs of the main feed.
+ *
+ * For You is everything: the member posts, every fixture the board reports, every
+ * highlight clip the window holds, and the league video and prediction cards,
+ * each kind placed by its own pass in `feed-interleave.ts` and revealed in
+ * batches. Nothing here decides how many of any kind there are.
  *
  * `livePosts` is the sports desk on its own: one card per fixture, live first,
  * then upcoming and results, then league video news. It is built by the page from
@@ -199,6 +205,17 @@ export default function FeedTabs({
                 <SportsPredictionFeedCard key={post.id} prediction={post.prediction} currentUser={currentUser} />
               ) : post.type === 'video-news' ? (
                 <SportsVideoNewsCard key={post.id} clip={post.clip} currentUser={currentUser} />
+              ) : post.type === 'highlight' ? (
+                // The same card the highlights list renders, with the anchor and
+                // saved state the page loaded for it. `anchor` is null for a clip
+                // with nothing to engage with, and the card stays read-only.
+                <HighlightPostCard
+                  key={post.id}
+                  clip={post.clip}
+                  anchor={post.anchor ?? null}
+                  engagement={post.engagement ?? null}
+                  signedIn={!!currentUser?.id}
+                />
               ) : (
                 <Post
                   key={post.id}

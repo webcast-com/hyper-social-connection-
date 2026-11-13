@@ -46,6 +46,22 @@ export { SPORTS_DESK };
 
 /** Bounds one homepage render: two leader boards plus the highlights list. */
 const MAX_REFS = 60;
+/**
+ * Ceiling on one lookup, for a page that is about to render more cards than the
+ * default covers — the For You feed carries every highlight clip in its window,
+ * not the handful a sidebar list shows.
+ *
+ * This bounds the `IN` list of one query, not how much is read back: the queries
+ * that follow are driven by the anchors that exist, so a page asking about 300
+ * clips nobody has engaged with still costs one row-less lookup. A card whose ref
+ * was cut off would render a Like count of zero over a clip that has likes, which
+ * is a wrong number rather than a missing one — so a caller that renders more
+ * cards has to ask for more refs.
+ *
+ * Sized against the feed's own ceiling: `FEED_INDEX_LIMIT` clips, plus the leader
+ * boards and the highlights list rendered beside them, all fit inside one lookup.
+ */
+const MAX_ENGAGEMENT_REFS = 400;
 /** Comments carried per card; the count still reports the real total. */
 const MAX_COMMENTS_PER_CARD = 12;
 
@@ -178,8 +194,14 @@ export async function createAnchorPost(draft: SportsAnchorDraft): Promise<number
  * comments. Cards nobody has engaged with cost one row of the id query and
  * nothing else.
  */
-export async function loadAnchorEngagement(refs: SportsAnchorRef[], viewerId: number | null): Promise<SportsAnchorEngagementMap> {
-  const wanted = refs.slice(0, MAX_REFS);
+export async function loadAnchorEngagement(
+  refs: SportsAnchorRef[],
+  viewerId: number | null,
+  options: { maxRefs?: number } = {},
+): Promise<SportsAnchorEngagementMap> {
+  const asked = Number.isFinite(options.maxRefs) ? Math.trunc(options.maxRefs as number) : MAX_REFS;
+  const ceiling = Math.max(1, Math.min(MAX_ENGAGEMENT_REFS, asked || MAX_REFS));
+  const wanted = refs.slice(0, ceiling);
   if (!hasDatabase || !wanted.length) return {};
   const keys = [...new Set(wanted.map(anchorKey))];
   if (!keys.length) return {};
@@ -261,6 +283,27 @@ export function leaderAnchorRefs(boards: Record<SportsLeaderSport, SportsLeaderB
     }
   }
   return refs;
+}
+
+/**
+ * One list of refs for a render, in the order the caller wants them looked up.
+ *
+ * Deduplication keeps each card's first position, so the groups are a priority
+ * order as well as a list: whatever comes first is what survives when
+ * `loadAnchorEngagement`'s ceiling has to cut something. A page renders cards
+ * that are always on screen — leader boards, a sidebar list — and cards deep in a
+ * batched feed, and only the second group can afford to lose engagement, so it
+ * goes last, newest card before oldest.
+ */
+export function dedupeAnchorRefs(...groups: SportsAnchorRef[][]): SportsAnchorRef[] {
+  const seen = new Map<string, SportsAnchorRef>();
+  for (const group of groups) {
+    for (const ref of group) {
+      const key = anchorKey(ref);
+      if (!seen.has(key)) seen.set(key, ref);
+    }
+  }
+  return [...seen.values()];
 }
 
 /**
