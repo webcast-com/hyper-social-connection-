@@ -22,7 +22,7 @@ It was built apart from the highlights stack on purpose, and stays apart:
 | Card | `SportsHighlightsFeed` + `LinkMediaPlayer` | `SportsVideoNewsCard` (own player) |
 | Asks ESPN for | finished fixtures, then each fixture's videos | each competition's news feed |
 | Clip identity | a match: `home` vs `away`, score, `eventId` | a league clip: no fixture, ESPN's own team labels |
-| Media in the listing | yes (`mp4`, `hls`, `playable`) | no — resolved on demand when a reader plays it |
+| Media in the listing | yes (`mp4`, `hls`, `playable`) | no — resolved when a reader plays it, then **stored** beside the clip |
 | When ESPN is unreachable | bundled sample card, labelled as a sample | empty board; **no sample clips exist here** |
 
 Nothing in one reads or writes the other: no shared cache, no shared in-flight
@@ -55,6 +55,17 @@ A news article carries a clip **page** (`espn.com/video/clip/_/id/…`) and a cl
 
 Listing twelve competitions therefore costs twelve requests, and watching one
 clip costs one more — not a media fetch per card on every scroll.
+
+That one request happens **once per clip, not once per process**. The rendition is
+written onto the clip's row in the stored highlights index
+([SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md)), and the next reader is
+served from Postgres without asking ESPN at all — which also means a clip still
+plays after a deploy, on another instance, and while ESPN is unreachable. In memory
+the answer lived 15 minutes and died on every restart, so the same popular clip was
+resolved forever. A sweep pre-warms at most six renditions per pass, newest first,
+so what a reader is most likely to press is already stored; a clip ESPN refuses is
+recorded as refused and a pass will not re-ask it for 24 h, while a reader who
+presses play again still gets a fresh attempt.
 
 ## What a card shows, and what it refuses to invent
 
@@ -132,10 +143,12 @@ competition that answers with **no** videos is a normal answer, not a failure:
 ESPN publishes league video for some competitions and not for others.
 
 Server-side caching: 15 minutes for a board, 60 seconds for a failed one, 15
-minutes for a resolved rendition; concurrent callers share one in-flight fan-out
-(`resetVideoNewsCaches()` is the test seam). Requests carry
-`AbortSignal.timeout(6000)`, run at concurrency 6, and use the shared
-`ESPN_REQUEST_HEADERS`.
+minutes for a resolved rendition **in memory** — and permanently in the stored
+index, which is asked before ESPN and written after a successful resolve, so the
+in-memory layer is a hot path rather than the only memory of an answer. Concurrent
+callers share one in-flight fan-out (`resetVideoNewsCaches()` is the test seam).
+Requests carry `AbortSignal.timeout(6000)`, run at concurrency 6, and use the
+shared `ESPN_REQUEST_HEADERS`.
 
 ## Coverage
 
@@ -176,6 +189,41 @@ refuse in another. That is what the "Watch it on ESPN" fallback is for.
   restored byte-identical) proved the card renders inside the For You feed with a
   poster and play control, **zero** `<video>` elements and no fallback link before
   a reader presses play.
+
+## Verified since, for the stored rendition
+
+- `video-news-feed.test.ts`, 4 new specs (12 in the file): a rendition already
+  stored is served with **zero** requests and seeds the in-memory cache; one
+  resolved for a reader is written back beside the clip and recorded as answered,
+  and after the caches are cleared — a deploy, a new instance — the stored
+  rendition answers with no request at all; a refusal is stored nowhere but is
+  recorded, while a reader who presses play again still gets a fresh attempt; an
+  invalid id reaches neither the network nor the database.
+- `highlights-index.test.ts`, 3 new specs: a league row stores the rendition and
+  reports `playable`, with the listing's own thumbnail and page kept; the upsert
+  merges media with `COALESCE` and derives `playable`, so re-storing a clip cannot
+  wipe a rendition; and every rendition lookup is inert without a database.
+- `highlights-sweep.test.ts`, 5 new specs: a pre-warm is bounded to
+  `MEDIA_WARM_PER_PASS` for twenty clips that need one, and `pass.requests` equals
+  the scoreboards plus collections plus news plus clip-record requests exactly; a
+  clip that refused within 24 h is skipped and asked again after it; the pre-warm
+  converges, so a second pass makes no clip-record request; a refusal does not fail
+  the pass and is not counted as warmed; with no database a pass asks for none.
+- **Real Postgres** (throwaway probe, deleted in the same run): the partial index
+  is created; a rendition round-trips through `storeNewsMedia` /
+  `findStoredNewsMedia` and flips the row to `playable` with its duration; the
+  listing's thumbnail and page survive the write, and a row whose listing had no
+  thumbnail takes the rendition's; **re-storing the same clip with no media leaves
+  the rendition intact** with `discovered_at` unchanged and `seen_at` advanced, and
+  the pre-warm query then returns nothing; a rendition that cannot play updates no
+  row; and `newsClipsNeedingMedia(9999)` is clamped to 12, newest first.
+- Live against the dev server, in a sandbox with **no ESPN egress**:
+  `clip?id=31053444` returned `playable: true` with the stored mp4 and the listing's
+  thumbnail — an answer that could only have come from Postgres — while
+  `clip?id=31053777`, stored with no rendition, returned `playable: false` with
+  `no-store`, and `clip?id=../../etc/passwd` still returned 400.
+  `/api/sports/highlights?index=1&kind=league` listed both clips, and
+  `/sports/highlights` rendered its League video section with them.
 
 ## Not verified here
 

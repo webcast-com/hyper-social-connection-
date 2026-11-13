@@ -434,3 +434,44 @@
     running preview in which a forced sweep ran a pass with no recent traffic and
     returned `rate-limited` after loading only the homepage, proving the homepage is
     a trigger. Not verified here: real clips being stored, no sandbox ESPN egress.
+
+- Phase 21: A news video's rendition is resolved once, and kept ✅
+  League video news was already stored as `kind='league'` rows, but a listing from
+  ESPN carries no media URL — only a clip page and an id — so those rows stored
+  `mp4`, `hls`, `duration` and `playable` as null. The playable rendition was
+  resolved per clip when a reader pressed play and cached **in memory for 15
+  minutes**, which meant the same popular clip was resolved again after every
+  deploy, on every instance, and could not play at all while ESPN was unreachable.
+  See [SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md) and
+  [ESPN_VIDEO_NEWS.md](ESPN_VIDEO_NEWS.md).
+
+  - No new table — the columns already existed. `resolveVideoNewsMedia` now asks
+    the index before ESPN and writes an answer back onto the clip's row, so a
+    rendition is resolved **once per clip rather than once per process**, survives a
+    deploy, and plays with ESPN unreachable. A partial index
+    (`… WHERE "kind" = 'league'`) serves the lookup by ESPN's clip id.
+  - A sweep **pre-warms at most six renditions per pass** (`MEDIA_WARM_PER_PASS`),
+    newest first, inside the pass's existing 4 s deadline: only rows whose media
+    columns are still null, skipping any clip that refused within the same 24 h the
+    collection rule uses and any already answered in memory, so `pass.requests`
+    stays exact. A row stops appearing in that query once stored, so the work
+    converges instead of repeating. `pass.mediaWarmed` reports it.
+  - A refusal is recorded as a probe (`media:{clipId}`) but **never stored as a
+    fact**: a rendition that cannot play updates no row, and a reader who presses
+    play again still gets a fresh attempt. The probe steers a sweep's pre-warm, it
+    does not lock a reader out.
+  - **A re-store can no longer wipe what is known.** The upsert merges the media and
+    URL columns with `COALESCE(EXCLUDED.x, table.x)` and derives `playable` from the
+    merged `mp4`, because a pass re-reads the league listing every 15 minutes with
+    no media on it — a plain assignment would have nulled every resolved rendition
+    on the next join. A rendition fills gaps beside it (a row whose listing had no
+    thumbnail takes the rendition's) but never replaces a value the listing stored.
+  - Verified: `npm run typecheck`, `npm run test:sports` **398/398** (12 new: 3
+    index, 4 feed, 5 sweep), `npm run build`, changed-file ESLint, a **real-Postgres
+    probe** (deleted in the same run) covering the index, the rendition round-trip,
+    the thumbnail precedence both ways, the re-store survival with `discovered_at`
+    unchanged and `seen_at` advanced, the clamp to 12 newest-first, and a
+    nothing-playable write updating no row — plus a live check in a sandbox with no
+    ESPN egress where `clip?id=…` returned `playable: true` with the stored mp4 (an
+    answer that could only have come from Postgres), a clip with no stored rendition
+    returned `playable: false` with `no-store`, and id validation still returned 400.
