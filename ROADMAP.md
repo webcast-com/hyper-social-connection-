@@ -318,3 +318,119 @@
     clean on every touched file, and a live smoke of the page, its filter
     variants, the new sports-board pill and four unchanged routes. Not verified
     here: live clips (no sandbox egress, so the labelled sample board renders).
+
+- Phase 19: Every highlight, in every competition, kept for days ✅
+  Constraint: ESPN has **no bulk highlights endpoint and no date range** — a
+  game's clips live on that game's own `videos?event={id}` collection and a
+  scoreboard takes one date per request. "Everything" therefore costs 121
+  scoreboards per day (847 for a week) **plus one request per game**: thousands of
+  calls, which cannot run inside a render and would risk a throttle on the host
+  every other ESPN surface shares. Nor can the existing in-memory caches keep
+  anything for days: they are per process and die on every deploy. So the reads
+  move into Postgres and the fetching moves into the background. See
+  [SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md).
+
+  - Three tables, created by `ensureMigrated()` with the repo's existing
+    idempotent DDL (no `prisma generate` needed): `sports_highlight_clips` (one row
+    per distinct clip, unique `external_key`, `discovered_at` never changes),
+    `sports_highlight_probes` (one row per game collection asked, so a collection
+    that answered with clips is **never** asked again and an empty one is retried
+    after 24 h, because ESPN publishes highlights hours after full time), and
+    `sports_highlight_sweeps` (one row per competition per UTC day — the cursor,
+    which survives a deploy and is shared by every instance).
+  - Retention is **permanent**: nothing deletes a clip. `?days=` bounds the query
+    (a year at most), not the storage.
+  - `highlights-sweep.ts` walks a **bounded slice**: ≤24 scoreboards and ≤24 game
+    collections per pass, 8 in flight (below the live board's 24, because this is
+    background work sharing an upstream host), inside one shared 4 s deadline;
+    day-major, so today across every competition comes before yesterday anywhere.
+    Rate-limited per process (10 min opportunistic, 30 s explicit, 5 min per named
+    competition) **including after a failure**, and concurrent callers share one
+    pass. A pass reports cells walked, games asked, clips stored, requests made,
+    seconds taken and whether it was truncated.
+  - Upcoming fixtures are never asked; a game with no provider id is skipped, never
+    guessed; a cell nobody answered is not recorded as walked, so it is retried.
+  - **League video news is stored in the same index** (`kind = 'league'`), because
+    it is the only clip source for competitions whose per-game collections are
+    always empty — the Premier League and the NFL. A league clip keeps its fixture
+    columns null and is rendered by `SportsVideoNewsCard`: no score, no kickoff, no
+    match page, and nothing dressed up as a match.
+  - `GET /api/sports/highlights` is **byte-identical without `index=1`**; with it,
+    the response is `{board, index}` and the stored half costs **no ESPN request**.
+    `?league=&status=&kind=&days=&limit=&offset=` are clamped server-side before
+    SQL, and an unknown value is dropped rather than queried. A new
+    `GET|POST /api/sports/highlights/sweep` runs one pass on demand.
+  - `/sports/highlights` renders two labelled sources (the live board and the
+    stored index) plus league video, dedupes a clip that is on both, pages with
+    "Load more", and prints the sweep report verbatim — including when a pass did
+    nothing because one ran recently. Chip badges count stored clips while anything
+    is stored and say so; while the index is empty or unreadable they count the
+    board's own clips, because a zero next to four cards would be a lie about those
+    cards.
+  - Engagement follows the clip: `resolveAnchorDraft` now falls back to
+    `findStoredHighlightClip(anchorKey)`, so a like on a stored clip that has left
+    the live board still creates its post. A stored clip and the same clip on the
+    board share one anchor, so they share one post.
+  - Without a database every store call resolves inert with a reason, the sweep
+    makes **zero** requests, and the page shows the live board exactly as it did
+    before this phase.
+  - Verified: `npm run typecheck`, `npm run test:sports` **374/374** (24 new: 8
+    index, 11 sweep, 5 page), `npm run build`, changed-file ESLint, a **real
+    Postgres smoke** of the DDL, insert idempotency (`discovered_at` preserved,
+    `seen_at` advanced), every filter, paging, the anchor lookup and both cursor
+    tables — which caught two genuine `INSERT` column-count bugs the unit tests
+    could not — and a live smoke in which a forced sweep honestly reported
+    `{ok: true, cells: 0, requests: 36, truncated: true}` because this sandbox has
+    no ESPN egress. Not verified here: real clips being stored, for the same
+    reason. Coverage advancing without traffic is phase 20, and needs no cron.
+
+- Phase 20: Coverage without a scheduler, and a homepage that reads what it stored ✅
+  Two follow-ups to phase 19, both about making the stored index earn its keep on
+  the render path. See
+  [SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md).
+
+  - **No cron, and no `vercel.json`.** Every trigger now calls
+    `nudgeHighlightsSweep()`, which schedules the pass with Next's `after()` instead
+    of a bare `void`. That distinction is the whole reason traffic-driven coverage
+    works on a serverless host: a fire-and-forget call can be frozen the moment its
+    response leaves — requests started, nothing stored — while an `after()` callback
+    runs to completion. Outside a request scope `after()` throws, so the nudge falls
+    back to the call it replaced and can never throw into a render. Triggers are the
+    homepage, `/sports/highlights`, `?index=1` and the sweep button, so a first
+    rotation of 847 cells (~36 passes) is about six hours of ordinary traffic; a
+    quiet period stops growth and breaks nothing, because stored clips are
+    permanent.
+  - **The homepage reads stored clips first.** `getHighlightsBoardForRender()` asks
+    Postgres for `kind=match` over the last seven days — the live board's own
+    window, so the card's copy still holds — at most twelve clips, inside a 900 ms
+    budget, and costs **zero ESPN requests**. Four or more stored clips is the board
+    (`provenance: 'stored'`, `games` counted as the distinct fixtures its clips
+    name, `source.url` the endpoint that produced the newest row, `httpStatus` left
+    `null` because this render received no HTTP response). Fewer than four is a
+    thinner card than twelve live clips, so the live board answers as before and the
+    stored clips it is missing are appended, deduplicated by clip id, live clips
+    first in their own order.
+  - A stored board reports `status: 'live'`, because that is what it is: the feed
+    only dresses cards as samples — and strips their anchor post, so no Like button
+    — when a board is neither live nor partial. `provenance` is optional on the
+    board type, so the feed, the bundled sample board and a page's empty board are
+    all still valid untouched, and no consumer branches on it.
+  - Storage that is missing, slow, empty, throwing or reporting a failed query
+    degrades to exactly the board the homepage rendered before this phase, sample
+    cards included.
+  - Also fixed a **pre-existing** flake in `highlights-feed.test.ts`: a spec that
+    seeded the finished-fixture pool 16 minutes old and then asserted against
+    `Date.now()` at assert time, so it failed for the first 16 minutes of every UTC
+    day and passed again at 00:17 with nothing in `src/` changing. Both expectations
+    now come from the bracketed seed instant, and a second spec locks the rule with
+    fixed timestamps instead of waiting for midnight.
+  - Verified: `npm run typecheck`, `npm run test:sports` **386/386** (12 new: 11 for
+    the board read, 1 for the midnight rule), `npm run build`, changed-file ESLint,
+    a **real-Postgres seed-and-delete** in which 6 stored match clips across 5
+    fixtures made the homepage board `provenance: stored` with `games: 5` in 84 ms
+    and no league clip on it, then went back to the bundled sample board once the
+    rows were deleted — a **marker route** proving a pass starts *after* the handler
+    returns, so `after()` and not the fallback ran — and a control/experiment on the
+    running preview in which a forced sweep ran a pass with no recent traffic and
+    returned `rate-limited` after loading only the homepage, proving the homepage is
+    a trigger. Not verified here: real clips being stored, no sandbox ESPN egress.

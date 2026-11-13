@@ -107,3 +107,22 @@ carrying the new pill, and `/`, `/sports/teams/epl/359`,
 **Not verified here:** live clips — this sandbox has no egress to ESPN, so the
 page renders the bundled sample board, labelled. Whether a given competition
 publishes per-game clips is a provider fact the page reports rather than guesses.
+
+
+## Update: the page now has a stored half
+
+Phase 19 added a permanent clip index behind this page — see
+[SPORTS_HIGHLIGHTS_INDEX.md](SPORTS_HIGHLIGHTS_INDEX.md). Everything above is still
+true of the **live board** half, and the page still renders exactly this when there
+is no database. What changed:
+
+- `?index=1` reads bring a second, stored set of clips (plus league video), so the
+  page lists more than the feed's ≤12 and can filter by age and page through
+  hundreds of clips without any ESPN request at read time.
+- Refresh now reads `/api/sports/highlights?index=1&refresh=1` and validates both
+  halves; a malformed `index` keeps the clips already on screen, exactly as a
+  malformed board always did.
+- A **Sweep more competitions** button asks for one bounded background pass and
+  prints its report.
+- Chip badges count stored clips while anything is stored (with a caption saying
+  so) and the board's own clips otherwise.

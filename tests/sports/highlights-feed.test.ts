@@ -161,8 +161,11 @@ test('a collection with no videos falls back to the bundled sample clips', async
 
 /* ── The finished-fixture pool ───────────────────────────────────────────── */
 
-/** YYYYMMDD for N days ago, the only date form ESPN accepts. */
-const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10).replace(/-/g, '');
+/** YYYYMMDD for one instant, the only date form ESPN accepts. */
+const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10).replace(/-/g, '');
+
+/** YYYYMMDD for N days ago. */
+const day = (daysAgo: number) => dayOf(Date.now() - daysAgo * 86_400_000);
 
 /** The parsed fixture the sweep is expected to surface, as `getSportsBoard` would. */
 const fixture = (id: string, league: string, name: string, daysAgo: number) => ({
@@ -268,7 +271,23 @@ test('a day already remembered is not asked for again', async () => {
   await seedBoard([]);
   // Yesterday is remembered but the pool has gone stale, so this render looks
   // further back instead of asking for the same day twice.
-  seedRecentFinishedEvents([fixture('401882814', 'laliga', 'Elche', 1)], 16 * 60_000);
+  //
+  // Both expectations are derived from the instant the pool was seeded, never from
+  // `Date.now()` at assert time. The seed ages the pool by 16 minutes, and during
+  // the first 16 minutes of a UTC day that puts the seed on the previous day, so
+  // the day it remembers is two days back and the sweep legitimately asks for
+  // yesterday. Comparing against `day(1)` and `day(2)` made this spec fail every
+  // day at 00:00 UTC and pass again at 00:16, with nothing in the feed changing.
+  const age = 16 * 60_000;
+  const before = Date.now();
+  seedRecentFinishedEvents([fixture('401882814', 'laliga', 'Elche', 1)], age);
+  const after = Date.now();
+  // The seed instant is somewhere inside this bracket, and its two ends can fall on
+  // different days, so both derivations are kept: the day the pool remembers, and
+  // the day after it that the sweep should reach for instead.
+  const remembered = new Set([dayOf(before - age - 86_400_000), dayOf(after - age - 86_400_000)]);
+  const furtherBack = new Set([dayOf(before - age - 2 * 86_400_000), dayOf(after - age - 2 * 86_400_000)]);
+
   const urls: string[] = [];
   await withFetch(async () => {
     const board = await getSportsHighlights(true);
@@ -279,16 +298,33 @@ test('a day already remembered is not asked for again', async () => {
     const url = String(input);
     urls.push(url);
     if (url.includes('/videos?event=')) return Response.json(videoCollection([clip('49861384', 'Riquelme scores')]));
-    // The day before yesterday: a finished La Liga match.
-    if (url.includes('/soccer/esp.1/scoreboard') && new URL(url).searchParams.get('dates') === day(2)) {
+    // The day past the remembered one: a finished La Liga match.
+    if (url.includes('/soccer/esp.1/scoreboard') && furtherBack.has(new URL(url).searchParams.get('dates') ?? '')) {
       return Response.json(scoreboard('401882814', 'Elche', 'post'));
     }
     return Response.json({ events: [] });
   });
-  const scoreboards = urls.filter((url) => url.includes('/scoreboard'));
-  assert.ok(scoreboards.length > 100, `expected a sweep, saw ${scoreboards.length} requests`);
-  assert.ok(!scoreboards.some((url) => url.includes(`dates=${day(1)}`)), 'yesterday was asked again');
-  assert.ok(scoreboards.some((url) => url.includes(`dates=${day(2)}`)), 'the sweep went further back');
+  const asked = urls.filter((url) => url.includes('/scoreboard'))
+    .map((url) => new URL(url).searchParams.get('dates') ?? '');
+  assert.ok(asked.length > 100, `expected a sweep, saw ${asked.length} requests`);
+  assert.ok(!asked.some((date) => remembered.has(date)), 'the remembered day was asked again');
+  assert.ok(asked.some((date) => furtherBack.has(date)), 'the sweep went further back');
+});
+
+test('the remembered day comes from the seed instant, not the assert instant', () => {
+  // The midnight rule, locked without waiting for midnight: a pool seeded 16
+  // minutes old remembers the day before the *seeded* instant, which for the first
+  // 16 minutes of a UTC day is not the day before now.
+  const age = 16 * 60_000;
+  const justAfterMidnight = Date.parse('2026-11-13T00:05:00.000Z');
+  const midMorning = Date.parse('2026-11-13T10:00:00.000Z');
+
+  assert.equal(dayOf(justAfterMidnight - age - 86_400_000), '20261111', 'what the feed remembers');
+  assert.equal(dayOf(justAfterMidnight - 86_400_000), '20261112', 'what "one day ago" means at the assert instant');
+  assert.notEqual(dayOf(justAfterMidnight - age - 86_400_000), dayOf(justAfterMidnight - 86_400_000),
+    'the two disagree just after midnight, which is the whole bug');
+  assert.equal(dayOf(midMorning - age - 86_400_000), dayOf(midMorning - 86_400_000),
+    'and agree at every other hour, which is why it hid');
 });
 
 test('a sweep that gets no answer does not hold the render', async () => {

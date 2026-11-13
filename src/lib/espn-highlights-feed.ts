@@ -34,6 +34,15 @@ export type SportsHighlightsBoard = {
   /** How many ESPN video collections answered with a clip. */
   games: number;
   source: { ok: boolean; url: string; httpStatus: number | null; error?: string; errorKind?: string };
+  /**
+   * Which read filled this board, stamped only by `getHighlightsBoardForRender`.
+   *
+   * Optional so every producer that predates the stored index — this feed, the
+   * bundled sample board, a page's empty board — stays valid untouched. It exists
+   * for diagnostics and tests: the cards are the same shape either way, so no
+   * consumer has to branch on it.
+   */
+  provenance?: 'live' | 'stored';
 };
 
 /**
@@ -277,6 +286,16 @@ const contextFor = (event: SportsEvent) => ({
   startAt: event.startAt,
   status: event.status,
 });
+
+/**
+ * The collection URL and fixture context, exported for the stored-index sweeper
+ * (`highlights-sweep.ts`) so that a clip found by the sweeper is addressed and
+ * described exactly as one found by the live board: same URL shape, same
+ * provider-id gate, same namespaced event id. Two readers that derive these
+ * separately would eventually disagree about what a clip is.
+ */
+export const matchVideosUrl = videosUrl;
+export const highlightContextFor = contextFor;
 
 async function readClips(event: SportsEvent) {
   const url = videosUrl(event);
