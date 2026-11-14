@@ -864,6 +864,148 @@ export async function readFeedClips(days: number, limit: number = FEED_INDEX_LIM
   }
 }
 
+/* ── One clip, one fixture, and the sitemap's list ─────────────────────── */
+
+export type StoredClipRead = {
+  /** The database answered. A clip that does not exist is still a good read. */
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  clip: SportsHighlightClip | null;
+};
+
+export type EventClipsRead = {
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  clips: SportsHighlightClip[];
+};
+
+/** One stored clip's identity and when it happened, for a list of URLs. */
+export type ClipRef = { id: string; at: Date | null };
+
+export type ClipRefsRead = {
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  refs: ClipRef[];
+};
+
+/**
+ * How many clip refs one read may return.
+ *
+ * A sitemap entry per clip is what makes six hundred stored clips six hundred
+ * crawlable pages instead of one list, and a sitemap may hold fifty thousand URLs;
+ * this bounds one query, not how much of the index the site is willing to publish.
+ */
+export const MAX_CLIP_REFS = 2_000;
+
+/** Clips listed for one fixture. A match rarely has more, and a page shows them all. */
+export const EVENT_CLIPS_LIMIT = 24;
+
+/**
+ * One stored match clip by the id its page is keyed on.
+ *
+ * Compared case-insensitively because the URL carries the slugified id: an ESPN
+ * clip id is numeric and survives that unchanged, but a page must not 404 over a
+ * difference in case that the row does not care about.
+ *
+ * Never throws, and inert without a database — a clip page on a deployment with no
+ * storage is a 404 rather than an error.
+ */
+export async function readStoredClip(clipId: string): Promise<StoredClipRead> {
+  const empty: StoredClipRead = { ok: false, reason: 'no-database', clip: null };
+  const wanted = String(clipId ?? '').trim();
+  if (!hasDatabase || !wanted) return empty;
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+      `SELECT ${COLUMNS} FROM "sports_highlight_clips"
+         WHERE "kind" = 'match' AND lower("clip_id") = lower($1::text)
+         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
+         LIMIT 1`,
+      wanted,
+    );
+    // No row is an answer, not a failure: a clip this site has never stored is a
+    // 404, and it must not be reported as a query that broke or logged as one —
+    // a crawler asking for ids that do not exist is ordinary traffic. A row that
+    // cannot be rendered is dropped here as it is everywhere else, for the same
+    // reason: the page 404s rather than showing a clip with nothing to play.
+    const row = rows[0];
+    return { ok: true, clip: row ? rowToMatchClip(row) : null };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
+}
+
+/**
+ * Every stored clip for one fixture, newest first.
+ *
+ * This is what turns a match page from a shell that fetches in the browser into a
+ * page with something on it when a crawler arrives: the fixture's own clips, read
+ * from storage, costing no ESPN request.
+ *
+ * The id is matched exactly and as a dash-separated prefix, because a stored event
+ * id is namespaced — `espn-{league}-{id}` — and a scoreboard carrying more than one
+ * competition for a fixture appends the competition to it. A match page knows its
+ * league and event id but not which form was stored, so it asks for the prefix and
+ * gets either. A clip page passes the stored id and matches itself.
+ */
+export async function readEventClips(eventId: string, limit: number = EVENT_CLIPS_LIMIT): Promise<EventClipsRead> {
+  const empty: EventClipsRead = { ok: false, reason: 'no-database', clips: [] };
+  const wanted = String(eventId ?? '').trim();
+  if (!hasDatabase || !wanted) return empty;
+  const asked = Number.isFinite(limit) ? Math.trunc(limit) : EVENT_CLIPS_LIMIT;
+  const bounded = Math.max(1, Math.min(FEED_INDEX_LIMIT, asked || EVENT_CLIPS_LIMIT));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+      `SELECT ${COLUMNS} FROM "sports_highlight_clips"
+         WHERE "kind" = 'match' AND ("event_id" = $1::text OR "event_id" LIKE $1::text || '-%')
+         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
+         LIMIT $2`,
+      wanted, bounded,
+    );
+    const clips: SportsHighlightClip[] = [];
+    for (const row of rows) {
+      const clip = rowToMatchClip(row);
+      if (clip) clips.push(clip);
+    }
+    return { ok: true, clips };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
+}
+
+/**
+ * The newest stored match clips as identities and timestamps, for a sitemap.
+ *
+ * Only what a sitemap needs — an id to build a URL from and a time to report as
+ * `lastmod` — so it reads two columns and no rows it cannot publish.
+ */
+export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise<ClipRefsRead> {
+  const empty: ClipRefsRead = { ok: false, reason: 'no-database', refs: [] };
+  if (!hasDatabase) return empty;
+  const asked = Number.isFinite(limit) ? Math.trunc(limit) : MAX_CLIP_REFS;
+  const bounded = Math.max(1, Math.min(MAX_CLIP_REFS, asked || MAX_CLIP_REFS));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<{ clip_id: string | null; occurred_at: Date | null }[]>(
+      `SELECT "clip_id", "occurred_at" FROM "sports_highlight_clips"
+         WHERE "kind" = 'match' AND "clip_id" IS NOT NULL
+         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
+         LIMIT $1`,
+      bounded,
+    );
+    const refs: ClipRef[] = [];
+    for (const row of rows) {
+      const id = typeof row.clip_id === 'string' ? row.clip_id.trim() : '';
+      if (!id) continue;
+      refs.push({ id, at: row.occurred_at instanceof Date ? row.occurred_at : null });
+    }
+    return { ok: true, refs };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
+}
+
 /**
  * The rows a batch will write, in order, without duplicates.
  *

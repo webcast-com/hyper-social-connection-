@@ -25,7 +25,7 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
     stdin: { contents: path.endsWith('sitemap.ts') ? `export { default } from './${path}';` : `export { generateMetadata } from './${path}';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'cjs', platform: 'node', packages: 'external',
     plugins: [{ name: 'seo-server-fixtures', setup(builder) {
-      builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
+      builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed|highlights-index)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
       builder.onLoad({ filter: /.*/, namespace: 'seo-boundary' }, () => ({ contents: `
         export const hasDatabase = fixture.hasDatabase ?? true;
         export const prisma = fixture.db;
@@ -34,6 +34,10 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
         export const getProfileShareCount = async () => 0;
         export const getMyGroupInvites = async () => [];
         export const StartCallButton = () => null;
+        export const EVENT_CLIPS_LIMIT = 24;
+        export const readRecentClipRefs = async () => fixture.clipRefs ?? { ok: true, refs: [] };
+        export const readStoredClip = async () => ({ ok: true, clip: fixture.clip ?? null });
+        export const readEventClips = async () => ({ ok: true, clips: fixture.eventClips ?? [] });
         export default function Component() { return null; }
       `, loader: 'js' }));
     } }],
@@ -122,9 +126,16 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', { hasDatabase: false });
     const rows = await loaded.default();
-    assert.deepEqual(rows.map((row) => row.url).slice(0, 6), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/nfl-basketball/basketball']);
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/basketball/upcoming'));
+    assert.deepEqual(rows.map((row) => row.url).slice(0, 6), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/sports/highlights']);
+    // The stored index is what makes the highlights list worth crawling, so the
+    // list is submitted; with no database there are no clips and so no clip URLs.
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/sports/highlights'));
+    assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/highlights/')));
+    // The dashboard's 96 team, player and hub URLs are one client-rendered document
+    // over the vendor's bundled sample data. They are reachable and labelled, but
+    // not submitted: crawl budget on this site is scarce and those pages carry
+    // nothing a reader could not get from the two hubs.
+    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')), 'no dashboard URLs are submitted');
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
     assert.ok(rows.every((row) => row.lastModified === undefined));
@@ -134,20 +145,85 @@ test('dynamic sitemap queries require public profiles, public groups and public 
   await withEnv(publicEnv, async () => {
     const queries: Record<string, unknown> = {};
     const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => { queries[kind] = query; return [{ id: 7, createdAt: new Date('2026-01-01') }]; } }]));
-    const loaded = await loadMetadataModule('src/app/sitemap.ts', { db });
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db,
+      clipRefs: { ok: true, refs: [
+        { id: '50476535', at: new Date('2026-11-14T02:00:00.000Z') },
+        { id: '50464264', at: null },
+      ] },
+    });
     const rows = await loaded.default();
     assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/post/7'));
+    // Every stored clip is a page now, so every stored clip is a URL — and one
+    // whose time was never reported gets no invented modification date.
+    const dated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50476535');
+    assert.ok(dated, 'the clip has its own URL');
+    assert.equal(dated?.lastModified instanceof Date && dated.lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
+    const undated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50464264');
+    assert.ok(undated && undated.lastModified === undefined, 'no lastModified this site cannot support');
     assert.match(JSON.stringify(queries.user), /"profileVisibility":"public"/);
     assert.match(JSON.stringify(queries.group), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
     assert.ok(rows.some((row) => row.url.endsWith('/search')));
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
+    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
   });
 });
+test('a stored highlight clip gets an indexable page of its own, with the clip as the shared image', async () => {
+  await withEnv(publicEnv, async () => {
+    const clip = {
+      id: '50476535', title: 'Gabe Perreault lights the lamp for Rangers',
+      description: 'Gabe Perreault lights the lamp for Rangers', duration: 48,
+      thumbnail: 'https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1114/f1136ae8.jpg',
+      mp4: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/f1136ae8.mp4',
+      hls: null, page: 'https://www.espn.com/video/clip/_/id/50476535', playable: true,
+      eventId: 'espn-nhl-401892706', eventName: 'Vancouver Canucks vs New York Rangers',
+      sport: 'ice-hockey', league: 'nhl', leagueName: 'National Hockey League',
+      home: 'Vancouver Canucks', away: 'New York Rangers', homeLogo: null, awayLogo: null,
+      startAt: '2026-11-14T02:00:00.000Z', status: 'live',
+    };
+    const loaded = await loadMetadataModule('src/app/sports/highlights/[clipId]/page.tsx', { clip });
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ clipId: '50476535' }) });
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/highlights/50476535');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'a stored clip is a real page, so it is indexable');
+    assert.match(String(metadata.title), /Gabe Perreault lights the lamp for Rangers/);
+    assert.match(String(metadata.title), /Vancouver Canucks vs New York Rangers/, 'the fixture names the clip for a reader who searched it');
+    // ESPN reported a description that was its own title again, so the page
+    // describes the clip from the facts ESPN did report — the fixture, the
+    // competition, the state and the length — rather than repeating the heading.
+    assert.equal(metadata.description, 'Vancouver Canucks vs New York Rangers · National Hockey League · Live · 0:48 clip — highlight video stored on Hyper.');
+    assert.equal(metadata.openGraph && 'type' in metadata.openGraph && metadata.openGraph.type, 'video.other');
+    const images = metadata.openGraph && 'images' in metadata.openGraph ? metadata.openGraph.images : [];
+    const first = Array.isArray(images) ? images[0] : undefined;
+    // An OG image is a bare URL, a URL object, or a descriptor carrying either.
+    const firstUrl = typeof first === 'string'
+      ? first
+      : first instanceof URL
+        ? first.toString()
+        : first && 'url' in first
+          ? String(first.url)
+          : undefined;
+    assert.equal(firstUrl, clip.thumbnail, 'the shared card is the moment, not the site logo');
+    assert.ok(JSON.stringify(metadata.keywords).includes('National Hockey League'));
+
+    // A clip this site has never stored is a 404, not a page with a heading and
+    // nothing under it: an index full of empty clip pages is worse than none.
+    const missing = await loadMetadataModule('src/app/sports/highlights/[clipId]/page.tsx', { clip: null });
+    await assert.rejects(
+      () => missing.generateMetadata({ params: Promise.resolve({ clipId: '99999999' }) }),
+      (error: unknown) => {
+        // Next signals notFound() with a digest in some versions and with an
+        // HTTP fallback error in others; both mean the page refused to render.
+        const text = `${(error as { digest?: string })?.digest ?? ''} ${(error as Error)?.message ?? ''}`;
+        return text.includes('NEXT_NOT_FOUND') || text.includes('NEXT_HTTP_ERROR_FALLBACK;404');
+      },
+    );
+  });
+});
+
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
   await withEnv(publicEnv, async () => {
     const base = { content: 'PRIVATE-CONTENT-MARKER', privacy: 'public', user: { profileVisibility: 'public' }, group: null, scheduledAt: null };

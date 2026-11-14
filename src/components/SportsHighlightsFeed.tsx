@@ -6,6 +6,7 @@ import { Play } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
 import LinkMediaPlayer from './LinkMediaPlayer';
 import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
+import { clipHref, clipMedia as clipMediaFor } from '@/lib/highlight-clip';
 import type { LinkMedia } from '@/lib/link-media';
 import type { SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import type { SportsHighlightClip } from '@/lib/espn-highlights';
@@ -50,18 +51,9 @@ const matchHrefFor = (clip: SportsHighlightClip) => {
   return `/sports?league=${encodeURIComponent(clip.league)}`;
 };
 
-/** The clip as the play card's own media descriptor. */
-const clipMedia = (clip: SportsHighlightClip): LinkMedia | null =>
-  clip.mp4
-    ? {
-        kind: 'video',
-        src: clip.mp4,
-        provider: 'ESPN',
-        thumbnail: clip.thumbnail,
-        aspect: 'video',
-        originalUrl: clip.page ?? clip.mp4,
-      }
-    : null;
+/** The clip as the play card's own media descriptor. One rule, shared with the
+ * clip's own page, so a card and the page it links to cannot describe it differently. */
+const clipMedia = clipMediaFor;
 
 /**
  * One clip as a post card. Exported for the highlights page, which lays the same
@@ -149,6 +141,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
       anchor={anchor}
       engagement={engagement}
       signedIn={signedIn}
+      permalink={{ href: clipHref(clip), label: 'Highlight page' }}
       menuLinks={[
         { label: 'Open Competition', href: cardHref },
         ...(clip.page ? [{ label: 'Watch on ESPN', href: clip.page }] : []),
