@@ -404,9 +404,9 @@ now contains **zero** links to a disallowed route.
 
 ### Verification
 
-`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **69/69**
-(26 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
-5 app-account rules + 3 profile-route rules + the pre-existing dashboard specs),
+`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **70/70**
+(27 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
+5 app-account rules + 3 route-id rules + the pre-existing dashboard specs),
 changed-file ESLint with 0 errors, `npm run build`.
 
 The 404s were then checked against both a dev server and a **production build**:
@@ -457,11 +457,70 @@ crawler acts on, and this is framework behaviour for every thrown `notFound()` i
 app rather than something these routes do. Not browser-verified here: this sandbox has
 no Chromium.
 
-**Found while verifying, not fixed:** `/post/{id}` and `/groups/{id}` return HTTP 200
-for an id that does not exist — the same soft 404. `groups/[id]` is worse than soft: it
-calls `redirect('/groups')` for a missing group inside a `try` whose `catch` swallows
-the throw and logs it as `[group detail] DB query failed: NEXT_REDIRECT`, so the
-intended redirect never happens either.
+### The same rule for every id this site takes from a URL
+
+`/post/{id}` and `/groups/{id}` had the same soft 404, and each route parsed its id
+its own way, each loose in a different direction: `parseInt(id) || 1` turned
+`/profile/abc` into member 1, `Number(raw)` turned `/post/1e3` into post 1000 and
+`/post/0x10` into post 16, and `parseInt(id)` handed `/groups/abc` a NaN that Prisma
+then rejected — and the rejection was logged as a database failure. A URL that named
+nobody rendered somebody, at HTTP 200.
+
+`routeIdFromParam` in `src/lib/route-id.ts` is now the one rule and all three routes
+ask it, in the page **and** in its metadata, so the two cannot disagree about which
+record is on screen. It replaced `profileIdFromRouteParam`, which was the same rule
+under a name that only fitted one of the three.
+
+**`groups/[id]` was worse than soft.** It called `redirect('/groups')` for a missing
+group *inside* the `try` whose `catch` turns a failure into a placeholder page, so its
+own error handler caught the throw and logged it as
+`[group detail] DB query failed: NEXT_REDIRECT` — the redirect never happened, and the
+page rendered "Demo Group" at 200. The lookup is now its own step, and the 404 is
+decided outside the `try`, because a throw that unwinds must not be caught by a handler
+whose job is to cope with a database that could not be reached. **"No such group" is an
+answer; "the query failed" is a failure**, and only the second may fall back.
+
+A missing group is a **404 rather than the redirect it used to attempt**: an address
+that names no group is not another page's address, and a crawler told the two are the
+same learns the wrong thing. A database outage still falls back to the placeholder at
+200, because a transient failure must not tell a search engine that a page does not
+exist.
+
+`post/[id]` already distinguished the two — it carries a `dbError` flag — so its 404 is
+precise: `hasDatabase && !dbError && !post`. Offline demo mode and an unreachable
+database both still render their own explanation at 200, which is now the only thing
+that "This post isn't available" copy is for.
+
+Verified against a dev server **and a production build**: `/profile/999999`,
+`/groups/999999`, `/groups/1e3`, `/post/0x10` and `/post/12abc` all answer 404, while
+`/profile/1`, `/groups/1` and `/post/1` still answer 200 and still render their own
+content — the group its real name and members, the post its real text — rather than a
+placeholder. The `NEXT_REDIRECT` warning no longer appears in the server log.
+
+**Found while verifying, not fixed:** `/sports/matches/{league}/{eventId}` still
+answers **HTTP 200** for an address that names no fixture — `/sports/matches/nhl/abc`
+and `/sports/matches/zzz/401892706` both serve the not-found body at 200. That is a
+soft 404 with the right content and the wrong status, and it is not the route's own
+logic: `resolveMatch` throws `MatchInputError`, and both the page and its metadata call
+`notFound()` exactly as `/sports/teams/` and `/sports/athletes/` do — and those two
+answer 404.
+
+The difference is `loading.tsx`, which this is the **only** route in the app to have.
+A `loading.tsx` wraps the page in a streaming `<Suspense>` boundary, so the shell — and
+with it the HTTP status line — is flushed **before** the page runs. By the time
+`notFound()` throws, 200 is already on the wire, and the not-found content arrives
+later in the stream: the reader sees the right page and the crawler records the wrong
+status. This is the same flush-before-the-throw mechanism as the empty body of a thrown
+404 noted above, seen from the status side rather than the body side.
+
+Proven by moving the file aside on a dev server: `/sports/matches/nhl/abc`,
+`/sports/matches/zzz/401892706` and `/sports/matches/nhl/000000000` all become **404**
+while the real fixture `/sports/matches/nhl/401892706` stays **200**; restoring the
+file restores the 200s. So the fix is a decision about what the placeholder is worth:
+delete `loading.tsx` and this route behaves like every sibling, at the cost of the
+instant "Loading ESPN match details…" line during client-side navigation; or move the
+stored-clip read into a `<Suspense>` child, which keeps the placeholder *and* lets the
+page settle the status before anything flushes.
 
 The three new index reads were proved against a **real PostgreSQL 18 cluster**, which
 caught a bug no spec could: `readStoredClip` passed `rows[0]` to `rowToMatchClip`

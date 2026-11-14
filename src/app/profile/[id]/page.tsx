@@ -8,7 +8,8 @@ import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import EmptyState from '@/components/EmptyState';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
-import { canMessageUser, canViewProfileDetails, profileIdFromRouteParam, sharedProfileCardData } from '@/lib/profile';
+import { canMessageUser, canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
+import { routeIdFromParam } from '@/lib/route-id';
 import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
@@ -22,8 +23,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   // The same rule the page uses, so the metadata cannot describe a member the page
-  // is about to say does not exist.
-  const profileId = profileIdFromRouteParam(id);
+  // is about to say does not exist. See `routeIdFromParam`.
+  const profileId = routeIdFromParam(id);
   let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string; email: string | null } | null = null;
 
   if (hasDatabase && profileId !== null) {
@@ -93,8 +94,8 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   };
   const { id } = await params;
 
-  // One rule, shared with this page's metadata: see `profileIdFromRouteParam`.
-  const parsedId = profileIdFromRouteParam(id);
+  // One rule, shared with this page's metadata: see `routeIdFromParam`.
+  const parsedId = routeIdFromParam(id);
   // With no database there is nothing to look up, and the offline demo install keeps
   // showing a sample person. With one, an id that is not an id is a 404 rather than
   // whichever member the old parse happened to land on.

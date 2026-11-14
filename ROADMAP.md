@@ -912,10 +912,77 @@
     status is 404 either way, which is what a crawler acts on, and it is framework
     behaviour for every thrown `notFound()` in this app rather than something these
     routes do. Not browser-verified: this sandbox has no Chromium.
-  - Found while verifying, **not** changed here: `/post/{id}` and `/groups/{id}`
-    return HTTP 200 for an id that does not exist — the same soft 404, two more
-    unbounded id spaces. `groups/[id]` is worse than soft: it calls
-    `redirect('/groups')` for a missing group inside a `try` whose `catch` swallows
-    the throw and logs `[group detail] DB query failed: NEXT_REDIRECT`, so the
-    intended redirect never happens either. Both are one-phase fixes on the pattern
-    established here.
+  - Found while verifying, and fixed in Phase 31: `/post/{id}` and `/groups/{id}`
+    returned HTTP 200 for an id that did not exist — the same soft 404, two more
+    unbounded id spaces.
+
+- Phase 31: One rule for every id this site takes from a URL ✅
+
+  Phase 30 fixed `/profile/{id}`. The other two routes that take an id had the same
+  soft 404, and fixing them separately would have left three parsers — which is how
+  the site got here. Each was loose in its own direction: `parseInt(id) || 1` turned
+  `/profile/abc` into member 1, `Number(raw)` turned `/post/1e3` into post 1000 and
+  `/post/0x10` into post 16, and `parseInt(id)` handed `/groups/abc` a NaN that
+  Prisma rejected — and the rejection was logged as a database failure. A URL that
+  named nobody rendered somebody, at HTTP 200.
+
+  - **`routeIdFromParam` in `src/lib/route-id.ts` is now the one rule**, and all
+    three routes ask it in the page *and* in its metadata, so neither can describe a
+    record the other is about to say does not exist. It replaces
+    `profileIdFromRouteParam`, the same rule under a name that only fitted one of the
+    three. An id is a positive integer written in full, or it is not an id; padded,
+    truncated, signed, fractional, exponential, hexadecimal, zero, negative and
+    past-a-safe-integer segments are refused rather than guessed at, because a guess
+    renders a real person, group or post under an address that is not theirs.
+  - **`groups/[id]` was worse than soft.** It called `redirect('/groups')` for a
+    missing group *inside* the `try` whose `catch` turns a failure into a placeholder
+    page, so its own error handler caught the throw, logged
+    `[group detail] DB query failed: NEXT_REDIRECT`, and never redirected — the page
+    rendered "Demo Group" at 200. The lookup is its own step now and the 404 is
+    decided outside the `try`, because a throw that unwinds must not be caught by a
+    handler whose job is coping with a database that could not be reached. **"No such
+    group" is an answer; "the query failed" is a failure**, and only the second may
+    fall back. The same trap, avoided deliberately, is why Phase 30 put the profile's
+    `notFound()` outside its `try`.
+  - A missing group is a **404 rather than the redirect it used to attempt**: an
+    address that names no group is not another page's address, and a crawler told the
+    two are the same learns the wrong thing. A database outage still falls back at
+    200, because a transient failure must not tell a search engine a page does not
+    exist.
+  - `post/[id]` already told the two apart — it carries a `dbError` flag — so its 404
+    is precise: `hasDatabase && !dbError && !post`. Offline demo mode and an
+    unreachable database still render their own explanation at 200, which is all the
+    "This post isn't available" copy is for now.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **70/70** (a new spec proving a non-id asks the database for
+    nobody on both routes, and that `/post/0x10` no longer reaches post 16),
+    changed-file ESLint with 0 errors, `npm run build`. Then against a dev server
+    **and a production build**: `/profile/999999`, `/groups/999999`, `/groups/1e3`,
+    `/post/0x10` and `/post/12abc` all answer 404, while `/profile/1`, `/groups/1`
+    and `/post/1` still answer 200 and still render their own content — the group its
+    real name and members, the post its real text — rather than a placeholder. The
+    `NEXT_REDIRECT` warning is gone from the server log.
+  - With that, the routes that take a **record id** answer 404 for an id they do not
+    have: profile, group, post, clip, team and athlete. The three unbounded id spaces
+    a crawler could walk — `/profile/1..n`, `/groups/1..n`, `/post/1..n` — no longer
+    pay 200 for nothing.
+  - **Found while verifying, not fixed:** `/sports/matches/{league}/{eventId}` still
+    answers HTTP 200 for an address that names no fixture, serving the not-found body
+    at 200 — a soft 404 with the right content and the wrong status. It is not the
+    route's logic: `resolveMatch` throws `MatchInputError` and both the page and its
+    metadata call `notFound()`, exactly as the team and athlete routes do, and those
+    answer 404. The difference is `loading.tsx`, which this is the **only** route in
+    the app to have: it wraps the page in a streaming `<Suspense>` boundary, so the
+    shell — and with it the status line — is flushed before the page runs, and by the
+    time `notFound()` throws, 200 is already on the wire. The same
+    flush-before-the-throw mechanism as the empty body of a thrown 404, seen from the
+    status side.
+  - Proven by moving `loading.tsx` aside on a dev server: `/sports/matches/nhl/abc`,
+    `/sports/matches/zzz/401892706` and `/sports/matches/nhl/000000000` all become
+    **404** while the real fixture `/sports/matches/nhl/401892706` stays **200**;
+    restoring the file restores the 200s. The fix is therefore a decision about what
+    the placeholder is worth — delete `loading.tsx` and behave like every sibling
+    route, or move the stored-clip read into a `<Suspense>` child so the page settles
+    the status before anything flushes and keeps the instant "Loading ESPN match
+    details…" line. Not taken here: it is a UX trade-off on a route outside this
+    phase's scope, and it should not be decided silently.

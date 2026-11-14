@@ -308,6 +308,40 @@ test('a fixture with stored clips gets one match URL, and only when the id rever
   });
 });
 
+test('a group or post address that is not an id describes nobody, and asks the database for nobody', async () => {
+  await withEnv(publicEnv, async () => {
+    // `Number.parseInt('1e3')` is 1 and `Number('0x10')` is 16, so both routes used
+    // to describe a real record under an address that names a different one — while
+    // the page, parsing its own way, showed something else again.
+    const asked: string[] = [];
+    const groupRow = { name: 'Real Group', description: 'A description.', coverPhoto: null, privacy: 'public' };
+    const groups = await loadMetadataModule('src/app/groups/[id]/page.tsx', {
+      db: { group: { findUnique: async (query: { where: { id: number } }) => { asked.push(`group:${query.where.id}`); return query.where.id === 1 ? groupRow : null; } } },
+    });
+    for (const id of ['1e3', 'abc', '0', '-2', '12abc']) {
+      const metadata = await groups.generateMetadata({ params: Promise.resolve({ id }) });
+      assert.equal(metadata.title, 'Community Group', `/groups/${id} describes no group`);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
+    }
+    const realGroup = await groups.generateMetadata({ params: Promise.resolve({ id: '1' }) });
+    assert.equal(realGroup.title, 'Real Group Community');
+    assert.deepEqual(asked, ['group:1'], 'only an address that is an id reaches the database');
+
+    const postRow = { content: 'A real post.', privacy: 'public', scheduledAt: null, user: { profileVisibility: 'public' }, group: null };
+    const posts = await loadMetadataModule('src/app/post/[id]/page.tsx', {
+      db: { post: { findUnique: async (query: { where: { id: number } }) => { asked.push(`post:${query.where.id}`); return query.where.id === 16 ? postRow : null; } } },
+    });
+    for (const id of ['0x10', '1e3', 'abc', '0', '12abc']) {
+      const metadata = await posts.generateMetadata({ params: Promise.resolve({ id }) });
+      assert.equal(metadata.title, 'Post', `/post/${id} describes no post`);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
+    }
+    const realPost = await posts.generateMetadata({ params: Promise.resolve({ id: '16' }) });
+    assert.equal(realPost.title, 'A real post.');
+    assert.deepEqual(asked, ['group:1', 'post:16'], 'and a hexadecimal address no longer reaches post 16');
+  });
+});
+
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
   await withEnv(publicEnv, async () => {
     const base = { content: 'PRIVATE-CONTENT-MARKER', privacy: 'public', user: { profileVisibility: 'public' }, group: null, scheduledAt: null };

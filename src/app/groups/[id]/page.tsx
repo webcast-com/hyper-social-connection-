@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Crown, ArrowLeft, CalendarDays, Lock } from 'lucide-react';
 import CreatePost from '@/components/CreatePost';
@@ -14,6 +14,7 @@ import GroupInviteButton from '@/components/GroupInviteButton';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
 import { getMyGroupInvites } from '@/app/invite-actions';
 import { sharedProfileCardData } from '@/lib/profile';
+import { routeIdFromParam } from '@/lib/route-id';
 import { StartCallButton } from '@/components/Call/StartCallButton';
 
 export async function generateMetadata({
@@ -22,10 +23,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
+  // The same rule the page uses, so the metadata cannot describe a group the page is
+  // about to say does not exist. `Number.parseInt('1e3')` is 1, and a group's
+  // description under an address that names a different group is a worse answer than
+  // no answer.
+  const groupId = routeIdFromParam(id);
   let group: { name: string; description: string | null; coverPhoto: string | null; privacy: string } | null = null;
 
-  if (hasDatabase && Number.isInteger(groupId)) {
+  if (hasDatabase && groupId !== null) {
     try {
       group = await prisma.group.findUnique({
         where: { id: groupId },
@@ -67,18 +72,43 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   const currentUser = viewer || guest;
   const { id } = await params;
 
-  const groupId = parseInt(id);
+  // One rule for every id this site takes from a URL: see `routeIdFromParam`. An
+  // address that is not an id is a 404, rather than a NaN that Prisma rejects and an
+  // error handler then reports as a database failure.
+  const parsedGroupId = routeIdFromParam(id);
+  if (hasDatabase && parsedGroupId === null) notFound();
+  // Offline there is nothing to look up, so the demo install keeps rendering its
+  // placeholder under whatever address was asked for.
+  const groupId = parsedGroupId ?? 0;
   let group: any = null;
   let members: any[] = [];
   let groupPosts: any[] = [];
   let bookmarkedIds = new Set<number>();
   let viewerFollowIds = new Set<number>();
 
+  // The lookup is its own step, because "no such group" is an answer and not a
+  // failure — and the handler below turns a failure into a placeholder page. Mixing
+  // the two is how this route answered HTTP 200 for a group that does not exist, and
+  // how `redirect('/groups')` came to be caught by its own error handler, logged as
+  // `[group detail] DB query failed: NEXT_REDIRECT`, and never actually redirect.
+  let lookupFailed = false;
   if (hasDatabase) {
     try {
       group = await prisma.group.findUnique({ where: { id: groupId } });
-      if (!group) redirect('/groups');
+    } catch (err) {
+      lookupFailed = true;
+      console.warn('[group detail] group lookup failed:', (err as Error)?.message);
+    }
+    // Outside the try, so the throw that makes this a 404 is not caught and turned
+    // back into a page. A 404 rather than the redirect this route used to attempt: an
+    // address that names no group is not another page's address, and a crawler told
+    // the two are the same learns the wrong thing.
+    if (!group && !lookupFailed) notFound();
+  }
 
+  // The group exists by the time this runs, or the lookup could not be made at all.
+  if (hasDatabase && !lookupFailed) {
+    try {
       const memberRows = await prisma.groupMember.findMany({
         where: { groupId },
         include: { user: true },
@@ -166,13 +196,14 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
         return base;
       });
     } catch (err) {
+      // The group is known to exist here — it was looked up above — so a failure is a
+      // failure to load what belongs to it, and the page shows a group with no feed.
       console.warn('[group detail] DB query failed:', (err as Error)?.message);
-      if (!group) {
-        group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: 0 };
-        members = [];
-      }
     }
   } else {
+    // Either there is no database to ask, or the one ask that matters could not be
+    // made. Neither is a missing group, so neither may be reported as one: a
+    // transient failure must not tell a crawler that a page does not exist.
     group = { id: groupId, name: 'Demo Group', description: 'Database is offline — showing placeholder data. Configure DATABASE_URL in .env.local to see real groups.', coverPhoto: null, adminId: 0 };
     members = [];
   }

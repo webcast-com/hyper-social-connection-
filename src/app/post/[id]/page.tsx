@@ -5,6 +5,8 @@ import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
 import { sharedProfileCardData } from '@/lib/profile';
+import { routeIdFromParam } from '@/lib/route-id';
+import { notFound } from 'next/navigation';
 import Post from '@/components/Post';
 
 /**
@@ -17,11 +19,6 @@ import Post from '@/components/Post';
  */
 
 type Params = { params: Promise<{ id: string }> };
-
-function parsePostId(raw: string): number | null {
-  const id = Number(raw);
-  return Number.isInteger(id) && id > 0 ? id : null;
-}
 
 /** Small shared loader so page + metadata don't diverge. */
 async function loadPost(postId: number) {
@@ -36,7 +33,7 @@ async function loadPost(postId: number) {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const postId = parsePostId(id);
+  const postId = routeIdFromParam(id);
   const post = postId ? await loadPost(postId) : null;
   const isPublic = !!post && post.privacy === 'public' && post.user.profileVisibility === 'public'
     && (!post.group || post.group.privacy === 'public') && (!post.scheduledAt || post.scheduledAt <= new Date());
@@ -51,7 +48,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function PostPage({ params }: Params) {
   const { id } = await params;
-  const postId = parsePostId(id);
+  const postId = routeIdFromParam(id);
   const viewer = await getViewer();
   const currentUser = viewer || null;
 
@@ -160,6 +157,13 @@ export default async function PostPage({ params }: Params) {
     }
   }
 
+  // A post that is not there is a 404 — but only when this site knows that. Offline
+  // there is nothing to look up, and a database that could not be reached is a
+  // transient failure rather than a missing post: neither may tell a crawler the page
+  // does not exist, which is why both still render the explanation below at 200.
+  // Called outside every try, because it throws to unwind.
+  if (hasDatabase && !dbError && !post) notFound();
+
   return (
     <div className="max-w-2xl mx-auto w-full p-4 space-y-4">
       <Link
@@ -186,13 +190,14 @@ export default async function PostPage({ params }: Params) {
             This post isn&apos;t available
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            {!postId
-              ? 'The link is malformed.'
-              : !hasDatabase
-                ? 'The app is running in offline/demo mode, so individual post links are not available.'
-                : dbError
-                  ? 'The database could not be reached. Please try again in a moment.'
-                  : 'It may have been deleted, or the link is incorrect.'}
+            {/* A post that is simply not there is a 404 now, so what is left to
+                explain is the two cases where this site cannot tell: no database to
+                ask, and one that could not be reached. */}
+            {!hasDatabase
+              ? 'The app is running in offline/demo mode, so individual post links are not available.'
+              : dbError
+                ? 'The database could not be reached. Please try again in a moment.'
+                : 'It may have been deleted, or the link is incorrect.'}
           </p>
           <Link
             href="/"
