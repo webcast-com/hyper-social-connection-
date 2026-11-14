@@ -47,6 +47,28 @@ twice per render, and because the two calls were two snapshots taken at differen
 moments, the mobile summary and the desktop rail could disagree about the same
 fixture. Neither component can fetch now; both take `board` as a prop.
 
+The same two-surface pattern applies to `SportsLeadersBoard` and
+`SportsHighlightsFeed`, and those two were **not** gated the way the match centre is.
+The mobile column renders both inside its `lg:hidden` "Catch up fast" rail, and the
+column then rendered them a second time with no responsive gate at all — so a phone got
+two "Players & top scorers" sections and two highlights feeds stacked one after the
+other, and the HTML carried both copies at every width. The second pair now sits in a
+`hidden lg:block` wrapper, which is exactly how the desktop match centre and the mobile
+compact one already divide: **one of each visible at any width**.
+
+Both copies are still in the HTML, and that is a deliberate limit rather than an
+oversight — the mobile pair lives inside the rail's card with `border-t` separators and
+the desktop pair are separate cards in the column flow, so a single render would mean
+restructuring the rail, not adding a class. Verified by parsing the served homepage and
+walking each section's ancestors rather than by eyeballing offsets: one
+`aria-label="Players & top scorers"` and one `aria-label="Match highlights"` inside the
+`lg:hidden` rail, one of each inside the `hidden lg:block` wrapper. The gate was also
+proved to exist in the shipped CSS — `.lg\:block{display:block}` and
+`.lg\:hidden{display:none}` under a `min-width:64rem` query — because a responsive class
+Tailwind never generated would silently do nothing. Not browser-verified: this sandbox
+has no Chromium, so "one visible per width" is established from the DOM and the CSS, not
+from a rendered screenshot.
+
 Which rows they show is one rule in `src/lib/match-centre.ts`, tested without a
 browser:
 

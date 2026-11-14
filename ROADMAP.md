@@ -1085,3 +1085,60 @@
     `/profile/999999`, `/groups/999999`, `/post/999999`, `/sports/matches/nhl/abc`,
     `/sports/teams/nhl/abc` and `/sports/highlights/99999999` all 404; `/profile/1` and
     `/` 200.
+
+- Phase 34: Housekeeping — 1.9 MB of dead vendor code, a homepage that showed the same
+  section twice, and two pull requests that cannot be merged ✅
+
+  Three items from the backlog that needed no product decision, plus the assessment of
+  the two open pull requests.
+
+  - **Deleted `nfl-nba-main (1)/nfl-nba-main/`** — 71 tracked files, 1.9 MB, at the
+    repository root. It was the original vendor drop the Basketball & NFL dashboard was
+    copied from; the copy the build actually reads is `vendor/nfl-nba`
+    (`scripts/build-nfl-basketball.mjs:5`). The only reference anywhere in the repo was
+    one prose line in `NFL_BASKETBALL_INTEGRATION.md`, now reworded to past tense and
+    pointing at the live copy. Keeping a second unreferenced copy in Git invited edits to
+    the wrong one. Proved nothing needed it: `npm run build:nfl-basketball` still emits
+    the dashboard (a 298 kB JS bundle and 46 kB of CSS), `npm run build` exits 0, and the
+    dashboard specs — which read the built `public/nfl-basketball/index.html` and fail
+    without it — still pass.
+  - **The homepage rendered "Players & top scorers" and the highlights feed twice.**
+    `SportsMatchCentre` already divides correctly between a compact copy in the mobile
+    `lg:hidden` "Catch up fast" rail and a full copy in the desktop `hidden lg:flex`
+    sidebar, but `SportsLeadersBoard` and `SportsHighlightsFeed` were rendered in the
+    mobile rail *and* again in the main column with **no responsive gate at all** — so a
+    phone got two of each stacked in one column. The second pair now sits in a
+    `hidden lg:block` wrapper: one of each visible at any width.
+  - Both copies remain in the HTML, deliberately. The mobile pair lives inside the rail's
+    card with `border-t` separators and the desktop pair are separate cards in the column
+    flow, so a true single render means restructuring the rail rather than adding a class
+    — a UX change, not housekeeping. Verified by parsing the served homepage and walking
+    each section's **ancestors** (a first attempt that compared string offsets matched the
+    wrong `lg:hidden` and reported nonsense; DOM ancestry is the only reliable way), and
+    the gate was proved to exist in the shipped CSS — `.lg\:block{display:block}`,
+    `.lg\:hidden{display:none}`, one `min-width:64rem` query — because a responsive class
+    Tailwind never generated would silently do nothing. Not browser-verified: no Chromium
+    in this sandbox.
+  - **PR #52 cannot be merged, and should be closed as superseded.** Its own work is
+    already on main: every one of the 17 files it touches has also changed on main since
+    the merge base `ae0c7b2`, and **no file is unique to it**. Main has since moved 1,701
+    insertions beyond it. Decisively, its version of `src/lib/highlights-index.ts` exports
+    neither `readEventClips` nor `readStoredClip`, which
+    `src/app/sports/highlights/[clipId]/page.tsx` and
+    `src/app/sports/matches/[league]/[eventId]/page.tsx` both import — so merging it would
+    not merely conflict, it would **fail `tsc`**. Its remaining unique premise, storing
+    *every* clip ESPN publishes with no cap, is the approach already ruled out: ESPN
+    refuses unbounded sweeps, which is why the `MAX_*` limits exist.
+  - **PR #32 should be closed too.** "Fixing Mobile device layout" has been stale since
+    2026-09-10 and patches `src/components/MobileTabBar.tsx`, **a file that no longer
+    exists on main** — the navbar now drives its tabs from `MOBILE_TABS`. It also carries
+    vendor scaffolding (`.base44/environment.json`, `docker-compose.base44.yml`,
+    `AGENTS.md`) and touches `next.config.ts`, `layout.tsx` and `migrate.ts`. Anything
+    worth keeping from it is a layout idea to re-implement against today's navbar, not a
+    branch to rebase. Neither PR was closed here: both are other branches' work and that
+    is the owner's call.
+  - Gates: `npm run typecheck` 0, `npm run test:sports` **484/484**, `npm run test:seo`
+    **70/70**, changed-file ESLint 0 errors (5 pre-existing `<img>` warnings elsewhere in
+    `page.tsx`, none on the lines touched), `npm run build` exit 0 with the one
+    pre-existing Turbopack `next.config.ts` warning. Homepage re-fetched after the change:
+    200, both sections present exactly once per breakpoint.

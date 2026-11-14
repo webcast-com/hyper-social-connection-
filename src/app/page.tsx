@@ -696,9 +696,19 @@ export default async function Home() {
           </div>
         </section>
 
-        <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
+        {/* Desktop only. The `lg:hidden` "Catch up fast" rail above already renders
+            both of these on small screens, so ungated they appeared twice on a phone —
+            two "Players & top scorers" sections and two highlights feeds stacked in one
+            column. Gating them the way `SportsMatchCentre` already is gated (compact
+            copy in the mobile rail, full copy in the desktop flow) leaves exactly one
+            of each visible at any width. Both copies are still in the HTML, because the
+            two sit in different visual containers: a real single render would mean
+            restructuring the rail, not adding a class. */}
+        <div className="hidden lg:block space-y-4">
+          <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
 
-        <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} />
+          <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} />
+        </div>
 
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>
