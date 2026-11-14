@@ -365,6 +365,34 @@ test('a profile is indexed only when it belongs to a person who chose to be publ
   });
 });
 
+test('profile metadata describes the member its URL names, and nobody else', async () => {
+  await withEnv(publicEnv, async () => {
+    const asked: unknown[] = [];
+    const row = { name: 'Member Twelve', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: 'member12@gmail.com' };
+    const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', {
+      db: { user: { findUnique: async (query: { where: { id: number } }) => { asked.push(query.where.id); return query.where.id === 12 ? row : null; } } },
+    });
+
+    // The old parse read `/profile/12abc` as member 12 and described them, while the
+    // page — parsing strictly — rendered someone else or nobody at all. One rule now.
+    const truncated = await loaded.generateMetadata({ params: Promise.resolve({ id: '12abc' }) });
+    assert.deepEqual(asked, [], 'an address that is not an id asks the database for nobody');
+    assert.equal(truncated.title, 'Profile on Hyper');
+    assert.equal(typeof truncated.robots === 'object' && truncated.robots?.index, false);
+
+    const real = await loaded.generateMetadata({ params: Promise.resolve({ id: '12' }) });
+    assert.deepEqual(asked, [12], 'and an address that is one asks for exactly that member');
+    assert.equal(real.title, 'Member Twelve on Hyper');
+    assert.equal(typeof real.robots === 'object' && real.robots?.index, true);
+
+    // An id that parses but names nobody is left to the page's 404; the metadata has
+    // nothing to describe and says so generically rather than inventing a person.
+    const missing = await loaded.generateMetadata({ params: Promise.resolve({ id: '999999' }) });
+    assert.equal(missing.title, 'Profile on Hyper');
+    assert.equal(typeof missing.robots === 'object' && missing.robots?.index, false);
+  });
+});
+
 test('a fixture this site holds clips for is server-verified, so its match page is indexable', async () => {
   await withEnv(publicEnv, async () => {
     const storedClip = {

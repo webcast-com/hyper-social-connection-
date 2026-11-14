@@ -1,5 +1,30 @@
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,24}$/;
 
+/**
+ * The member a `/profile/{id}` route names, or null when it names nobody.
+ *
+ * `parseInt(id) || 1` quietly turned `/profile/abc` into member 1, and
+ * `/profile/12abc` into member 12 — a page whose URL names nobody rendering
+ * somebody, at HTTP 200, while the page's own metadata parsed strictly and said
+ * "Profile on Hyper" and noindexed it. The URL and the page disagreed about which
+ * member was being shown.
+ *
+ * So there is one rule, and both the metadata and the page ask it: an id is a
+ * positive integer written in full, or it is not an id. A truncated or padded one is
+ * not guessed at, because a guess renders a real person under an address that does
+ * not belong to them; and an id too large to be one of this database's own is
+ * refused rather than wrapped.
+ *
+ * Null is not "no such member" — that is the database's answer. Null here is "this
+ * is not a member id at all", which needs no database to know.
+ */
+export function profileIdFromRouteParam(id: string | null | undefined): number | null {
+  if (typeof id !== 'string') return null;
+  if (!/^[1-9][0-9]*$/.test(id)) return null;
+  const value = Number(id);
+  return Number.isSafeInteger(value) ? value : null;
+}
+
 export function sanitizeUsername(raw: string | null | undefined) {
   const value = (raw || '').trim().replace(/^@/, '');
   if (!value) return null;

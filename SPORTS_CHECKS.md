@@ -404,16 +404,64 @@ now contains **zero** links to a disallowed route.
 
 ### Verification
 
-`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **65/65**
-(25 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
-5 app-account rules + the pre-existing dashboard specs), changed-file ESLint with 0
-errors, `npm run build`.
+`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **69/69**
+(26 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
+5 app-account rules + 3 profile-route rules + the pre-existing dashboard specs),
+changed-file ESLint with 0 errors, `npm run build`.
 
-**Known gap, not fixed here:** `/profile/{id}` returns HTTP 200 for an id that does
-not exist. Its metadata is honest about it — `noindex` and the generic "Profile on
-Hyper" title — but the status is not, so a crawler walking `/profile/1..n` finds an
-unbounded space of soft 404s. The fix is a `notFound()` when a database is
-configured and the row is missing, which leaves the offline demo fallback intact.
+The 404s were then checked against both a dev server and a **production build**:
+`/profile/999999`, `/profile/abc`, `/profile/12abc`, `/profile/0`, `/profile/-5` and
+a 25-digit id all answer 404, `/profile/1` and `/profile/5` still answer 200, and the
+metadata on a non-id describes nobody rather than the member a loose parse would have
+found.
+
+### A missing profile is a 404, and an address that names nobody is too
+
+`/profile/{id}` answered HTTP **200** for an id that did not exist, with a body
+reading "User not found." Its metadata was honest — `noindex` and the generic
+"Profile on Hyper" — but the status was not, so a crawler walking `/profile/1..n`
+found an unbounded space of soft 404s, each costing a visit and saying nothing.
+
+Two causes, both fixed:
+
+- **A missing row rendered a sample person.** When the database was reachable but had
+  no such member, ids 1–5 fell through to the hardcoded `DEMO_USERS_MAP` and rendered
+  five people who do not exist. A configured database that has no such member is a
+  404. The offline demo install, which has no database to ask, keeps its fallback.
+- **`parseInt(id) || 1` guessed.** `/profile/abc` became member 1 and `/profile/12abc`
+  became member 12 — a page whose URL names nobody rendering somebody at 200, while
+  the metadata, parsing strictly, described nobody. `profileIdFromRouteParam` in
+  `src/lib/profile.ts` is now the one rule and both the page and its metadata ask it:
+  an id is a positive integer written in full, or it is not an id. Padded, truncated,
+  signed, fractional, zero, negative and past-a-safe-integer addresses are all
+  refused rather than guessed at, because a guess renders a real person under an
+  address that is not theirs.
+
+`notFound()` is called **outside** the page's `try`, deliberately: it throws to
+unwind, and the catch that handles a database outage would otherwise swallow it into
+the demo fallback — the same trap that turns `redirect()` into a logged query failure
+in `groups/[id]`. A database outage still falls back rather than 404ing, because a
+transient failure must not tell a search engine that a page does not exist.
+
+**`src/app/not-found.tsx` now exists.** Without it, `notFound()` rendered Next's bare
+fallback: an empty body, no navigation, nothing to read. The page says what happened,
+guesses honestly at why, and points at five pages that carry content. It answers every
+unmatched URL on the site as well as the five routes that throw `notFound()` —
+profile, clip, match, team and athlete.
+
+**Known limitation, verified in a production build:** an unmatched URL server-renders
+that page in full, but a `notFound()` thrown from a page streams — the HTML carries the
+flight payload and a client renders the page on hydration, while a client without
+JavaScript sees an empty body. The **status code is 404 either way**, which is what a
+crawler acts on, and this is framework behaviour for every thrown `notFound()` in the
+app rather than something these routes do. Not browser-verified here: this sandbox has
+no Chromium.
+
+**Found while verifying, not fixed:** `/post/{id}` and `/groups/{id}` return HTTP 200
+for an id that does not exist — the same soft 404. `groups/[id]` is worse than soft: it
+calls `redirect('/groups')` for a missing group inside a `try` whose `catch` swallows
+the throw and logs it as `[group detail] DB query failed: NEXT_REDIRECT`, so the
+intended redirect never happens either.
 
 The three new index reads were proved against a **real PostgreSQL 18 cluster**, which
 caught a bug no spec could: `readStoredClip` passed `rows[0]` to `rowToMatchClip`
