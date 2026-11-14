@@ -966,23 +966,55 @@
     have: profile, group, post, clip, team and athlete. The three unbounded id spaces
     a crawler could walk — `/profile/1..n`, `/groups/1..n`, `/post/1..n` — no longer
     pay 200 for nothing.
-  - **Found while verifying, not fixed:** `/sports/matches/{league}/{eventId}` still
-    answers HTTP 200 for an address that names no fixture, serving the not-found body
-    at 200 — a soft 404 with the right content and the wrong status. It is not the
-    route's logic: `resolveMatch` throws `MatchInputError` and both the page and its
-    metadata call `notFound()`, exactly as the team and athlete routes do, and those
-    answer 404. The difference is `loading.tsx`, which this is the **only** route in
-    the app to have: it wraps the page in a streaming `<Suspense>` boundary, so the
-    shell — and with it the status line — is flushed before the page runs, and by the
-    time `notFound()` throws, 200 is already on the wire. The same
-    flush-before-the-throw mechanism as the empty body of a thrown 404, seen from the
-    status side.
-  - Proven by moving `loading.tsx` aside on a dev server: `/sports/matches/nhl/abc`,
-    `/sports/matches/zzz/401892706` and `/sports/matches/nhl/000000000` all become
-    **404** while the real fixture `/sports/matches/nhl/401892706` stays **200**;
-    restoring the file restores the 200s. The fix is therefore a decision about what
-    the placeholder is worth — delete `loading.tsx` and behave like every sibling
-    route, or move the stored-clip read into a `<Suspense>` child so the page settles
-    the status before anything flushes and keeps the instant "Loading ESPN match
-    details…" line. Not taken here: it is a UX trade-off on a route outside this
-    phase's scope, and it should not be decided silently.
+  - Found while verifying, and fixed in Phase 32: `/sports/matches/{league}/{eventId}`
+    answered HTTP 200 for an address that names no fixture — a soft 404 with the right
+    content and the wrong status, caused by the route's `loading.tsx` flushing the
+    status line before the page could throw. Left out of this phase deliberately: it is
+    a UX trade-off on a route outside its scope, and should not be decided silently.
+
+- Phase 32: The match page's 404 was already on the wire before the page could throw ✅
+
+  Phase 31's verification turned up a third soft 404 of the same class, on a route
+  whose own logic was already correct.
+
+  - `/sports/matches/{league}/{eventId}` answered **HTTP 200** for an address that
+    names no fixture — `/sports/matches/nhl/abc` and `/sports/matches/zzz/401892706`
+    both served the not-found body at 200, on a dev server **and** in a production
+    build. The right content with the wrong status, which is what a crawler records as
+    a real page.
+  - It was not the route's logic. `resolveMatch` throws `MatchInputError`, and both the
+    page and its metadata call `notFound()` exactly as the team and athlete routes do —
+    and those answer 404. `matchReference` even requires `/^[1-9]\d{0,19}$/`, the same
+    shape as Phase 31's `routeIdFromParam`, so this route always had the strict rule
+    and was only prevented from acting on it.
+  - **The cause was `loading.tsx`**, which this was the only route in the app to have.
+    It wraps the page in a streaming `<Suspense>` boundary, so the shell — and with it
+    the HTTP status line — is flushed *before* the page runs. By the time `notFound()`
+    throws, 200 is already on the wire and the not-found content arrives later in the
+    stream. The same flush-before-the-throw mechanism as the empty body of a thrown 404
+    (Phase 30), seen from the status side rather than the body side.
+  - Proven rather than assumed: moving the file aside turned all three bad addresses
+    into **404** while the real fixture stayed **200**; restoring it brought the 200s
+    back. That is what made the cause certain enough to act on.
+  - **Deleted.** Two options were on the table — delete the placeholder, or move the
+    stored-clip read into a `<Suspense>` child so the page settles the status before
+    anything flushes and keeps the instant line. The second is a restructure of Phase 27
+    code with 10 specs on it, for a placeholder that turned out to be redundant:
+    `SportsMatchDetails` renders the same "Loading ESPN match details…" copy itself
+    while it fetches (`src/components/SportsMatchDetails.tsx:153`), so the deleted file
+    only covered the interval before the server responds — an interval no other route on
+    this site covers either. Nothing in the repo referenced `loading.tsx` or its
+    component, and no spec asserted the placeholder, so deleting it changed no test.
+  - Verified: `npm run typecheck` 0, `npm run test:sports` **484/484**,
+    `npm run test:seo` **70/70**, `npm run build` exit 0. Then on a dev server **and a
+    production build**: `/sports/matches/nhl/abc`, `/sports/matches/zzz/401892706` and
+    `/sports/matches/nhl/000000000` all **404**, while `/sports/matches/nhl/401892706`
+    stays **200** and still renders `NHL match details | Hyper` with that loading copy
+    intact. Every other route re-checked and unchanged: profile, group, post, clip, team
+    and athlete 404 for an id they do not have, while `/`, `/sitemap.xml`,
+    `/profile/1`, `/groups/1`, `/post/1` and `/sports/highlights` all 200.
+  - With that, **every** id route on the site answers 404 for an id it does not have:
+    profile, group, post, clip, match, team and athlete. Still open and unchanged — the
+    *body* of a thrown 404 is empty on Next 16.2.6 here (the status is right; the
+    visible content reaches only the RSC payload), a framework behaviour that would need
+    a mechanism other than `notFound()` to fix.
