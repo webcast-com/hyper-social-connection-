@@ -45,10 +45,49 @@ export const STORED_BOARD_CLIPS = 12;
  */
 export const MIN_STORED_CLIPS = 4;
 /**
- * How long the render waits for storage. A couple of indexed queries, so this is
- * a ceiling for a cold pooled connection rather than an expected cost.
+ * How long the render waits for storage. Two indexed queries, so this is a
+ * ceiling for a cold pooled connection rather than an expected cost.
+ *
+ * It was 900ms while the read ran the index page's five-query `read()`, and on a
+ * cold serverless instance that race was lost often enough to matter: the board
+ * fell through to the live feed, ESPN's per-event video endpoint answered with no
+ * videos, and the homepage rendered sample cards over an index that was holding
+ * hundreds of real clips. Losing that race is not a cosmetic failure — the sample
+ * copy is what a crawler caches.
  */
-export const BOARD_BUDGET_MS = 900;
+export const BOARD_BUDGET_MS = 1_500;
+
+/**
+ * How long a board this instance already read stays usable.
+ *
+ * A serverless instance that answered once has proved storage works; if a later
+ * render's read runs past its budget, serving the board it remembers beats
+ * serving samples over clips that exist. Bounded so a genuinely emptied index is
+ * not kept alive by memory, and only ever consulted when the read failed rather
+ * than when it answered with too few clips — an answer is the truth.
+ */
+export const STORED_BOARD_TTL_MS = 15 * 60_000;
+
+type RememberedBoard = { at: number; board: SportsHighlightsBoard };
+let remembered: RememberedBoard | null = null;
+
+/** Forget the remembered board. Tests, and nothing else, need this. */
+export function resetStoredBoardMemory(): void {
+  remembered = null;
+}
+
+function rememberBoard(board: SportsHighlightsBoard): void {
+  remembered = { at: Date.now(), board };
+}
+
+function rememberedBoard(): SportsHighlightsBoard | null {
+  if (!remembered) return null;
+  if (Date.now() - remembered.at >= STORED_BOARD_TTL_MS) {
+    remembered = null;
+    return null;
+  }
+  return remembered.board;
+}
 
 type StoredBoardClips = { clips: SportsHighlightClip[]; sourceUrl: string | null };
 
@@ -102,6 +141,31 @@ export function topUpBoardClips(
  * store that throws resolves `null` too: the homepage must not fail because the
  * index did.
  */
+/**
+ * The stored clips for the default store, read lean.
+ *
+ * `read()` answers the index page: it also builds a summary, per-competition
+ * totals and per-state counts, which is five queries. A board needs twelve clips
+ * and the endpoint they came from, so it asks `readFeedClips` — the same rows in
+ * the same order for two queries. On a pooled connection the difference is the
+ * whole budget.
+ */
+async function readStoredClipsLean(budgetMs: number): Promise<StoredBoardClips | null> {
+  if (!highlightsStore.available()) return null;
+  const job = readFeedClips(STORED_BOARD_DAYS, STORED_BOARD_CLIPS)
+    .then((read): StoredBoardClips | null => (read.ok ? { clips: read.clips, sourceUrl: read.sourceUrl } : null))
+    .catch(() => null);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<StoredBoardClips | null>((resolve) => {
+    timer = setTimeout(() => resolve(null), budgetMs);
+  });
+  try {
+    return await Promise.race([job, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function readStoredClips(store: HighlightsStore, budgetMs: number): Promise<StoredBoardClips | null> {
   if (!store.available()) return null;
   const job = store
@@ -130,13 +194,38 @@ async function readStoredClips(store: HighlightsStore, budgetMs: number): Promis
 export async function getHighlightsBoardForRender(options: {
   budgetMs?: number;
   store?: HighlightsStore;
+  /**
+   * Consult and update this instance's memory of a good stored board. On by
+   * default for the real store, off for an injected one, so one test's fake store
+   * cannot inherit a board another test remembered. A test that wants the memory
+   * asks for it explicitly and resets it afterwards.
+   */
+  useMemory?: boolean;
 } = {}): Promise<SportsHighlightsBoard> {
-  const store = options.store ?? highlightsStore;
+  const injected = options.store ?? null;
+  const store = injected ?? highlightsStore;
   const budgetMs = options.budgetMs ?? BOARD_BUDGET_MS;
-  const stored = await readStoredClips(store, budgetMs);
+  const useMemory = options.useMemory ?? !injected;
+  // An injected store is read through the interface the caller faked; the real
+  // one is read lean, because a board needs twelve clips and not the index page's
+  // summaries.
+  const stored = injected
+    ? await readStoredClips(store, budgetMs)
+    : await readStoredClipsLean(budgetMs);
 
   if (stored && stored.clips.length >= MIN_STORED_CLIPS) {
-    return storedHighlightsBoard(stored.clips.slice(0, STORED_BOARD_CLIPS), stored.sourceUrl);
+    const board = storedHighlightsBoard(stored.clips.slice(0, STORED_BOARD_CLIPS), stored.sourceUrl);
+    if (useMemory) rememberBoard(board);
+    return board;
+  }
+
+  // The read did not answer at all — not "answered with too few clips", which is
+  // a true answer and goes on to the live feed. If this instance read a good
+  // board recently, that is a better card than the samples the live feed ends on
+  // when ESPN's video endpoint has nothing.
+  if (!stored && useMemory) {
+    const recalled = rememberedBoard();
+    if (recalled) return recalled;
   }
 
   const live = await getSportsHighlights();
