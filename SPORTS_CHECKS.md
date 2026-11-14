@@ -366,6 +366,16 @@ that column and this repository does not regenerate it — the same reason
 at a domain the rule does not recognise, is submitted: dropping a real member's page
 is a worse mistake than listing one account that should not have been there.
 
+**Those same accounts are not indexed either.** Leaving a URL out of the sitemap
+lowers its priority; it does not hide the page, because the homepage rails still link
+to it. So the profile page asks the same question — `isAppAccount` in
+`src/lib/app-accounts.ts` is the single place that decides, so the two call sites
+cannot drift into submitting a page they do not index or indexing one they will not
+submit — and answers `noindex, follow` for the desk and the five demo people.
+`follow` stays on, as it does for a private profile: a noindexed author does not take
+their posts and groups with them. The address is read for that one comparison and is
+never published; the specs assert it appears nowhere in the metadata.
+
 **A page is dated by the newest thing it renders.** `/` and `/discover` carry the
 newest public post's date, `/groups` the newest public group's, `/sports` and
 `/sports/highlights` the newest stored clip's — all three reads already come back
@@ -394,10 +404,16 @@ now contains **zero** links to a disallowed route.
 
 ### Verification
 
-`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **60/60**
-(24 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
-the pre-existing dashboard specs), changed-file ESLint with 0 errors,
-`npm run build`.
+`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **65/65**
+(25 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
+5 app-account rules + the pre-existing dashboard specs), changed-file ESLint with 0
+errors, `npm run build`.
+
+**Known gap, not fixed here:** `/profile/{id}` returns HTTP 200 for an id that does
+not exist. Its metadata is honest about it — `noindex` and the generic "Profile on
+Hyper" title — but the status is not, so a crawler walking `/profile/1..n` finds an
+unbounded space of soft 404s. The fix is a `notFound()` when a database is
+configured and the row is missing, which leaves the offline demo fallback intact.
 
 The three new index reads were proved against a **real PostgreSQL 18 cluster**, which
 caught a bug no spec could: `readStoredClip` passed `rows[0]` to `rowToMatchClip`
@@ -410,6 +426,13 @@ video.other`, the clip thumbnail as the shared image and both JSON-LD blocks; an
 unknown clip id 404s; the fixture page 200s with the fixture in its `<h1>` and no
 "Loading" text in the HTML, while a fixture with nothing stored 200s as `noindex`;
 and the homepage renders stored clips with **no** sample-card copy anywhere in it.
+
+The profile rule was checked in both directions against a running server and real
+rows: all five seeded profiles serve `noindex, follow`; a temporary member at
+`gmail.com` and a lookalike at `notexample.com` both serve `index, follow`; the
+desk's own address serves `noindex`; and while those three rows existed the sitemap
+submitted exactly the two members and neither app account. All three temporary rows
+were deleted afterwards.
 
 The sitemap and link rules were then checked against a running server with the real
 seeded database: `/login`, `/signup` and `/search` absent, no dashboard URLs, **zero**

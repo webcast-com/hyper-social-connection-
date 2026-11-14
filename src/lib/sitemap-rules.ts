@@ -13,48 +13,23 @@
  * only decides what to query, and asks here what to submit.
  */
 import type { MetadataRoute } from 'next';
-import { SPORTS_DESK } from './sports-anchor';
-
-/**
- * Reserved for documentation and testing by RFC 2606, and the domain both seeds in
- * this repository create their demo accounts under — with a password published in
- * the repo. Nobody's profile lives there.
- */
-const DEMO_EMAIL_DOMAINS = ['example.com', 'example.org', 'example.net'];
-
-/**
- * Addresses that belong to the app rather than to a person.
- *
- * The sports desk authors the anchor posts every highlight and leaders card hangs
- * off, and the schema marks it `accountType = 'broadcaster'` — but the committed
- * Prisma client predates that column and this repository does not regenerate it, so
- * the desk is recognised the way `discover/page.tsx` already recognises it: by the
- * one address it is created under, which `SPORTS_DESK` owns.
- */
-const SYSTEM_EMAILS = [SPORTS_DESK.email];
+import { isAppAccount } from './app-accounts';
 
 /**
  * Whether an account is worth asking a crawler to visit.
  *
- * Two kinds are not. The sports desk is a system account, not a person: the site
- * already keeps it out of Discover, people suggestions and the homepage contacts
- * rail, and a sitemap is the same kind of list. And the seeded demo accounts are
- * five people who do not exist, whose avatars are generated and whose bios are the
- * same five lines in every installation of this app — submitting them asks a search
- * engine to index a site that looks like a template.
+ * The accounts that are not are the app's own — the sports desk and the five seeded
+ * demo people — and `isAppAccount` in `src/lib/app-accounts.ts` is the single place
+ * that decides which those are, because the profile page asks the same question when
+ * it chooses whether to be indexed and the two must not disagree.
  *
- * **The rule excludes only on positive evidence.** An account with no address, or
- * one at a domain this rule does not recognise, is submitted: dropping a real
- * member's page from the sitemap is a worse mistake than listing one account that
- * should not have been there.
+ * There has to be an account to submit at all, so nothing to identify is nothing to
+ * ask for; an account this rule cannot judge is submitted, because dropping a real
+ * member's page from the sitemap is a worse mistake than listing one that should not
+ * have been there.
  */
 export function isSubmittableProfile(user: { email?: string | null } | null | undefined): boolean {
-  if (!user) return false;
-  const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : '';
-  if (!email) return true;
-  if (SYSTEM_EMAILS.some((address) => address.toLowerCase() === email)) return false;
-  const domain = email.slice(email.lastIndexOf('@') + 1);
-  return !DEMO_EMAIL_DOMAINS.includes(domain);
+  return !!user && !isAppAccount(user);
 }
 
 /**

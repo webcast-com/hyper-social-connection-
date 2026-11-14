@@ -338,6 +338,33 @@ test('private profile and group metadata are noindex and omit private descriptio
     }
   });
 });
+test('a profile is indexed only when it belongs to a person who chose to be public', async () => {
+  await withEnv(publicEnv, async () => {
+    const cases: { email: string | null; index: boolean; label: string }[] = [
+      { email: 'wanjiru@gmail.com', index: true, label: 'a member' },
+      // Exclusion needs positive evidence: an account with nothing to judge by is
+      // left in, because hiding a real member is the worse mistake.
+      { email: null, index: true, label: 'an account with no address to judge' },
+      { email: 'alex@example.com', index: false, label: 'a seeded demo person' },
+      { email: SPORTS_DESK.email, index: false, label: 'the sports desk that authors anchor posts' },
+    ];
+    for (const entry of cases) {
+      const row = { name: 'Reported Name', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: entry.email };
+      const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', { db: { user: { findUnique: async () => row } } });
+      const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, entry.index, entry.label);
+      // `follow` stays on either way, as it does for a private profile: what a page
+      // links to is judged for itself.
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.follow, true, entry.label);
+      // The address decides the flag and is never published.
+      if (entry.email) assert.ok(!JSON.stringify(metadata).includes(entry.email), `${entry.label}: the address stays out of the metadata`);
+      // And the page still describes itself as a profile either way — noindex is not
+      // a reason to strip the title a reader shares.
+      assert.equal(metadata.title, 'Reported Name on Hyper', entry.label);
+    }
+  });
+});
+
 test('a fixture this site holds clips for is server-verified, so its match page is indexable', async () => {
   await withEnv(publicEnv, async () => {
     const storedClip = {

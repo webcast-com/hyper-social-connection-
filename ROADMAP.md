@@ -818,12 +818,53 @@
     demo profiles submitted, `/`, `/discover` and `/groups` dated by their own newest
     row, `/sports*` undated while the clip table is empty rather than inventing a
     date, and no disallowed link in the anonymous homepage.
-  - **Known gap, deliberately not closed here:** the demo profiles are still linked
-    from the homepage rails, so a crawler can still discover them even though the
-    sitemap no longer submits them — removing a URL from a sitemap lowers its
-    priority, it does not hide the page. The complete fix is either marking those
-    accounts `noindex` or deleting the seeded rows, and both were scoped out (audit
-    step 4, "real editorial content and de-seeding"). Marking them `noindex` on the
-    strength of an email domain would silently drop a real member's page from the
-    index if anyone ever signed up with one, so it is a decision for the owner rather
-    than a default.
+  - **Known gap at the time, closed in Phase 29:** the demo profiles were still
+    linked from the homepage rails, so a crawler could still discover them even
+    though the sitemap no longer submitted them — removing a URL from a sitemap
+    lowers its priority, it does not hide the page.
+
+- Phase 29: A profile that is not a person is not indexed ✅
+
+  Phase 28 stopped submitting the sports desk and the five seeded demo accounts, but
+  a sitemap is a request and not a barrier: those profiles are still linked from the
+  homepage rails, so a crawler still finds them and still has to decide what they
+  are. Five generated avatars with the same five bios as every other installation of
+  this app, presented as members of a community, is exactly the page that makes a
+  young domain look like a template.
+
+  - Those profile pages now carry `noindex, follow`. `follow` stays on, as it does
+    for a private profile, because what a page links to is judged for itself — a
+    noindexed author does not take their posts and groups with them.
+  - **One rule, two call sites.** Which accounts belong to the app rather than to a
+    person moved to `src/lib/app-accounts.ts`, and both the sitemap and the profile
+    page ask it, so they cannot drift into submitting a page they do not index or
+    indexing one they will not submit. The detection is unchanged: the desk by
+    `SPORTS_DESK.email`, the demo people by the RFC 2606 reserved domains both seeds
+    use.
+  - **It still excludes only on positive evidence.** An account with no address, or
+    one at a domain the rule does not recognise, is a person as far as it is
+    concerned — hiding a real member from search is a worse mistake than leaving one
+    account that should have been hidden. That was the whole reason this was an
+    owner's decision rather than a default, and it is why the rule was kept narrow
+    enough to be safe to apply: `someone@notexample.com` and `desk@hyper.co.ke` are
+    people, and only the desk's own address is the desk.
+  - The address decides the flag and is never published: the profile's `select`
+    gained `email` for this one comparison, and the specs assert it appears nowhere
+    in the metadata — not in the title, the description or the share cards.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **65/65** (5 new detection specs, 4 new profile-metadata
+    cases), changed-file ESLint with 0 errors, `npm run build`.
+  - Proved against a running server and real rows, in both directions: all five
+    seeded profiles serve `noindex, follow`; a temporary member at `gmail.com` and a
+    lookalike at `notexample.com` both serve `index, follow`; the desk's own address
+    serves `noindex`; and while those three rows existed the sitemap submitted
+    exactly the two members and neither app account — submitted and indexable agree.
+    All three temporary rows were deleted afterwards and the table is back to the
+    five it started with.
+  - Found while verifying, **not** changed here: `/profile/{id}` returns HTTP 200 for
+    an id that does not exist. Its metadata is honest about it — `noindex` and the
+    generic "Profile on Hyper" title — but the status is not, so a crawler walking
+    `/profile/1..n` finds an unbounded space of soft 404s. The fix is a `notFound()`
+    when a database is configured and the row is missing, which keeps the offline
+    demo fallback intact; it was left out of this phase because it changes a route's
+    status code, not its index flag.

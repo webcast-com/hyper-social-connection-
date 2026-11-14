@@ -13,6 +13,7 @@ import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
 import { getProfileShareCount } from '@/app/share-actions';
+import { isAppAccount } from '@/lib/app-accounts';
 
 export async function generateMetadata({
   params,
@@ -21,13 +22,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const profileId = Number.parseInt(id, 10);
-  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string } | null = null;
+  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string; email: string | null } | null = null;
 
   if (hasDatabase && Number.isInteger(profileId)) {
     try {
       profile = await prisma.user.findUnique({
         where: { id: profileId },
-        select: { name: true, bio: true, avatar: true, profileVisibility: true },
+        // `email` decides whether this is a person's page at all; it is never
+        // rendered, described or shared.
+        select: { name: true, bio: true, avatar: true, profileVisibility: true, email: true },
       });
     } catch (err) {
       console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
@@ -36,13 +39,22 @@ export async function generateMetadata({
 
   const title = profile?.name ? `${profile.name} on Hyper` : 'Profile on Hyper';
   const isPublic = profile?.profileVisibility === 'public';
+  // A private profile is nobody's to index. Neither is the profile of an account
+  // that is not a person — the sports desk that authors the anchor posts, or one of
+  // the five seeded demo people, whose generated avatars and identical bios are the
+  // same in every installation of this app. Leaving those out of the sitemap only
+  // lowered their priority: this page is still linked from the homepage rails, so a
+  // crawler still finds it, and this is what tells it the page is not a member.
+  // `follow` stays on either way, as it does for a private profile: the posts and
+  // groups a page links to are judged for themselves.
+  const isIndexable = isPublic && !isAppAccount(profile);
   const description = (isPublic ? profile?.bio : null) || 'View this Hyper profile and connect with the community.';
 
   return {
     title,
     description,
     alternates: { canonical: `/profile/${id}` },
-    robots: isPublic ? { index: true, follow: true } : { index: false, follow: true },
+    robots: isIndexable ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'profile',
       title: `${title} | Hyper`,
