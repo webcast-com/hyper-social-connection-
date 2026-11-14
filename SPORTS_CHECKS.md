@@ -340,11 +340,64 @@ so a fixture with stored clips has something true to say before any browser fetc
   of one fixture are one URL. Submitting a URL that 404s costs the crawl budget it
   was meant to earn.
 
+### Which routes and accounts are submitted at all
+
+A sitemap is a request, not an inventory, and everything in it costs crawl budget on
+a domain this young. `src/lib/sitemap-rules.ts` holds the two decisions as pure,
+tested rules.
+
+**Three pages are no longer submitted.** `/login` and `/signup` are two forms with no
+content and are the least worth a visit of anything on the site; `/search` is a query
+surface, so submitting it invites a crawler into an unbounded space of
+near-duplicate result pages it can never finish. All three remain reachable and
+indexable — nothing blocks them, the site just stopped asking for them.
+
+**Two kinds of account are not submitted.** The sports desk is a system account that
+authors the anchor posts, not a person: Discover, people suggestions and the homepage
+contacts rail already leave it out, and a sitemap is the same kind of list. And the
+five seeded demo accounts live at `example.com`, reserved for documentation by RFC
+2606 and created by both seeds in this repository with a password published in the
+repo. The desk is recognised by `SPORTS_DESK.email` rather than by its
+`accountType = 'broadcaster'` column, because the committed Prisma client predates
+that column and this repository does not regenerate it — the same reason
+`discover/page.tsx` filters on the address.
+
+**The rule excludes only on positive evidence.** An account with no address, or one
+at a domain the rule does not recognise, is submitted: dropping a real member's page
+is a worse mistake than listing one account that should not have been there.
+
+**A page is dated by the newest thing it renders.** `/` and `/discover` carry the
+newest public post's date, `/groups` the newest public group's, `/sports` and
+`/sports/highlights` the newest stored clip's — all three reads already come back
+newest-first, so no extra query is made to date a page. `/sports/predictions` gets no
+date because live odds carry no stored instant, and neither do `/about` or `/privacy`
+because their copy changes when a person edits it: a constant that has to be
+remembered and bumped is a date that eventually lies, and a made-up `lastmod` is a
+lie in the one file a crawler is told to trust.
+
+### The homepage no longer links where robots.txt says not to
+
+`/messages`, `/notifications` and `/settings` are disallowed in `robots.ts`, but the
+anonymous homepage handed a crawler seven links to them: the desktop and aside
+contacts rails linked every contact to `/messages/{id}`, the rail's heading linked to
+`/messages`, and the mobile tab bar and desktop nav linked `/messages` and
+`/notifications` unconditionally. A link to a route the crawler was told to skip is
+wasted discovery, and for a visitor it is a dead end at the login wall anyway.
+
+Those links now depend on whether anybody is signed in, following the pattern the
+nav's own Profile link already used. To a member a contact is a conversation; to a
+visitor it is a person, and the person's page is the one worth crawling. The rail's
+heading reads "Inbox" for a member and "Sign in" for a visitor. `MOBILE_TABS` gained
+a `memberOnly` flag so the two account tabs point at signing in for a visitor while
+Home, People, Sports and Groups keep working for guests. The anonymous homepage HTML
+now contains **zero** links to a disallowed route.
+
 ### Verification
 
-`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **52/52**
-(21 metadata/sitemap + 12 clip-page rules + 10 match-page rules + the pre-existing
-dashboard specs), changed-file ESLint with 0 errors, `npm run build`.
+`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **60/60**
+(24 metadata/sitemap + 12 clip-page rules + 10 match-page rules + 8 sitemap-rules +
+the pre-existing dashboard specs), changed-file ESLint with 0 errors,
+`npm run build`.
 
 The three new index reads were proved against a **real PostgreSQL 18 cluster**, which
 caught a bug no spec could: `readStoredClip` passed `rows[0]` to `rowToMatchClip`
@@ -357,6 +410,13 @@ video.other`, the clip thumbnail as the shared image and both JSON-LD blocks; an
 unknown clip id 404s; the fixture page 200s with the fixture in its `<h1>` and no
 "Loading" text in the HTML, while a fixture with nothing stored 200s as `noindex`;
 and the homepage renders stored clips with **no** sample-card copy anywhere in it.
+
+The sitemap and link rules were then checked against a running server with the real
+seeded database: `/login`, `/signup` and `/search` absent, no dashboard URLs, **zero**
+of the five `example.com` demo profiles submitted, `/`, `/discover` and `/groups`
+carrying the newest post's and group's dates, `/sports*` carrying none while the clip
+table is empty rather than inventing one, and no disallowed link anywhere in the
+anonymous homepage.
 
 ## Verification
 

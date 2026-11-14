@@ -668,11 +668,17 @@ export default async function Home() {
           <div id="contacts" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Contacts</h2>
-              <Link href="/messages" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Inbox</Link>
+              {/* A visitor who is not signed in has no inbox, and `/messages` is
+                  disallowed in robots.txt — so the link a crawler would follow
+                  points at signing in rather than at a route it was told to skip
+                  and a reader would be turned away from anyway. */}
+              <Link href={signedIn ? '/messages' : '/login'} className="text-[11px] font-bold text-blue-600 dark:text-blue-400">{signedIn ? 'Inbox' : 'Sign in'}</Link>
             </div>
             <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
+              {/* To a member each of these is a conversation; to a visitor it is
+                  a person, and the person's page is the one worth crawling. */}
               {otherUsers.slice(0, 8).map((u) => (
-                <Link key={u.id} href={`/messages/${u.id}`} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
+                <Link key={u.id} href={signedIn ? `/messages/${u.id}` : `/profile/${u.id}`} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
                   <div className="flex items-center gap-2">
                     <div className="relative">
                       {u.avatar ? (
@@ -791,7 +797,7 @@ export default async function Home() {
           <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide mb-3">Contacts</h3>
           <div className="space-y-1">
             {otherUsers.slice(0, 6).map((u) => (
-              <Link key={u.id} href={`/messages/${u.id}`} className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-colors">
+              <Link key={u.id} href={signedIn ? `/messages/${u.id}` : `/profile/${u.id}`} className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-colors">
                 <div className="relative">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full object-cover" />

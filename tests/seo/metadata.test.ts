@@ -10,6 +10,7 @@ import nextConfig from '../../next.config';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { getPrivacyContact } from '../../src/lib/privacy-contact';
+import { SPORTS_DESK } from '../../src/lib/sports-anchor';
 
 async function withEnv(values: Record<string, string | undefined>, run: () => void | Promise<void>) {
   const original = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]));
@@ -148,7 +149,20 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
 test('dynamic sitemap queries require public profiles, public groups and public published posts', async () => {
   await withEnv(publicEnv, async () => {
     const queries: Record<string, unknown> = {};
-    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => { queries[kind] = query; return [{ id: 7, createdAt: new Date('2026-01-01') }]; } }]));
+    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => {
+      queries[kind] = query;
+      if (kind === 'user') {
+        // A member, the sports desk that authors anchor posts, and two of the five
+        // seeded demo accounts. Only the member is a person worth a crawl.
+        return [
+          { id: 7, createdAt: new Date('2026-01-01'), email: 'wanjiru@gmail.com' },
+          { id: 8, createdAt: new Date('2025-12-01'), email: SPORTS_DESK.email },
+          { id: 1, createdAt: new Date('2025-11-01'), email: 'alex@example.com' },
+          { id: 2, createdAt: new Date('2025-11-02'), email: 'maya@example.com' },
+        ];
+      }
+      return [{ id: 7, createdAt: new Date('2026-01-01') }];
+    } }]));
     const loaded = await loadMetadataModule('src/app/sitemap.ts', {
       db,
       clipRefs: { ok: true, refs: [
@@ -170,12 +184,51 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     assert.match(JSON.stringify(queries.post), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
-    assert.ok(rows.some((row) => row.url.endsWith('/search')));
+    // A member's profile is submitted; the desk and the seeded demo accounts are
+    // not, for the same reason Discover and the contacts rail leave them out.
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/profile/7'), 'the member is submitted');
+    for (const id of [8, 1, 2]) {
+      assert.ok(!rows.some((row) => row.url === `https://hyper.co.ke/profile/${id}`), `profile ${id} is not submitted`);
+    }
+    // Forms and the query surface stay reachable and indexable, but the site no
+    // longer asks for a visit it cannot justify.
+    for (const path of ['/login', '/signup', '/search']) {
+      assert.ok(!rows.some((row) => row.url.endsWith(path)), `${path} is not submitted`);
+    }
     assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
   });
 });
+test('a static route is dated by the newest thing it renders, and by nothing it cannot derive', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [{ id: 7, createdAt: new Date('2026-01-01T09:00:00.000Z'), email: 'wanjiru@gmail.com' }] } ])),
+      clipRefs: { ok: true, refs: [
+        // A clip with no reported time sorts last in the read, so the head of the
+        // list is the newest instant this site actually holds.
+        { id: '50476535', at: new Date('2026-11-14T02:00:00.000Z') },
+        { id: '50464264', at: null },
+      ] },
+    });
+    const rows = await loaded.default();
+    const modified = (path: string) => {
+      const row = rows.find((entry) => entry.url === `https://hyper.co.ke${path}`);
+      return row?.lastModified instanceof Date ? row.lastModified.toISOString() : row?.lastModified;
+    };
+    assert.equal(modified('/'), '2026-01-01T09:00:00.000Z', 'the homepage renders the newest post');
+    assert.equal(modified('/discover'), '2026-01-01T09:00:00.000Z');
+    assert.equal(modified('/groups'), '2026-01-01T09:00:00.000Z');
+    assert.equal(modified('/sports'), '2026-11-14T02:00:00.000Z', 'the boards render the newest stored clip');
+    assert.equal(modified('/sports/highlights'), '2026-11-14T02:00:00.000Z');
+    // Live odds carry no stored instant, and the about/privacy copy changes when a
+    // person edits it — neither is in the data, so neither gets a date.
+    assert.equal(modified('/sports/predictions'), undefined);
+    assert.equal(modified('/about'), undefined);
+    assert.equal(modified('/privacy'), undefined);
+  });
+});
+
 test('a stored highlight clip gets an indexable page of its own, with the clip as the shared image', async () => {
   await withEnv(publicEnv, async () => {
     const clip = {

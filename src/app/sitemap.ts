@@ -4,6 +4,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
 import { clipHref } from "@/lib/highlight-clip";
 import { matchHref, storedMatchReference } from "@/lib/espn-match";
+import { isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
 
 /**
  * How many stored highlight clips get a URL of their own here.
@@ -34,50 +35,13 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteUrl();
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/`,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/discover`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/groups`,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/sports`,
-      changeFrequency: "hourly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/sports/predictions`,
-      changeFrequency: "hourly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/sports/highlights`,
-      changeFrequency: "hourly",
-      priority: 0.8,
-    },
-    // The dashboard's 96 hubs, teams and players are deliberately **not** listed.
-    // They are one client-rendered document serving the vendor's bundled sample
-    // dataset — the pages themselves say "Sample schedule" — so asking a crawler to
-    // spend 96 of its visits on this site there left it little for pages that carry
-    // something true. `dashboardSitemapRoutes()` stays for when they do.
-    ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
-      url: `${baseUrl}${path}`,
-      changeFrequency: 'monthly' as const,
-      priority: path === '/about' ? 0.6 : 0.4,
-    })),
-  ];
+  // Which routes are submitted, and what date each can honestly claim, is a rule
+  // of its own — see `staticSitemapRoutes`. It needs the newest post, group and
+  // stored clip, which the queries below already fetch newest-first, so no extra
+  // read is made to date a page.
+  let freshness: SitemapFreshness = NO_FRESHNESS;
 
-  let profileRows: { id: number; createdAt: Date }[] = [];
+  let profileRows: { id: number; createdAt: Date; email: string | null }[] = [];
   let groupRows: { id: number; createdAt: Date }[] = [];
   let postRows: { id: number; createdAt: Date }[] = [];
   let clipRefs: ClipRef[] = [];
@@ -93,7 +57,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { profileVisibility: "public" },
         take: 1000,
         orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true },
+        // `email` is read only to decide whether the account is a person worth
+        // submitting, and it never leaves this function.
+        select: { id: true, createdAt: true, email: true },
       });
       groupRows = await prisma.group.findMany({
         where: { privacy: "public" },
@@ -121,7 +87,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const profileRoutes: MetadataRoute.Sitemap = profileRows.map((u) => ({
+  // Every read is newest-first, so the head of each is the newest thing that
+  // surface renders. A clip whose time was never reported sorts last rather than
+  // first, so a head with no date means nothing here has one.
+  const newestClip = clipRefs.find((ref) => ref.at)?.at ?? null;
+  freshness = {
+    newestPost: postRows[0]?.createdAt ?? null,
+    newestGroup: groupRows[0]?.createdAt ?? null,
+    newestClip,
+  };
+  const staticRoutes = staticSitemapRoutes(baseUrl, freshness);
+
+  // The sports desk and the seeded demo accounts are not people to ask a crawler
+  // about, for the same reason Discover and the contacts rail already leave them
+  // out.
+  const profileRoutes: MetadataRoute.Sitemap = profileRows.filter(isSubmittableProfile).map((u) => ({
     url: `${baseUrl}/profile/${u.id}`,
     lastModified: u.createdAt,
     changeFrequency: "weekly",

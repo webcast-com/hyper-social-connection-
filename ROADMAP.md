@@ -765,3 +765,65 @@
     routes still carry no `lastModified`, and the homepage still links to
     `Disallow:`ed `/messages/*` pages. Those are cause 7 and out of this phase's
     scope.
+
+- Phase 28: The sitemap asks only for pages worth visiting, and dates them honestly ✅
+
+  Phase 27 filled the sitemap with 667 clips and 595 fixtures. This phase stops it
+  asking for the pages that were wasting the budget those needed, and gives the
+  static routes a date they can actually support. Both decisions live in
+  `src/lib/sitemap-rules.ts` as pure rules, because a sitemap is a request rather
+  than an inventory and the reasoning belongs somewhere testable.
+
+  - **`/login`, `/signup` and `/search` are no longer submitted.** Two forms with no
+    content, and a query surface that invites a crawler into an unbounded space of
+    near-duplicate result pages it can never finish. All three stay reachable and
+    indexable — nothing blocks them, the site just stopped asking.
+  - **Two kinds of account are not submitted.** The sports desk is a system account
+    that authors the anchor posts, and Discover, people suggestions and the homepage
+    contacts rail already leave it out; a sitemap is the same kind of list. The five
+    seeded demo accounts live at `example.com`, reserved by RFC 2606 and created by
+    both seeds in this repo with a password published in the repo — five people who
+    do not exist, with generated avatars and the same five bios as every other
+    installation of this app.
+  - The desk is recognised by `SPORTS_DESK.email`, not by its
+    `accountType = 'broadcaster'` column: the committed Prisma client predates that
+    column and this repository does not regenerate it, which is also why
+    `discover/page.tsx` filters on the address. **The rule excludes only on positive
+    evidence** — an account with no address, or at a domain the rule does not
+    recognise, is submitted, because dropping a real member's page is a worse mistake
+    than listing one account that should not have been there.
+  - **A page is dated by the newest thing it renders**: `/` and `/discover` by the
+    newest public post, `/groups` by the newest public group, `/sports` and
+    `/sports/highlights` by the newest stored clip. All three reads already return
+    newest-first, so dating a page costs no extra query. `/sports/predictions` gets
+    no date (live odds carry no stored instant) and neither do `/about` or `/privacy`
+    (their copy changes when a person edits it): a constant that has to be remembered
+    and bumped is a date that eventually lies, and a made-up `lastmod` is a lie in
+    the one file a crawler is told to trust.
+  - **The homepage stopped linking where robots.txt says not to.** `/messages`,
+    `/notifications` and `/settings` are disallowed, yet the anonymous homepage handed
+    a crawler seven links to them — both contacts rails linking every contact to
+    `/messages/{id}`, the rail's heading to `/messages`, and the desktop nav and
+    mobile tab bar to `/messages` and `/notifications` unconditionally. Those now
+    depend on whether anyone is signed in, following the pattern the nav's own
+    Profile link already used: to a member a contact is a conversation, to a visitor
+    it is a person, and the person's page is the one worth crawling. `MOBILE_TABS`
+    gained a `memberOnly` flag so the account tabs point at signing in for a visitor
+    while Home, People, Sports and Groups keep working for guests. The anonymous
+    homepage now contains **zero** links to a disallowed route.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **60/60** (8 new sitemap-rule specs plus extended sitemap
+    specs), changed-file ESLint with 0 errors, `npm run build`, and a running server
+    against the real seeded database: the three routes absent, **zero** of the five
+    demo profiles submitted, `/`, `/discover` and `/groups` dated by their own newest
+    row, `/sports*` undated while the clip table is empty rather than inventing a
+    date, and no disallowed link in the anonymous homepage.
+  - **Known gap, deliberately not closed here:** the demo profiles are still linked
+    from the homepage rails, so a crawler can still discover them even though the
+    sitemap no longer submits them — removing a URL from a sitemap lowers its
+    priority, it does not hide the page. The complete fix is either marking those
+    accounts `noindex` or deleting the seeded rows, and both were scoped out (audit
+    step 4, "real editorial content and de-seeding"). Marking them `noindex` on the
+    strength of an email domain would silently drop a real member's page from the
+    index if anyone ever signed up with one, so it is a decision for the owner rather
+    than a default.
