@@ -1,7 +1,27 @@
 import type { MetadataRoute } from "next";
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
-import { dashboardSitemapRoutes } from "@/lib/dashboard-seo";
+import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
+import { clipHref } from "@/lib/highlight-clip";
+import { matchHref, storedMatchReference } from "@/lib/espn-match";
+import { isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
+
+/**
+ * How many stored highlight clips get a URL of their own here.
+ *
+ * A sitemap may hold fifty thousand, so this is not a limit on what the site is
+ * willing to publish; it bounds one query and keeps the newest clips — the ones a
+ * reader would search for — at the front of the list.
+ */
+const SITEMAP_CLIPS = 1000;
+
+/**
+ * How many fixtures with stored clips get a URL here.
+ *
+ * A fixture this site holds clips for is a fixture it can server-render something
+ * true about, which is the only reason its match page is indexable at all.
+ */
+const SITEMAP_MATCHES = 500;
 
 /**
  * Sitemap generator — served at /sitemap.xml.
@@ -15,53 +35,31 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteUrl();
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/`,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/discover`,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/groups`,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/sports`,
-      changeFrequency: "hourly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/sports/predictions`,
-      changeFrequency: "hourly",
-      priority: 0.6,
-    },
-    // Basketball and NFL live in the standalone dashboard, which now serves
-    // per-route metadata; its hubs, sub-pages, teams and players are listed
-    // here so crawlers discover them.
-    ...dashboardSitemapRoutes().map((route) => ({ url: `${baseUrl}${route.path}`, changeFrequency: route.changeFrequency, priority: route.priority })),
-    ...['/about', '/privacy', '/login', '/signup', '/search'].map((path) => ({
-      url: `${baseUrl}${path}`,
-      changeFrequency: 'monthly' as const,
-      priority: path === '/about' ? 0.6 : 0.4,
-    })),
-  ];
+  // Which routes are submitted, and what date each can honestly claim, is a rule
+  // of its own — see `staticSitemapRoutes`. It needs the newest post, group and
+  // stored clip, which the queries below already fetch newest-first, so no extra
+  // read is made to date a page.
+  let freshness: SitemapFreshness = NO_FRESHNESS;
 
-  let profileRows: { id: number; createdAt: Date }[] = [];
+  let profileRows: { id: number; createdAt: Date; email: string | null }[] = [];
   let groupRows: { id: number; createdAt: Date }[] = [];
   let postRows: { id: number; createdAt: Date }[] = [];
+  let clipRefs: ClipRef[] = [];
+  let eventRefs: EventRef[] = [];
   if (hasDatabase) {
     try {
+      // Stored highlight clips: each one is a page of its own now, so each one is
+      // a URL. This is the freshest unique content the site has.
+      clipRefs = (await readRecentClipRefs(SITEMAP_CLIPS)).refs;
+      // And the fixtures they belong to, which are pages for the same reason.
+      eventRefs = (await readRecentEventRefs(SITEMAP_MATCHES)).refs;
       profileRows = await prisma.user.findMany({
         where: { profileVisibility: "public" },
         take: 1000,
         orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true },
+        // `email` is read only to decide whether the account is a person worth
+        // submitting, and it never leaves this function.
+        select: { id: true, createdAt: true, email: true },
       });
       groupRows = await prisma.group.findMany({
         where: { privacy: "public" },
@@ -83,13 +81,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         take: 200,
       });
     } catch (err) {
-      profileRows = []; groupRows = []; postRows = [];
+      profileRows = []; groupRows = []; postRows = []; clipRefs = []; eventRefs = [];
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);
     }
   }
 
-  const profileRoutes: MetadataRoute.Sitemap = profileRows.map((u) => ({
+  // Every read is newest-first, so the head of each is the newest thing that
+  // surface renders. A clip whose time was never reported sorts last rather than
+  // first, so a head with no date means nothing here has one.
+  const newestClip = clipRefs.find((ref) => ref.at)?.at ?? null;
+  freshness = {
+    newestPost: postRows[0]?.createdAt ?? null,
+    newestGroup: groupRows[0]?.createdAt ?? null,
+    newestClip,
+  };
+  const staticRoutes = staticSitemapRoutes(baseUrl, freshness);
+
+  // The sports desk and the seeded demo accounts are not people to ask a crawler
+  // about, for the same reason Discover and the contacts rail already leave them
+  // out.
+  const profileRoutes: MetadataRoute.Sitemap = profileRows.filter(isSubmittableProfile).map((u) => ({
     url: `${baseUrl}/profile/${u.id}`,
     lastModified: u.createdAt,
     changeFrequency: "weekly",
@@ -110,5 +122,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...profileRoutes, ...groupRoutes, ...postRoutes];
+  // Newest clip first, and no `lastModified` for one whose time was never
+  // reported: a date this site made up would be a lie in a file crawlers trust.
+  const clipRoutes: MetadataRoute.Sitemap = clipRefs.map((ref) => ({
+    url: `${baseUrl}${clipHref({ id: ref.id })}`,
+    ...(ref.at ? { lastModified: ref.at } : {}),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  // A fixture's URL only goes in when the stored event id reverses into a
+  // reference the match route will actually serve: submitting a URL that 404s
+  // costs the crawl budget it was meant to earn. Two stored forms of one fixture
+  // — a scoreboard reporting more than one competition appends to the id — are one
+  // URL, so the newest report of it is the one listed.
+  const matchRoutes = new Map<string, MetadataRoute.Sitemap[number]>();
+  for (const ref of eventRefs) {
+    const reference = storedMatchReference(ref.league, ref.eventId);
+    if (!reference) continue;
+    const url = `${baseUrl}${matchHref(reference)}`;
+    if (matchRoutes.has(url)) continue;
+    matchRoutes.set(url, {
+      url,
+      ...(ref.at ? { lastModified: ref.at } : {}),
+      changeFrequency: "daily" as const,
+      priority: 0.6,
+    });
+  }
+
+  return [...staticRoutes, ...clipRoutes, ...matchRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
 }

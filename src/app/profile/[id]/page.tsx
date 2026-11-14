@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { prisma, hasDatabase } from '@/lib/prisma';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
@@ -9,10 +9,12 @@ import EmptyState from '@/components/EmptyState';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { canMessageUser, canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
+import { routeIdFromParam } from '@/lib/route-id';
 import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
 import { getProfileShareCount } from '@/app/share-actions';
+import { isAppAccount } from '@/lib/app-accounts';
 
 export async function generateMetadata({
   params,
@@ -20,14 +22,18 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const profileId = Number.parseInt(id, 10);
-  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string } | null = null;
+  // The same rule the page uses, so the metadata cannot describe a member the page
+  // is about to say does not exist. See `routeIdFromParam`.
+  const profileId = routeIdFromParam(id);
+  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string; email: string | null } | null = null;
 
-  if (hasDatabase && Number.isInteger(profileId)) {
+  if (hasDatabase && profileId !== null) {
     try {
       profile = await prisma.user.findUnique({
         where: { id: profileId },
-        select: { name: true, bio: true, avatar: true, profileVisibility: true },
+        // `email` decides whether this is a person's page at all; it is never
+        // rendered, described or shared.
+        select: { name: true, bio: true, avatar: true, profileVisibility: true, email: true },
       });
     } catch (err) {
       console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
@@ -36,13 +42,22 @@ export async function generateMetadata({
 
   const title = profile?.name ? `${profile.name} on Hyper` : 'Profile on Hyper';
   const isPublic = profile?.profileVisibility === 'public';
+  // A private profile is nobody's to index. Neither is the profile of an account
+  // that is not a person — the sports desk that authors the anchor posts, or one of
+  // the five seeded demo people, whose generated avatars and identical bios are the
+  // same in every installation of this app. Leaving those out of the sitemap only
+  // lowered their priority: this page is still linked from the homepage rails, so a
+  // crawler still finds it, and this is what tells it the page is not a member.
+  // `follow` stays on either way, as it does for a private profile: the posts and
+  // groups a page links to are judged for themselves.
+  const isIndexable = isPublic && !isAppAccount(profile);
   const description = (isPublic ? profile?.bio : null) || 'View this Hyper profile and connect with the community.';
 
   return {
     title,
     description,
     alternates: { canonical: `/profile/${id}` },
-    robots: isPublic ? { index: true, follow: true } : { index: false, follow: true },
+    robots: isIndexable ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'profile',
       title: `${title} | Hyper`,
@@ -79,7 +94,13 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   };
   const { id } = await params;
 
-  const profileId = parseInt(id) || 1;
+  // One rule, shared with this page's metadata: see `routeIdFromParam`.
+  const parsedId = routeIdFromParam(id);
+  // With no database there is nothing to look up, and the offline demo install keeps
+  // showing a sample person. With one, an id that is not an id is a 404 rather than
+  // whichever member the old parse happened to land on.
+  if (hasDatabase && parsedId === null) notFound();
+  const profileId = parsedId ?? 1;
   let profileUser: any = null;
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -97,11 +118,13 @@ export default async function Profile({ params }: { params: Promise<{ id: string
     try {
       const profileRow = await prisma.user.findUnique({ where: { id: profileId } });
       if (!profileRow) {
-        if (DEMO_USERS_MAP[profileId]) {
-          profileUser = DEMO_USERS_MAP[profileId];
-        } else {
-          profileNotFound = true;
-        }
+        // The database is reachable and has no such member, so this is a 404 — not a
+        // sample person from the hardcoded demo map, and not a 200 whose body says
+        // "User not found." A crawler walking /profile/1..n would otherwise find an
+        // unbounded space of soft 404s, each one a page that costs a visit and says
+        // nothing. `notFound()` is called below, outside this try, because it throws
+        // to unwind and the catch here would swallow it into the demo fallback.
+        profileNotFound = true;
       } else {
         profileUser = profileRow;
 
@@ -153,9 +176,9 @@ export default async function Profile({ params }: { params: Promise<{ id: string
     allUsers = Object.values(DEMO_USERS_MAP);
   }
 
-  if (profileNotFound) {
-    return <div className="p-8 text-center text-gray-500">User not found.</div>;
-  }
+  // Outside every try, so the throw that makes this a 404 is not caught and turned
+  // back into a rendered page.
+  if (profileNotFound) notFound();
 
   // Ensure safe profileUser for unauth + guest + offline (avoids .name / .id crashes)
   if (!profileUser || typeof profileUser.name === 'undefined') {

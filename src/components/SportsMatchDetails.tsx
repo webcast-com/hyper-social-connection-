@@ -69,7 +69,20 @@ function Lineup({ lineup, name, league }: { lineup: MatchLineup; name: string; l
   </article>;
 }
 
-export default function SportsMatchDetails({ initial, reference, returnTo }: { initial: MatchBoard; reference: { league: string; eventId: string }; returnTo?: string }) {
+export default function SportsMatchDetails({ initial, reference, returnTo, knownTitle }: {
+  initial: MatchBoard;
+  reference: { league: string; eventId: string };
+  returnTo?: string;
+  /**
+   * The fixture's name, when the server already knows it from stored clips.
+   *
+   * The board this component renders from arrives in the browser, so without this
+   * the page's own heading says "Loading match details…" in the HTML a crawler
+   * reads — on a page that is indexable precisely because the server could say
+   * something about the fixture. The fetched title still wins once it lands.
+   */
+  knownTitle?: string | null;
+}) {
   const [board, setBoard] = useState(initial);
   const [section, setSection] = useState<Section>('statistics');
   const [insightsOpened, setInsightsOpened] = useState(false);
@@ -122,7 +135,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo }: { i
     </nav>
     <header className="mb-5 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
       <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">ESPN · {match?.leagueName ?? 'Match details'}</p>
-      <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? (loading ? 'Loading match details…' : 'Match details unavailable')}</h1>
+      <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? knownTitle ?? (loading ? 'Loading match details…' : 'Match details unavailable')}</h1>
       {match && <>
         <p className="mt-2 break-words text-sm text-gray-600 dark:text-gray-300">{match.statusText ?? 'Status not reported'}{match.kickoff ? ` · ${formatPredictionKickoff(match.kickoff)}` : ''}</p>
         {match.venue && <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-400">{match.venue}</p>}

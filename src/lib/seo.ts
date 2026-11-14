@@ -9,20 +9,25 @@ import { SITE_DESCRIPTION } from './site-description';
  * stays reachable but a different page owns the content (for example the
  * /sports/nba hand-off to the Basketball & NFL dashboard). `keywords` adds a
  * keyword list for crawlers that still read it.
+ *
+ * `image` shares the page's own subject instead of the site's card - a highlight
+ * clip's thumbnail is the thing the link is about, and a shared image that matches
+ * the page is what a video result is made of. An image that is missing falls back
+ * to the site card rather than sharing nothing.
  */
-export function getPageMetadata({ title, description, path, index = true, type = 'website', canonicalPath, keywords }: {
-  title: string; description: string; path: string; index?: boolean; type?: 'article' | 'website';
-  canonicalPath?: string; keywords?: string[];
+export function getPageMetadata({ title, description, path, index = true, type = 'website', canonicalPath, keywords, image }: {
+  title: string; description: string; path: string; index?: boolean; type?: 'article' | 'website' | 'video.other';
+  canonicalPath?: string; keywords?: string[]; image?: string | null;
 }): Metadata {
   const origin = getSiteUrl();
   const url = new URL(path, origin).toString();
   const canonical = canonicalPath ? new URL(canonicalPath, origin).toString() : url;
-  const image = new URL('/og-image.png', origin).toString();
+  const imageUrl = new URL(image || '/og-image.png', origin).toString();
   return {
     title, description, ...(keywords?.length ? { keywords: keywords.join(', ') } : {}), alternates: { canonical },
     robots: { index: index && !isPreviewDeployment(), follow: true },
-    openGraph: { type, title: `${title} | Hyper`, description, url, siteName: 'Hyper', images: [{ url: image, width: 1200, height: 630, alt: 'Hyper — Connect with the world' }] },
-    twitter: { card: 'summary_large_image', title: `${title} | Hyper`, description, images: [image] },
+    openGraph: { type, title: `${title} | Hyper`, description, url, siteName: 'Hyper', images: [{ url: imageUrl, width: 1200, height: 630, alt: title }] },
+    twitter: { card: 'summary_large_image', title: `${title} | Hyper`, description, images: [imageUrl] },
   };
 }
 

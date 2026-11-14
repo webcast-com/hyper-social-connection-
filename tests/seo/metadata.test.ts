@@ -10,6 +10,7 @@ import nextConfig from '../../next.config';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { getPrivacyContact } from '../../src/lib/privacy-contact';
+import { SPORTS_DESK } from '../../src/lib/sports-anchor';
 
 async function withEnv(values: Record<string, string | undefined>, run: () => void | Promise<void>) {
   const original = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]));
@@ -25,7 +26,7 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
     stdin: { contents: path.endsWith('sitemap.ts') ? `export { default } from './${path}';` : `export { generateMetadata } from './${path}';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'cjs', platform: 'node', packages: 'external',
     plugins: [{ name: 'seo-server-fixtures', setup(builder) {
-      builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
+      builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed|highlights-index)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
       builder.onLoad({ filter: /.*/, namespace: 'seo-boundary' }, () => ({ contents: `
         export const hasDatabase = fixture.hasDatabase ?? true;
         export const prisma = fixture.db;
@@ -34,6 +35,11 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
         export const getProfileShareCount = async () => 0;
         export const getMyGroupInvites = async () => [];
         export const StartCallButton = () => null;
+        export const EVENT_CLIPS_LIMIT = 24;
+        export const readRecentClipRefs = async () => fixture.clipRefs ?? { ok: true, refs: [] };
+        export const readStoredClip = async () => ({ ok: true, clip: fixture.clip ?? null });
+        export const readEventClips = async () => ({ ok: true, clips: fixture.eventClips ?? [] });
+        export const readRecentEventRefs = async () => fixture.eventRefs ?? { ok: true, refs: [] };
         export default function Component() { return null; }
       `, loader: 'js' }));
     } }],
@@ -122,9 +128,19 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', { hasDatabase: false });
     const rows = await loaded.default();
-    assert.deepEqual(rows.map((row) => row.url).slice(0, 6), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/nfl-basketball/basketball']);
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/basketball/upcoming'));
+    assert.deepEqual(rows.map((row) => row.url).slice(0, 6), ['https://hyper.co.ke/', 'https://hyper.co.ke/discover', 'https://hyper.co.ke/groups', 'https://hyper.co.ke/sports', 'https://hyper.co.ke/sports/predictions', 'https://hyper.co.ke/sports/highlights']);
+    // The stored index is what makes the highlights list worth crawling, so the
+    // list is submitted; with no database there are no clips and so no clip URLs.
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/sports/highlights'));
+    assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/highlights/')));
+    // With nothing stored there is no fixture this site can say anything about, so
+    // no match URL is submitted: the route exists, the page is a shell.
+    assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/')));
+    // The dashboard's 96 team, player and hub URLs are one client-rendered document
+    // over the vendor's bundled sample data. They are reachable and labelled, but
+    // not submitted: crawl budget on this site is scarce and those pages carry
+    // nothing a reader could not get from the two hubs.
+    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')), 'no dashboard URLs are submitted');
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
     assert.ok(rows.every((row) => row.lastModified === undefined));
@@ -133,21 +149,199 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
 test('dynamic sitemap queries require public profiles, public groups and public published posts', async () => {
   await withEnv(publicEnv, async () => {
     const queries: Record<string, unknown> = {};
-    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => { queries[kind] = query; return [{ id: 7, createdAt: new Date('2026-01-01') }]; } }]));
-    const loaded = await loadMetadataModule('src/app/sitemap.ts', { db });
+    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => {
+      queries[kind] = query;
+      if (kind === 'user') {
+        // A member, the sports desk that authors anchor posts, and two of the five
+        // seeded demo accounts. Only the member is a person worth a crawl.
+        return [
+          { id: 7, createdAt: new Date('2026-01-01'), email: 'wanjiru@gmail.com' },
+          { id: 8, createdAt: new Date('2025-12-01'), email: SPORTS_DESK.email },
+          { id: 1, createdAt: new Date('2025-11-01'), email: 'alex@example.com' },
+          { id: 2, createdAt: new Date('2025-11-02'), email: 'maya@example.com' },
+        ];
+      }
+      return [{ id: 7, createdAt: new Date('2026-01-01') }];
+    } }]));
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db,
+      clipRefs: { ok: true, refs: [
+        { id: '50476535', at: new Date('2026-11-14T02:00:00.000Z') },
+        { id: '50464264', at: null },
+      ] },
+    });
     const rows = await loaded.default();
     assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/post/7'));
+    // Every stored clip is a page now, so every stored clip is a URL — and one
+    // whose time was never reported gets no invented modification date.
+    const dated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50476535');
+    assert.ok(dated, 'the clip has its own URL');
+    assert.equal(dated?.lastModified instanceof Date && dated.lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
+    const undated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50464264');
+    assert.ok(undated && undated.lastModified === undefined, 'no lastModified this site cannot support');
     assert.match(JSON.stringify(queries.user), /"profileVisibility":"public"/);
     assert.match(JSON.stringify(queries.group), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
-    assert.ok(rows.some((row) => row.url.endsWith('/search')));
-    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/nfl'));
+    // A member's profile is submitted; the desk and the seeded demo accounts are
+    // not, for the same reason Discover and the contacts rail leave them out.
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/profile/7'), 'the member is submitted');
+    for (const id of [8, 1, 2]) {
+      assert.ok(!rows.some((row) => row.url === `https://hyper.co.ke/profile/${id}`), `profile ${id} is not submitted`);
+    }
+    // Forms and the query surface stay reachable and indexable, but the site no
+    // longer asks for a visit it cannot justify.
+    for (const path of ['/login', '/signup', '/search']) {
+      assert.ok(!rows.some((row) => row.url.endsWith(path)), `${path} is not submitted`);
+    }
+    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
   });
 });
+test('a static route is dated by the newest thing it renders, and by nothing it cannot derive', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [{ id: 7, createdAt: new Date('2026-01-01T09:00:00.000Z'), email: 'wanjiru@gmail.com' }] } ])),
+      clipRefs: { ok: true, refs: [
+        // A clip with no reported time sorts last in the read, so the head of the
+        // list is the newest instant this site actually holds.
+        { id: '50476535', at: new Date('2026-11-14T02:00:00.000Z') },
+        { id: '50464264', at: null },
+      ] },
+    });
+    const rows = await loaded.default();
+    const modified = (path: string) => {
+      const row = rows.find((entry) => entry.url === `https://hyper.co.ke${path}`);
+      return row?.lastModified instanceof Date ? row.lastModified.toISOString() : row?.lastModified;
+    };
+    assert.equal(modified('/'), '2026-01-01T09:00:00.000Z', 'the homepage renders the newest post');
+    assert.equal(modified('/discover'), '2026-01-01T09:00:00.000Z');
+    assert.equal(modified('/groups'), '2026-01-01T09:00:00.000Z');
+    assert.equal(modified('/sports'), '2026-11-14T02:00:00.000Z', 'the boards render the newest stored clip');
+    assert.equal(modified('/sports/highlights'), '2026-11-14T02:00:00.000Z');
+    // Live odds carry no stored instant, and the about/privacy copy changes when a
+    // person edits it — neither is in the data, so neither gets a date.
+    assert.equal(modified('/sports/predictions'), undefined);
+    assert.equal(modified('/about'), undefined);
+    assert.equal(modified('/privacy'), undefined);
+  });
+});
+
+test('a stored highlight clip gets an indexable page of its own, with the clip as the shared image', async () => {
+  await withEnv(publicEnv, async () => {
+    const clip = {
+      id: '50476535', title: 'Gabe Perreault lights the lamp for Rangers',
+      description: 'Gabe Perreault lights the lamp for Rangers', duration: 48,
+      thumbnail: 'https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1114/f1136ae8.jpg',
+      mp4: 'https://espnmedia-cdn.akamaized.net/espn/media/16x9/wsc/2026/1114/f1136ae8.mp4',
+      hls: null, page: 'https://www.espn.com/video/clip/_/id/50476535', playable: true,
+      eventId: 'espn-nhl-401892706', eventName: 'Vancouver Canucks vs New York Rangers',
+      sport: 'ice-hockey', league: 'nhl', leagueName: 'National Hockey League',
+      home: 'Vancouver Canucks', away: 'New York Rangers', homeLogo: null, awayLogo: null,
+      startAt: '2026-11-14T02:00:00.000Z', status: 'live',
+    };
+    const loaded = await loadMetadataModule('src/app/sports/highlights/[clipId]/page.tsx', { clip });
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ clipId: '50476535' }) });
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/highlights/50476535');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'a stored clip is a real page, so it is indexable');
+    assert.match(String(metadata.title), /Gabe Perreault lights the lamp for Rangers/);
+    assert.match(String(metadata.title), /Vancouver Canucks vs New York Rangers/, 'the fixture names the clip for a reader who searched it');
+    // ESPN reported a description that was its own title again, so the page
+    // describes the clip from the facts ESPN did report — the fixture, the
+    // competition, the state and the length — rather than repeating the heading.
+    assert.equal(metadata.description, 'Vancouver Canucks vs New York Rangers · National Hockey League · Live · 0:48 clip — highlight video stored on Hyper.');
+    assert.equal(metadata.openGraph && 'type' in metadata.openGraph && metadata.openGraph.type, 'video.other');
+    const images = metadata.openGraph && 'images' in metadata.openGraph ? metadata.openGraph.images : [];
+    const first = Array.isArray(images) ? images[0] : undefined;
+    // An OG image is a bare URL, a URL object, or a descriptor carrying either.
+    const firstUrl = typeof first === 'string'
+      ? first
+      : first instanceof URL
+        ? first.toString()
+        : first && 'url' in first
+          ? String(first.url)
+          : undefined;
+    assert.equal(firstUrl, clip.thumbnail, 'the shared card is the moment, not the site logo');
+    assert.ok(JSON.stringify(metadata.keywords).includes('National Hockey League'));
+
+    // A clip this site has never stored is a 404, not a page with a heading and
+    // nothing under it: an index full of empty clip pages is worse than none.
+    const missing = await loadMetadataModule('src/app/sports/highlights/[clipId]/page.tsx', { clip: null });
+    await assert.rejects(
+      () => missing.generateMetadata({ params: Promise.resolve({ clipId: '99999999' }) }),
+      (error: unknown) => {
+        // Next signals notFound() with a digest in some versions and with an
+        // HTTP fallback error in others; both mean the page refused to render.
+        const text = `${(error as { digest?: string })?.digest ?? ''} ${(error as Error)?.message ?? ''}`;
+        return text.includes('NEXT_NOT_FOUND') || text.includes('NEXT_HTTP_ERROR_FALLBACK;404');
+      },
+    );
+  });
+});
+
+test('a fixture with stored clips gets one match URL, and only when the id reverses into a route that serves', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [] }])),
+      eventRefs: { ok: true, refs: [
+        // One fixture reported twice: a scoreboard carrying more than one
+        // competition appends to the stored id, but it is still one match page.
+        { eventId: 'espn-nhl-401892706', league: 'nhl', at: new Date('2026-11-14T02:00:00.000Z'), clips: 2 },
+        { eventId: 'espn-nhl-401892706-7', league: 'nhl', at: new Date('2026-11-13T02:00:00.000Z'), clips: 1 },
+        // A league slug with a dash in it must still reverse cleanly.
+        { eventId: 'espn-league-one-401880754', league: 'league-one', at: new Date('2026-11-12T02:00:00.000Z'), clips: 3 },
+        // An id this site cannot turn into a match URL is not submitted as one.
+        { eventId: 'not-namespaced', league: 'nhl', at: new Date('2026-11-11T02:00:00.000Z'), clips: 1 },
+        { eventId: 'espn-nba-', league: 'nba', at: null, clips: 1 },
+        { eventId: 'espn-nhl-401892707', league: '', at: null, clips: 1 },
+      ] },
+    });
+    const rows = await loaded.default();
+    const matches = rows.filter((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/'));
+    assert.deepEqual(matches.map((row) => row.url), [
+      'https://hyper.co.ke/sports/matches/nhl/401892706',
+      'https://hyper.co.ke/sports/matches/league-one/401880754',
+    ], 'one URL per fixture, newest first, and no guessed or unreversable ones');
+    assert.equal(matches[0].lastModified instanceof Date && matches[0].lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
+  });
+});
+
+test('a group or post address that is not an id describes nobody, and asks the database for nobody', async () => {
+  await withEnv(publicEnv, async () => {
+    // `Number.parseInt('1e3')` is 1 and `Number('0x10')` is 16, so both routes used
+    // to describe a real record under an address that names a different one — while
+    // the page, parsing its own way, showed something else again.
+    const asked: string[] = [];
+    const groupRow = { name: 'Real Group', description: 'A description.', coverPhoto: null, privacy: 'public' };
+    const groups = await loadMetadataModule('src/app/groups/[id]/page.tsx', {
+      db: { group: { findUnique: async (query: { where: { id: number } }) => { asked.push(`group:${query.where.id}`); return query.where.id === 1 ? groupRow : null; } } },
+    });
+    for (const id of ['1e3', 'abc', '0', '-2', '12abc']) {
+      const metadata = await groups.generateMetadata({ params: Promise.resolve({ id }) });
+      assert.equal(metadata.title, 'Community Group', `/groups/${id} describes no group`);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
+    }
+    const realGroup = await groups.generateMetadata({ params: Promise.resolve({ id: '1' }) });
+    assert.equal(realGroup.title, 'Real Group Community');
+    assert.deepEqual(asked, ['group:1'], 'only an address that is an id reaches the database');
+
+    const postRow = { content: 'A real post.', privacy: 'public', scheduledAt: null, user: { profileVisibility: 'public' }, group: null };
+    const posts = await loadMetadataModule('src/app/post/[id]/page.tsx', {
+      db: { post: { findUnique: async (query: { where: { id: number } }) => { asked.push(`post:${query.where.id}`); return query.where.id === 16 ? postRow : null; } } },
+    });
+    for (const id of ['0x10', '1e3', 'abc', '0', '12abc']) {
+      const metadata = await posts.generateMetadata({ params: Promise.resolve({ id }) });
+      assert.equal(metadata.title, 'Post', `/post/${id} describes no post`);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
+    }
+    const realPost = await posts.generateMetadata({ params: Promise.resolve({ id: '16' }) });
+    assert.equal(realPost.title, 'A real post.');
+    assert.deepEqual(asked, ['group:1', 'post:16'], 'and a hexadecimal address no longer reaches post 16');
+  });
+});
+
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
   await withEnv(publicEnv, async () => {
     const base = { content: 'PRIVATE-CONTENT-MARKER', privacy: 'public', user: { profileVisibility: 'public' }, group: null, scheduledAt: null };
@@ -178,6 +372,91 @@ test('private profile and group metadata are noindex and omit private descriptio
     }
   });
 });
+test('a profile is indexed only when it belongs to a person who chose to be public', async () => {
+  await withEnv(publicEnv, async () => {
+    const cases: { email: string | null; index: boolean; label: string }[] = [
+      { email: 'wanjiru@gmail.com', index: true, label: 'a member' },
+      // Exclusion needs positive evidence: an account with nothing to judge by is
+      // left in, because hiding a real member is the worse mistake.
+      { email: null, index: true, label: 'an account with no address to judge' },
+      { email: 'alex@example.com', index: false, label: 'a seeded demo person' },
+      { email: SPORTS_DESK.email, index: false, label: 'the sports desk that authors anchor posts' },
+    ];
+    for (const entry of cases) {
+      const row = { name: 'Reported Name', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: entry.email };
+      const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', { db: { user: { findUnique: async () => row } } });
+      const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, entry.index, entry.label);
+      // `follow` stays on either way, as it does for a private profile: what a page
+      // links to is judged for itself.
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.follow, true, entry.label);
+      // The address decides the flag and is never published.
+      if (entry.email) assert.ok(!JSON.stringify(metadata).includes(entry.email), `${entry.label}: the address stays out of the metadata`);
+      // And the page still describes itself as a profile either way — noindex is not
+      // a reason to strip the title a reader shares.
+      assert.equal(metadata.title, 'Reported Name on Hyper', entry.label);
+    }
+  });
+});
+
+test('profile metadata describes the member its URL names, and nobody else', async () => {
+  await withEnv(publicEnv, async () => {
+    const asked: unknown[] = [];
+    const row = { name: 'Member Twelve', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: 'member12@gmail.com' };
+    const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', {
+      db: { user: { findUnique: async (query: { where: { id: number } }) => { asked.push(query.where.id); return query.where.id === 12 ? row : null; } } },
+    });
+
+    // The old parse read `/profile/12abc` as member 12 and described them, while the
+    // page — parsing strictly — rendered someone else or nobody at all. One rule now.
+    const truncated = await loaded.generateMetadata({ params: Promise.resolve({ id: '12abc' }) });
+    assert.deepEqual(asked, [], 'an address that is not an id asks the database for nobody');
+    assert.equal(truncated.title, 'Profile on Hyper');
+    assert.equal(typeof truncated.robots === 'object' && truncated.robots?.index, false);
+
+    const real = await loaded.generateMetadata({ params: Promise.resolve({ id: '12' }) });
+    assert.deepEqual(asked, [12], 'and an address that is one asks for exactly that member');
+    assert.equal(real.title, 'Member Twelve on Hyper');
+    assert.equal(typeof real.robots === 'object' && real.robots?.index, true);
+
+    // An id that parses but names nobody is left to the page's 404; the metadata has
+    // nothing to describe and says so generically rather than inventing a person.
+    const missing = await loaded.generateMetadata({ params: Promise.resolve({ id: '999999' }) });
+    assert.equal(missing.title, 'Profile on Hyper');
+    assert.equal(typeof missing.robots === 'object' && missing.robots?.index, false);
+  });
+});
+
+test('a fixture this site holds clips for is server-verified, so its match page is indexable', async () => {
+  await withEnv(publicEnv, async () => {
+    const storedClip = {
+      id: '50476535', title: 'Gabe Perreault lights the lamp for Rangers', description: null, duration: 48,
+      thumbnail: 'https://espn.test/50476535.jpg', mp4: 'https://espn.test/50476535.mp4', hls: null,
+      page: 'https://www.espn.com/video/clip/_/id/50476535', playable: true,
+      eventId: 'espn-nhl-401892706', eventName: 'Vancouver Canucks vs New York Rangers',
+      sport: 'ice-hockey', league: 'nhl', leagueName: 'National Hockey League',
+      home: 'Vancouver Canucks', away: 'New York Rangers', homeLogo: null, awayLogo: null,
+      startAt: '2026-11-14T02:00:00.000Z', status: 'live',
+    };
+    const loaded = await loadMetadataModule('src/app/sports/matches/[league]/[eventId]/page.tsx', {
+      board: { status: 'unavailable', match: null },
+      eventClips: [storedClip],
+    });
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ league: 'nhl', eventId: '401892706' }) });
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/matches/nhl/401892706');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'the server can name the fixture, so the page is worth crawling');
+    assert.equal(metadata.title, 'Vancouver Canucks vs New York Rangers — National Hockey League highlights and match stats');
+    assert.equal(
+      metadata.description,
+      'Vancouver Canucks vs New York Rangers in the National Hockey League: 1 highlight clip stored from this fixture, plus ESPN-reported statistics, lineups and match events on Hyper.',
+      'the clip count is a fact this site can stand behind',
+    );
+    const images = metadata.openGraph && 'images' in metadata.openGraph ? metadata.openGraph.images : [];
+    const first = Array.isArray(images) ? images[0] : undefined;
+    assert.equal(typeof first === 'object' && first && 'url' in first ? String(first.url) : first, storedClip.thumbnail);
+  });
+});
+
 test('browser-first match metadata keeps its canonical and remains noindex until match data is server-verified', async () => {
   await withEnv(publicEnv, async () => {
     const fixture: { board: { status: string; match: { title: string } | null } } = { board: { status: 'ready', match: { title: 'Away Club vs Home Club' } } };

@@ -697,3 +697,391 @@
   - Not verified here: no clip has been stored by a live sweep against real ESPN,
     because this sandbox cannot reach it. The rules that decide what a reader sees
     when it can are the ones tested above.
+
+- Phase 27: Every stored clip and fixture is a page a crawler can reach ✅
+
+  Search Console reported **11 indexed pages, zero impressions, zero clicks** on a
+  site holding 667 real stored highlight clips. The audit ranked seven causes; this
+  phase is the first three, in order of what they cost.
+
+  - **The homepage told Google the site was a demo.** It rendered four sample cards
+    with copy reading "sample value while ESPN is unreachable" *while* the stored
+    index beside it held 667 fresh, playable clips. The cause was a budget, not the
+    data: `BOARD_BUDGET_MS = 900` raced a five-query `store.read()` on a pooled
+    connection and lost, and losing fell through to the live feed's samples. The
+    budget is `1_500` and, more importantly, the stored board is **remembered** for
+    15 minutes so the render never has to win a race it already won once — memory is
+    used only when nothing was stored, so "too few clips" still falls through and a
+    stale board can never be served over a fresher one. Verified by rendering the
+    homepage against a real server: stored clips, and no sample-card copy anywhere.
+  - **The clips had no URLs.** Each is now a page at `/sports/highlights/{id}`, keyed
+    by the same identity its post anchor uses so a card, its Like button and its
+    permalink cannot disagree about which clip they mean. Server-rendered from
+    storage, `VideoObject` + `BreadcrumbList`, the clip's thumbnail as the shared
+    image, 404 for anything never stored. Nothing on the page claims a fact ESPN did
+    not report: no thumbnail means no `VideoObject` rather than one with an invented
+    image, no reported length means no `duration`, and a description that is only the
+    title again is assembled from the fixture, competition, state and length instead.
+  - **Nothing linked to them, and the sitemap asked for the wrong pages.** Clip cards
+    gained a visible "Highlight page" link — the card-wide href goes to the fixture's
+    board and the menu's links exist in the DOM only once opened, so neither was
+    crawlable. The sitemap gained `/sports/highlights` plus one URL per stored clip,
+    and **dropped the dashboard's 96 hub/team/player URLs**: they are one
+    client-rendered document over the vendor's bundled sample data ("Sample
+    schedule"), and on a site this size they were spending nearly all of the crawl
+    budget on pages that say nothing true.
+  - **A match page is indexable only when this server can describe it.**
+    `/sports/matches/…` was `index: false` because it was a shell — a crawler arrived
+    at an `<h1>` reading "Loading match details…". But every stored clip carries the
+    fixture's own reported facts, so a fixture with clips now renders them as prose
+    before any browser fetch, links its clips, and marks itself `index: true` with a
+    `SportsEvent`. A fixture with nothing stored **stays exactly the shell it was** —
+    an index full of empty match pages would be worse than none. This is the long
+    tail: 595 finished fixtures with real stored clips.
+  - Two rules made the fixture page possible. `readEventClips` matches a stored
+    `event_id` exactly **or as a dash-separated prefix**, because the id is
+    namespaced (`espn-{league}-{id}`) and a scoreboard reporting more than one
+    competition appends to it — a clip's id cannot be turned into a match URL by
+    string surgery, and a match page finds its clips by prefix instead. And
+    `storedMatchReference` reverses that prefix into a match reference **only** when
+    the stored id really is this site's namespaced form, refusing anything else: a
+    match URL built from a guess is a 404, and a 404 a crawler meets is remembered
+    longer than a page it never found.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **52/52**, changed-file ESLint with 0 errors, `npm run build`,
+    and a real server rendering the clip page (`index, follow`, own canonical,
+    `og:type video.other`, both JSON-LD blocks), an unknown clip id at 404, a fixture
+    page with the fixture in its `<h1>` and no "Loading" text in the HTML, a
+    fixture with nothing stored still `noindex`, and a sitemap carrying one deduped
+    match URL and one per clip.
+  - Proved against a **real PostgreSQL 18 cluster**, which caught a bug no spec
+    could: `readStoredClip` passed `rows[0]` to `rowToMatchClip` without checking the
+    row existed, so every unknown clip id threw and was logged as a failed query —
+    a crawler asking for ids that do not exist is ordinary traffic, not an error.
+    Every seeded row was deleted afterwards.
+  - Not done here, deliberately: real editorial content and de-seeding the demo
+    profiles and groups (cause 6), and the minor sitemap cleanups — `/search`,
+    `/login`, `/signup` and the 13 demo profile URLs are still submitted, static
+    routes still carry no `lastModified`, and the homepage still links to
+    `Disallow:`ed `/messages/*` pages. Those are cause 7 and out of this phase's
+    scope.
+
+- Phase 28: The sitemap asks only for pages worth visiting, and dates them honestly ✅
+
+  Phase 27 filled the sitemap with 667 clips and 595 fixtures. This phase stops it
+  asking for the pages that were wasting the budget those needed, and gives the
+  static routes a date they can actually support. Both decisions live in
+  `src/lib/sitemap-rules.ts` as pure rules, because a sitemap is a request rather
+  than an inventory and the reasoning belongs somewhere testable.
+
+  - **`/login`, `/signup` and `/search` are no longer submitted.** Two forms with no
+    content, and a query surface that invites a crawler into an unbounded space of
+    near-duplicate result pages it can never finish. All three stay reachable and
+    indexable — nothing blocks them, the site just stopped asking.
+  - **Two kinds of account are not submitted.** The sports desk is a system account
+    that authors the anchor posts, and Discover, people suggestions and the homepage
+    contacts rail already leave it out; a sitemap is the same kind of list. The five
+    seeded demo accounts live at `example.com`, reserved by RFC 2606 and created by
+    both seeds in this repo with a password published in the repo — five people who
+    do not exist, with generated avatars and the same five bios as every other
+    installation of this app.
+  - The desk is recognised by `SPORTS_DESK.email`, not by its
+    `accountType = 'broadcaster'` column: the committed Prisma client predates that
+    column and this repository does not regenerate it, which is also why
+    `discover/page.tsx` filters on the address. **The rule excludes only on positive
+    evidence** — an account with no address, or at a domain the rule does not
+    recognise, is submitted, because dropping a real member's page is a worse mistake
+    than listing one account that should not have been there.
+  - **A page is dated by the newest thing it renders**: `/` and `/discover` by the
+    newest public post, `/groups` by the newest public group, `/sports` and
+    `/sports/highlights` by the newest stored clip. All three reads already return
+    newest-first, so dating a page costs no extra query. `/sports/predictions` gets
+    no date (live odds carry no stored instant) and neither do `/about` or `/privacy`
+    (their copy changes when a person edits it): a constant that has to be remembered
+    and bumped is a date that eventually lies, and a made-up `lastmod` is a lie in
+    the one file a crawler is told to trust.
+  - **The homepage stopped linking where robots.txt says not to.** `/messages`,
+    `/notifications` and `/settings` are disallowed, yet the anonymous homepage handed
+    a crawler seven links to them — both contacts rails linking every contact to
+    `/messages/{id}`, the rail's heading to `/messages`, and the desktop nav and
+    mobile tab bar to `/messages` and `/notifications` unconditionally. Those now
+    depend on whether anyone is signed in, following the pattern the nav's own
+    Profile link already used: to a member a contact is a conversation, to a visitor
+    it is a person, and the person's page is the one worth crawling. `MOBILE_TABS`
+    gained a `memberOnly` flag so the account tabs point at signing in for a visitor
+    while Home, People, Sports and Groups keep working for guests. The anonymous
+    homepage now contains **zero** links to a disallowed route.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **60/60** (8 new sitemap-rule specs plus extended sitemap
+    specs), changed-file ESLint with 0 errors, `npm run build`, and a running server
+    against the real seeded database: the three routes absent, **zero** of the five
+    demo profiles submitted, `/`, `/discover` and `/groups` dated by their own newest
+    row, `/sports*` undated while the clip table is empty rather than inventing a
+    date, and no disallowed link in the anonymous homepage.
+  - **Known gap at the time, closed in Phase 29:** the demo profiles were still
+    linked from the homepage rails, so a crawler could still discover them even
+    though the sitemap no longer submitted them — removing a URL from a sitemap
+    lowers its priority, it does not hide the page.
+
+- Phase 29: A profile that is not a person is not indexed ✅
+
+  Phase 28 stopped submitting the sports desk and the five seeded demo accounts, but
+  a sitemap is a request and not a barrier: those profiles are still linked from the
+  homepage rails, so a crawler still finds them and still has to decide what they
+  are. Five generated avatars with the same five bios as every other installation of
+  this app, presented as members of a community, is exactly the page that makes a
+  young domain look like a template.
+
+  - Those profile pages now carry `noindex, follow`. `follow` stays on, as it does
+    for a private profile, because what a page links to is judged for itself — a
+    noindexed author does not take their posts and groups with them.
+  - **One rule, two call sites.** Which accounts belong to the app rather than to a
+    person moved to `src/lib/app-accounts.ts`, and both the sitemap and the profile
+    page ask it, so they cannot drift into submitting a page they do not index or
+    indexing one they will not submit. The detection is unchanged: the desk by
+    `SPORTS_DESK.email`, the demo people by the RFC 2606 reserved domains both seeds
+    use.
+  - **It still excludes only on positive evidence.** An account with no address, or
+    one at a domain the rule does not recognise, is a person as far as it is
+    concerned — hiding a real member from search is a worse mistake than leaving one
+    account that should have been hidden. That was the whole reason this was an
+    owner's decision rather than a default, and it is why the rule was kept narrow
+    enough to be safe to apply: `someone@notexample.com` and `desk@hyper.co.ke` are
+    people, and only the desk's own address is the desk.
+  - The address decides the flag and is never published: the profile's `select`
+    gained `email` for this one comparison, and the specs assert it appears nowhere
+    in the metadata — not in the title, the description or the share cards.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **65/65** (5 new detection specs, 4 new profile-metadata
+    cases), changed-file ESLint with 0 errors, `npm run build`.
+  - Proved against a running server and real rows, in both directions: all five
+    seeded profiles serve `noindex, follow`; a temporary member at `gmail.com` and a
+    lookalike at `notexample.com` both serve `index, follow`; the desk's own address
+    serves `noindex`; and while those three rows existed the sitemap submitted
+    exactly the two members and neither app account — submitted and indexable agree.
+    All three temporary rows were deleted afterwards and the table is back to the
+    five it started with.
+  - Found while verifying, and fixed in Phase 30: `/profile/{id}` returned HTTP 200
+    for an id that did not exist.
+
+- Phase 30: A missing profile is a 404, not a 200 that says so ✅
+
+  Phase 29 made the profiles that are not people unindexable, and verifying it turned
+  up the defect underneath: `/profile/{id}` answered **HTTP 200** for an id that did
+  not exist, with a body reading "User not found." The metadata was honest —
+  `noindex`, generic title — but the status was not, so a crawler walking
+  `/profile/1..n` found an unbounded space of soft 404s, each one costing a visit and
+  saying nothing. Search Console reports those separately from real 404s, and a site
+  this young does not have visits to spare.
+
+  - **A missing row rendered a sample person.** With the database reachable and no
+    such member, ids 1–5 fell through to the hardcoded `DEMO_USERS_MAP` and rendered
+    five people who do not exist. A configured database that has no such member is a
+    404. The offline demo install, which has no database to ask, keeps its fallback —
+    this changes what a real deployment says about a missing member, not what a
+    laptop with no Postgres shows a developer.
+  - **`parseInt(id) || 1` guessed.** `/profile/abc` became member 1 and
+    `/profile/12abc` became member 12 — a page whose URL names nobody rendering
+    somebody, at 200, while the metadata parsed strictly and described nobody. The
+    two disagreed about which member was on screen. `profileIdFromRouteParam` is now
+    the one rule, in `src/lib/profile.ts`, and the page and its metadata both ask it:
+    an id is a positive integer written in full, or it is not an id. Padded,
+    truncated, signed, fractional, zero, negative and past-a-safe-integer addresses
+    are refused rather than guessed at, because a guess renders a real person under
+    an address that is not theirs.
+  - `notFound()` is called **outside** the page's `try` on purpose. It throws to
+    unwind, and the catch that handles a database outage would otherwise swallow it
+    into the demo fallback — a 404 that never reaches the client. A database outage
+    still falls back rather than 404ing, because a transient failure must not tell a
+    search engine a page does not exist.
+  - **`src/app/not-found.tsx` now exists**, because without it `notFound()` rendered
+    Next's bare fallback: an empty body, no navigation, nothing to read. It says what
+    happened, guesses honestly at why, and points at five pages that carry content —
+    and it answers every unmatched URL on the site as well as the five routes that
+    throw `notFound()`: profile, clip, match, team and athlete.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **69/69** (3 new route-rule specs plus a metadata spec proving
+    a non-id asks the database for nobody), changed-file ESLint with 0 errors,
+    `npm run build`. Then against a dev server **and a production build**:
+    `/profile/999999`, `/profile/abc`, `/profile/12abc`, `/profile/0`, `/profile/-5`
+    and a 25-digit id all answer 404, `/profile/1` and `/profile/5` still answer 200.
+  - **Known limitation, found by checking the production HTML rather than assuming:**
+    an unmatched URL server-renders the new 404 page in full, but a `notFound()`
+    thrown from a page streams — the HTML carries the flight payload, a client renders
+    the page on hydration, and a client without JavaScript sees an empty body. The
+    status is 404 either way, which is what a crawler acts on, and it is framework
+    behaviour for every thrown `notFound()` in this app rather than something these
+    routes do. Not browser-verified: this sandbox has no Chromium.
+  - Found while verifying, and fixed in Phase 31: `/post/{id}` and `/groups/{id}`
+    returned HTTP 200 for an id that did not exist — the same soft 404, two more
+    unbounded id spaces.
+
+- Phase 31: One rule for every id this site takes from a URL ✅
+
+  Phase 30 fixed `/profile/{id}`. The other two routes that take an id had the same
+  soft 404, and fixing them separately would have left three parsers — which is how
+  the site got here. Each was loose in its own direction: `parseInt(id) || 1` turned
+  `/profile/abc` into member 1, `Number(raw)` turned `/post/1e3` into post 1000 and
+  `/post/0x10` into post 16, and `parseInt(id)` handed `/groups/abc` a NaN that
+  Prisma rejected — and the rejection was logged as a database failure. A URL that
+  named nobody rendered somebody, at HTTP 200.
+
+  - **`routeIdFromParam` in `src/lib/route-id.ts` is now the one rule**, and all
+    three routes ask it in the page *and* in its metadata, so neither can describe a
+    record the other is about to say does not exist. It replaces
+    `profileIdFromRouteParam`, the same rule under a name that only fitted one of the
+    three. An id is a positive integer written in full, or it is not an id; padded,
+    truncated, signed, fractional, exponential, hexadecimal, zero, negative and
+    past-a-safe-integer segments are refused rather than guessed at, because a guess
+    renders a real person, group or post under an address that is not theirs.
+  - **`groups/[id]` was worse than soft.** It called `redirect('/groups')` for a
+    missing group *inside* the `try` whose `catch` turns a failure into a placeholder
+    page, so its own error handler caught the throw, logged
+    `[group detail] DB query failed: NEXT_REDIRECT`, and never redirected — the page
+    rendered "Demo Group" at 200. The lookup is its own step now and the 404 is
+    decided outside the `try`, because a throw that unwinds must not be caught by a
+    handler whose job is coping with a database that could not be reached. **"No such
+    group" is an answer; "the query failed" is a failure**, and only the second may
+    fall back. The same trap, avoided deliberately, is why Phase 30 put the profile's
+    `notFound()` outside its `try`.
+  - A missing group is a **404 rather than the redirect it used to attempt**: an
+    address that names no group is not another page's address, and a crawler told the
+    two are the same learns the wrong thing. A database outage still falls back at
+    200, because a transient failure must not tell a search engine a page does not
+    exist.
+  - `post/[id]` already told the two apart — it carries a `dbError` flag — so its 404
+    is precise: `hasDatabase && !dbError && !post`. Offline demo mode and an
+    unreachable database still render their own explanation at 200, which is all the
+    "This post isn't available" copy is for now.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **70/70** (a new spec proving a non-id asks the database for
+    nobody on both routes, and that `/post/0x10` no longer reaches post 16),
+    changed-file ESLint with 0 errors, `npm run build`. Then against a dev server
+    **and a production build**: `/profile/999999`, `/groups/999999`, `/groups/1e3`,
+    `/post/0x10` and `/post/12abc` all answer 404, while `/profile/1`, `/groups/1`
+    and `/post/1` still answer 200 and still render their own content — the group its
+    real name and members, the post its real text — rather than a placeholder. The
+    `NEXT_REDIRECT` warning is gone from the server log.
+  - With that, the routes that take a **record id** answer 404 for an id they do not
+    have: profile, group, post, clip, team and athlete. The three unbounded id spaces
+    a crawler could walk — `/profile/1..n`, `/groups/1..n`, `/post/1..n` — no longer
+    pay 200 for nothing.
+  - Found while verifying, and fixed in Phase 32: `/sports/matches/{league}/{eventId}`
+    answered HTTP 200 for an address that names no fixture — a soft 404 with the right
+    content and the wrong status, caused by the route's `loading.tsx` flushing the
+    status line before the page could throw. Left out of this phase deliberately: it is
+    a UX trade-off on a route outside its scope, and should not be decided silently.
+
+- Phase 32: The match page's 404 was already on the wire before the page could throw ✅
+
+  Phase 31's verification turned up a third soft 404 of the same class, on a route
+  whose own logic was already correct.
+
+  - `/sports/matches/{league}/{eventId}` answered **HTTP 200** for an address that
+    names no fixture — `/sports/matches/nhl/abc` and `/sports/matches/zzz/401892706`
+    both served the not-found body at 200, on a dev server **and** in a production
+    build. The right content with the wrong status, which is what a crawler records as
+    a real page.
+  - It was not the route's logic. `resolveMatch` throws `MatchInputError`, and both the
+    page and its metadata call `notFound()` exactly as the team and athlete routes do —
+    and those answer 404. `matchReference` even requires `/^[1-9]\d{0,19}$/`, the same
+    shape as Phase 31's `routeIdFromParam`, so this route always had the strict rule
+    and was only prevented from acting on it.
+  - **The cause was `loading.tsx`**, which this was the only route in the app to have.
+    It wraps the page in a streaming `<Suspense>` boundary, so the shell — and with it
+    the HTTP status line — is flushed *before* the page runs. By the time `notFound()`
+    throws, 200 is already on the wire and the not-found content arrives later in the
+    stream. The same flush-before-the-throw mechanism as the empty body of a thrown 404
+    (Phase 30), seen from the status side rather than the body side.
+  - Proven rather than assumed: moving the file aside turned all three bad addresses
+    into **404** while the real fixture stayed **200**; restoring it brought the 200s
+    back. That is what made the cause certain enough to act on.
+  - **Deleted.** Two options were on the table — delete the placeholder, or move the
+    stored-clip read into a `<Suspense>` child so the page settles the status before
+    anything flushes and keeps the instant line. The second is a restructure of Phase 27
+    code with 10 specs on it, for a placeholder that turned out to be redundant:
+    `SportsMatchDetails` renders the same "Loading ESPN match details…" copy itself
+    while it fetches (`src/components/SportsMatchDetails.tsx:153`), so the deleted file
+    only covered the interval before the server responds — an interval no other route on
+    this site covers either. Nothing in the repo referenced `loading.tsx` or its
+    component, and no spec asserted the placeholder, so deleting it changed no test.
+  - Verified: `npm run typecheck` 0, `npm run test:sports` **484/484**,
+    `npm run test:seo` **70/70**, `npm run build` exit 0. Then on a dev server **and a
+    production build**: `/sports/matches/nhl/abc`, `/sports/matches/zzz/401892706` and
+    `/sports/matches/nhl/000000000` all **404**, while `/sports/matches/nhl/401892706`
+    stays **200** and still renders `NHL match details | Hyper` with that loading copy
+    intact. Every other route re-checked and unchanged: profile, group, post, clip, team
+    and athlete 404 for an id they do not have, while `/`, `/sitemap.xml`,
+    `/profile/1`, `/groups/1`, `/post/1` and `/sports/highlights` all 200.
+  - With that, **every** id route on the site answers 404 for an id it does not have:
+    profile, group, post, clip, match, team and athlete. Still open at this point: the
+    *body* of a thrown 404 is empty on Next 16.2.6 here (the status is right; the
+    visible content reaches only the RSC payload). Investigated in Phase 33 — it is
+    upstream behaviour, deliberate, and not fixable in app code on any released Next.
+
+- Phase 33: A thrown 404 has no HTML body — investigated, and it is upstream's by design ✅
+
+  Every route that throws `notFound()` answers with the right **status** and an empty
+  **body**: `<div hidden=""></div>` plus a
+  `<template data-next-error-message="NEXT_HTTP_ERROR_FALLBACK;404">` marker, with the
+  404 page's own content only in the flight payload. An unmatched URL server-renders
+  `not-found.tsx` in full. Phase 30 recorded that as a limitation; this phase went and
+  checked whether it could be fixed.
+
+  - **Ruled out by measurement, not by reading:** throwing from `generateMetadata`
+    instead of the page does not help — the team and athlete routes already throw there
+    and their bodies are just as empty, and metadata runs before the page, so if
+    anything could settle the response early it would be that.
+  - **`experimental.globalNotFound` was implemented, enabled, measured and reverted.**
+    Next 16.2.6 does have the flag, and it does what its code says: the not-found tree is
+    built with `app/global-not-found.tsx` as the *layout* and an empty stub as the page,
+    so the document itself becomes the 404. Measured on a dev server **and in a
+    production build**: every thrown 404 still had **zero visible characters**, while an
+    unmatched URL — the one case that already worked — **lost its `<title>`**, because
+    with `global-not-found` present Next takes a 404's metadata from the page and an
+    unmatched URL has none. It also turned `/_not-found` dynamic at build time and added
+    a viewer read to every 404. No benefit, one regression, so the flag and the file were
+    both removed.
+  - **Upstream confirms the mechanism and that it is deliberate.** Per
+    vercel/next.js#100596: the flight phase emits an error chunk for the segment, Fizz's
+    `InnerLayoutRouter` re-throws `NEXT_HTTP_ERROR_FALLBACK;404` while turning that stream
+    into HTML, `HTTPAccessFallbackErrorBoundary` is a class-based boundary so streaming SSR
+    does not catch it and the SSR pass aborts, and `app-render`'s `catch` then sets
+    `res.statusCode = 404` and emits the `<html id="__next_error__">` recovery shell with
+    the original flight stream embedded so a client can render it. A fix landed in #92231
+    and was **reverted on purpose** in #94037 (merged 2026-05-26, so it is in 16.3 and
+    later too) to keep error pages resumable for parallel routes and `cacheComponents`.
+    The community PRs that would server-render the nearest boundary, #98455 and #98583,
+    are both still **open**; 16.4.6 shipped 2026-11-09 without them. **Upgrading is not a
+    fix** — this is current, intentional behaviour. See also #99287, #99793 and #85446
+    ("global-not-found not served for pages with dynamic paths"), which is precisely what
+    the measurement found.
+  - **Two workarounds exist in app code and neither was taken.** A `proxy.ts` rewriting a
+    malformed id to a path nothing matches, with `status: 404`, would give real HTML 404s
+    — an unmatched path is the one case that renders a full body — but only for addresses
+    that are not ids at all (`/profile/abc`, `/post/1e3`, `/sports/matches/nhl/abc`), not
+    for `/profile/999999`, the case a crawler walking an id space actually hits; covering
+    that too means a database existence check in request middleware, i.e. a second read on
+    the site's hottest routes and Prisma coupled into the proxy. Both put a new component
+    in front of **every** request to improve the body of a response whose status is
+    already correct, for readers who do not run JavaScript. Not worth it. If that
+    trade-off ever changes — a no-JavaScript audience that matters, or one of those PRs
+    merging — the rewrite half is cheap and can be added on its own.
+  - **What is true for readers today:** a browser that runs JavaScript gets the full 404
+    page, because the payload carries it — `404 — page not found`, `This page isn't here`,
+    `Discover people` and `Match highlights` are all present in the response for
+    `/profile/999999`, against zero visible characters in the `<body>`. A crawler gets the
+    404 status, which is the part it acts on. A client with JavaScript off gets a blank
+    404, the same as every other Next 16 app that throws `notFound()`. Still not
+    browser-verified: this sandbox has no Chromium.
+  - **One real bug came out of looking:** `not-found.tsx` rendered its own `<main>` inside
+    the root layout's `<main>` — invalid HTML, and two landmarks both claiming to be the
+    page for assistive technology. It is a `<div>` now, and a 404 has exactly one
+    `<main>`. Verified: `/this-route-does-not-exist` renders one `<main>`, three `<nav>`,
+    the full copy and its site title.
+  - Gates: `npm run typecheck` 0, `npm run test:sports` **484/484**, `npm run test:seo`
+    **70/70**, `npm run build` exit 0 — once with the flag on, to measure it, and again
+    after the revert. Statuses re-checked after the revert and unchanged:
+    `/profile/999999`, `/groups/999999`, `/post/999999`, `/sports/matches/nhl/abc`,
+    `/sports/teams/nhl/abc` and `/sports/highlights/99999999` all 404; `/profile/1` and
+    `/` 200.

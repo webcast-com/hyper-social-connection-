@@ -17,13 +17,20 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 
+/**
+ * The bottom tab bar. `memberOnly` marks the tabs whose route belongs to an
+ * account: a visitor who is not signed in has no inbox and no alerts, and both
+ * routes are disallowed in robots.txt, so for a visitor the tab points at signing
+ * in rather than at a route a crawler was told to skip and a reader would be turned
+ * away from anyway.
+ */
 const MOBILE_TABS = [
   { href: '/', label: 'Home', icon: Home, isActive: (p: string) => p === '/' },
   { href: '/discover', label: 'People', icon: Compass, isActive: (p: string) => p.startsWith('/discover') },
   { href: '/sports', label: 'Sports', icon: Trophy, isActive: (p: string) => p.startsWith('/sports') },
   { href: '/groups', label: 'Groups', icon: Users, isActive: (p: string) => p.startsWith('/groups') },
-  { href: '/messages', label: 'Messages', icon: MessageCircle, isActive: (p: string) => p.startsWith('/messages') },
-  { href: '/notifications', label: 'Notifications', shortLabel: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true },
+  { href: '/messages', label: 'Messages', icon: MessageCircle, isActive: (p: string) => p.startsWith('/messages'), memberOnly: true },
+  { href: '/notifications', label: 'Notifications', shortLabel: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true, memberOnly: true },
 ];
 
 export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; unreadCount?: number; isDemo?: boolean }) {
@@ -127,7 +134,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
 
           <Link
-            href="/messages"
+            href={user ? '/messages' : '/login'}
             className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/messages')
                 ? 'text-blue-600 dark:text-blue-400'
@@ -172,7 +179,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
 
           <Link
-            href="/notifications"
+            href={user ? '/notifications' : '/login'}
             className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/notifications')
                 ? 'text-blue-600 dark:text-blue-400'
@@ -259,10 +266,11 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           {MOBILE_TABS.map((tab) => {
             const active = tab.isActive(pathname);
             const Icon = tab.icon;
+            const href = tab.memberOnly && !user ? '/login' : tab.href;
             return (
               <Link
                 key={tab.href}
-                href={tab.href}
+                href={href}
                 aria-current={active ? 'page' : undefined}
                 aria-label={tab.label}
                 title={tab.label}

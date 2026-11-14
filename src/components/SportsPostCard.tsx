@@ -61,6 +61,7 @@ export default function SportsPostCard({
   details,
   likeLabel,
   footnote,
+  permalink,
   onExpand,
   menuLinks,
   anchor = null,
@@ -84,6 +85,15 @@ export default function SportsPostCard({
   likeLabel: string;
   /** Small print under the composer, when the card needs to be explicit. */
   footnote?: string;
+  /**
+   * A labelled link to the card's own page, when the subject has one.
+   *
+   * The card-wide link goes wherever the card goes — a fixture's board, a match —
+   * and the menu's links only exist in the DOM once a reader opens it, so neither
+   * is a way for a crawler to reach the page about this one subject. This is: one
+   * visible link, above the card-wide one so it stays clickable.
+   */
+  permalink?: { href: string; label: string };
   /** Lets the share menu offer the image in the post lightbox. The caller owns
       the lightbox, so it can expand whatever media the card is showing. */
   onExpand?: () => void;
@@ -227,6 +237,17 @@ export default function SportsPostCard({
           </div>
         ))}
       </dl>
+
+      {permalink ? (
+        <div className="relative z-10 px-4 py-1.5 text-xs">
+          <Link
+            href={permalink.href}
+            className="font-semibold text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {permalink.label}
+          </Link>
+        </div>
+      ) : null}
 
       {/* Post metrics row */}
       <div className="relative z-10 px-4 py-2 flex items-center justify-between gap-3 text-gray-500 dark:text-gray-400 text-xs border-b border-gray-100 dark:border-gray-700">

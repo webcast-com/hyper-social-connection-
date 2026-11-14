@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BOARD_BUDGET_MS, MIN_STORED_CLIPS, STORED_BOARD_CLIPS, STORED_BOARD_DAYS,
-  getHighlightsBoardForRender, storedHighlightsBoard, topUpBoardClips,
+  BOARD_BUDGET_MS, MIN_STORED_CLIPS, STORED_BOARD_CLIPS, STORED_BOARD_DAYS, STORED_BOARD_TTL_MS,
+  getHighlightsBoardForRender, resetStoredBoardMemory, storedHighlightsBoard, topUpBoardClips,
 } from '../../src/lib/highlights-board';
 import { INDEX_EMPTY, INDEX_UNAVAILABLE, type HighlightsIndexQuery, type HighlightsIndexSummary, type HighlightsStore, type IndexedHighlights } from '../../src/lib/highlights-index';
 import { nudgeHighlightsSweep, resetHighlightsSweep } from '../../src/lib/highlights-sweep';
@@ -215,7 +215,10 @@ test('the stored read is bounded, and asks for match clips only', async () => {
   assert.deepEqual(queries, [{ kind: 'match', days: STORED_BOARD_DAYS, limit: STORED_BOARD_CLIPS }]);
   assert.equal(STORED_BOARD_DAYS, 7, "the live feed's own window, so the card copy still holds");
   assert.equal(STORED_BOARD_CLIPS, 12, "the live feed's own cap");
-  assert.equal(BOARD_BUDGET_MS, 900);
+  // Raised from 900ms together with the lean read: five queries in 900ms on a
+  // cold pooled connection lost the race often enough that the homepage rendered
+  // sample cards over an index holding hundreds of real clips.
+  assert.equal(BOARD_BUDGET_MS, 1_500);
 });
 
 test('a stored board never shows more clips than the live one would', async () => {
@@ -351,4 +354,79 @@ test('the nudge starts a pass outside a request scope instead of throwing', asyn
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.ok(seen.length > 0, 'a pass was launched, and it asked the store first');
   resetHighlightsSweep();
+});
+
+/* ── Remembering a board storage answered once ─────────────────────────── */
+
+/**
+ * A render whose stored read runs past its budget used to fall through to the
+ * live feed, and when ESPN's per-event video endpoint answered with no videos the
+ * homepage rendered sample cards — over an index that was holding hundreds of
+ * real clips. That is the copy a crawler caches, so an instance that has already
+ * read a good board serves it again rather than degrading to samples.
+ */
+
+test('a read that misses its budget serves the board this instance already read', async () => {
+  resetStoredBoardMemory();
+  const good = fakeStore({ read: { match: storedClips(), sourceUrl: 'https://espn.test/scoreboard' } });
+  const first = await getHighlightsBoardForRender({ store: good.store, useMemory: true });
+  assert.equal(first.provenance, 'stored');
+
+  // A cold connection: the query never lands inside the budget.
+  const slow = fakeStore({ read: { match: storedClips(), delayMs: 500 } });
+  const second = await getHighlightsBoardForRender({ store: slow.store, budgetMs: 20, useMemory: true });
+  assert.equal(second.status, 'live', 'not the sample board the live feed ends on');
+  assert.equal(second.provenance, 'stored');
+  assert.deepEqual(second.clips.map((clip) => clip.id), first.clips.map((clip) => clip.id), 'the clips it remembered');
+  resetStoredBoardMemory();
+});
+
+test('an answer of "too few clips" is the truth, so memory does not override it', async () => {
+  resetStoredBoardMemory();
+  const good = fakeStore({ read: { match: storedClips() } });
+  await getHighlightsBoardForRender({ store: good.store, useMemory: true });
+
+  // The index really was emptied: a read that answers with one clip must go on to
+  // the live feed rather than resurrect a board that no longer exists.
+  const emptied = fakeStore({ read: { match: storedClips().slice(0, 1) } });
+  const board = await getHighlightsBoardForRender({ store: emptied.store, useMemory: true });
+  assert.notEqual(board.provenance, 'stored');
+  assert.ok(board.clips.length >= 1, 'it fell through to the live feed');
+  resetStoredBoardMemory();
+});
+
+test('a thrown read degrades to the remembered board too', async () => {
+  resetStoredBoardMemory();
+  const good = fakeStore({ read: { match: storedClips() } });
+  await getHighlightsBoardForRender({ store: good.store, useMemory: true });
+  const broken = fakeStore({ read: { throws: true } });
+  const board = await getHighlightsBoardForRender({ store: broken.store, useMemory: true });
+  assert.equal(board.provenance, 'stored', 'a lost connection is not a lost index');
+  resetStoredBoardMemory();
+});
+
+test('memory is off for an injected store unless the test asks for it', async () => {
+  resetStoredBoardMemory();
+  const good = fakeStore({ read: { match: storedClips() } });
+  await getHighlightsBoardForRender({ store: good.store, useMemory: true });
+  const slow = fakeStore({ read: { match: storedClips(), delayMs: 500 } });
+  // Without useMemory this fake cannot inherit the board the one above remembered,
+  // which is what keeps every other spec in this file deterministic.
+  const board = await getHighlightsBoardForRender({ store: slow.store, budgetMs: 20 });
+  assert.notEqual(board.provenance, 'stored');
+  resetStoredBoardMemory();
+});
+
+test('a remembered board expires rather than being served indefinitely', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  resetStoredBoardMemory();
+  const good = fakeStore({ read: { match: storedClips() } });
+  await getHighlightsBoardForRender({ store: good.store, useMemory: true });
+  const slow = fakeStore({ read: { match: storedClips(), delayMs: 500 } });
+
+  t.mock.timers.tick(STORED_BOARD_TTL_MS - 1_000);
+  assert.equal((await getHighlightsBoardForRender({ store: slow.store, budgetMs: 20, useMemory: true })).provenance, 'stored', 'still fresh');
+  t.mock.timers.tick(2_000);
+  assert.notEqual((await getHighlightsBoardForRender({ store: slow.store, budgetMs: 20, useMemory: true })).provenance, 'stored', 'past its TTL it is forgotten');
+  resetStoredBoardMemory();
 });
