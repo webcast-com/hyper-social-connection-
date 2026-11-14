@@ -697,3 +697,71 @@
   - Not verified here: no clip has been stored by a live sweep against real ESPN,
     because this sandbox cannot reach it. The rules that decide what a reader sees
     when it can are the ones tested above.
+
+- Phase 27: Every stored clip and fixture is a page a crawler can reach ✅
+
+  Search Console reported **11 indexed pages, zero impressions, zero clicks** on a
+  site holding 667 real stored highlight clips. The audit ranked seven causes; this
+  phase is the first three, in order of what they cost.
+
+  - **The homepage told Google the site was a demo.** It rendered four sample cards
+    with copy reading "sample value while ESPN is unreachable" *while* the stored
+    index beside it held 667 fresh, playable clips. The cause was a budget, not the
+    data: `BOARD_BUDGET_MS = 900` raced a five-query `store.read()` on a pooled
+    connection and lost, and losing fell through to the live feed's samples. The
+    budget is `1_500` and, more importantly, the stored board is **remembered** for
+    15 minutes so the render never has to win a race it already won once — memory is
+    used only when nothing was stored, so "too few clips" still falls through and a
+    stale board can never be served over a fresher one. Verified by rendering the
+    homepage against a real server: stored clips, and no sample-card copy anywhere.
+  - **The clips had no URLs.** Each is now a page at `/sports/highlights/{id}`, keyed
+    by the same identity its post anchor uses so a card, its Like button and its
+    permalink cannot disagree about which clip they mean. Server-rendered from
+    storage, `VideoObject` + `BreadcrumbList`, the clip's thumbnail as the shared
+    image, 404 for anything never stored. Nothing on the page claims a fact ESPN did
+    not report: no thumbnail means no `VideoObject` rather than one with an invented
+    image, no reported length means no `duration`, and a description that is only the
+    title again is assembled from the fixture, competition, state and length instead.
+  - **Nothing linked to them, and the sitemap asked for the wrong pages.** Clip cards
+    gained a visible "Highlight page" link — the card-wide href goes to the fixture's
+    board and the menu's links exist in the DOM only once opened, so neither was
+    crawlable. The sitemap gained `/sports/highlights` plus one URL per stored clip,
+    and **dropped the dashboard's 96 hub/team/player URLs**: they are one
+    client-rendered document over the vendor's bundled sample data ("Sample
+    schedule"), and on a site this size they were spending nearly all of the crawl
+    budget on pages that say nothing true.
+  - **A match page is indexable only when this server can describe it.**
+    `/sports/matches/…` was `index: false` because it was a shell — a crawler arrived
+    at an `<h1>` reading "Loading match details…". But every stored clip carries the
+    fixture's own reported facts, so a fixture with clips now renders them as prose
+    before any browser fetch, links its clips, and marks itself `index: true` with a
+    `SportsEvent`. A fixture with nothing stored **stays exactly the shell it was** —
+    an index full of empty match pages would be worse than none. This is the long
+    tail: 595 finished fixtures with real stored clips.
+  - Two rules made the fixture page possible. `readEventClips` matches a stored
+    `event_id` exactly **or as a dash-separated prefix**, because the id is
+    namespaced (`espn-{league}-{id}`) and a scoreboard reporting more than one
+    competition appends to it — a clip's id cannot be turned into a match URL by
+    string surgery, and a match page finds its clips by prefix instead. And
+    `storedMatchReference` reverses that prefix into a match reference **only** when
+    the stored id really is this site's namespaced form, refusing anything else: a
+    match URL built from a guess is a 404, and a 404 a crawler meets is remembered
+    longer than a page it never found.
+  - Verified: `npm run typecheck`, `npm run test:sports` **484/484**,
+    `npm run test:seo` **52/52**, changed-file ESLint with 0 errors, `npm run build`,
+    and a real server rendering the clip page (`index, follow`, own canonical,
+    `og:type video.other`, both JSON-LD blocks), an unknown clip id at 404, a fixture
+    page with the fixture in its `<h1>` and no "Loading" text in the HTML, a
+    fixture with nothing stored still `noindex`, and a sitemap carrying one deduped
+    match URL and one per clip.
+  - Proved against a **real PostgreSQL 18 cluster**, which caught a bug no spec
+    could: `readStoredClip` passed `rows[0]` to `rowToMatchClip` without checking the
+    row existed, so every unknown clip id threw and was logged as a failed query —
+    a crawler asking for ids that do not exist is ordinary traffic, not an error.
+    Every seeded row was deleted afterwards.
+  - Not done here, deliberately: real editorial content and de-seeding the demo
+    profiles and groups (cause 6), and the minor sitemap cleanups — `/search`,
+    `/login`, `/signup` and the 13 demo profile URLs are still submitted, static
+    routes still carry no `lastModified`, and the homepage still links to
+    `Disallow:`ed `/messages/*` pages. Those are cause 7 and out of this phase's
+    scope.

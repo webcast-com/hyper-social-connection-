@@ -29,6 +29,24 @@ export function matchReference(league: string, id: unknown): MatchReference | un
   const eventId = typeof id === 'number' && Number.isSafeInteger(id) ? String(id) : typeof id === 'string' ? id : '';
   return /^[1-9]\d{0,19}$/.test(eventId) ? { league, eventId } : undefined;
 }
+/**
+ * The match reference a stored event id names, or nothing when it does not name one.
+ *
+ * A stored clip's event id is this site's own namespaced form — `espn-{league}-{id}`
+ * — and a scoreboard reporting more than one competition for a fixture appends the
+ * competition to it, so the ESPN event id is the run of digits after the prefix for
+ * the league the row itself reports. Anything else is refused: a match URL built
+ * from a guess is a 404, and a 404 a crawler meets is remembered longer than a page
+ * it never found.
+ */
+export function storedMatchReference(league: string, eventId: string | null | undefined): MatchReference | undefined {
+  if (!league || !eventId) return undefined;
+  const prefix = `espn-${league}-`;
+  if (!eventId.startsWith(prefix)) return undefined;
+  const digits = /^\d+/.exec(eventId.slice(prefix.length))?.[0];
+  return digits ? matchReference(league, digits) : undefined;
+}
+
 export function matchHref(reference: MatchReference) {
   return `/sports/matches/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.eventId)}`;
 }

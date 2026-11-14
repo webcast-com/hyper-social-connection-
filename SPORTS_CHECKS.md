@@ -258,6 +258,106 @@ the first batch showing the two newest as cards at their slots ahead of 24 more,
 both "Match highlights" sections still showing their own four, and the page at 200
 with no trace of them once the seed was removed.
 
+## Highlights and fixtures as pages of their own
+
+The site stores every clip it has ever read — production holds 667, each with a
+title, a description, a fixture, a competition and a length — and all of it sat
+behind one filterable list at `/sports/highlights`. There was no URL for a crawler
+to reach, so none of it could rank for the search that brings a reader to a
+highlight ("Canucks vs Rangers highlights"), and nothing on the site was eligible
+for a video result. Search Console reported 11 indexed pages and no impressions.
+
+### One URL per stored clip
+
+`/sports/highlights/{clipId}` is keyed by `highlightAnchorId` — the same identity
+the clip's post anchor uses — so a card, its Like button and its permalink cannot
+disagree about which clip they mean. The page is server-rendered from storage and
+makes no ESPN request:
+
+- `generateMetadata` with `type: 'video.other'`, the clip's thumbnail as the shared
+  image, and keywords from the league, fixture and both sides.
+- `VideoObject` + `BreadcrumbList` structured data, `<`-escaped as the homepage does.
+- `LinkMediaPlayer` with `preload="metadata"` — one page whose whole subject is one
+  video, so the poster loads but the bytes do not until the reader plays it. When
+  the stored row is unplayable the page says so in prose and shows the thumbnail as
+  an image rather than rendering a player that cannot play.
+- A clip this site has never stored is a **404**, not a heading with nothing under it.
+
+**Nothing on the page claims a fact ESPN did not report.** A clip with no thumbnail
+gets no `VideoObject` at all rather than one with an invented image; a clip with no
+reported length gets no `duration`; `iso8601Duration` returns null for a
+non-finite or non-positive value and drops fractions rather than rounding them; a
+clip whose stored `description` is only its `title` again gets a description
+assembled from the fixture, competition, match state and length; and a clip with no
+reported time gets no `lastmod` in the sitemap.
+
+`clipPageTitle` appends the fixture only when the title does not already carry it:
+a clip titled "Perreault lights the lamp" becomes "Perreault lights the lamp —
+Vancouver Canucks vs New York Rangers highlights", while "Canucks hold off Rangers"
+is left alone because it already names the fixture. Each side's **last word** counts
+as naming it, and a clip ESPN gave no title for is headed by its fixture rather than
+by a placeholder that would repeat the word "highlights" and name nothing.
+
+### Discovery, because a page nothing links to is a page nobody finds
+
+- The sitemap lists `/sports/highlights` (hourly, 0.8) and one URL per stored clip
+  ref (weekly, 0.7), newest first, capped at `SITEMAP_CLIPS = 1000` per query with
+  `lastModified` only where a stored time exists.
+- The dashboard's **96** hub, team and player URLs are **no longer submitted**. They
+  are one client-rendered document over the vendor's bundled sample data — the pages
+  say "Sample schedule" — and asking a crawler to spend 96 of its visits on a site
+  this size left little for pages carrying something true. `dashboardSitemapRoutes()`
+  is kept for when they do.
+- A highlight card now carries a visible **"Highlight page"** link (`SportsPostCard`'s
+  new optional `permalink`). The card-wide link goes to the fixture's board and the
+  menu's links exist in the DOM only once a reader opens it, so neither was a way for
+  a crawler to reach the clip.
+
+### A match page is indexable only when this server can describe it
+
+`/sports/matches/{league}/{eventId}` used to be a shell: it rendered an empty board
+and fetched in the browser, so a crawler arrived at an `<h1>` saying "Loading match
+details…" and nothing else — which is why the route was `index: false`, the honest
+setting for a shell. But every stored clip carries the fixture's own reported facts,
+so a fixture with stored clips has something true to say before any browser fetch:
+
+- `readEventClips` matches a stored `event_id` **exactly or as a dash-separated
+  prefix**, because the id is namespaced (`espn-{league}-{id}`) and a scoreboard
+  reporting more than one competition appends the competition id to it. A clip's id
+  therefore cannot be turned into a match URL by string surgery, and a match page
+  finds its clips by prefix instead.
+- `matchPageFacts` takes each fact from the newest stored clip that has it, so a
+  later clip can supply a detail an earlier one did not.
+- The page renders the fixture's facts as prose, links its stored clips, marks the
+  page `index: true` with a `SportsEvent` + `BreadcrumbList`, and passes the fixture
+  name down as `knownTitle` so the page's own `<h1>` names the fixture in the HTML a
+  crawler reads. The fetched title still wins once it lands.
+- **A fixture with no stored clips stays exactly the shell it was** — `noindex`, no
+  stored section, no `SportsEvent`. An index full of empty match pages would be
+  worse than none.
+- Fixture URLs enter the sitemap only when `storedMatchReference` reverses the stored
+  id into a reference the route will actually serve, deduplicated so two stored forms
+  of one fixture are one URL. Submitting a URL that 404s costs the crawl budget it
+  was meant to earn.
+
+### Verification
+
+`npm run typecheck`, `npm run test:sports` **484/484**, `npm run test:seo` **52/52**
+(21 metadata/sitemap + 12 clip-page rules + 10 match-page rules + the pre-existing
+dashboard specs), changed-file ESLint with 0 errors, `npm run build`.
+
+The three new index reads were proved against a **real PostgreSQL 18 cluster**, which
+caught a bug no spec could: `readStoredClip` passed `rows[0]` to `rowToMatchClip`
+without checking the row existed, so every unknown clip id threw
+`Cannot read properties of undefined (reading 'status')` and was logged as a failed
+query — a crawler asking for ids that do not exist is ordinary traffic, not an error.
+Every seeded row was deleted afterwards. Rendering was then checked against a real
+server: the clip page 200s with `index, follow`, its own canonical, `og:type
+video.other`, the clip thumbnail as the shared image and both JSON-LD blocks; an
+unknown clip id 404s; the fixture page 200s with the fixture in its `<h1>` and no
+"Loading" text in the HTML, while a fixture with nothing stored 200s as `noindex`;
+and the homepage renders stored clips with **no** sample-card copy anywhere in it.
+
 ## Verification
 
 ```sh

@@ -974,6 +974,55 @@ export async function readEventClips(eventId: string, limit: number = EVENT_CLIP
   }
 }
 
+/** One fixture this site holds clips for, as a list of URLs needs it. */
+export type EventRef = { eventId: string; league: string; at: Date | null; clips: number };
+
+export type EventRefsRead = {
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  refs: EventRef[];
+};
+
+/** How many fixtures one read may return. Bounds one grouped query, not the index. */
+export const MAX_EVENT_REFS = 2_000;
+
+/**
+ * The fixtures this site holds clips for, newest first, with how many clips each has.
+ *
+ * A fixture with stored clips is a fixture this site can say something true about
+ * without a browser, so it is a fixture worth a URL in the sitemap. One grouped
+ * query, and only the three columns a URL and a `lastmod` need.
+ */
+export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promise<EventRefsRead> {
+  const empty: EventRefsRead = { ok: false, reason: 'no-database', refs: [] };
+  if (!hasDatabase) return empty;
+  const asked = Number.isFinite(limit) ? Math.trunc(limit) : MAX_EVENT_REFS;
+  const bounded = Math.max(1, Math.min(MAX_EVENT_REFS, asked || MAX_EVENT_REFS));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<{ event_id: string | null; league: string | null; occurred_at: Date | null; clips: number }[]>(
+      `SELECT "event_id", "league", max("occurred_at") AS "occurred_at", count(*)::int AS "clips"
+         FROM "sports_highlight_clips"
+        WHERE "kind" = 'match' AND "event_id" IS NOT NULL AND "league" IS NOT NULL
+        GROUP BY "event_id", "league"
+        ORDER BY max("occurred_at") DESC NULLS LAST, "event_id" DESC
+        LIMIT $1`,
+      bounded,
+    );
+    const refs: EventRef[] = [];
+    for (const row of rows) {
+      const eventId = typeof row.event_id === 'string' ? row.event_id.trim() : '';
+      const league = typeof row.league === 'string' ? row.league.trim() : '';
+      // A row that cannot name both halves of a match URL is not a URL.
+      if (!eventId || !league) continue;
+      refs.push({ eventId, league, at: row.occurred_at instanceof Date ? row.occurred_at : null, clips: Number.isFinite(row.clips) ? row.clips : 0 });
+    }
+    return { ok: true, refs };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
+}
+
 /**
  * The newest stored match clips as identities and timestamps, for a sitemap.
  *

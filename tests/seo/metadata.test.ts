@@ -38,6 +38,7 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
         export const readRecentClipRefs = async () => fixture.clipRefs ?? { ok: true, refs: [] };
         export const readStoredClip = async () => ({ ok: true, clip: fixture.clip ?? null });
         export const readEventClips = async () => ({ ok: true, clips: fixture.eventClips ?? [] });
+        export const readRecentEventRefs = async () => fixture.eventRefs ?? { ok: true, refs: [] };
         export default function Component() { return null; }
       `, loader: 'js' }));
     } }],
@@ -131,6 +132,9 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
     // list is submitted; with no database there are no clips and so no clip URLs.
     assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/sports/highlights'));
     assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/highlights/')));
+    // With nothing stored there is no fixture this site can say anything about, so
+    // no match URL is submitted: the route exists, the page is a shell.
+    assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/')));
     // The dashboard's 96 team, player and hub URLs are one client-rendered document
     // over the vendor's bundled sample data. They are reachable and labelled, but
     // not submitted: crawl budget on this site is scarce and those pages carry
@@ -224,6 +228,33 @@ test('a stored highlight clip gets an indexable page of its own, with the clip a
   });
 });
 
+test('a fixture with stored clips gets one match URL, and only when the id reverses into a route that serves', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [] }])),
+      eventRefs: { ok: true, refs: [
+        // One fixture reported twice: a scoreboard carrying more than one
+        // competition appends to the stored id, but it is still one match page.
+        { eventId: 'espn-nhl-401892706', league: 'nhl', at: new Date('2026-11-14T02:00:00.000Z'), clips: 2 },
+        { eventId: 'espn-nhl-401892706-7', league: 'nhl', at: new Date('2026-11-13T02:00:00.000Z'), clips: 1 },
+        // A league slug with a dash in it must still reverse cleanly.
+        { eventId: 'espn-league-one-401880754', league: 'league-one', at: new Date('2026-11-12T02:00:00.000Z'), clips: 3 },
+        // An id this site cannot turn into a match URL is not submitted as one.
+        { eventId: 'not-namespaced', league: 'nhl', at: new Date('2026-11-11T02:00:00.000Z'), clips: 1 },
+        { eventId: 'espn-nba-', league: 'nba', at: null, clips: 1 },
+        { eventId: 'espn-nhl-401892707', league: '', at: null, clips: 1 },
+      ] },
+    });
+    const rows = await loaded.default();
+    const matches = rows.filter((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/'));
+    assert.deepEqual(matches.map((row) => row.url), [
+      'https://hyper.co.ke/sports/matches/nhl/401892706',
+      'https://hyper.co.ke/sports/matches/league-one/401880754',
+    ], 'one URL per fixture, newest first, and no guessed or unreversable ones');
+    assert.equal(matches[0].lastModified instanceof Date && matches[0].lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
+  });
+});
+
 test('public posts get a dedicated article canonical and private/unpublished posts do not leak content', async () => {
   await withEnv(publicEnv, async () => {
     const base = { content: 'PRIVATE-CONTENT-MARKER', privacy: 'public', user: { profileVisibility: 'public' }, group: null, scheduledAt: null };
@@ -254,6 +285,36 @@ test('private profile and group metadata are noindex and omit private descriptio
     }
   });
 });
+test('a fixture this site holds clips for is server-verified, so its match page is indexable', async () => {
+  await withEnv(publicEnv, async () => {
+    const storedClip = {
+      id: '50476535', title: 'Gabe Perreault lights the lamp for Rangers', description: null, duration: 48,
+      thumbnail: 'https://espn.test/50476535.jpg', mp4: 'https://espn.test/50476535.mp4', hls: null,
+      page: 'https://www.espn.com/video/clip/_/id/50476535', playable: true,
+      eventId: 'espn-nhl-401892706', eventName: 'Vancouver Canucks vs New York Rangers',
+      sport: 'ice-hockey', league: 'nhl', leagueName: 'National Hockey League',
+      home: 'Vancouver Canucks', away: 'New York Rangers', homeLogo: null, awayLogo: null,
+      startAt: '2026-11-14T02:00:00.000Z', status: 'live',
+    };
+    const loaded = await loadMetadataModule('src/app/sports/matches/[league]/[eventId]/page.tsx', {
+      board: { status: 'unavailable', match: null },
+      eventClips: [storedClip],
+    });
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ league: 'nhl', eventId: '401892706' }) });
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/matches/nhl/401892706');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'the server can name the fixture, so the page is worth crawling');
+    assert.equal(metadata.title, 'Vancouver Canucks vs New York Rangers — National Hockey League highlights and match stats');
+    assert.equal(
+      metadata.description,
+      'Vancouver Canucks vs New York Rangers in the National Hockey League: 1 highlight clip stored from this fixture, plus ESPN-reported statistics, lineups and match events on Hyper.',
+      'the clip count is a fact this site can stand behind',
+    );
+    const images = metadata.openGraph && 'images' in metadata.openGraph ? metadata.openGraph.images : [];
+    const first = Array.isArray(images) ? images[0] : undefined;
+    assert.equal(typeof first === 'object' && first && 'url' in first ? String(first.url) : first, storedClip.thumbnail);
+  });
+});
+
 test('browser-first match metadata keeps its canonical and remains noindex until match data is server-verified', async () => {
   await withEnv(publicEnv, async () => {
     const fixture: { board: { status: string; match: { title: string } | null } } = { board: { status: 'ready', match: { title: 'Away Club vs Home Club' } } };
