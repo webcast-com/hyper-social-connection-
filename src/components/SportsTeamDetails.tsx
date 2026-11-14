@@ -133,7 +133,18 @@ function SquadRow({ person, league }: { person: TeamRosterEntry; league: string 
   </li>;
 }
 
-export default function SportsTeamDetails({ initial, reference, returnTo }: { initial: TeamBoard; reference: { league: string; teamId: string }; returnTo?: string }) {
+export default function SportsTeamDetails({ initial, reference, returnTo, knownTitle }: {
+  initial: TeamBoard;
+  reference: { league: string; teamId: string };
+  returnTo?: string;
+  /**
+   * The team's name as the server already knows it, from clips this site holds.
+   * Same contract as `SportsMatchDetails`: used only until the browser's own read
+   * replaces it, so the heading in the served HTML names the team instead of
+   * saying it is still loading something the server already knew.
+   */
+  knownTitle?: string | null;
+}) {
   const [board, setBoard] = useState(initial);
   const [section, setSection] = useState<Section>('overview');
   const [loading, setLoading] = useState(!initial.team);
@@ -205,7 +216,7 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
       <div className="mt-3 flex min-w-0 items-start gap-4">
         <Crest url={team?.logo ?? null} name={team?.name ?? 'Team'} />
         <div className="min-w-0">
-          <h1 className="break-words text-xl font-black sm:text-3xl">{team?.name ?? (loading ? 'Loading team details…' : 'Team details unavailable')}</h1>
+          <h1 className="break-words text-xl font-black sm:text-3xl">{team?.name ?? knownTitle ?? (loading ? 'Loading team details…' : 'Team details unavailable')}</h1>
           {team && <p className="mt-2 break-words text-sm text-gray-600 dark:text-gray-300">
             {[team.standing, team.record ? `Record ${team.record}` : null, team.abbreviation, team.active === false ? 'Reported inactive' : null].filter(Boolean).join(' · ') || 'No record reported yet'}
           </p>}

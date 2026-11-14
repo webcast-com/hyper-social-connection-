@@ -64,6 +64,14 @@ export type SportsHighlightClip = {
   awayLogo: string | null;
   startAt: string | null;
   status: SportsHighlightStatus;
+  /**
+   * ESPN's team ids for each side, when the fixture reported them. Optional:
+   * a clip found before these were captured has none, and a race-style event
+   * has no two sides to id. Absent is not an error — it only means a team page
+   * cannot be answered from this row.
+   */
+  homeId?: string | null;
+  awayId?: string | null;
 };
 
 /** The match a clip belongs to, so the card can show the fixture. */
@@ -79,6 +87,9 @@ export type SportsHighlightContext = {
   awayLogo: string | null;
   startAt: string | null;
   status: SportsHighlightStatus;
+  /** ESPN's team ids for each side, when reported. See `SportsHighlightClip`. */
+  homeId?: string | null;
+  awayId?: string | null;
 };
 
 const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
@@ -288,6 +299,8 @@ export function normalizeHighlights(payload: unknown, context: SportsHighlightCo
       awayLogo: context.awayLogo,
       startAt: context.startAt,
       status: context.status,
+      homeId: context.homeId ?? null,
+      awayId: context.awayId ?? null,
     });
   }
 

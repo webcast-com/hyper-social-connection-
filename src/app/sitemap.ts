@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { prisma, hasDatabase } from "@/lib/prisma";
 import { getSiteUrl } from "@/lib/site-url";
-import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
+import { readRecentClipRefs, readRecentEventRefs, readRecentTeamRefs, type ClipRef, type EventRef, type TeamRef } from "@/lib/highlights-index";
 import { clipHref } from "@/lib/highlight-clip";
 import { matchHref, storedMatchReference } from "@/lib/espn-match";
+import { storedTeamReference, teamHref } from "@/lib/espn-team";
 import { isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
 
 /**
@@ -22,6 +23,17 @@ const SITEMAP_CLIPS = 1000;
  * true about, which is the only reason its match page is indexable at all.
  */
 const SITEMAP_MATCHES = 500;
+
+/**
+ * How many teams with stored clips get a URL here.
+ *
+ * Same reasoning as the fixtures: a team page became indexable once this site could
+ * name the team and cite real fixtures for it from stored clips, and a sitemap entry
+ * is what makes it discoverable — nothing links to a team page in server-rendered
+ * HTML, so without one a crawler would never arrive. Bounded to the teams with the
+ * newest clips, which are the ones a reader would search for.
+ */
+const SITEMAP_TEAMS = 500;
 
 /**
  * Sitemap generator — served at /sitemap.xml.
@@ -46,6 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let postRows: { id: number; createdAt: Date }[] = [];
   let clipRefs: ClipRef[] = [];
   let eventRefs: EventRef[] = [];
+  let teamRefs: TeamRef[] = [];
   if (hasDatabase) {
     try {
       // Stored highlight clips: each one is a page of its own now, so each one is
@@ -53,6 +66,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       clipRefs = (await readRecentClipRefs(SITEMAP_CLIPS)).refs;
       // And the fixtures they belong to, which are pages for the same reason.
       eventRefs = (await readRecentEventRefs(SITEMAP_MATCHES)).refs;
+      // And the teams on both sides of those fixtures: each stored clip names its
+      // two sides' ESPN team ids, which is enough to server-render a team page.
+      teamRefs = (await readRecentTeamRefs(SITEMAP_TEAMS)).refs;
       profileRows = await prisma.user.findMany({
         where: { profileVisibility: "public" },
         take: 1000,
@@ -81,7 +97,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         take: 200,
       });
     } catch (err) {
-      profileRows = []; groupRows = []; postRows = []; clipRefs = []; eventRefs = [];
+      profileRows = []; groupRows = []; postRows = []; clipRefs = []; eventRefs = []; teamRefs = [];
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);
     }
@@ -150,5 +166,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return [...staticRoutes, ...clipRoutes, ...matchRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
+  // A team's URL only goes in when the stored league and id reverse into a
+  // reference the team route will actually serve — the same rule the fixtures
+  // above use, because submitting a URL that 404s costs the crawl budget it was
+  // meant to earn. One team can sit on both sides of many stored fixtures, so it is
+  // deduplicated to a single URL, and the refs are newest-first so the listing kept
+  // is the freshest.
+  const teamRoutes = new Map<string, MetadataRoute.Sitemap[number]>();
+  for (const ref of teamRefs) {
+    const reference = storedTeamReference(ref.league, ref.teamId);
+    if (!reference) continue;
+    const url = `${baseUrl}${teamHref(reference)}`;
+    if (teamRoutes.has(url)) continue;
+    teamRoutes.set(url, {
+      url,
+      // No date when none was reported: a date this site made up would be a lie in
+      // a file crawlers trust.
+      ...(ref.at ? { lastModified: ref.at } : {}),
+      // Weekly and below a fixture: a team's stored clips accumulate more slowly
+      // than one match's, and the page's record and squad are read live anyway.
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    });
+  }
+
+  return [...staticRoutes, ...clipRoutes, ...matchRoutes.values(), ...teamRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
 }

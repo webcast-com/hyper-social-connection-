@@ -36,15 +36,18 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
         export const getMyGroupInvites = async () => [];
         export const StartCallButton = () => null;
         export const EVENT_CLIPS_LIMIT = 24;
+        export const TEAM_CLIPS_LIMIT = 24;
         export const readRecentClipRefs = async () => fixture.clipRefs ?? { ok: true, refs: [] };
         export const readStoredClip = async () => ({ ok: true, clip: fixture.clip ?? null });
         export const readEventClips = async () => ({ ok: true, clips: fixture.eventClips ?? [] });
+        export const readTeamClips = async () => ({ ok: true, clips: fixture.teamClips ?? [], teamName: fixture.teamName ?? null, leagueName: fixture.teamLeagueName ?? null });
         export const readRecentEventRefs = async () => fixture.eventRefs ?? { ok: true, refs: [] };
+        export const readRecentTeamRefs = async () => fixture.teamRefs ?? { ok: true, refs: [] };
         export default function Component() { return null; }
       `, loader: 'js' }));
     } }],
   });
-  const loaded = { exports: {} as { default: () => Promise<Array<{ url: string; lastModified?: unknown }>>; generateMetadata: (input: { params: Promise<Record<string, string>> }) => Promise<import('next').Metadata> } };
+  const loaded = { exports: {} as { default: () => Promise<Array<{ url: string; lastModified?: unknown; changeFrequency?: unknown; priority?: unknown }>>; generateMetadata: (input: { params: Promise<Record<string, string>> }) => Promise<import('next').Metadata> } };
   new Function('require', 'module', 'exports', 'fixture', result.outputFiles[0].text)(createRequire(import.meta.url), loaded, loaded.exports, fixture);
   return loaded.exports;
 }
@@ -308,6 +311,41 @@ test('a fixture with stored clips gets one match URL, and only when the id rever
   });
 });
 
+test('a team with stored clips gets one URL, and only when the id and competition reverse into a route that serves', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule('src/app/sitemap.ts', {
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [] }])),
+      teamRefs: { ok: true, refs: [
+        // One team on both sides of many stored fixtures is still one page.
+        { teamId: '4993', league: 'nhl', at: new Date('2026-11-14T02:00:00.000Z'), clips: 4 },
+        { teamId: '4993', league: 'nhl', at: new Date('2026-11-10T02:00:00.000Z'), clips: 1 },
+        // A league slug with a dash in it must still reverse cleanly.
+        { teamId: '359', league: 'league-one', at: new Date('2026-11-12T02:00:00.000Z'), clips: 3 },
+        // Refs that cannot become a URL are not submitted: a 404 a crawler meets is
+        // remembered longer than a page it never found.
+        { teamId: 'abc', league: 'nhl', at: new Date('2026-11-11T02:00:00.000Z'), clips: 1 },
+        { teamId: '0', league: 'nba', at: null, clips: 1 },
+        { teamId: '4994', league: '', at: null, clips: 1 },
+        { teamId: '4995', league: 'not-a-league', at: null, clips: 1 },
+        // No date reported means no lastmod invented.
+        { teamId: '4996', league: 'nhl', at: null, clips: 1 },
+      ] },
+    });
+    const rows = await loaded.default();
+    const teams = rows.filter((row) => row.url.startsWith('https://hyper.co.ke/sports/teams/'));
+    assert.deepEqual(teams.map((row) => row.url), [
+      'https://hyper.co.ke/sports/teams/nhl/4993',
+      'https://hyper.co.ke/sports/teams/league-one/359',
+      'https://hyper.co.ke/sports/teams/nhl/4996',
+    ], 'one URL per team, newest first, and no guessed or unreversable ones');
+    assert.equal(teams[0].lastModified instanceof Date && teams[0].lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
+    assert.equal(teams[2].lastModified, undefined, 'a team with no reported date gets no invented one');
+    // Below a fixture: a team's clips accumulate more slowly than one match's.
+    assert.equal(teams[0].changeFrequency, 'weekly');
+    assert.equal(teams[0].priority, 0.5);
+  });
+});
+
 test('a group or post address that is not an id describes nobody, and asks the database for nobody', async () => {
   await withEnv(publicEnv, async () => {
     // `Number.parseInt('1e3')` is 1 and `Number('0x10')` is 16, so both routes used
@@ -533,4 +571,68 @@ test('privacy contact only publishes a valid operator-supplied address, never an
 
 test('root metadata emits the exact owner-supplied Google Search Console verification token', () => {
   assert.equal(getSiteMetadata('https://hyper.co.ke').verification?.google, '0_cko3izuhuWqNHJ2touhJTuXeoA2Kuxtbe4A8vXIwc');
+});
+
+/* ── A team page: indexable only when stored clips let the server name it ── */
+
+const TEAM_PAGE = 'src/app/sports/teams/[league]/[teamId]/page.tsx';
+const teamParams = (league: string, teamId: string) => ({ params: Promise.resolve({ league, teamId }) });
+
+test('a team page is indexable and names the team once stored clips resolve its id', async () => {
+  await withEnv(publicEnv, async () => {
+    const storedClip = {
+      id: '50476535', title: 'Perreault lights the lamp', description: null, duration: 48,
+      thumbnail: 'https://espn.test/50476535.jpg', mp4: 'https://espn.test/50476535.mp4', hls: null,
+      page: 'https://www.espn.com/video/clip/_/id/50476535', playable: true,
+      eventId: 'espn-nhl-401892706', eventName: 'Vancouver Canucks vs New York Rangers',
+      sport: 'ice-hockey', league: 'nhl', leagueName: 'National Hockey League',
+      home: 'Vancouver Canucks', away: 'New York Rangers', homeLogo: null, awayLogo: null,
+      startAt: '2026-11-14T02:00:00.000Z', status: 'final', homeId: '4993', awayId: '4994',
+    };
+    const loaded = await loadMetadataModule(TEAM_PAGE, {
+      teamClips: [storedClip], teamName: 'Vancouver Canucks', teamLeagueName: 'National Hockey League',
+    });
+    const metadata = await loaded.generateMetadata(teamParams('nhl', '4993'));
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/teams/nhl/4993');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true,
+      'the server can name the team and cite a real fixture, so the page is worth crawling');
+    assert.equal(metadata.title, 'Vancouver Canucks — National Hockey League highlights, record and squad');
+    assert.equal(
+      metadata.description,
+      'Vancouver Canucks in the National Hockey League: 1 highlight clip stored from fixtures involving this team, against New York Rangers, plus the ESPN-reported record, fixtures and squad on Hyper.',
+    );
+    const images = metadata.openGraph && 'images' in metadata.openGraph ? metadata.openGraph.images : [];
+    const first = Array.isArray(images) ? images[0] : undefined;
+    assert.equal(typeof first === 'object' && first && 'url' in first ? String(first.url) : first, storedClip.thumbnail);
+  });
+});
+
+test('a team page stays noindex while the server can say nothing about the team', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule(TEAM_PAGE, { teamClips: [], teamName: null });
+    const metadata = await loaded.generateMetadata(teamParams('nhl', '4993'));
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/teams/nhl/4993');
+    assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false,
+      'an index full of team pages that cannot name their own team would be worse than none');
+    assert.match(String(metadata.title), /team details$/, 'the shell title, not a guessed name');
+    assert.equal(String(metadata.description).includes('4993'), false, 'the numeric id is never surfaced as copy');
+
+    // Clips but no name: the id did not resolve to a team this site can name.
+    const nameless = await loadMetadataModule(TEAM_PAGE, {
+      teamClips: [{ id: '1', title: 'Clip', league: 'nhl', leagueName: 'National Hockey League', home: 'A', away: 'B', homeId: '4993', awayId: '4994', startAt: null, eventName: 'A vs B' }],
+      teamName: null,
+    });
+    const unresolved = await nameless.generateMetadata(teamParams('nhl', '4993'));
+    assert.equal(typeof unresolved.robots === 'object' && unresolved.robots?.index, false);
+  });
+});
+
+test('a team page 404s on an unknown competition or a non-numeric id, before any read', async () => {
+  await withEnv(publicEnv, async () => {
+    const loaded = await loadMetadataModule(TEAM_PAGE, { teamClips: [], teamName: null });
+    for (const [league, teamId] of [['zzz', '4993'], ['nhl', 'abc'], ['nhl', '0'], ['nhl', '-5'], ['nhl', '1e3']]) {
+      await assert.rejects(() => loaded.generateMetadata(teamParams(league, teamId)),
+        `${league}/${teamId} must 404 rather than render a page about nothing`);
+    }
+  });
 });

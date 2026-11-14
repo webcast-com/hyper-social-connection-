@@ -37,6 +37,7 @@
 import { hasDatabase, prisma } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
 import { ESPN_LEAGUES } from './sports-catalog';
+import { entityIdFrom } from './espn-team';
 import { highlightAnchorId } from './sports-anchor';
 import type { SportsHighlightClip, SportsHighlightStatus } from './espn-highlights';
 import type { SportsVideoNewsClip, SportsVideoNewsMedia } from './espn-video-news';
@@ -235,6 +236,14 @@ export type ClipRow = {
   league_name: string;
   home: string | null;
   away: string | null;
+  /**
+   * ESPN's team id for each side of a match clip, stored so a team page can be
+   * answered from rows this site already holds rather than from a fresh ESPN
+   * call. Null for a league clip (no two sides) and for any clip whose fixture
+   * reported no id. Never inferred from the team name.
+   */
+  home_id: string | null;
+  away_id: string | null;
   home_logo: string | null;
   away_logo: string | null;
   teams: string | null;
@@ -335,6 +344,11 @@ export function matchRow(stored: StoredMatchClip): ClipRow | null {
     league_name: text(clip.leagueName, 120) ?? league,
     home: text(clip.home, 120),
     away: text(clip.away, 120),
+    // Re-gated on the way in, not trusted from the caller: an id that reaches
+    // the table is later used to address a team page, so a malformed one stored
+    // here would be a permanently wrong record. Retention is permanent.
+    home_id: entityIdFrom(clip.homeId),
+    away_id: entityIdFrom(clip.awayId),
     home_logo: url(clip.homeLogo),
     away_logo: url(clip.awayLogo),
     teams: null,
@@ -390,6 +404,9 @@ export function leagueRow(stored: StoredLeagueClip): ClipRow | null {
     league_name: text(clip.leagueName, 120) ?? league,
     home: null,
     away: null,
+    // A league clip has no two sides, so it carries no team id either.
+    home_id: null,
+    away_id: null,
     home_logo: null,
     away_logo: null,
     teams: teams.length ? JSON.stringify(teams) : null,
@@ -409,10 +426,10 @@ export function clipRow(stored: StoredClip): ClipRow | null {
 
 const COLUMNS = `"external_key", "kind", "clip_id", "title", "description", "duration", "thumbnail",
     "mp4", "hls", "page", "playable", "event_id", "event_name", "sport", "league", "league_name",
-    "home", "away", "home_logo", "away_logo", "teams", "occurred_at", "source_url", "status",
-    "anchor_key"`;
+    "home", "away", "home_id", "away_id", "home_logo", "away_logo", "teams", "occurred_at",
+    "source_url", "status", "anchor_key"`;
 
-const FIELDS = 25;
+const FIELDS = 27;
 
 /**
  * The INSERT for a batch, with bound placeholders only — no value is ever
@@ -432,8 +449,8 @@ export function insertSql(rows: ClipRow[]): { sql: string; params: unknown[] } |
     params.push(
       row.external_key, row.kind, row.clip_id, row.title, row.description, row.duration, row.thumbnail,
       row.mp4, row.hls, row.page, row.playable, row.event_id, row.event_name, row.sport, row.league,
-      row.league_name, row.home, row.away, row.home_logo, row.away_logo, row.teams, row.occurred_at,
-      row.source_url, row.status, row.anchor_key,
+      row.league_name, row.home, row.away, row.home_id, row.away_id, row.home_logo, row.away_logo,
+      row.teams, row.occurred_at, row.source_url, row.status, row.anchor_key,
     );
   });
   return {
@@ -458,6 +475,12 @@ export function insertSql(rows: ClipRow[]): { sql: string; params: unknown[] } |
          "league_name" = EXCLUDED."league_name",
          "home" = EXCLUDED."home",
          "away" = EXCLUDED."away",
+         -- Team ids are only ever filled in, never cleared. A row stored before
+         -- ids were captured picks one up on the next sweep, and a later listing
+         -- that reports none keeps the id already held. Wiping an id here would
+         -- silently un-answer a team page that used to render.
+         "home_id" = COALESCE(EXCLUDED."home_id", "sports_highlight_clips"."home_id"),
+         "away_id" = COALESCE(EXCLUDED."away_id", "sports_highlight_clips"."away_id"),
          "home_logo" = EXCLUDED."home_logo",
          "away_logo" = EXCLUDED."away_logo",
          "teams" = EXCLUDED."teams",
@@ -513,6 +536,10 @@ export function rowToMatchClip(row: ClipRow): SportsHighlightClip | null {
     leagueName: row.league_name || league.name,
     home: row.home ?? '',
     away: row.away ?? '',
+    // Gated again on the way out, so a row written before the gate existed (or
+    // by hand) can never put a malformed id into a rendered link.
+    homeId: entityIdFrom(row.home_id),
+    awayId: entityIdFrom(row.away_id),
     homeLogo: url(row.home_logo),
     awayLogo: url(row.away_logo),
     startAt: iso(row.occurred_at),
@@ -974,6 +1001,101 @@ export async function readEventClips(eventId: string, limit: number = EVENT_CLIP
   }
 }
 
+/** Clips listed for one team. Bounded like a fixture's list: a page shows them all. */
+export const TEAM_CLIPS_LIMIT = 24;
+
+export type TeamClipsRead = {
+  ok: boolean;
+  /**
+   * `no-database` means the database is genuinely absent; `bad-reference` means it
+   * is there but the league or id asked for is not one this site can read. Kept
+   * apart because conflating them sends whoever debugs next to look at connection
+   * settings for what is really a malformed id — the failure this reader exists to
+   * refuse cleanly.
+   */
+  reason?: 'no-database' | 'bad-reference' | 'query-failed';
+  clips: SportsHighlightClip[];
+  /**
+   * The team's own name, read back from the rows that mention it.
+   *
+   * A team page is addressed by a numeric ESPN id, and this site stores no team
+   * table, so nothing server-side can turn that id into a name — except the
+   * clips already held, which store both the id and the side's display name.
+   * Deriving the name here rather than fetching it means a team page can render
+   * real, crawlable copy with no ESPN call. Null when no stored row names it,
+   * which is the honest "we have nothing to say about this team" case and must
+   * never be filled in with a guess or with the id itself.
+   */
+  teamName: string | null;
+  /** The competition's display name as stored, for the same reason. */
+  leagueName: string | null;
+};
+
+/**
+ * The name a stored clip gives one side, by the id that side was stored under.
+ *
+ * Exported separately from the reader so the rule can be tested without a
+ * database: it is the whole reason a team page has real copy on it, and it must
+ * answer null rather than fall back to the other side's name, to the id, or to
+ * anything invented.
+ */
+export function teamNameFromClips(clips: SportsHighlightClip[], teamId: string): string | null {
+  const wanted = entityIdFrom(teamId);
+  if (!wanted) return null;
+  for (const clip of clips) {
+    if (clip.homeId === wanted && typeof clip.home === 'string' && clip.home.trim()) return clip.home.trim();
+    if (clip.awayId === wanted && typeof clip.away === 'string' && clip.away.trim()) return clip.away.trim();
+  }
+  return null;
+}
+
+/**
+ * Every stored match clip this site holds for one team, newest first.
+ *
+ * Scoped to the competition in the URL, so `/sports/teams/nba/1234` can never
+ * answer with a clip stored under a different league's id space. Mirrors
+ * `readEventClips`: same gating, same bounded limit, same refusal semantics —
+ * no database is a good, empty answer, and a failed query is reported rather
+ * than thrown, because a team page must still render its shell.
+ */
+export async function readTeamClips(league: string, teamId: string, limit: number = TEAM_CLIPS_LIMIT): Promise<TeamClipsRead> {
+  const empty = (reason: 'no-database' | 'bad-reference'): TeamClipsRead =>
+    ({ ok: false, reason, clips: [], teamName: null, leagueName: null });
+  if (!hasDatabase) return empty('no-database');
+  const wantedLeague = knownLeague(league);
+  const wantedId = entityIdFrom(teamId);
+  // A league or an id this site cannot read is an answer, not an error: there is
+  // nothing stored to say about it, and it must not be logged as a failed query.
+  if (!wantedLeague || !wantedId) return empty('bad-reference');
+  const asked = Number.isFinite(limit) ? Math.trunc(limit) : TEAM_CLIPS_LIMIT;
+  const bounded = Math.max(1, Math.min(FEED_INDEX_LIMIT, asked || TEAM_CLIPS_LIMIT));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+      `SELECT ${COLUMNS} FROM "sports_highlight_clips"
+         WHERE "kind" = 'match' AND "league" = $1::text
+           AND ("home_id" = $2::text OR "away_id" = $2::text)
+         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
+         LIMIT $3`,
+      wantedLeague, wantedId, bounded,
+    );
+    const clips: SportsHighlightClip[] = [];
+    for (const row of rows) {
+      const clip = rowToMatchClip(row);
+      if (clip) clips.push(clip);
+    }
+    return {
+      ok: true,
+      clips,
+      teamName: teamNameFromClips(clips, wantedId),
+      leagueName: clips[0]?.leagueName || null,
+    };
+  } catch (error) {
+    const reason = failed('query-failed', error);
+    return { ok: false, reason, clips: [], teamName: null, leagueName: null };
+  }
+}
+
 /** One fixture this site holds clips for, as a list of URLs needs it. */
 export type EventRef = { eventId: string; league: string; at: Date | null; clips: number };
 
@@ -1016,6 +1138,65 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
       // A row that cannot name both halves of a match URL is not a URL.
       if (!eventId || !league) continue;
       refs.push({ eventId, league, at: row.occurred_at instanceof Date ? row.occurred_at : null, clips: Number.isFinite(row.clips) ? row.clips : 0 });
+    }
+    return { ok: true, refs };
+  } catch (error) {
+    return { ...empty, reason: failed('query-failed', error) };
+  }
+}
+
+/** One team this site holds clips for, as a list of URLs needs it. */
+export type TeamRef = { teamId: string; league: string; at: Date | null; clips: number };
+
+export type TeamRefsRead = {
+  ok: boolean;
+  reason?: 'no-database' | 'query-failed';
+  refs: TeamRef[];
+};
+
+/** How many teams one read may return. Bounds one grouped query, not the index. */
+export const MAX_TEAM_REFS = 2_000;
+
+/**
+ * The teams this site holds clips for, newest first, with how many clips each has.
+ *
+ * Both sides of every stored match clip are a team this site can now say something
+ * about, so the read unions them and groups by competition and id: one row per team,
+ * however many fixtures it appears in. That is what makes a team page discoverable
+ * rather than merely indexable — a crawler cannot find `/sports/teams/{league}/{id}`
+ * on its own, because nothing links to it in server-rendered HTML.
+ *
+ * Mirrors `readRecentEventRefs`: same bound, same newest-first ordering, same rule
+ * that a row which cannot name both halves of a URL is not a URL.
+ */
+export async function readRecentTeamRefs(limit: number = MAX_TEAM_REFS): Promise<TeamRefsRead> {
+  const empty: TeamRefsRead = { ok: false, reason: 'no-database', refs: [] };
+  if (!hasDatabase) return empty;
+  const asked = Number.isFinite(limit) ? Math.trunc(limit) : MAX_TEAM_REFS;
+  const bounded = Math.max(1, Math.min(MAX_TEAM_REFS, asked || MAX_TEAM_REFS));
+  try {
+    await ensureMigrated();
+    const rows = await prisma.$queryRawUnsafe<{ team_id: string | null; league: string | null; occurred_at: Date | null; clips: number }[]>(
+      `SELECT "league", "team_id", max("occurred_at") AS "occurred_at", count(*)::int AS "clips"
+         FROM (
+           SELECT "league", "home_id" AS "team_id", "occurred_at" FROM "sports_highlight_clips"
+            WHERE "kind" = 'match' AND "home_id" IS NOT NULL AND "league" IS NOT NULL
+           UNION ALL
+           SELECT "league", "away_id" AS "team_id", "occurred_at" FROM "sports_highlight_clips"
+            WHERE "kind" = 'match' AND "away_id" IS NOT NULL AND "league" IS NOT NULL
+         ) AS "sides"
+        GROUP BY "league", "team_id"
+        ORDER BY max("occurred_at") DESC NULLS LAST, "team_id" DESC
+        LIMIT $1`,
+      bounded,
+    );
+    const refs: TeamRef[] = [];
+    for (const row of rows) {
+      const teamId = entityIdFrom(row.team_id);
+      const league = typeof row.league === 'string' ? row.league.trim() : '';
+      // A row that cannot name both halves of a team URL is not a URL.
+      if (!teamId || !league) continue;
+      refs.push({ teamId, league, at: row.occurred_at instanceof Date ? row.occurred_at : null, clips: Number.isFinite(row.clips) ? row.clips : 0 });
     }
     return { ok: true, refs };
   } catch (error) {

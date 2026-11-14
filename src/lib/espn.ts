@@ -1,4 +1,5 @@
 import { matchReference } from './espn-match';
+import { entityIdFrom } from './espn-team';
 import type { EspnLeague } from './sports-catalog';
 import type { EventStatus, SportsEvent, SportsTeam } from './sports';
 
@@ -19,6 +20,12 @@ function team(competitor: any): SportsTeam | null {
     name, short: competitor.team.abbreviation,
     logo: competitor.team.logo || competitor.team.logos?.[0]?.href || null,
     score: score(competitor.score),
+    // ESPN's own team id, which is what `/sports/teams/{competition}/{teamId}`
+    // is addressed by. Read here rather than re-derived later so a stored clip
+    // can answer a team page from rows this site already holds. Gated by the
+    // same rule the leaders and insights parsers use: unconfirmed stays null,
+    // never coerced, because a guessed id would point at the wrong team.
+    id: entityIdFrom(competitor.team.id),
   };
 }
 

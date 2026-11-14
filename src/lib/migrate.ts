@@ -508,6 +508,18 @@ async function runMigration() {
     // a reader presses play, and the listing that stored the row carries no media
     // URL. Partial, because only league rows are ever asked this way.
     `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_league_clip_id_idx" ON "sports_highlight_clips"("clip_id") WHERE "kind" = 'league'`,
+    // ESPN's own team id for each side of a stored match clip. Added after the
+    // table shipped, so nullable: rows written before this carry no id and a
+    // sweep fills one in on its next pass (the upsert COALESCEs, never clears).
+    // These are what let `/sports/teams/{competition}/{teamId}` be answered from
+    // rows already held instead of from a live ESPN call — and the id doubles as
+    // the only server-side way to turn a numeric team id into that team's name.
+    `ALTER TABLE "sports_highlight_clips" ADD COLUMN IF NOT EXISTS "home_id" text`,
+    `ALTER TABLE "sports_highlight_clips" ADD COLUMN IF NOT EXISTS "away_id" text`,
+    // A team page asks for one id within one competition, newest first. Partial
+    // because league clips have no sides at all and would only bloat the index.
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_home_id_idx" ON "sports_highlight_clips"("league", "home_id") WHERE "home_id" IS NOT NULL`,
+    `CREATE INDEX IF NOT EXISTS "sports_highlight_clips_away_id_idx" ON "sports_highlight_clips"("league", "away_id") WHERE "away_id" IS NOT NULL`,
     // One row per game collection asked, so a collection that answered with clips
     // is never asked again and one that answered empty is retried only after
     // ESPN has had time to publish (highlights appear hours after full time).

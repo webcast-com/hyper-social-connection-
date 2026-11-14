@@ -285,6 +285,10 @@ const contextFor = (event: SportsEvent) => ({
   awayLogo: event.away.logo ?? null,
   startAt: event.startAt,
   status: event.status,
+  // The provider's team ids travel with the clip so a team page can be answered
+  // from stored rows. Null when the scoreboard reported none — never guessed.
+  homeId: event.home.id ?? null,
+  awayId: event.away.id ?? null,
 });
 
 /**

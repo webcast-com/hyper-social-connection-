@@ -41,8 +41,26 @@ export class TeamInputError extends Error {
 export type TeamReference = { league: string; teamId: string };
 
 /** ESPN's own entity ids: digits, no leading zero, bounded. */
+const ENTITY_ID = /^[1-9]\d{0,19}$/;
+
 export const validEntityId = (value: unknown): value is string =>
-  typeof value === 'string' && /^[1-9]\d{0,19}$/.test(value);
+  typeof value === 'string' && ENTITY_ID.test(value);
+
+/**
+ * The same rule, reading an id ESPN may have sent as a number.
+ *
+ * `validEntityId` narrows a value that is already a string; a payload field can
+ * arrive as `1234` instead, and a scoreboard's team id does. Both spellings
+ * share `ENTITY_ID` so no reader can accept an id another refuses — an id this
+ * site stores is later used to address `/sports/teams/{competition}/{teamId}`,
+ * and a disagreement between two parsers would send a reader to the wrong team.
+ * Returns null rather than coercing: an id we did not confirm must stay absent.
+ */
+export const entityIdFrom = (value: unknown): string | null => {
+  const raw = typeof value === 'number' && Number.isFinite(value) ? String(value)
+    : typeof value === 'string' ? value.trim() : null;
+  return raw !== null && ENTITY_ID.test(raw) ? raw : null;
+};
 
 const object = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -59,6 +77,27 @@ const booleanOf = (value: unknown): boolean | null => (typeof value === 'boolean
 
 export function teamHref(reference: TeamReference): string {
   return `/sports/teams/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.teamId)}`;
+}
+
+/**
+ * The team reference a stored row names, or nothing when it does not name one.
+ *
+ * A stored clip carries the league slug and each side's ESPN team id, which is
+ * exactly what a team URL is built from — but only if both halves are real. The
+ * competition has to be one the team route actually serves and the id has to pass
+ * the same gate the route's own resolver uses, because a submitted URL that 404s
+ * costs the crawl budget it was meant to earn, and a 404 a crawler meets is
+ * remembered longer than a page it never found. Mirrors `storedMatchReference`.
+ */
+export function storedTeamReference(
+  league: string | null | undefined,
+  teamId: string | null | undefined,
+): TeamReference | undefined {
+  const slug = typeof league === 'string' ? league.trim() : '';
+  const id = entityIdFrom(teamId ?? null);
+  if (!slug || !id) return undefined;
+  if (!ESPN_LEAGUES.some((entry) => entry.slug === slug)) return undefined;
+  return { league: slug, teamId: id };
 }
 
 const PATH_SEGMENT = /^[a-z][a-z0-9-]*\/[a-z0-9][a-z0-9._-]*$/;

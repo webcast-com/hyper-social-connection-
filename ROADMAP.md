@@ -1142,3 +1142,96 @@
     `page.tsx`, none on the lines touched), `npm run build` exit 0 with the one
     pre-existing Turbopack `next.config.ts` warning. Homepage re-fetched after the change:
     200, both sections present exactly once per breakpoint.
+
+- Phase 35: Team pages became real pages — the parser was throwing away the one field
+  that could name them ✅
+
+  Backlog item 6: `/sports/teams/**` and `/sports/athletes/**` were still `index: false`
+  after Phases 27–33 made fixtures, clips, profiles, groups and posts crawlable. The
+  recorded cause was that `src/lib/migrate.ts` holds 38 stored tables and **no team,
+  athlete or standings storage**, so a team page had nothing to be rendered from.
+
+  The cheaper half turned out to be available after all, and the reason it was not
+  already taken was one line. A team page is addressed by a numeric ESPN id, and this
+  site stores no team table — but it does store clips, and every clip's fixture carries
+  both sides' names. `src/lib/espn.ts`'s `team()` reader was taking a competitor's
+  `displayName`, `abbreviation`, `logo` and `score` and **discarding `team.id`**, the one
+  field that ties a stored clip to a team URL. Other parsers in the same repo already
+  read it (`espn-leaders.ts`, `espn-insights.ts`, `espn-match-history-feed.ts`, which
+  builds team-schedule URLs from it), so the id space was known to match — the scoreboard
+  reader was simply not keeping it.
+
+  - **The id now travels with the clip.** `SportsTeam.id` (optional), read through a new
+    `entityIdFrom` exported from `espn-team.ts` beside `validEntityId` and sharing one
+    `ENTITY_ID` pattern — so there is one rule, not a fourth spelling of it, and no reader
+    can accept an id another refuses. ESPN sends some ids as numbers; both are normalised
+    and an unconfirmed id stays absent rather than being coerced. `SportsHighlightClip`
+    and `SportsHighlightContext` gained optional `homeId` / `awayId` (optional so the 17
+    existing clip literals across 13 files stay valid, and because absent is a real state:
+    a clip stored before this has none).
+  - **Storage:** `sports_highlight_clips` gained `home_id` / `away_id`, plus two *partial*
+    indexes on `("league", …) WHERE … IS NOT NULL` — league clips have no sides, so they
+    would only bloat them. Both values are re-gated on the way in (`matchRow`) and on the
+    way out (`rowToMatchClip`), because retention here is permanent: a malformed id stored
+    once would address the wrong team's page forever.
+  - **The upsert COALESCEs the ids instead of assigning them.** A row stored before ids
+    were captured picks one up on the next sweep, and a sweep reporting none keeps the one
+    already held; clearing it would silently un-answer a team page that used to render.
+    This is why the change needs no backfill and no operator action — **production fills
+    the columns in by itself within one sweep** of the league listings.
+  - **`readTeamClips(league, teamId)`** returns that team's clips inside that competition,
+    newest first, plus the team's own name via `teamNameFromClips` — taken from whichever
+    side of each row the id actually matches, so a team stored as the away side still
+    resolves to itself, and an id no row carries answers `null` rather than the other
+    side's name. That name is the only server-side way to turn a numeric id into a team,
+    and it comes from rows already held: **no ESPN call, nothing inferred from the URL**.
+    The reader also reports `bad-reference` separately from `no-database`, because
+    conflating them sends whoever debugs next to look at connection settings for what is
+    really a malformed id.
+  - **`src/lib/team-page.ts`** (new, pure and client-safe like `match-page.ts`) turns those
+    rows into `teamPageFacts` / `teamPageTitle` / `teamPageDescription` /
+    `teamBreadcrumbFor`. The description claims **a count and opponents — never a score, a
+    result or a date**, since a stored clip proves a fixture happened and that highlights
+    exist for it and nothing more; a spec asserts that no result word appears. Opponents
+    are deduplicated, newest first, capped at `MAX_NAMED_OPPONENTS = 6`.
+  - **The page** renders that prose, links the stored clips, marks itself `index: true`
+    with a `BreadcrumbList`, and passes the name down as a new `knownTitle` prop on
+    `SportsTeamDetails` so its own `<h1>` names the team in the HTML a crawler reads.
+    **A team with no stored clips stays exactly the shell it was** — `noindex`, no stored
+    section, `<h1>` still "Loading team details…" — and so does a team with clips but no
+    resolvable name.
+  - **Discovery,** because an indexable page nothing links to is a page nobody finds:
+    `readRecentTeamRefs` unions both sides of every stored match clip and groups by
+    competition and id, and the sitemap submits one URL per team (weekly, 0.5, capped at
+    `SITEMAP_TEAMS = 500`) only when the new `storedTeamReference` reverses the stored
+    league and id into a reference the route will serve. Mirrors `storedMatchReference`.
+  - **Athlete pages are deliberately unchanged and still `noindex`.** Leaders and squads
+    are fetched live and stored nowhere, so there is no row for `/sports/athletes/**` to be
+    answered from and this trick has nothing to work with. Making them indexable needs new
+    tables and a sweep writer, and no sweep can be verified in this sandbox — there is no
+    ESPN egress. Recorded as remaining work rather than attempted.
+  - **Proven against a real local cluster,** because no spec catches a raw-SQL error (the
+    suite runs without `DATABASE_URL`). A temporary probe inserted two marked clips through
+    the production write path — one with the team home, one away — and confirmed:
+    `ensureMigrated()` added both columns and both indexes to an existing table;
+    `readTeamClips` returned 2 clips newest-first with the name resolved from either side;
+    the away-side row alone gave the same name and the right opponent; another competition
+    returned 0; unknown, non-numeric and malformed ids all refused; a re-store with null
+    ids left `4993/4994` intact (the COALESCE). Probe rows deleted, remaining count
+    printed **0**, and both temp scripts removed.
+  - **Then over HTTP,** seeded and unseeded: `/sports/teams/nhl/4993` 200 `index, follow`
+    with `<h1>Vancouver Canucks</h1>` and `data-team-stored="2"`; `/sports/teams/nhl/999999`
+    200 `noindex, follow` with the shell `<h1>`; `/sports/teams/nhl/abc` and
+    `/sports/teams/zzz/4993` 404. `/sitemap.xml` went 22 → 27 URLs adding exactly
+    `/sports/teams/nhl/4993` and `/sports/teams/nhl/4994` — the away-side team once,
+    despite appearing in both clips — and back to 22 with 0 team URLs after cleanup. Full
+    route table in `SPORTS_CHECKS.md`.
+  - Gates: `npm run typecheck` 0, `npm run test:sports` **488/488** (was 484),
+    `npm run test:seo` **84/84** (was 70; `tests/seo/team-page.test.ts` is new),
+    changed-file ESLint 0 errors, `npm run build` exit 0 with the one pre-existing
+    Turbopack warning. `test:calls` / `test:uploads` still cannot run here — both abort at
+    config load and no Playwright browser is installed — and neither config is touched.
+  - Not verified, and not claimable: the rendered section against **production's** stored
+    clips (667 rows, no egress to `hyper.co.ke` from this sandbox), and browser rendering
+    (no Chromium). On deploy the team URLs appear only once a sweep has re-stored clips
+    with ids — expected within one 15-minute sweep pass, with no action required.

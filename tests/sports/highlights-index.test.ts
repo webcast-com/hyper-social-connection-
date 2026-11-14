@@ -1,13 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_INDEX_LIMIT, INDEX_EMPTY, INDEX_UNAVAILABLE, MAX_INDEX_DAYS, MAX_INDEX_LIMIT,
+  DEFAULT_INDEX_LIMIT, INDEX_EMPTY, INDEX_UNAVAILABLE, MAX_CLIP_REFS, MAX_EVENT_REFS,
+  MAX_INDEX_DAYS, MAX_INDEX_LIMIT, MAX_TEAM_REFS,
   clipKey, clipRow, findStoredHighlightClip, findStoredNewsMedia, highlightsStore, insertSql, leagueRow, matchRow,
-  newsClipsNeedingMedia, storeNewsMedia,
+  newsClipsNeedingMedia, readRecentTeamRefs, readTeamClips, storeNewsMedia, TEAM_CLIPS_LIMIT, teamNameFromClips,
   probeKey, resolveIndexQuery, rowToLeagueClip, rowToMatchClip, sweepCellKey, uniqueRows,
   type ClipRow, type StoredClip, type StoredMatchClip,
 } from '../../src/lib/highlights-index';
 import type { SportsHighlightClip } from '../../src/lib/espn-highlights';
+import { storedTeamReference } from '../../src/lib/espn-team';
 import type { SportsVideoNewsClip, SportsVideoNewsMedia } from '../../src/lib/espn-video-news';
 
 /**
@@ -37,6 +39,11 @@ const matchClip = (over: Partial<SportsHighlightClip> = {}): SportsHighlightClip
   leagueName: 'Premier League',
   home: 'Arsenal',
   away: 'Chelsea',
+  // ESPN's own team ids, stored beside the names so `/sports/teams/{league}/{id}`
+  // can be answered from rows already held. Arsenal is 359 — the same id its logo
+  // URL below carries.
+  homeId: '359',
+  awayId: '360',
   homeLogo: 'https://a.espncdn.com/i/teamlogos/soccer/500/359.png',
   awayLogo: null,
   startAt: '2026-11-08T18:00:00.000Z',
@@ -268,8 +275,12 @@ test('one batch is one statement, with every value bound', () => {
   const batch = insertSql(rows)!;
   const columns = batch.sql.slice(batch.sql.indexOf('(') + 1, batch.sql.indexOf(')'));
   const fields = columns.split(',').map((column) => column.trim().replace(/"/g, ''));
-  assert.equal(fields.length, 25);
+  assert.equal(fields.length, 27);
   assert.ok(fields.includes('external_key') && fields.includes('kind') && fields.includes('status') && fields.includes('anchor_key'));
+  // The provider's team ids travel with the clip, so a team page can be answered
+  // from rows already stored. They sit beside the names they identify.
+  assert.ok(fields.includes('home_id') && fields.includes('away_id'));
+  assert.deepEqual(fields.slice(fields.indexOf('home'), fields.indexOf('home_logo')), ['home', 'away', 'home_id', 'away_id']);
   assert.ok(!fields.includes('discovered_at'), 'when this site first saw a clip is never overwritten');
   assert.ok(!fields.includes('seen_at'), 'it is set by the statement itself');
 
@@ -283,6 +294,11 @@ test('one batch is one statement, with every value bound', () => {
   assert.match(batch.sql, /ON CONFLICT \("external_key"\) DO UPDATE SET/);
   assert.match(batch.sql, /"seen_at" = now\(\)/);
   assert.match(batch.sql, /"status" = EXCLUDED\."status"/, 'a game that went from live to full time is corrected');
+  // An id is only ever filled in, never cleared: a row stored before ids were
+  // captured picks one up on a later sweep, and a sweep reporting none keeps the
+  // one already held. Clearing it would silently un-answer a team page.
+  assert.match(batch.sql, /"home_id" = COALESCE\(EXCLUDED\."home_id", "sports_highlight_clips"\."home_id"\)/);
+  assert.match(batch.sql, /"away_id" = COALESCE\(EXCLUDED\."away_id", "sports_highlight_clips"\."away_id"\)/);
   assert.ok(!/"discovered_at" =/.test(batch.sql));
 
   assert.equal(insertSql([]), null);
@@ -296,10 +312,24 @@ test('a stored row reads back as the same clip', () => {
   // the same clip are the same card: same fixture, same state, same media, and the
   // same anchor, which is what lets a like on one be a like on the other.
   assert.deepEqual(rowToMatchClip(row), original);
+  // The provider's team ids survive too — that is what lets a team page be
+  // answered from stored rows. And an unconfirmed id is dropped on the way in
+  // rather than stored as a permanently wrong record, because retention is
+  // permanent and that id later addresses a page.
+  assert.equal(row.home_id, '359');
+  assert.equal(row.away_id, '360');
+  assert.equal(rowToMatchClip(row)!.homeId, '359');
+  const unconfirmed = matchRow(stored(matchClip({ homeId: 'abc', awayId: '0' })))!;
+  assert.equal(unconfirmed.home_id, null);
+  assert.equal(unconfirmed.away_id, null);
+  assert.equal(rowToMatchClip({ ...row, home_id: 'not-an-id' })!.homeId, null, 'gated again on the way out');
 
   const leagueOriginal = leagueClip();
   const leagueRowValue = leagueRow({ kind: 'league', clip: leagueOriginal })!;
   assert.deepEqual(rowToLeagueClip(leagueRowValue), leagueOriginal);
+  // A league clip has no two sides, so it carries no team id either.
+  assert.equal(leagueRowValue.home_id, null);
+  assert.equal(leagueRowValue.away_id, null);
 
   // A clip ESPN reported no id for keeps the derived one it was given.
   const keyed = matchRow(stored(matchClip({ id: 'espn-epl-401111111:a late winner' })))!;
@@ -349,4 +379,68 @@ test('without a database the store is inert, and says why', async () => {
   await highlightsStore.recordCells([{ key: 'sweep:epl:20261110', games: 1, clips: 2 }]);
   assert.deepEqual(await highlightsStore.freshCells(['sweep:epl:20261110'], 1000), new Set(), 'nothing is remembered, so nothing is skipped');
   assert.equal(await findStoredHighlightClip('49861382'), null, 'engagement on a stored clip resolves to nothing, and does not throw');
+});
+
+test('a team id resolves to the name its own stored clips give it, or to nothing', () => {
+  const home = matchClip({ homeId: '359', awayId: '360', home: 'Arsenal', away: 'Chelsea' });
+  const flipped = matchClip({ id: '2', homeId: '360', awayId: '359', home: 'Chelsea', away: 'Arsenal' });
+  assert.equal(teamNameFromClips([home], '359'), 'Arsenal');
+  // The same team stored as the away side still resolves to itself: the name is
+  // taken from whichever side the id actually matches.
+  assert.equal(teamNameFromClips([flipped], '359'), 'Arsenal');
+  assert.equal(teamNameFromClips([home, flipped], '360'), 'Chelsea');
+  // An id no row carries is an answer, not an error — and never the other side's
+  // name, which would put the wrong team at the top of the page.
+  assert.equal(teamNameFromClips([home], '999'), null);
+  assert.equal(teamNameFromClips([home], 'abc'), null);
+  assert.equal(teamNameFromClips([home], ''), null);
+  assert.equal(teamNameFromClips([], '359'), null);
+  // A row whose side is named but blank cannot name the team.
+  assert.equal(teamNameFromClips([matchClip({ homeId: '359', home: '   ' })], '359'), null);
+});
+
+test('reading a team without a database is an empty answer, and never throws', async () => {
+  const read = await readTeamClips('epl', '359');
+  assert.equal(read.ok, false);
+  // No database is the dominant fact, so it is reported ahead of the shape of the
+  // reference — the two are kept apart because conflating them sends whoever
+  // debugs next to look at connection settings for a malformed id.
+  assert.equal(read.reason, 'no-database');
+  assert.deepEqual(read.clips, []);
+  assert.equal(read.teamName, null);
+  assert.equal(read.leagueName, null);
+  assert.equal(await readTeamClips('epl', 'abc').then((value) => value.ok), false);
+  assert.equal(await readTeamClips('not-a-league', '359').then((value) => value.ok), false);
+  // The bound a team page reads under, and it stays inside the index's own limit:
+  // this work adds no new cap and raises none.
+  assert.equal(TEAM_CLIPS_LIMIT, 24);
+  assert.equal(TEAM_CLIPS_LIMIT <= MAX_INDEX_LIMIT, true);
+});
+
+test('a stored league and team id reverse into a team URL only when the route would serve it', () => {
+  assert.deepEqual(storedTeamReference('nhl', '4993'), { league: 'nhl', teamId: '4993' });
+  // A league slug with a dash in it reverses cleanly, same as a fixture's does.
+  assert.deepEqual(storedTeamReference('league-one', '359'), { league: 'league-one', teamId: '359' });
+  // Surrounding space is normalised, not rejected: the id is the same id.
+  assert.deepEqual(storedTeamReference(' nhl ', ' 4993 '), { league: 'nhl', teamId: '4993' });
+  // Everything else is refused, because a submitted URL that 404s costs the crawl
+  // budget it was meant to earn.
+  for (const [league, teamId] of [
+    ['nhl', 'abc'], ['nhl', '0'], ['nhl', '-5'], ['nhl', '1e3'], ['nhl', '0x10'], ['nhl', ''],
+    ['', '4993'], ['not-a-league', '4993'], ['nhl', null], [null, '4993'], [undefined, undefined],
+  ] as Array<[string | null | undefined, string | null | undefined]>) {
+    assert.equal(storedTeamReference(league, teamId), undefined, `${JSON.stringify(league)}/${JSON.stringify(teamId)} must not become a URL`);
+  }
+});
+
+test('listing teams without a database is an empty answer, and never throws', async () => {
+  const read = await readRecentTeamRefs();
+  assert.equal(read.ok, false);
+  assert.equal(read.reason, 'no-database');
+  assert.deepEqual(read.refs, []);
+  // Bounds one grouped query, not how much of the index the site will publish —
+  // and it sits at the same bound as the fixture and clip listings beside it, so
+  // this work adds no new cap and raises none.
+  assert.equal(MAX_TEAM_REFS, MAX_EVENT_REFS);
+  assert.equal(MAX_TEAM_REFS, MAX_CLIP_REFS);
 });

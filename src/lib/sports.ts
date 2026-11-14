@@ -21,6 +21,15 @@ export type SportsTeam = {
   short?: string;
   logo?: string | null;
   score?: number | null;
+  /**
+   * The provider's own team id, when the payload carries one. This is the same
+   * id space `/sports/teams/{competition}/{teamId}` is addressed by, which is
+   * what lets a team page be answered from rows this site already holds instead
+   * of from a fresh provider call. Optional because not every payload names it
+   * (race fields, older fixtures) and because nothing may invent one: an id we
+   * guessed would point a reader at the wrong team forever.
+   */
+  id?: string | null;
 };
 
 export type SportsRace = { title: string; entries: { name: string; position: number | null }[] };
