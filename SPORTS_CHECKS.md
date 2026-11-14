@@ -454,13 +454,75 @@ guesses honestly at why, and points at five pages that carry content. It answers
 unmatched URL on the site as well as the five routes that throw `notFound()` —
 profile, clip, match, team and athlete.
 
-**Known limitation, verified in a production build:** an unmatched URL server-renders
-that page in full, but a `notFound()` thrown from a page streams — the HTML carries the
-flight payload and a client renders the page on hydration, while a client without
-JavaScript sees an empty body. The **status code is 404 either way**, which is what a
-crawler acts on, and this is framework behaviour for every thrown `notFound()` in the
-app rather than something these routes do. Not browser-verified here: this sandbox has
-no Chromium.
+**Known limitation, investigated rather than assumed — see "A thrown 404 has no HTML
+body, and no released Next.js fixes that" below.** An unmatched URL server-renders that
+page in full, but a `notFound()` thrown from a page returns **HTTP 404 with an empty
+`<body>`**: the copy is present in the response, but only inside the flight payload, so
+a client that runs JavaScript renders the page and one that does not sees nothing. The
+status is 404 either way, which is what a crawler acts on. Not browser-verified here —
+this sandbox has no Chromium — but the payload was checked directly: the strings
+`404 — page not found`, `This page isn't here`, `Discover people` and `Match highlights`
+are all in the response for `/profile/999999`, with zero visible characters in the
+`<body>`.
+
+### A thrown 404 has no HTML body, and no released Next.js fixes that
+
+Every route that throws `notFound()` — profile, group, post, clip, match, team, athlete
+— answers with the correct **404 status and an empty `<body>`**. What the server sends
+is `<div hidden=""></div>` plus
+`<template data-next-error-message="NEXT_HTTP_ERROR_FALLBACK;404">`, and the 404 page's
+own content only in the flight payload. An unmatched URL, by contrast, server-renders
+`src/app/not-found.tsx` in full — same status, complete body, site chrome and all.
+
+This was investigated rather than accepted. Two things were ruled out by measurement:
+
+- **Throwing from `generateMetadata` instead of the page does not help.** The team and
+  athlete routes already throw there, and their bodies are just as empty. Metadata runs
+  before the page, so if anything could settle the response early it would be this.
+- **`experimental.globalNotFound` + `src/app/global-not-found.tsx` does not help, and
+  costs something.** Next 16.2.6 does have the flag: with it, the not-found tree is
+  built with that file as the *layout* and an empty stub as the page, so the document
+  itself is the 404. It was implemented, enabled and measured on a dev server **and in a
+  production build**: every thrown 404 still had **zero visible characters**, while an
+  unmatched URL — the one case that already worked — **lost its `<title>`**, because
+  with `global-not-found` present Next takes the 404's metadata from the page and an
+  unmatched URL has none. It also made `/_not-found` dynamic at build time and added a
+  viewer read to every 404. Reverted: no benefit, one regression.
+
+Upstream confirms the mechanism and that it is deliberate. Per vercel/next.js#100596,
+the flight phase emits an error chunk for the segment; Fizz's `InnerLayoutRouter`
+re-throws `NEXT_HTTP_ERROR_FALLBACK;404` while turning that stream into HTML;
+`HTTPAccessFallbackErrorBoundary` is a class-based boundary, so streaming SSR does not
+catch it and the whole SSR pass aborts; `app-render`'s `catch` then sets
+`res.statusCode = 404` and emits the `<html id="__next_error__">` recovery shell with
+the original flight stream embedded, so a client can render it. A fix landed in #92231
+and was **reverted on purpose** in #94037 (merged 2026-05-26, so it is in 16.3 and
+later too) to keep error pages resumable for parallel routes and `cacheComponents`. The
+community PRs that would server-render the nearest boundary, #98455 and #98583, are both
+still **open**, and 16.4.6 shipped 2026-11-09 without them. **Upgrading is therefore not
+a fix** — the behaviour is current and intentional. See also #99287, #99793 and #85446
+(`global-not-found` not served for dynamic paths, which is exactly what was measured).
+
+Two workarounds exist in app code, and neither was taken:
+
+1. **A `proxy.ts` that rewrites a malformed id to a path nothing matches**, with
+   `status: 404`. An unmatched path is the one case that *does* render a full body, so
+   this would give real HTML 404s — but only for addresses that are not ids at all
+   (`/profile/abc`, `/post/1e3`, `/groups/0x10`, `/sports/matches/nhl/abc`). It cannot
+   cover `/profile/999999`, the case a crawler walking an id space actually hits,
+   without a database query in the proxy.
+2. **That same proxy with an existence check**, which would cover everything at the cost
+   of a second read on the site's hottest routes and Prisma coupled into request
+   middleware.
+
+Both put a new component in front of every request the site serves to improve the body
+of a response whose **status is already correct**, for readers who do not run
+JavaScript. Not worth it while the status — the part a crawler acts on — is right.
+
+One real bug did come out of looking: `not-found.tsx` rendered its own `<main>` inside
+the root layout's `<main>`, which is invalid HTML and gives assistive technology two
+landmarks both claiming to be the page. It is a `<div>` now, and a 404 has exactly one
+`<main>`.
 
 ### The same rule for every id this site takes from a URL
 

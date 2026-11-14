@@ -25,7 +25,10 @@ const WAYS_BACK = [
 
 export default function NotFound() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-12 sm:py-16">
+    // A `div`, not a `main`: the root layout already wraps this in the page's `<main>`,
+    // and a second `<main>` inside it is invalid HTML that hands assistive technology
+    // two landmarks both claiming to be the page.
+    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:py-16">
       <p className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
         404 — page not found
       </p>
@@ -64,6 +67,6 @@ export default function NotFound() {
         </Link>
         .
       </p>
-    </main>
+    </div>
   );
 }
