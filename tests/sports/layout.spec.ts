@@ -185,6 +185,68 @@ for (const width of [320, 1280]) {
   });
 }
 
+for (const width of [320, 1280]) {
+  test(`matchday mode fills the window with the filtered fixtures, pages them and returns focus at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const launcher = page.getByRole('button', { name: 'Matchday', exact: true });
+    expect((await launcher.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    const dialog = page.getByRole('dialog', { name: 'Matchday board', exact: true });
+    await expect(dialog).toHaveCount(0);
+    await launcher.click();
+    await expect(dialog).toBeVisible();
+    expect(await dialog.boundingBox()).toEqual({ x: 0, y: 0, width, height: 900 });
+    const cards = dialog.locator('[data-matchday-card]');
+    await expect(cards).toHaveCount(6);
+    const pages = Math.ceil(SPORTS_BOARD_COMPETITIONS.length / 6);
+    await expect(dialog.getByRole('status')).toHaveText(`Page 1 of ${pages} · ${SPORTS_BOARD_COMPETITIONS.length} matches`);
+    await expect(dialog.getByRole('button', { name: 'Previous', exact: true })).toBeDisabled();
+    for (const card of await cards.all()) {
+      const fit = await card.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
+      expect(fit.scroll).toBeLessThanOrEqual(fit.width);
+    }
+    await page.screenshot({ path: `test-results/sports/matchday-${width}.png` });
+    await dialog.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(dialog.getByRole('status')).toContainText(`Page 2 of ${pages}`);
+    // Escape leaves, the launcher has focus again, and the board is untouched.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(launcher).toBeFocused();
+    await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
+
+    // It shows the filtered view: one league, one card, its score and its match link.
+    await page.getByRole('combobox', { name: 'League or competition', exact: true }).selectOption('epl');
+    await launcher.click();
+    await expect(cards).toHaveCount(1);
+    await expect(cards.locator('[data-matchday-score]')).toHaveText('1–2');
+    await expect(cards.getByText('Live', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Match details: Premier League Away vs Premier League Home', exact: true }))
+      .toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent('/sports?league=epl')}`);
+    await expect(dialog.getByRole('status')).toHaveText('Page 1 of 1 · 1 match');
+    await dialog.getByRole('button', { name: 'Exit matchday', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+}
+
+test('matchday mode labels sample fixtures, links none of them, and draws a race as positions', async ({ page }) => {
+  await page.evaluate(() => window.renderSports('demo'));
+  await page.getByRole('button', { name: 'Matchday', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Matchday board', exact: true });
+  await expect(dialog.getByText('Sample fixture', { exact: true })).toHaveCount(6);
+  await expect(dialog.getByText('Sample board', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('link')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Exit matchday', exact: true }).click();
+
+  await page.evaluate(() => window.renderSports('live'));
+  await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
+  await page.getByRole('button', { name: 'Matchday', exact: true }).click();
+  const card = dialog.locator('[data-matchday-card]');
+  await expect(card).toHaveCount(1);
+  await expect(card.getByText('Review Grand Prix', { exact: true })).toBeVisible();
+  await expect(card.getByRole('list', { name: 'Reported race positions' })).toBeVisible();
+  await expect(card.locator('[data-matchday-score]')).toHaveCount(0);
+  await expect(card.getByRole('link')).toHaveCount(0);
+});
+
 test('a long board offers a way back to the top once scrolled', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   const top = page.getByRole('button', { name: 'Back to top', exact: true });

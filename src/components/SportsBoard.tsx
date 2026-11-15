@@ -13,6 +13,7 @@ import SportsCompetitionBrowser from './SportsCompetitionBrowser';
 import SportsEventCard from '@/components/SportsEventCard';
 import SportsFeaturedMatch from '@/components/SportsFeaturedMatch';
 import SportsBackToTop from '@/components/SportsBackToTop';
+import SportsMatchday from '@/components/SportsMatchday';
 import { pickFeaturedEvent } from '@/lib/featured-match';
 import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
@@ -281,8 +282,12 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </button>)}
       </div>}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <p aria-live="polite">{filtered.length} events in {groups.length} competitions</p>
-        <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
+        <p aria-live="polite" className="min-w-0 flex-1">{filtered.length} events in {groups.length} competitions</p>
+        <div className="flex shrink-0 items-center gap-2">
+          <SportsMatchday events={filtered} returnTo={returnTo} now={now} refreshing={refreshing}
+            feedLabel={initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'} />
+          <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">

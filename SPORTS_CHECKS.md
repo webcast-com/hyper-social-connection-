@@ -38,7 +38,7 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 
 ### The board's featured match
 
-When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture:
+When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture (`tests/sports/layout.spec.ts`):
 
 - **Only a live fixture ESPN reported is featured.** A sample fixture, a race and an upcoming or finished match never are, so a board with nothing live looks exactly as it did before, and the 700px rule above is unchanged for it. When a match is featured, that card is the first score on the page and the first competition card starts below it (about 900px at 320px wide).
 - **It is a second view, not an extra fixture.** The match stays in its competition below; the featured card is a labelled `section`, not an `article`, and has no heading, so counts of cards and competition headings are unaffected. With a single fixture in view there is nothing to feature it over, so no card is drawn.
@@ -47,6 +47,15 @@ When the view holds more than one fixture and ESPN reports one of them as live, 
 - **Nothing is invented.** Away is first, as on every board card; an unreported score is a dash and counts as nothing when ranking; the progress bar is drawn only from a football minute the provider gave (`54'`, `HT`).
 
 The same file supplies three additions to the board's own card, none of which changes its markup for an existing state: the loser of a finished match is dimmed (never in a draw or with an unreported score), an upcoming fixture inside the next 24 hours shows a countdown (`in 2h 15m`, refreshed each minute from the board's clock), and a scoreline that changes between two refreshes is tinted for a moment (colour only, off under reduced motion). A logo that fails to load is replaced by the side's code. A back-to-top button appears after 600px of scroll and sits above the mobile tab bar.
+
+### Matchday mode
+
+The **Matchday** control beside "Reset filters" opens `SportsMatchday`: the fixtures in the current view at large size, six to a page, in a dialog that fills the window. It sits in the existing count row, which keeps its 44px height at 320px, so nothing below it moves.
+
+- **The same fixtures as the board.** It is handed the filtered list and the board's clock, in the board's order, and fetches nothing: a refresh of the board is a refresh of the dialog. Nothing is rendered while it is closed, so the board's card, heading, link and status counts are unaffected.
+- **A native modal `<dialog>`.** Focus stays inside, Escape and "Exit matchday" close it, the page behind is inert and does not scroll, and focus returns to the launcher. Without `showModal` the launcher does nothing rather than open a layer that cannot be left.
+- **The board's honesty rules.** Away first; an unreported score is a dash; a sample fixture's pill reads "Sample fixture" and has no match link; a race is drawn as its title and reported positions, never as a scoreline; the loser of a finished match is dimmed.
+- **Paging.** `matchdayPage` clamps a page past the end to the last page, so a view that shrinks under the reader never shows an empty page while fixtures remain. Opening always starts on page 1.
 
 ## The homepage match centre
 

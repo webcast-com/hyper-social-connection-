@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mountBoard } from './leaders-post-cards';
 import {
-  footballMinute, isFeaturable, kickoffCountdown, matchProgressPercent, pickFeaturedEvent, scoreKey, winningSide,
+  MATCHDAY_PAGE_SIZE, footballMinute, isFeaturable, kickoffCountdown, matchdayPage, matchdayStatus, matchProgressPercent,
+  pickFeaturedEvent, scoreKey, winningSide,
 } from '../../src/lib/featured-match';
 import type { SportsEvent } from '../../src/lib/sports';
 
@@ -115,6 +116,30 @@ test('a kickoff inside the next day gets a countdown; anything else does not', (
   assert.equal(at('not a date'), null);
   assert.equal(at('2026-11-09T14:15:00Z', 'live'), null);
   assert.equal(at('2026-11-09T14:15:00Z', 'final'), null);
+});
+
+test('matchday pages hold six fixtures and a page past the end lands on the last one', () => {
+  assert.equal(MATCHDAY_PAGE_SIZE, 6);
+  const fixtures = Array.from({ length: 14 }, (_, index) => index);
+  assert.deepEqual(matchdayPage(fixtures, 0), { pageCount: 3, current: 0, rows: [0, 1, 2, 3, 4, 5] });
+  assert.deepEqual(matchdayPage(fixtures, 2), { pageCount: 3, current: 2, rows: [12, 13] });
+  // The view shrank under the reader: never an empty page while fixtures remain.
+  assert.deepEqual(matchdayPage(fixtures, 9), { pageCount: 3, current: 2, rows: [12, 13] });
+  assert.deepEqual(matchdayPage(fixtures, -1).current, 0);
+  assert.deepEqual(matchdayPage(fixtures, Number.NaN).current, 0);
+  assert.deepEqual(matchdayPage([], 0), { pageCount: 1, current: 0, rows: [] });
+  assert.equal(matchdayPage(fixtures.slice(0, 6), 0).pageCount, 1);
+});
+
+test('the matchday status pill carries the provider’s clock and never calls a sample live', () => {
+  assert.equal(matchdayStatus(event()), "Live · 54'");
+  assert.equal(matchdayStatus(event({ detail: null })), 'Live');
+  assert.equal(matchdayStatus(event({ status: 'upcoming', detail: null })), 'Upcoming');
+  assert.equal(matchdayStatus(event({ status: 'final', detail: 'Final/OT' })), 'Final/OT');
+  assert.equal(matchdayStatus(event({ status: 'final', detail: null })), 'Finished');
+  for (const status of ['live', 'upcoming', 'final'] as const) {
+    assert.equal(matchdayStatus(event({ source: 'demo', status })), 'Sample fixture');
+  }
 });
 
 /** Mounts a component in the suite's jsdom window. */

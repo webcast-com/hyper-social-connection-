@@ -112,3 +112,29 @@ export function scoreKey(event: SportsEvent): string {
   if (event.status === 'upcoming' || event.race) return '';
   return `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
 }
+
+/** Fixtures on one matchday page: big enough to read from across a room. */
+export const MATCHDAY_PAGE_SIZE = 6;
+
+/**
+ * One page of the matchday board. A page number past the end — the view shrank
+ * after a filter or a refresh — lands on the last page instead of an empty one.
+ */
+export function matchdayPage<T>(events: readonly T[], page: number): { pageCount: number; current: number; rows: T[] } {
+  const pageCount = Math.max(1, Math.ceil(events.length / MATCHDAY_PAGE_SIZE));
+  const current = Math.min(Math.max(0, Math.trunc(page) || 0), pageCount - 1);
+  return { pageCount, current, rows: events.slice(current * MATCHDAY_PAGE_SIZE, (current + 1) * MATCHDAY_PAGE_SIZE) };
+}
+
+/**
+ * The matchday card's status pill. A sample fixture is labelled the way the
+ * board's cards label it and is never called live; a live or finished fixture
+ * carries the provider's own clock text.
+ */
+export function matchdayStatus(event: SportsEvent): string {
+  if (event.source === 'demo') return 'Sample fixture';
+  if (event.status === 'upcoming') return 'Upcoming';
+  const detail = event.detail?.trim();
+  if (event.status === 'final') return detail || 'Finished';
+  return detail ? `Live · ${detail}` : 'Live';
+}
