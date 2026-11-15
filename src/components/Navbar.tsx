@@ -16,6 +16,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import ProfileMenu from '@/components/ProfileMenu';
 
 /**
  * The bottom tab bar. `memberOnly` marks the tabs whose route belongs to an
@@ -201,7 +202,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
         </nav>
 
-        {/* Right: Settings, Logout & User Avatar */}
+        {/* Right: Settings, Logout & the avatar, which opens the profile menu */}
         <div className="flex items-center space-x-2 shrink-0">
           {user ? (
             <>
@@ -233,23 +234,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
                 </button>
               )}
 
-              <Link
-                href={user ? `/profile/${user.id}` : '/login'}
-                aria-label="Your profile"
-                className="hover:scale-105 transition-transform ml-1"
-              >
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-gray-800 ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm"
-                  />
-                ) : (
-                  <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-blue-400 hover:ring-blue-600 transition-all shadow-sm">
-                    {user.name?.charAt(0) || 'U'}
-                  </div>
-                )}
-              </Link>
+              <ProfileMenu user={user} pathname={pathname} />
             </>
           ) : (
             <>

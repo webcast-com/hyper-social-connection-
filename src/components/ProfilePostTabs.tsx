@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Bookmark, LayoutList } from 'lucide-react';
 import Post from '@/components/Post';
 import EmptyState from '@/components/EmptyState';
+import { SAVED_SECTION_EVENT, SAVED_SECTION_ID, takeSavedSectionRequest } from '@/lib/saved-section';
 
 type Tab = 'posts' | 'saved';
 
@@ -40,6 +42,53 @@ export default function ProfilePostTabs({
 }) {
   const ownProfile = savedPosts !== null;
   const [tab, setTab] = useState<Tab>(ownProfile && initialTab === 'saved' ? 'saved' : 'posts');
+
+  // The address is the other way into a section: the header's profile menu links
+  // to `?tab=saved`, and it can be pressed while this page is already open. So the
+  // section follows `?tab=` whenever that changes, and pressing the switch writes
+  // it back — otherwise an address still saying "saved" after a press of Posts
+  // would make the menu's Saved link a link to where the router already is.
+  // (`params` is null outside the app router, where only the switch applies.)
+  const params = useSearchParams();
+  const urlTab: Tab | null = params ? (params.get('tab') === 'saved' ? 'saved' : 'posts') : null;
+  const [seenUrlTab, setSeenUrlTab] = useState(urlTab);
+  if (urlTab !== seenUrlTab) {
+    setSeenUrlTab(urlTab);
+    if (urlTab) setTab(urlTab);
+  }
+  const choose = (id: Tab) => {
+    setTab(id);
+    if (!params) return;
+    const next = new URLSearchParams(params.toString());
+    if (id === 'saved') next.set('tab', 'saved');
+    else next.delete('tab');
+    const query = next.toString();
+    // Next keeps `useSearchParams` in step with the native history call, without a
+    // round trip to the server: both lists are already on the page.
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+  };
+
+  // The profile menu's Saved link asks for more than the address can carry: the
+  // section has to end up in view (on a phone it is three cards down the page),
+  // including when it is already selected and the address will not change.
+  const column = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ownProfile) return;
+    const reveal = () => {
+      // After the router has finished placing the page it just navigated to.
+      requestAnimationFrame(() => column.current?.scrollIntoView({ block: 'start' }));
+    };
+    // Asked for from another page, and this is the profile arriving.
+    if (takeSavedSectionRequest()) reveal();
+    const onRequest = () => {
+      takeSavedSectionRequest();
+      setTab('saved');
+      reveal();
+    };
+    window.addEventListener(SAVED_SECTION_EVENT, onRequest);
+    return () => window.removeEventListener(SAVED_SECTION_EVENT, onRequest);
+  }, [ownProfile]);
+
   const bookmarked = new Set(bookmarkedPostIds);
   const showingSaved = ownProfile && tab === 'saved';
   const list = showingSaved ? savedPosts : posts;
@@ -47,7 +96,7 @@ export default function ProfilePostTabs({
   const tabButton = (id: Tab, label: string, count: number, Icon: typeof Bookmark) => (
     <button
       type="button"
-      onClick={() => setTab(id)}
+      onClick={() => choose(id)}
       aria-pressed={tab === id}
       className={`min-w-0 min-h-11 flex-1 rounded-lg px-3 py-2.5 text-sm font-bold flex items-center justify-center gap-2 transition-all ${
         tab === id
@@ -66,9 +115,9 @@ export default function ProfilePostTabs({
   );
 
   return (
-    // The id lets a link land on this column (`?tab=saved#profile-posts`): on a
-    // phone it sits below the About, Photos and Followers cards.
-    <div id="profile-posts" className="lg:col-span-2 min-w-0 space-y-4 scroll-mt-20">
+    // The margin keeps the switch clear of the fixed header when the column is
+    // scrolled to, by the profile menu or by a `#profile-posts` fragment.
+    <div ref={column} id={SAVED_SECTION_ID} className="lg:col-span-2 min-w-0 space-y-4 scroll-mt-20">
       {ownProfile ? (
         <>
           <h2 className="sr-only">{showingSaved ? 'Saved' : 'Posts'}</h2>

@@ -171,6 +171,90 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
+
+/* The avatar is a menu: your profile, and the posts you saved. */
+
+for (const width of [320, 375, 768, 1440]) {
+  test(`the profile menu offers your profile and Saved at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    const header = page.getByRole('banner');
+    const trigger = header.getByRole('button', { name: 'Profile menu' });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const menu = page.getByRole('menu', { name: 'Profile menu' });
+    await expect(menu).toBeVisible();
+    const items = menu.getByRole('menuitem');
+    await expect(items).toHaveText(['Your profile', 'Saved']);
+    await expect(items.nth(0)).toHaveAttribute('href', '/profile/1');
+    await expect(items.nth(1)).toHaveAttribute('href', '/profile/1?tab=saved');
+
+    // On screen, clear of the header it hangs from, and a full touch target each.
+    const box = (await menu.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(box.y).toBeGreaterThanOrEqual((await header.boundingBox())!.height);
+    for (const item of await items.all()) expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    // Nothing is drawn over it: the point in the middle of Saved is Saved.
+    const saved = (await items.nth(1).boundingBox())!;
+    expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[role="menuitem"]')?.textContent?.trim(), [saved.x + saved.width / 2, saved.y + saved.height / 2])).toBe('Saved');
+  });
+}
+
+test('the profile menu works from the keyboard and closes on Escape, outside press, or choosing', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const trigger = page.getByRole('banner').getByRole('button', { name: 'Profile menu' });
+  const menu = page.getByRole('menu', { name: 'Profile menu' });
+  const items = menu.getByRole('menuitem');
+
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(menu).toHaveCount(0);
+
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await page.getByRole('heading', { name: 'Home' }).click();
+  await expect(menu).toHaveCount(0);
+
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await trigger.click();
+  await expect(menu).toHaveCount(0);
+
+  // Choosing a destination closes it; so does arriving anywhere else.
+  await page.evaluate(() => document.addEventListener('click', (event) => {
+    if ((event.target as Element).closest('a')) event.preventDefault();
+  }, true));
+  await trigger.click();
+  await items.nth(1).click();
+  await expect(menu).toHaveCount(0);
+});
+
+test('a guest has no profile menu', async ({ page }) => {
+  await page.evaluate(() => window.renderMobileNavigation('/', 0, false));
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Profile menu' })).toHaveCount(0);
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
 for (const pathname of ['/login', '/signup']) {
   test(`guest navigation stays visible on ${pathname}, including after scrolling`, async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 812 });

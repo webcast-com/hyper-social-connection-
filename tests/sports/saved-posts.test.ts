@@ -70,23 +70,32 @@ test('a bookmark whose post is gone is skipped rather than rendered empty', () =
 
 /* ── The section on the profile ─────────────────────────────────────────── */
 
-async function mountProfileTabs(props: Record<string, unknown>) {
+/**
+ * `search` stands in for the app router: with it, the component reads `?tab=` the
+ * way it does on the real page, and `navigate` is a link changing the address.
+ */
+async function mountProfileTabs(props: Record<string, unknown>, search?: string) {
   const empty = { sport: 'basketball', league: 'nba', rows: [], status: 'live', source: { ok: true, url: '', httpStatus: 200 } };
   const mounted = await mountBoard({ basketball: empty, football: empty });
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
   const ProfilePostTabs = (await import('../../src/components/ProfilePostTabs')).default;
+  const { SearchParamsContext } = await import('next/dist/shared/lib/hooks-client-context.shared-runtime');
   const act = (React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> }).act;
   const container = mounted.document.createElement('div');
   mounted.document.body.appendChild(container);
   const root = createRoot(container);
-  await act(async () => {
-    root.render(React.createElement(ProfilePostTabs as never, {
+  const render = (query: string | undefined) => act(async () => {
+    const tabsElement = React.createElement(ProfilePostTabs as never, {
       posts: [],
       currentUser: { id: 1, name: 'Review User' },
       ...props,
-    } as never));
+    } as never);
+    root.render(query === undefined
+      ? tabsElement
+      : React.createElement(SearchParamsContext.Provider, { value: new URLSearchParams(query) }, tabsElement));
   });
+  await render(search);
   const tabs = () => [...container.querySelectorAll('[role="group"][aria-label="Profile sections"] button[aria-pressed]')] as any[];
   const tab = (label: string) => tabs().find((button) => button.textContent.includes(label));
   return {
@@ -94,6 +103,7 @@ async function mountProfileTabs(props: Record<string, unknown>) {
     tabs,
     tab,
     press: async (label: string) => { await act(async () => { tab(label).click(); }); },
+    navigate: (query: string) => render(query),
     unmount: () => act(() => root.unmount()),
   };
 }
@@ -142,4 +152,125 @@ test('a saved list that could not be read says so instead of claiming nothing is
   assert.match(view.container.textContent!, /Your saved posts are still there/);
   assert.doesNotMatch(view.container.textContent!, /No saved posts yet/);
   await view.unmount();
+});
+
+/* ── Arriving from the profile menu ─────────────────────────────────────── */
+
+test('the profile menu\u2019s Saved link opens the section when the profile is already open', async () => {
+  const view = await mountProfileTabs({ savedPosts: [] }, '');
+  assert.equal(view.tab('Posts').getAttribute('aria-pressed'), 'true');
+  await view.navigate('tab=saved');
+  assert.equal(view.tab('Saved').getAttribute('aria-pressed'), 'true', 'the section follows the address, not only its first value');
+  await view.navigate('');
+  assert.equal(view.tab('Posts').getAttribute('aria-pressed'), 'true');
+  await view.unmount();
+});
+
+test('pressing the switch writes the section into the address, so the menu link is never a link to nowhere', async () => {
+  const calls: string[] = [];
+  const history = (globalThis as any).window.history;
+  const original = history.replaceState;
+  history.replaceState = (_state: unknown, _title: string, url: string) => { calls.push(url); };
+  try {
+    // Landed on `?tab=saved` (say, from the menu), with another parameter to keep.
+    const view = await mountProfileTabs({ savedPosts: [], initialTab: 'saved' }, 'tab=saved&ref=menu');
+    assert.equal(view.tab('Saved').getAttribute('aria-pressed'), 'true');
+
+    await view.press('Posts');
+    assert.equal(view.tab('Posts').getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(calls, ['/?ref=menu'], '`tab` leaves the address, nothing else does');
+
+    // The router reports the new address; the menu's Saved link is then a real change.
+    await view.navigate('ref=menu');
+    assert.equal(view.tab('Posts').getAttribute('aria-pressed'), 'true');
+    await view.navigate('tab=saved&ref=menu');
+    assert.equal(view.tab('Saved').getAttribute('aria-pressed'), 'true');
+
+    await view.press('Posts');
+    await view.navigate('ref=menu');
+    await view.press('Saved');
+    assert.equal(calls.at(-1), '/?ref=menu&tab=saved');
+    await view.unmount();
+  } finally {
+    history.replaceState = original;
+  }
+});
+
+test('the address cannot open a saved list on somebody else\u2019s profile', async () => {
+  const view = await mountProfileTabs({ savedPosts: null }, 'tab=saved');
+  assert.equal(view.tabs().length, 0);
+  assert.equal(view.container.querySelector('h2')!.textContent, 'Posts');
+  assert.match(view.container.textContent!, /No posts yet/);
+  assert.doesNotMatch(view.container.textContent!, /Saved|saved/);
+  await view.unmount();
+});
+
+test('the menu\u2019s request shows the section at once when the profile is already open, and brings it into view', async () => {
+  const { requestSavedSection, takeSavedSectionRequest, savedPostsHref } = await import('../../src/lib/saved-section');
+  assert.equal(savedPostsHref(7), '/profile/7?tab=saved', 'no fragment: the router doubles one on a second visit');
+
+  const proto = (globalThis as any).window.HTMLElement.prototype;
+  const scrolled: string[] = [];
+  proto.scrollIntoView = function scrollIntoView(this: { id: string }) { scrolled.push(this.id); };
+  const frame = () => new Promise((resolve) => setTimeout(resolve, 5));
+  try {
+    takeSavedSectionRequest();
+    const view = await mountProfileTabs({ savedPosts: [] }, '');
+    await frame();
+    assert.deepEqual(scrolled, [], 'opening your profile without asking for Saved moves nothing');
+    assert.equal(view.tab('Posts').getAttribute('aria-pressed'), 'true');
+
+    const React = await import('react');
+    const act = (React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> }).act;
+    await act(async () => { requestSavedSection(); await frame(); });
+    assert.equal(view.tab('Saved').getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(scrolled, ['profile-posts']);
+
+    // Already on Saved (the address would not change): asking again still brings it back into view.
+    await act(async () => { requestSavedSection(); await frame(); });
+    assert.deepEqual(scrolled, ['profile-posts', 'profile-posts']);
+    assert.equal(takeSavedSectionRequest(), false, 'and the request is spent, so the next visit is not scrolled');
+    await view.unmount();
+  } finally {
+    delete proto.scrollIntoView;
+  }
+});
+
+test('a request made on another page is honoured when the profile arrives, once, and only while fresh', async () => {
+  const { requestSavedSection, takeSavedSectionRequest } = await import('../../src/lib/saved-section');
+  const proto = (globalThis as any).window.HTMLElement.prototype;
+  const scrolled: string[] = [];
+  proto.scrollIntoView = function scrollIntoView(this: { id: string }) { scrolled.push(this.id); };
+  const frame = () => new Promise((resolve) => setTimeout(resolve, 5));
+  try {
+    // Pressed in the menu on the home feed; nothing is listening yet.
+    requestSavedSection();
+    const arriving = await mountProfileTabs({ savedPosts: [], initialTab: 'saved' }, 'tab=saved');
+    await frame();
+    assert.deepEqual(scrolled, ['profile-posts']);
+    await arriving.unmount();
+
+    const later = await mountProfileTabs({ savedPosts: [], initialTab: 'saved' }, 'tab=saved');
+    await frame();
+    assert.deepEqual(scrolled, ['profile-posts'], 'a later visit to the same address is left where the browser put it');
+    await later.unmount();
+
+    // Somebody else's profile neither listens nor scrolls, and does not spend the request.
+    requestSavedSection();
+    const other = await mountProfileTabs({ savedPosts: null }, 'tab=saved');
+    await frame();
+    assert.deepEqual(scrolled, ['profile-posts']);
+    assert.equal(other.tabs().length, 0);
+    await other.unmount();
+    assert.equal(takeSavedSectionRequest(), true);
+
+    // A request that never reached a profile (a failed navigation, say) expires.
+    requestSavedSection(1_000);
+    assert.equal(takeSavedSectionRequest(1_000 + 60_000), false);
+    requestSavedSection(1_000);
+    assert.equal(takeSavedSectionRequest(1_000 + 5_000), true);
+    assert.equal(takeSavedSectionRequest(1_000 + 5_001), false, 'once');
+  } finally {
+    delete proto.scrollIntoView;
+  }
 });

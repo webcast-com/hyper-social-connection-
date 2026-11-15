@@ -303,8 +303,13 @@ still no ESPN request.
   stays where it was: For You and Live here, and its own section on the page.
 
 Saved posts moved to the member's own profile: a **Saved** section beside Posts
-(`ProfilePostTabs`, `src/lib/saved-posts.ts`), linkable as
-`/profile/{id}?tab=saved#profile-posts`. It keeps the tab's rules — no post by a
+(`ProfilePostTabs`, `src/lib/saved-posts.ts`), reached from the header: the
+avatar is a **profile menu** (`ProfileMenu`) with *Your profile* and *Saved*.
+The menu's link is `/profile/{id}?tab=saved` and carries no `#fragment` — the
+router doubled one on a second visit and did not scroll — so the menu asks for
+the section and the section scrolls itself into view (`src/lib/saved-section.ts`),
+which also covers pressing Saved when it is already the address. Pressing the
+Posts / Saved switch rewrites `?tab=` without a request to the server. It keeps the tab's rules — no post by a
 blocked or muted author, nothing still scheduled — and lists the most recently
 saved first. Bookmarks are private: the loader takes the viewer's id, the page
 calls it only when the viewer is the profile's owner, and on anyone else's
