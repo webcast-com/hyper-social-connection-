@@ -82,17 +82,24 @@ branches are not deployed. Removing the `branches` filter in the workflow gives
 every branch a preview environment with its own service and its own empty
 database.
 
-To turn it on, connect the repository to a Prisma workspace: in the Prisma
-Console, or with `npx prisma auth login` then `npx prisma git connect`. The
-workflow needs no secret after that. Until the repository is connected the job
-finishes green with the notice "deploy skipped, no credential".
+A deploy finds its project **by name** in the workspace and creates it when no
+project has that name. The name in `module.ts` is `hyper-social-connection-`.
 
-A deploy finds its project **by name** in the connected workspace and creates
-it when no project has that name. The name in `module.ts` is
-`hyper-social-connection-` (with the trailing hyphen), the project connected in
-the Console. If the project is ever renamed, change `module.ts` to match;
-otherwise the next deploy creates a second project and the original stops
-receiving deploys.
+The workflow has two ways to authenticate:
+
+- The repository secret `PRISMA_SERVICE_TOKEN` (a service token created in the
+  Prisma Console). It can create the project, so the **first** deploy needs it.
+- Without the secret, the short-lived token Prisma issues to a repository that
+  is connected in the Console. It can deploy into a project that already
+  exists, but creating one is refused ("The management API rejected the service
+  token").
+
+The workspace's older project, `hybrid`, cannot be the target. Its `main`
+branch already holds the `Development` database, the `hyper-blog` bucket and
+the `nextjs-postgresql-template` app, and a deploy refuses a branch that has
+resources it did not create. The fix it suggests, deleting the environment,
+would delete that database and bucket. Leave that project as it is; this app
+deploys into its own project.
 
 Each deploy applies the committed migrations in `migrations/app` to that
 environment's database before the service starts, so a schema change ships as:

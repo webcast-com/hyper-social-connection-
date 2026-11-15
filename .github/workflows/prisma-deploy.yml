@@ -3,20 +3,27 @@
 # A push to `main` deploys the `production` environment of the Prisma project
 # "hyper-social-connection-". Other branches are not deployed. To give every
 # branch its own preview environment (its own service and its own empty
-# database), remove the `branches` filter below.
+# database), remove the `branches` filter and the job's `if` below.
 #
 # What it deploys is declared in module.ts (see PRISMA_SETUP.md, "Deploying").
 #
-# No secret is needed once the repository is connected in the Prisma Console:
-# the job proves which repository it is to Prisma with a GitHub-issued token
-# (`id-token: write` below) and receives a deploy token that lasts 30 minutes.
-# Until the repository is connected the job finishes green and reports
-# "deploy skipped, no credential" rather than failing.
+# Credentials, in the order the action tries them:
+#
+#   1. The repository secret PRISMA_SERVICE_TOKEN, when it is set. A service
+#      token can create the Prisma project, so the first deploy needs it.
+#   2. Otherwise a 30-minute token Prisma issues to this repository because it
+#      is connected in the Prisma Console (`id-token: write` below). That token
+#      can deploy into a project that exists but cannot create one.
+#
+# With neither, the job finishes green and reports "deploy skipped, no
+# credential".
 name: prisma-deploy
 
 on:
   push:
     branches: [main]
+  # Lets a deploy be started by hand from the Actions tab, without a commit.
+  workflow_dispatch:
 
 # One deploy at a time. A newer push waits for the running deploy
 # instead of cancelling it: a deploy stopped halfway can leave a migration
@@ -31,6 +38,9 @@ permissions:
 
 jobs:
   deploy:
+    # A run started by hand from another branch would deploy a preview
+    # environment; only `main` is deployed.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,3 +55,7 @@ jobs:
         with:
           build-command: npm run build
           module: module.ts
+        env:
+          # Empty when the secret is not set; the action then uses the
+          # token issued to the connected repository.
+          PRISMA_SERVICE_TOKEN: ${{ secrets.PRISMA_SERVICE_TOKEN }}
