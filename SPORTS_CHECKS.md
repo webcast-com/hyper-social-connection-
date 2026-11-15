@@ -302,9 +302,17 @@ still no ESPN request.
 - League video is not in this tab. It is a different card with its own feed, and
   stays where it was: For You and Live here, and its own section on the page.
 
-Saved posts are not deleted and the Save buttons still work, but **no view lists
-them any more**: the Saved tab was the only one. That is a known gap, not an
-oversight.
+Saved posts moved to the member's own profile: a **Saved** section beside Posts
+(`ProfilePostTabs`, `src/lib/saved-posts.ts`), linkable as
+`/profile/{id}?tab=saved#profile-posts`. It keeps the tab's rules — no post by a
+blocked or muted author, nothing still scheduled — and lists the most recently
+saved first. Bookmarks are private: the loader takes the viewer's id, the page
+calls it only when the viewer is the profile's owner, and on anyone else's
+profile (or signed out) there is no switch and no saved list in the payload,
+whatever `?tab=` says. Checked in a browser against the local database: three
+saved posts in save order, removing one from its menu drops it and the count
+without leaving the section, another member's saved post absent from their
+profile's HTML, and no overflow at 320px.
 
 At 320px the four labels are as wide as their text needs (`flex-auto` below `sm`)
 instead of four equal quarters, which were too narrow for "Highlights".

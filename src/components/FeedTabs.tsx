@@ -22,7 +22,8 @@ type Tab = 'for-you' | 'following' | 'live' | 'highlights';
  * placed by its own pass in `feed-interleave.ts` and revealed in batches. Nothing
  * here decides how many of any kind there are.
  *
- * `highlightPosts` is the Highlights tab, which took the place of Saved: every
+ * `highlightPosts` is the Highlights tab, which took the place of Saved (saved
+ * posts are now a section of the member's own profile, `ProfilePostTabs`): every
  * match clip the Match Highlights page's stored index supplied, newest first, as
  * the same post cards For You renders. `highlightsRemaining` is how many stored
  * clips that read did not carry, so the tab can point at the page that pages
