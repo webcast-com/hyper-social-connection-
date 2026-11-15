@@ -10,7 +10,7 @@
  * database gets an empty list and a refused write, which the surfaces render as
  * "no picks" rather than as a leaderboard of nobody.
  */
-import { hasDatabase, prisma } from '@/lib/prisma';
+import { hasDatabase, rawExecute, rawQuery } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
 import { validEntityId } from './espn-team';
 import {
@@ -83,7 +83,7 @@ export async function placePick(userId: number, pick: NewPick): Promise<PlacePic
   if (!hasDatabase || !(userId > 0)) return { ok: false, reason: 'no-database' };
   try {
     await ensureMigrated();
-    const inserted = await prisma.$queryRawUnsafe<PickRow[]>(
+    const inserted = await rawQuery<PickRow>(
       `INSERT INTO "sports_picks" ("user_id", "league", "event_id", "side", "home", "away", "price", "kickoff_at")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT ("user_id", "league", "event_id") DO NOTHING
@@ -94,7 +94,7 @@ export async function placePick(userId: number, pick: NewPick): Promise<PlacePic
     const stored = inserted[0] ? rowToPick(inserted[0]) : null;
     if (stored) return { ok: true, pick: stored, stored: true };
 
-    const existing = await prisma.$queryRawUnsafe<PickRow[]>(
+    const existing = await rawQuery<PickRow>(
       `SELECT ${COLUMNS} FROM "sports_picks"
         WHERE "user_id" = $1 AND "league" = $2 AND "event_id" = $3 LIMIT 1`,
       userId, pick.league, pick.eventId,
@@ -113,7 +113,7 @@ export async function findViewerPicks(userId: number | null | undefined, limit: 
   if (!hasDatabase || !Number.isFinite(id) || id <= 0) return [];
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<PickRow[]>(
+    const rows = await rawQuery<PickRow>(
       `SELECT ${COLUMNS} FROM "sports_picks" WHERE "user_id" = $1
         ORDER BY "created_at" DESC, "id" DESC LIMIT $2`,
       id, Math.min(VIEWER_PICKS, Math.max(1, Math.trunc(limit))),
@@ -130,7 +130,7 @@ export async function findUngradedPicks(limit: number = GRADE_PER_PASS): Promise
   if (!hasDatabase) return [];
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<PickRow[]>(
+    const rows = await rawQuery<PickRow>(
       `SELECT ${COLUMNS} FROM "sports_picks" WHERE "graded_at" IS NULL
         ORDER BY "kickoff_at" ASC NULLS LAST, "id" ASC LIMIT $1`,
       Math.min(GRADE_PER_PASS, Math.max(1, Math.trunc(limit))),
@@ -153,7 +153,7 @@ export async function applyGrading(entries: readonly Grading[]): Promise<number>
   if (!hasDatabase || !entries.length) return 0;
   try {
     await ensureMigrated();
-    const rows = await prisma.$executeRawUnsafe(
+    const rows = await rawExecute(
       `UPDATE "sports_picks" AS pick SET
           "graded_at" = now(), "outcome" = graded.outcome, "points" = graded.points,
           "home_score" = graded.home_score, "away_score" = graded.away_score
@@ -193,10 +193,10 @@ export async function getPicksLeaderboard(
   const rows = clampLeaderboardRows(limit);
   try {
     await ensureMigrated();
-    const leaders = await prisma.$queryRawUnsafe<{
+    const leaders = await rawQuery<{
       user_id: number; name: string | null; username: string | null;
       graded: number; won: number; points: number; readers: number;
-    }[]>(
+    }>(
       `SELECT reader."id" AS "user_id", reader."name" AS "name", reader."username" AS "username",
               COUNT(*)::integer AS "graded",
               (COUNT(*) FILTER (WHERE pick."outcome" = 'won'))::integer AS "won",
@@ -215,7 +215,7 @@ export async function getPicksLeaderboard(
     const id = Number(viewerId);
     let viewer: ViewerStanding | null = null;
     if (Number.isFinite(id) && id > 0) {
-      const standing = await prisma.$queryRawUnsafe<{ rank: number; graded: number; won: number; points: number }[]>(
+      const standing = await rawQuery<{ rank: number; graded: number; won: number; points: number }>(
         `WITH scored AS (
            SELECT "user_id", COUNT(*)::integer AS "graded",
                   COUNT(*) FILTER (WHERE "outcome" = 'won')::integer AS "won",

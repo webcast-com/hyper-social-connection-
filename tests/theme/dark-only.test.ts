@@ -14,7 +14,7 @@ test('the server renders a dark document without reading stored or system theme 
       builder.onResolve({ filter: /^(\.\/globals\.css|@\/components\/(Navbar|SiteFooter)|@\/lib\/(prisma|viewer)|@vercel\/analytics\/next)$/ },
         (args) => ({ path: args.path, namespace: 'layout-fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'layout-fixture' }, () => ({
-        contents: `export const hasDatabase = false; export const prisma = {};
+        contents: `export const hasDatabase = false; export const db = {};
           export const getViewer = async () => null; export const Analytics = () => null;
           export default function Component() { return null; }`, loader: 'js',
       }));

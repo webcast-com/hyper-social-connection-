@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { prisma } from "../src/lib/prisma";
+import { closeDb, db } from "../src/lib/prisma";
 
 /**
  * Connectivity check: performs one real read against the database.
@@ -10,12 +10,12 @@ async function main() {
     throw new Error("DATABASE_URL is not set. Add it to .env (see DATABASE.md).");
   }
 
-  // One read. findMany rather than a raw query so it exercises the generated
-  // client, the pg driver adapter, and the migrated schema together.
-  const users = await prisma.user.findMany({
-    include: { posts: { select: { id: true, likesCount: true } } },
-    orderBy: { id: "asc" },
-  });
+  // One read through the typed client rather than a raw query, so it exercises
+  // the emitted contract, the pg pool, and the migrated schema together.
+  const users = await db.orm.public.User
+    .include('posts', (rel) => rel.select('id', 'likesCount'))
+    .orderBy((o) => o.id.asc())
+    .all();
 
   console.log("✅ Connected");
   console.log(`   ${users.length} user(s) found:`);
@@ -26,11 +26,11 @@ async function main() {
 
 main()
   .then(async () => {
-    await prisma.$disconnect();
+    await closeDb();
   })
   .catch(async (e) => {
     console.error("❌ Verification failed. Exact error:\n");
     console.error(e);
-    await prisma.$disconnect();
+    await closeDb();
     process.exit(1);
   });

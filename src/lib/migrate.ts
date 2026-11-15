@@ -1,4 +1,4 @@
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { hasDatabase, rawExecute } from '@/lib/prisma';
 import { SOCIAL_DDL } from '@/lib/social-ddl';
 
 let migrated = false;
@@ -427,9 +427,19 @@ async function runMigration() {
     // Profile sharing: a post can carry a profile card, and every share
     // (internal or to an external network) is logged for the share counter.
     `ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "shared_profile_id" integer`,
+    // Only when the column has no foreign key yet. A database created by
+    // `prisma db migrate` already has this one under Prisma's name
+    // (`posts_shared_profile_id_fkey`); adding a second copy under another
+    // name would make `prisma db verify` reject the schema.
     `DO $$ BEGIN
-      ALTER TABLE "posts" ADD CONSTRAINT "posts_shared_profile_id_fk"
-        FOREIGN KEY ("shared_profile_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint c
+        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+        WHERE c.conrelid = 'public.posts'::regclass AND c.contype = 'f' AND a.attname = 'shared_profile_id'
+      ) THEN
+        ALTER TABLE "posts" ADD CONSTRAINT "posts_shared_profile_id_fk"
+          FOREIGN KEY ("shared_profile_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+      END IF;
     EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
     `CREATE TABLE IF NOT EXISTS "profile_shares" (
       "id" serial PRIMARY KEY NOT NULL,
@@ -582,7 +592,7 @@ async function runMigration() {
   let anyFailed = false;
   for (const statement of statements) {
     try {
-      await prisma.$executeRawUnsafe(statement);
+      await rawExecute(statement);
     } catch (error) {
       anyFailed = true;
       console.warn('Migration skipped:', statement.slice(0, 80), (error as Error)?.message);

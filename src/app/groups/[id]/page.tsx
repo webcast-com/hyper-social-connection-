@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Crown, ArrowLeft, CalendarDays, Lock } from 'lucide-react';
@@ -32,10 +32,10 @@ export async function generateMetadata({
 
   if (hasDatabase && groupId !== null) {
     try {
-      group = await prisma.group.findUnique({
-        where: { id: groupId },
-        select: { name: true, description: true, coverPhoto: true, privacy: true },
-      });
+      group = await db.orm.public.Group
+        .where({ id: groupId })
+        .select('name', 'description', 'coverPhoto', 'privacy')
+        .first();
     } catch (err) {
       console.warn('[group metadata] DB query failed:', (err as Error)?.message);
     }
@@ -94,7 +94,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   let lookupFailed = false;
   if (hasDatabase) {
     try {
-      group = await prisma.group.findUnique({ where: { id: groupId } });
+      group = await db.orm.public.Group.where({ id: groupId }).first();
     } catch (err) {
       lookupFailed = true;
       console.warn('[group detail] group lookup failed:', (err as Error)?.message);
@@ -109,42 +109,36 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   // The group exists by the time this runs, or the lookup could not be made at all.
   if (hasDatabase && !lookupFailed) {
     try {
-      const memberRows = await prisma.groupMember.findMany({
-        where: { groupId },
-        include: { user: true },
-      });
+      const memberRows = await db.orm.public.GroupMember.where({ groupId }).include('user').all();
       members = memberRows.map((m) => ({ user: m.user, role: m.role || 'member' }));
 
       // ── Group discussion feed (same enrichment pipeline as the home feed) ──
-      const rows = await prisma.post.findMany({
-        where: { groupId },
-        orderBy: { createdAt: 'desc' },
-      });
+      const rows = await db.orm.public.Post.where({ groupId }).orderBy((o) => o.createdAt.desc()).all();
 
-      const allUsers = await prisma.user.findMany();
+      const allUsers = await db.orm.public.User.all();
       const usersById = new Map(allUsers.map((u) => [u.id, u]));
 
       const postIds = rows.map((p) => p.id);
-      const allLikes = postIds.length ? await prisma.like.findMany() : [];
+      const allLikes = postIds.length ? await db.orm.public.Like.all() : [];
       const allComments = postIds.length
-        ? await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } })
+        ? await db.orm.public.Comment.orderBy((o) => o.createdAt.desc()).all()
         : [];
-      const allPolls = postIds.length ? await prisma.poll.findMany() : [];
-      const allPollOptions = postIds.length ? await prisma.pollOption.findMany() : [];
-      const allPollVotes = postIds.length ? await prisma.pollVote.findMany() : [];
+      const allPolls = postIds.length ? await db.orm.public.Poll.all() : [];
+      const allPollOptions = postIds.length ? await db.orm.public.PollOption.all() : [];
+      const allPollVotes = postIds.length ? await db.orm.public.PollVote.all() : [];
 
       // Who the viewer follows — used to gate the details (bio/location)
       // shown on shared-profile cards per profile visibility.
       if (viewer?.id) {
-        const followRows = await prisma.follow.findMany({
-          where: { followerId: viewer.id },
-          select: { followingId: true },
-        });
+        const followRows = await db.orm.public.Follow
+          .where({ followerId: viewer.id })
+          .select('followingId')
+          .all();
         viewerFollowIds = new Set(followRows.map((f) => f.followingId));
       }
 
       if (viewer?.id) {
-        const bks = await prisma.bookmark.findMany({ where: { userId: viewer.id } });
+        const bks = await db.orm.public.Bookmark.where({ userId: viewer.id }).all();
         bookmarkedIds = new Set(bks.map((b) => b.postId));
       }
 
@@ -226,27 +220,28 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   if (hasDatabase && viewer) {
     try {
       if (isAdmin) {
-        const rows = await prisma.groupJoinRequest.findMany({
-          where: { groupId, status: 'pending' },
-          include: { user: true },
-        });
+        const rows = await db.orm.public.GroupJoinRequest
+          .where({ groupId, status: 'pending' })
+          .include('user')
+          .all();
         joinRequests = rows.map((r) => ({ user: r.user, status: r.status }));
       } else if (!isMember) {
-        const mine = await prisma.groupJoinRequest.findFirst({
-          where: { groupId, userId: viewer.id, status: 'pending' },
-          select: { id: true },
-        });
+        const mine = await db.orm.public.GroupJoinRequest
+          .where({ groupId, userId: viewer.id, status: 'pending' })
+          .select('id')
+          .first();
         joinPending = !!mine;
       }
       if (canSeeFeed) {
-        const eventRows = await prisma.groupEvent.findMany({
+        const eventRows = await db.orm.public.GroupEvent
+          .where({ groupId })
           // This dynamic server route intentionally computes a request-time cutoff.
           // eslint-disable-next-line react-hooks/purity
-          where: { groupId, startsAt: { gte: new Date(Date.now() - 86400000) } },
-          include: { rsvps: true },
-          orderBy: { startsAt: 'asc' },
-          take: 8,
-        });
+          .where((m) => m.startsAt.gte(new Date(Date.now() - 86400000)))
+          .include('rsvps')
+          .orderBy((o) => o.startsAt.asc())
+          .limit(8)
+          .all();
         events = eventRows.map((ev) => ({
           id: ev.id,
           title: ev.title,

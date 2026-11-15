@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
-import { prisma, hasDatabase, markDatabaseDown } from '@/lib/prisma';
+import { db, hasDatabase, markDatabaseDown } from '@/lib/prisma';
 
 const SESSION_COOKIE = 'session';
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -39,12 +39,8 @@ export async function loginUser(userId: number) {
 
   try {
     // Keep old expired rows from accumulating for users who log in regularly.
-    await prisma.session.deleteMany({
-      where: { userId, expires: { lt: new Date() } },
-    });
-    await prisma.session.create({
-      data: { sessionToken, userId, expires },
-    });
+    await db.orm.public.Session.where({ userId }).where((m) => m.expires.lt(new Date())).deleteAndCount();
+    await db.orm.public.Session.create({ sessionToken, userId, expires });
 
     const cookieStore = await cookies();
     cookieStore.set(SESSION_COOKIE, token, sessionCookieOptions(expires));
@@ -61,9 +57,7 @@ export async function logoutUser() {
 
   if (token && hasDatabase) {
     try {
-      await prisma.session.deleteMany({
-        where: { sessionToken: hashSessionToken(token) },
-      });
+      await db.orm.public.Session.where({ sessionToken: hashSessionToken(token) }).deleteAndCount();
     } catch (error) {
       // Logout should still clear the browser cookie if the database is down.
       markDatabaseDown();
@@ -93,17 +87,15 @@ export async function getSession(): Promise<{ userId: number; expires: Date } | 
   if (!token) return null;
 
   try {
-    const session = await prisma.session.findUnique({
-      where: { sessionToken: hashSessionToken(token) },
-      select: { userId: true, expires: true },
-    });
+    const session = await db.orm.public.Session
+      .where({ sessionToken: hashSessionToken(token) })
+      .select('userId', 'expires')
+      .first();
 
     if (!session) return null;
 
     if (session.expires <= new Date()) {
-      await prisma.session.deleteMany({
-        where: { sessionToken: hashSessionToken(token) },
-      });
+      await db.orm.public.Session.where({ sessionToken: hashSessionToken(token) }).deleteAndCount();
       return null;
     }
 

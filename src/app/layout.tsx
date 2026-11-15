@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import SiteFooter from '@/components/SiteFooter';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
 import { getSiteMetadata } from '@/components/SEO/SEOMeta';
@@ -46,10 +46,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let unread: { id: number }[] = [];
   if (user && hasDatabase) {
     try {
-      unread = await prisma.notification.findMany({
-        where: { userId: user.id, isRead: 0 },
-        select: { id: true },
-      });
+      unread = await db.orm.public.Notification.where({ userId: user.id, isRead: 0 }).select('id').all();
     } catch (err) {
       console.warn('[layout] notifications query failed:', (err as Error)?.message);
       unread = [];

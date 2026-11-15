@@ -25,13 +25,11 @@ source of truth for the physical schema (it runs on boot, every statement
 | `posts.external_key` | `text NULL`, unique where present | One anchor per feed item. Postgres allows any number of NULLs in a unique index, so ordinary posts are unaffected and `INSERT … ON CONFLICT DO NOTHING` makes double submits and concurrent clicks resolve to one row. |
 | `users.account_type` | `text NOT NULL DEFAULT 'person'` | Marks the system account that authors anchors as a `broadcaster`. |
 
-Run `npm run db:generate` after pulling: the committed Prisma client in
-`generated/prisma` predates these fields. Until it is regenerated, the anchor
-store reads and writes the three columns with parameterised SQL
-(`$queryRawUnsafe` / `$executeRawUnsafe`) and everything else — counts, comments,
-likes, bookmarks — through Prisma as usual. That is why `account_type` is verified
-by SQL below rather than by a Prisma select: a stale client silently omits fields
-it does not know.
+The anchor store reads and writes the three columns with parameterised SQL
+(`rawQuery` / `rawExecute` from `src/lib/prisma.ts`) and everything else — counts,
+comments, likes, bookmarks — through the Prisma client as usual. Since the move to
+Prisma ORM 8 there is no generated client to go stale: the fields are in the
+committed contract (`src/prisma/contract.json`).
 
 ## Identity
 
@@ -169,9 +167,6 @@ Not verified here, with reasons:
 - **Browser layout at 320/768/1440.** `npm run test:sports-layout` needs a
   Chromium binary; none is installed and `cdn.playwright.dev` is outside the
   egress allowlist. The card's own layout assertions still run in jsdom.
-- **`npm run db:generate`.** No route to `binaries.prisma.sh`, so the committed
-  client is stale. Regenerate locally before relying on `kind` / `externalKey` /
-  `accountType` through Prisma.
 
 
 ## Update (November 2026): drafts can now resolve from the stored index

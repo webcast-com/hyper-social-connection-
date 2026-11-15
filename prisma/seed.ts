@@ -1,10 +1,9 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { prisma } from "../src/lib/prisma";
+import { closeDb, db } from "../src/lib/prisma";
 
 /**
- * Seed script for the authentication schema. Wired via `migrations.seed` in
- * prisma.config.ts, so it runs with: npx prisma db seed
+ * Seed script for the authentication schema. Run it with: npm run db:seed
  *
  * Upserts by unique `email` so re-running is idempotent. The users match the
  * app's own Drizzle seed (src/lib/seed.ts) — same demo logins either way.
@@ -52,11 +51,15 @@ const users = [
 async function main() {
   const password = await bcrypt.hash(DEMO_PASSWORD, 10);
   for (const user of users) {
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: { ...user },
-      create: { ...user, password },
-    });
+    // Update the existing account, or create it. `email` is unique in the
+    // database, so a concurrent run is skipped rather than duplicated.
+    const updated = await db.orm.public.User.where({ email: user.email }).update({ ...user });
+    if (!updated) {
+      await db.orm.public.User.createAndCount([{ ...user, password }], {
+        onConflict: 'skip',
+        conflictOn: ['email'],
+      });
+    }
   }
   console.log(`🌱 Seeded ${users.length} users — login with any email above / ${DEMO_PASSWORD}`);
 }
@@ -66,4 +69,4 @@ main()
     console.error(e);
     process.exitCode = 1;
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => closeDb());

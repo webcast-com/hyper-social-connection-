@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
@@ -19,7 +19,7 @@ export default async function Messages() {
   let allUsers: any[] = [];
   if (hasDatabase) {
     try {
-      allUsers = await prisma.user.findMany();
+      allUsers = await db.orm.public.User.all();
     } catch (err) {
       console.warn('[messages] DB query failed:', (err as Error)?.message);
     }

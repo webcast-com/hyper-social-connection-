@@ -1,6 +1,7 @@
 'use server';
 
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
+import { and, not, or } from '@prisma/orm-postgres/orm-client';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 import { getEspnOdds } from '@/lib/espn-odds-feed';
@@ -30,15 +31,10 @@ async function createNotification(userId: number, actorId: number, type: string,
   // Don't notify yourself
   if (userId === actorId) return;
   try {
-    const prefs = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        notifyLikes: true,
-        notifyComments: true,
-        notifyFollows: true,
-        notifyMessages: true,
-      },
-    });
+    const prefs = await db.orm.public.User
+      .where({ id: userId })
+      .select('notifyLikes', 'notifyComments', 'notifyFollows', 'notifyMessages')
+      .first();
     if (prefs) {
       if (type === 'like' && prefs.notifyLikes === 0) return;
       if (type === 'comment' && prefs.notifyComments === 0) return;
@@ -46,15 +42,13 @@ async function createNotification(userId: number, actorId: number, type: string,
       if (type === 'message' && prefs.notifyMessages === 0) return;
     }
 
-    await prisma.notification.create({
-      data: {
-        userId,
-        actorId,
-        type,
-        postId: postId || null,
-        messageId: messageId || null,
-        isRead: 0,
-      },
+    await db.orm.public.Notification.create({
+      userId,
+      actorId,
+      type,
+      postId: postId || null,
+      messageId: messageId || null,
+      isRead: 0,
     });
   } catch (e) {
     console.warn('[action:createNotification] DB unavailable:', (e as Error)?.message);
@@ -86,10 +80,10 @@ export async function createPost(formData: FormData) {
     // Group posts are members-only — verified server-side, not just in the UI.
     let groupId: number | null = null;
     if (requestedGroupId > 0) {
-      const membership = await prisma.groupMember.findFirst({
-        where: { groupId: requestedGroupId, userId },
-        select: { userId: true },
-      });
+      const membership = await db.orm.public.GroupMember
+        .where({ groupId: requestedGroupId, userId })
+        .select('userId')
+        .first();
       if (!membership) {
         console.warn('[action:createPost] non-member tried to post in group', requestedGroupId);
         return; // silently refuse — the composer is only rendered for members anyway
@@ -97,15 +91,13 @@ export async function createPost(formData: FormData) {
       groupId = requestedGroupId;
     }
 
-    const createdPost = await prisma.post.create({
-      data: {
-        userId,
-        content,
-        imageUrl: imageUrl || null,
-        videoUrl: videoUrl || null,
-        groupId,
-        scheduledAt,
-      },
+    const createdPost = await db.orm.public.Post.create({
+      userId,
+      content,
+      imageUrl: imageUrl || null,
+      videoUrl: videoUrl || null,
+      groupId,
+      scheduledAt,
     });
 
     if (hasPoll && createdPost) {
@@ -118,22 +110,18 @@ export async function createPost(formData: FormData) {
 
       const options = [option1, option2, option3, option4].filter(Boolean);
       if (options.length >= 2) {
-        const createdPoll = await prisma.poll.create({
-          data: {
-            postId: createdPost.id,
-            question: content || 'Community Poll',
-            expiresAt,
-          },
+        const createdPoll = await db.orm.public.Poll.create({
+          postId: createdPost.id,
+          question: content || 'Community Poll',
+          expiresAt,
         });
 
         if (createdPoll) {
           for (let i = 0; i < options.length; i++) {
-            await prisma.pollOption.create({
-              data: {
-                pollId: createdPoll.id,
-                text: options[i],
-                position: i,
-              },
+            await db.orm.public.PollOption.create({
+              pollId: createdPoll.id,
+              text: options[i],
+              position: i,
             });
           }
         }
@@ -152,28 +140,20 @@ export async function toggleLike(postId: number) {
   const userId = await getUserId();
   if (!userId) return;
   try {
-    const existingLike = await prisma.like.findFirst({
-      where: { postId, userId },
-    });
+    const existingLike = await db.orm.public.Like.where({ postId, userId }).first();
 
     if (existingLike) {
-      await prisma.like.deleteMany({ where: { postId, userId } });
+      await db.orm.public.Like.where({ postId, userId }).deleteAndCount();
     } else {
       // The database enforces UNIQUE(post_id, user_id), so a double submit or
       // a concurrent request that slips between the check above and this
       // insert is rejected (skipDuplicates) rather than stored twice. Only
       // notify when this request actually created the like, so a duplicate
       // click cannot spam the post owner.
-      const inserted = await prisma.like.createMany({
-        data: { postId, userId },
-        skipDuplicates: true,
-      });
+      const inserted = await db.orm.public.Like.createAndCount([{ postId, userId }], { onConflict: 'skip' });
 
-      if (inserted.count > 0) {
-        const post = await prisma.post.findFirst({
-          where: { id: postId },
-          select: { userId: true },
-        });
+      if (inserted > 0) {
+        const post = await db.orm.public.Post.where({ id: postId }).select('userId').first();
         if (post) {
           await createNotification(post.userId, userId, 'like', postId);
         }
@@ -195,19 +175,14 @@ export async function createComment(postId: number, formData: FormData) {
   if (!content) return;
 
   try {
-    await prisma.comment.create({
-      data: {
-        postId,
-        userId,
-        content,
-      },
+    await db.orm.public.Comment.create({
+      postId,
+      userId,
+      content,
     });
 
     // Notify post owner
-    const post = await prisma.post.findFirst({
-      where: { id: postId },
-      select: { userId: true },
-    });
+    const post = await db.orm.public.Post.where({ id: postId }).select('userId').first();
     if (post) {
       await createNotification(post.userId, userId, 'comment', postId);
     }
@@ -225,48 +200,48 @@ export async function toggleFollow(followingId: number) {
   if (followerId === followingId) return { status: 'error' as const };
 
   try {
-    const blocked = await prisma.block.findFirst({
-      where: {
-        OR: [
-          { blockerId: followerId, blockedId: followingId },
-          { blockerId: followingId, blockedId: followerId },
-        ],
-      },
-    });
+    const blocked = await db.orm.public.Block
+      .where((m) => or(
+        and(m.blockerId.eq(followerId), m.blockedId.eq(followingId)),
+        and(m.blockerId.eq(followingId), m.blockedId.eq(followerId)),
+      ))
+      .first();
     if (blocked) return { status: 'blocked' as const };
 
-    const existingFollow = await prisma.follow.findFirst({
-      where: { followerId, followingId },
-    });
+    const existingFollow = await db.orm.public.Follow.where({ followerId, followingId }).first();
 
     if (existingFollow) {
-      await prisma.follow.deleteMany({ where: { followerId, followingId } });
-      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      await db.orm.public.Follow.where({ followerId, followingId }).deleteAndCount();
+      await db.orm.public.FollowRequest.where({ followerId, followingId }).deleteAndCount();
       revalidatePath(`/profile/${followingId}`);
       revalidatePath('/discover');
       revalidatePath('/notifications');
       return { status: 'none' as const };
     }
 
-    const pending = await prisma.followRequest.findFirst({
-      where: { followerId, followingId, status: 'pending' },
-    });
+    const pending = await db.orm.public.FollowRequest
+      .where({ followerId, followingId, status: 'pending' })
+      .first();
     if (pending) {
-      await prisma.followRequest.deleteMany({ where: { followerId, followingId } });
+      await db.orm.public.FollowRequest.where({ followerId, followingId }).deleteAndCount();
       revalidatePath(`/profile/${followingId}`);
       return { status: 'none' as const };
     }
 
-    const target = await prisma.user.findUnique({
-      where: { id: followingId },
-      select: { followPrivacy: true },
-    });
+    const target = await db.orm.public.User.where({ id: followingId }).select('followPrivacy').first();
     if ((target?.followPrivacy || 'everyone') === 'approval') {
-      await prisma.followRequest.upsert({
-        where: { followerId_followingId: { followerId, followingId } },
-        update: { status: 'pending' },
-        create: { followerId, followingId, status: 'pending' },
-      });
+      // Re-open an earlier (declined) request, or file a new one. The pair is
+      // unique in the database, so a concurrent double submit is skipped
+      // rather than stored twice.
+      const reopened = await db.orm.public.FollowRequest
+        .where({ followerId, followingId })
+        .update({ status: 'pending' });
+      if (!reopened) {
+        await db.orm.public.FollowRequest.createAndCount(
+          [{ followerId, followingId, status: 'pending' }],
+          { onConflict: 'skip', conflictOn: ['followerId', 'followingId'] },
+        );
+      }
       await createNotification(followingId, followerId, 'follow_request');
       revalidatePath(`/profile/${followingId}`);
       revalidatePath('/notifications');
@@ -274,7 +249,7 @@ export async function toggleFollow(followingId: number) {
       return { status: 'requested' as const };
     }
 
-    await prisma.follow.create({ data: { followerId, followingId } });
+    await db.orm.public.Follow.create({ followerId, followingId });
     await createNotification(followingId, followerId, 'follow');
   } catch (e) {
     console.warn('[action:toggleFollow] DB unavailable:', (e as Error)?.message);
@@ -348,17 +323,15 @@ export async function updateProfile(formData: FormData) {
 
   try {
     if (username) {
-      const taken = await prisma.user.findFirst({
-        where: { username, NOT: { id: userId } },
-        select: { id: true },
-      });
+      const taken = await db.orm.public.User
+        .where({ username })
+        .where((m) => not(m.id.eq(userId)))
+        .select('id')
+        .first();
       if (taken) return { success: false, message: 'That username is already taken.' };
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data,
-    });
+    await db.orm.public.User.where({ id: userId }).update(data);
   } catch (e) {
     console.warn('[action:updateProfile] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Could not save profile' };
@@ -389,10 +362,7 @@ export async function changePassword(formData: FormData) {
     if (!match) return { success: false, message: 'Current password is incorrect.' };
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { id: viewer.id },
-      data: { password: hashed },
-    });
+    await db.orm.public.User.where({ id: viewer.id }).update({ password: hashed });
   } catch (e) {
     console.warn('[action:changePassword] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Could not update password' };
@@ -408,7 +378,7 @@ export async function updateAvatar(avatarUrl: string) {
   if (!isSafeMediaUrl(avatarUrl)) return;
 
   try {
-    await prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } });
+    await db.orm.public.User.where({ id: userId }).update({ avatar: avatarUrl });
   } catch (e) {
     console.warn('[action:updateAvatar] DB unavailable:', (e as Error)?.message);
   }
@@ -426,7 +396,7 @@ export async function updateCoverPhoto(coverUrl: string) {
   const coverPhoto = trimmed ? (isSafeMediaUrl(trimmed) ? trimmed : null) : null;
 
   try {
-    await prisma.user.update({ where: { id: userId }, data: { coverPhoto } });
+    await db.orm.public.User.where({ id: userId }).update({ coverPhoto });
   } catch (e) {
     console.warn('[action:updateCoverPhoto] DB unavailable:', (e as Error)?.message);
   }
@@ -439,32 +409,25 @@ export async function sendMessage(receiverId: number, formData: FormData) {
   const senderId = await getUserId();
   if (!senderId) return;
   try {
-    const blocked = await prisma.block.findFirst({
-      where: {
-        OR: [
-          { blockerId: senderId, blockedId: receiverId },
-          { blockerId: receiverId, blockedId: senderId },
-        ],
-      },
-    });
+    const blocked = await db.orm.public.Block
+      .where((m) => or(
+        and(m.blockerId.eq(senderId), m.blockedId.eq(receiverId)),
+        and(m.blockerId.eq(receiverId), m.blockedId.eq(senderId)),
+      ))
+      .first();
     if (blocked) return;
 
-    const target = await prisma.user.findUnique({
-      where: { id: receiverId },
-      select: { messagePrivacy: true },
-    });
+    const target = await db.orm.public.User.where({ id: receiverId }).select('messagePrivacy').first();
     const privacy = target?.messagePrivacy || 'everyone';
     if (privacy === 'nobody') return;
     if (privacy === 'followers') {
-      const connected = await prisma.follow.findFirst({
-        where: {
-          OR: [
-            { followerId: senderId, followingId: receiverId },
-            { followerId: receiverId, followingId: senderId },
-          ],
-        },
-        select: { followerId: true },
-      });
+      const connected = await db.orm.public.Follow
+        .where((m) => or(
+          and(m.followerId.eq(senderId), m.followingId.eq(receiverId)),
+          and(m.followerId.eq(receiverId), m.followingId.eq(senderId)),
+        ))
+        .select('followerId')
+        .first();
       if (!connected) return;
     }
   } catch (e) {
@@ -479,14 +442,12 @@ export async function sendMessage(receiverId: number, formData: FormData) {
   if (!content && !imageUrl && !videoUrl) return;
 
   try {
-    const result = await prisma.message.create({
-      data: {
-        senderId,
-        receiverId,
-        content,
-        imageUrl,
-        videoUrl,
-      },
+    const result = await db.orm.public.Message.create({
+      senderId,
+      receiverId,
+      content,
+      imageUrl,
+      videoUrl,
     });
 
     await createNotification(receiverId, senderId, 'message', undefined, result.id);
@@ -522,23 +483,19 @@ export async function searchUsers(query: string) {
 
   try {
     const userId = await getUserId();
-    const results = await prisma.user.findMany({
-      where: {
-        OR: [
-          { name: { contains: clean, mode: 'insensitive' } },
-          { username: { contains: clean, mode: 'insensitive' } },
-        ],
-      },
-    });
+    const results = await db.orm.public.User
+      .where((m) => or(m.name.ilike(`%${clean}%`), m.username.ilike(`%${clean}%`)))
+      .all();
     if (results.length > 0) {
       const matched = results.filter((u) => u.id !== userId);
       const ids = matched.map((u) => u.id);
       const followRows =
         userId && ids.length
-          ? await prisma.follow.findMany({
-              where: { followerId: userId, followingId: { in: ids } },
-              select: { followingId: true },
-            })
+          ? await db.orm.public.Follow
+            .where({ followerId: userId })
+            .where((m) => m.followingId.in(ids))
+            .select('followingId')
+            .all()
           : [];
       const followed = new Set(followRows.map((f) => f.followingId));
       // Return only what the result card shows, and hide details for
@@ -573,13 +530,11 @@ export async function searchPosts(query: string) {
   if (!clean) return [];
 
   try {
-    const results = await prisma.post.findMany({
-      where: {
-        content: { contains: clean, mode: 'insensitive' },
-      },
-      include: { user: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    const results = await db.orm.public.Post
+      .where((m) => m.content.ilike(`%${clean}%`))
+      .include('user')
+      .orderBy((o) => o.createdAt.desc())
+      .all();
     if (results.length > 0) {
       return results.map((post) => ({ post, user: post.user }));
     }
@@ -600,10 +555,7 @@ export async function markNotificationRead(id: number) {
   const userId = await getUserId();
   if (!userId) return;
   try {
-    await prisma.notification.updateMany({
-      where: { id, userId },
-      data: { isRead: 1 },
-    });
+    await db.orm.public.Notification.where({ id, userId }).updateAndCount({ isRead: 1 });
   } catch (e) {
     console.warn('[action:markNotificationRead] DB unavailable:', (e as Error)?.message);
   }
@@ -615,13 +567,10 @@ export async function markAllNotificationsRead() {
   const userId = await getUserId();
   if (!userId) return 0;
   try {
-    const result = await prisma.notification.updateMany({
-      where: { userId, isRead: 0 },
-      data: { isRead: 1 },
-    });
+    const result = await db.orm.public.Notification.where({ userId, isRead: 0 }).updateAndCount({ isRead: 1 });
     revalidatePath('/notifications');
     revalidatePath('/', 'layout');
-    return result.count;
+    return result;
   } catch (e) {
     console.warn('[action:markAllNotificationsRead] DB unavailable:', (e as Error)?.message);
     return 0;
@@ -634,12 +583,10 @@ export async function createStory(imageUrl: string) {
   if (!isSafeMediaUrl(imageUrl)) return;
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
   try {
-    await prisma.story.create({
-      data: {
-        userId,
-        imageUrl,
-        expiresAt,
-      },
+    await db.orm.public.Story.create({
+      userId,
+      imageUrl,
+      expiresAt,
     });
   } catch (e) {
     console.warn('[action:createStory] DB unavailable:', (e as Error)?.message);
@@ -662,24 +609,20 @@ export async function createGroup(formData: FormData) {
   if (!name) return null;
 
   try {
-    const group = await prisma.group.create({
-      data: {
-        name,
-        description,
-        coverPhoto: coverPhoto || null,
-        adminId: userId,
-        privacy,
-        category,
-        requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
-      },
+    const group = await db.orm.public.Group.create({
+      name,
+      description,
+      coverPhoto: coverPhoto || null,
+      adminId: userId,
+      privacy,
+      category,
+      requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
     });
 
-    await prisma.groupMember.create({
-      data: {
-        groupId: group.id,
-        userId,
-        role: 'admin',
-      },
+    await db.orm.public.GroupMember.create({
+      groupId: group.id,
+      userId,
+      role: 'admin',
     });
 
     revalidatePath('/groups');
@@ -696,31 +639,37 @@ export async function joinGroup(groupId: number) {
   const userId = await getUserId();
   if (!userId) return { success: false, pending: false, message: 'Must be logged in' };
   try {
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-      select: { id: true, adminId: true, privacy: true, requireApproval: true },
-    });
+    const group = await db.orm.public.Group
+      .where({ id: groupId })
+      .select('id', 'adminId', 'privacy', 'requireApproval')
+      .first();
     if (!group) return { success: false, pending: false, message: 'Group not found' };
 
     const needsApproval = group.privacy === 'private' || group.requireApproval === 1;
     if (needsApproval) {
-      await prisma.groupJoinRequest.upsert({
-        where: { groupId_userId: { groupId, userId } },
-        update: { status: 'pending' },
-        create: { groupId, userId, status: 'pending' },
-      });
+      // Re-open an earlier request, or file a new one; (group, user) is unique
+      // in the database, so a concurrent double submit is skipped.
+      const reopened = await db.orm.public.GroupJoinRequest
+        .where({ groupId, userId })
+        .update({ status: 'pending' });
+      if (!reopened) {
+        await db.orm.public.GroupJoinRequest.createAndCount(
+          [{ groupId, userId, status: 'pending' }],
+          { onConflict: 'skip', conflictOn: ['groupId', 'userId'] },
+        );
+      }
       await createNotification(group.adminId, userId, 'follow');
       revalidatePath(`/groups/${groupId}`);
       revalidatePath('/groups');
       return { success: true, pending: true, message: 'Request sent' };
     }
 
-    await prisma.groupMember.upsert({
-      where: { groupId_userId: { groupId, userId } },
-      update: {},
+    await db.orm.public.GroupMember.upsert({
       create: { groupId, userId, role: 'member' },
+      update: {},
+      conflictOn: { groupId, userId },
     });
-    await prisma.groupJoinRequest.deleteMany({ where: { groupId, userId } });
+    await db.orm.public.GroupJoinRequest.where({ groupId, userId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:joinGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, pending: false, message: 'Database unavailable' };
@@ -735,16 +684,11 @@ export async function leaveGroup(groupId: number) {
   if (!userId) return { success: false, message: 'Must be logged in' };
   try {
     // The admin cannot leave their own group — they must keep or delete it.
-    const g = await prisma.group.findFirst({
-      where: { id: groupId },
-      select: { adminId: true },
-    });
+    const g = await db.orm.public.Group.where({ id: groupId }).select('adminId').first();
     if (g?.adminId === userId) {
       return { success: false, message: 'The group admin cannot leave their own group' };
     }
-    await prisma.groupMember.deleteMany({
-      where: { groupId, userId },
-    });
+    await db.orm.public.GroupMember.where({ groupId, userId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:leaveGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -779,19 +723,18 @@ export async function updateGroup(groupId: number, formData: FormData) {
 
   try {
     // Admin-only — enforced in the WHERE clause.
-    await prisma.group.updateMany({
-      where: { id: groupId, adminId: userId },
-      data: {
-        name,
-        description: description || null,
-        coverPhoto: coverPhoto || null,
-        privacy,
-        category,
-        rules: trimField(formData.get('rules') as string, 800),
-        location: trimField(formData.get('location') as string, 80),
-        website,
-        requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
-      },
+    await db.orm.public.Group
+      .where({ id: groupId, adminId: userId })
+      .updateAndCount({
+      name,
+      description: description || null,
+      coverPhoto: coverPhoto || null,
+      privacy,
+      category,
+      rules: trimField(formData.get('rules') as string, 800),
+      location: trimField(formData.get('location') as string, 80),
+      website,
+      requireApproval: formData.get('requireApproval') === '1' ? 1 : 0,
     });
   } catch (e) {
     console.warn('[action:updateGroup] DB unavailable:', (e as Error)?.message);
@@ -803,10 +746,7 @@ export async function updateGroup(groupId: number, formData: FormData) {
 }
 
 async function requireGroupAdmin(groupId: number, userId: number) {
-  return prisma.group.findFirst({
-    where: { id: groupId, adminId: userId },
-    select: { id: true, adminId: true },
-  });
+  return db.orm.public.Group.where({ id: groupId, adminId: userId }).select('id', 'adminId').first();
 }
 
 export async function inviteGroupMember(groupId: number, query: string) {
@@ -819,24 +759,19 @@ export async function inviteGroupMember(groupId: number, query: string) {
     const admin = await requireGroupAdmin(groupId, userId);
     if (!admin) return { success: false, message: 'Only the group admin can invite people' };
 
-    const target = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: needle },
-          { username: needle },
-        ],
-      },
-      select: { id: true, name: true },
-    });
+    const target = await db.orm.public.User
+      .where((m) => or(m.email.eq(needle), m.username.eq(needle)))
+      .select('id', 'name')
+      .first();
     if (!target) return { success: false, message: 'No user found with that username or email' };
     if (target.id === userId) return { success: false, message: 'You already admin this group' };
 
-    await prisma.groupMember.upsert({
-      where: { groupId_userId: { groupId, userId: target.id } },
-      update: {},
+    await db.orm.public.GroupMember.upsert({
       create: { groupId, userId: target.id, role: 'member' },
+      update: {},
+      conflictOn: { groupId, userId: target.id },
     });
-    await prisma.groupJoinRequest.deleteMany({ where: { groupId, userId: target.id } });
+    await db.orm.public.GroupJoinRequest.where({ groupId, userId: target.id }).deleteAndCount();
     await createNotification(target.id, userId, 'follow');
   } catch (e) {
     console.warn('[action:inviteGroupMember] DB unavailable:', (e as Error)?.message);
@@ -852,23 +787,17 @@ export async function removeGroupMember(groupId: number, memberId: number) {
   if (!userId) return { success: false, message: 'Must be logged in' };
 
   try {
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-      select: { adminId: true },
-    });
+    const group = await db.orm.public.Group.where({ id: groupId }).select('adminId').first();
     if (!group) return { success: false, message: 'Group not found' };
     if (memberId === group.adminId) {
       return { success: false, message: 'The group owner cannot be removed' };
     }
 
-    const actor = await prisma.groupMember.findFirst({
-      where: { groupId, userId },
-      select: { role: true },
-    });
+    const actor = await db.orm.public.GroupMember.where({ groupId, userId }).select('role').first();
     const canModerate = group.adminId === userId || actor?.role === 'admin' || actor?.role === 'moderator';
     if (!canModerate) return { success: false, message: 'You cannot remove members' };
 
-    await prisma.groupMember.deleteMany({ where: { groupId, userId: memberId } });
+    await db.orm.public.GroupMember.where({ groupId, userId: memberId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:removeGroupMember] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -891,10 +820,7 @@ export async function setGroupMemberRole(groupId: number, memberId: number, role
       return { success: false, message: 'The group owner stays an admin' };
     }
 
-    await prisma.groupMember.updateMany({
-      where: { groupId, userId: memberId },
-      data: { role },
-    });
+    await db.orm.public.GroupMember.where({ groupId, userId: memberId }).updateAndCount({ role });
   } catch (e) {
     console.warn('[action:setGroupMemberRole] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -912,16 +838,15 @@ export async function reviewJoinRequest(groupId: number, requestUserId: number, 
     if (!admin) return { success: false, message: 'Only the group admin can review requests' };
 
     if (decision === 'approved') {
-      await prisma.groupMember.upsert({
-        where: { groupId_userId: { groupId, userId: requestUserId } },
-        update: {},
+      await db.orm.public.GroupMember.upsert({
         create: { groupId, userId: requestUserId, role: 'member' },
+        update: {},
+        conflictOn: { groupId, userId: requestUserId },
       });
     }
-    await prisma.groupJoinRequest.updateMany({
-      where: { groupId, userId: requestUserId },
-      data: { status: decision },
-    });
+    await db.orm.public.GroupJoinRequest
+      .where({ groupId, userId: requestUserId })
+      .updateAndCount({ status: decision });
   } catch (e) {
     console.warn('[action:reviewJoinRequest] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -936,9 +861,7 @@ export async function deleteGroup(groupId: number) {
   try {
     // Admin-only. group_members rows cascade; member posts survive with
     // group_id set to NULL (become regular feed posts).
-    await prisma.group.deleteMany({
-      where: { id: groupId, adminId: userId },
-    });
+    await db.orm.public.Group.where({ id: groupId, adminId: userId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:deleteGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -951,11 +874,13 @@ export async function getNotifications() {
   const userId = await getUserId();
   if (!userId || !hasDatabase) return [];
   try {
-    const result = await prisma.notification.findMany({
-      where: { userId },
-      include: { actor: true, post: true, message: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    const result = await db.orm.public.Notification
+      .where({ userId })
+      .include('actor')
+      .include('post')
+      .include('message')
+      .orderBy((o) => o.createdAt.desc())
+      .all();
 
     return result.map((notification) => ({
       notification,
@@ -973,16 +898,14 @@ export async function toggleBookmark(postId: number) {
   const userId = await getUserId();
   if (!userId) return false;
   try {
-    const existing = await prisma.bookmark.findFirst({
-      where: { userId, postId },
-    });
+    const existing = await db.orm.public.Bookmark.where({ userId, postId }).first();
     if (existing) {
-      await prisma.bookmark.deleteMany({ where: { userId, postId } });
+      await db.orm.public.Bookmark.where({ userId, postId }).deleteAndCount();
       revalidatePath('/');
       revalidatePath(`/profile/${userId}`);
       return false;
     } else {
-      await prisma.bookmark.create({ data: { userId, postId } });
+      await db.orm.public.Bookmark.create({ userId, postId });
       revalidatePath('/');
       revalidatePath(`/profile/${userId}`);
       return true;
@@ -998,9 +921,7 @@ export async function deletePost(postId: number) {
   if (!userId) return;
   try {
     // Only author can delete their post
-    await prisma.post.deleteMany({
-      where: { id: postId, userId },
-    });
+    await db.orm.public.Post.where({ id: postId, userId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:deletePost] DB unavailable:', (e as Error)?.message);
   }
@@ -1013,9 +934,7 @@ export async function deleteComment(commentId: number) {
   const userId = await getUserId();
   if (!userId) return;
   try {
-    await prisma.comment.deleteMany({
-      where: { id: commentId, userId },
-    });
+    await db.orm.public.Comment.where({ id: commentId, userId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:deleteComment] DB unavailable:', (e as Error)?.message);
   }
@@ -1027,20 +946,15 @@ export async function repostPost(postId: number, quoteContent?: string) {
   if (!userId) return;
   try {
     const content = (quoteContent || '').trim() || '🔁 Reposted';
-    const newPost = await prisma.post.create({
-      data: {
-        userId,
-        content,
-        repostOfId: postId,
-        privacy: 'public',
-      },
+    const newPost = await db.orm.public.Post.create({
+      userId,
+      content,
+      repostOfId: postId,
+      privacy: 'public',
     });
 
     // Notify author of original post
-    const originalPost = await prisma.post.findFirst({
-      where: { id: postId },
-      select: { userId: true },
-    });
+    const originalPost = await db.orm.public.Post.where({ id: postId }).select('userId').first();
     if (originalPost && originalPost.userId !== userId) {
       await createNotification(originalPost.userId, userId, 'repost', newPost?.id || postId);
     }
@@ -1056,13 +970,11 @@ export async function reportPost(postId: number, reason: string, details?: strin
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in to report' };
   try {
-    await prisma.report.create({
-      data: {
-        reporterId: userId,
-        postId,
-        reason: reason || 'other',
-        details: details || null,
-      },
+    await db.orm.public.Report.create({
+      reporterId: userId,
+      postId,
+      reason: reason || 'other',
+      details: details || null,
     });
     return { success: true, message: 'Thank you. Our moderation team has received your report.' };
   } catch (e) {
@@ -1075,22 +987,15 @@ export async function votePoll(pollId: number, optionId: number) {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in to vote' };
   try {
-    const existing = await prisma.pollVote.findFirst({
-      where: { pollId, userId },
-    });
+    const existing = await db.orm.public.PollVote.where({ pollId, userId }).first();
 
     if (existing) {
-      await prisma.pollVote.updateMany({
-        where: { pollId, userId },
-        data: { optionId },
-      });
+      await db.orm.public.PollVote.where({ pollId, userId }).updateAndCount({ optionId });
     } else {
-      await prisma.pollVote.create({
-        data: {
-          pollId,
-          optionId,
-          userId,
-        },
+      await db.orm.public.PollVote.create({
+        pollId,
+        optionId,
+        userId,
       });
     }
   } catch (e) {
@@ -1113,10 +1018,9 @@ export async function editPost(postId: number, content: string) {
 
   try {
     // Only the author may edit — enforced in the WHERE clause, mirroring deletePost.
-    await prisma.post.updateMany({
-      where: { id: postId, userId },
-      data: { content: trimmed, updatedAt: new Date() },
-    });
+    await db.orm.public.Post
+      .where({ id: postId, userId })
+      .updateAndCount({ content: trimmed, updatedAt: new Date() });
   } catch (e) {
     console.warn('[action:editPost] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable — edit not saved' };

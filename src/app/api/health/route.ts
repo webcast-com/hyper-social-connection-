@@ -1,4 +1,4 @@
-import { prisma, hasDatabase, ensureDbConnection } from "@/lib/prisma";
+import { hasDatabase, ensureDbConnection, rawQuery } from "@/lib/prisma";
 import { getStorageDriver } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export async function GET() {
 
     if (connected) {
       // Extra lightweight query to confirm
-      await prisma.$queryRaw`SELECT 1`;
+      await rawQuery("SELECT 1");
       return Response.json({ ok: true, db: true, storage, mode: "postgres" });
     } else {
       return Response.json({

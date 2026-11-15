@@ -34,7 +34,7 @@
  * than throwing, and callers fall back to the live feed exactly as they did
  * before this table existed.
  */
-import { hasDatabase, prisma } from '@/lib/prisma';
+import { hasDatabase, rawExecute, rawQuery } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
 import { ESPN_LEAGUES } from './sports-catalog';
 import { highlightAnchorId } from './sports-anchor';
@@ -562,7 +562,7 @@ export async function findStoredHighlightClip(anchorKey: string): Promise<Sports
   if (!hasDatabase || !key) return null;
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+    const rows = await rawQuery<ClipRow>(
       `SELECT ${COLUMNS} FROM "sports_highlight_clips" WHERE "anchor_key" = $1 AND "kind" = 'match' LIMIT 1`,
       key,
     );
@@ -589,9 +589,9 @@ export async function findStoredNewsMedia(clipId: string): Promise<SportsVideoNe
   if (!hasDatabase || !id) return null;
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<{
+    const rows = await rawQuery<{
       mp4: string | null; hls: string | null; page: string | null; thumbnail: string | null; duration: number | null;
-    }[]>(
+    }>(
       `SELECT "mp4", "hls", "page", "thumbnail", "duration" FROM "sports_highlight_clips"
         WHERE "kind" = 'league' AND "clip_id" = $1 ORDER BY "id" DESC LIMIT 1`,
       id,
@@ -632,7 +632,7 @@ export async function storeNewsMedia(clipId: string, media: SportsVideoNewsMedia
   if (!hasDatabase || !id || (!mp4 && !hls)) return 0;
   try {
     await ensureMigrated();
-    return await prisma.$executeRawUnsafe(
+    return await rawExecute(
       `UPDATE "sports_highlight_clips"
           SET "mp4" = $2,
               "hls" = $3,
@@ -660,7 +660,7 @@ export async function newsClipsNeedingMedia(limit: number = MAX_MEDIA_WARM): Pro
   const max = Math.max(1, Math.min(MAX_MEDIA_WARM, Math.trunc(limit) || MAX_MEDIA_WARM));
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<{ clip_id: string; external_key: string }[]>(
+    const rows = await rawQuery<{ clip_id: string; external_key: string }>(
       `SELECT "clip_id", "external_key" FROM "sports_highlight_clips"
         WHERE "kind" = 'league' AND "mp4" IS NULL AND "hls" IS NULL
         ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC LIMIT $1`,
@@ -707,10 +707,10 @@ export type HighlightsStore = {
 
 async function querySummary(): Promise<HighlightsIndexSummary> {
   await ensureMigrated();
-  const rows = await prisma.$queryRawUnsafe<{
+  const rows = await rawQuery<{
     clips: number; match_clips: number; league_clips: number; competitions: number;
     oldest_at: Date | string | null; newest_at: Date | string | null;
-  }[]>(
+  }>(
     `SELECT count(*)::int AS "clips",
             count(*) FILTER (WHERE "kind" = 'match')::int AS "match_clips",
             count(*) FILTER (WHERE "kind" = 'league')::int AS "league_clips",
@@ -719,7 +719,7 @@ async function querySummary(): Promise<HighlightsIndexSummary> {
             max("occurred_at") AS "newest_at"
        FROM "sports_highlight_clips"`,
   );
-  const sweeps = await prisma.$queryRawUnsafe<{ last_sweep_at: Date | string | null; cells: number }[]>(
+  const sweeps = await rawQuery<{ last_sweep_at: Date | string | null; cells: number }>(
     `SELECT max("swept_at") AS "last_sweep_at", count(*)::int AS "cells" FROM "sports_highlight_sweeps"`,
   );
   const row = rows[0];
@@ -747,25 +747,25 @@ async function queryRead(query: HighlightsIndexQuery): Promise<IndexedHighlights
           AND ($4::timestamptz IS NULL OR "occurred_at" >= $4)`;
   const filters = [resolved.kind, resolved.league, resolved.status, resolved.since];
 
-  const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+  const rows = await rawQuery<ClipRow>(
     `SELECT ${COLUMNS}, "id" FROM "sports_highlight_clips"
        ${where}
        ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
        LIMIT $5 OFFSET $6`,
     ...filters, resolved.limit, resolved.offset,
   );
-  const counted = await prisma.$queryRawUnsafe<{ total: number }[]>(
+  const counted = await rawQuery<{ total: number }>(
     `SELECT count(*)::int AS "total" FROM "sports_highlight_clips" ${where}`,
     ...filters,
   );
   // Totals for the filter chips, deliberately unfiltered: a chip that counted
   // only the current page would claim a competition has four clips when it has
   // four hundred stored.
-  const leagueRows = await prisma.$queryRawUnsafe<{ league: string; total: number }[]>(
+  const leagueRows = await rawQuery<{ league: string; total: number }>(
     `SELECT "league", count(*)::int AS "total" FROM "sports_highlight_clips"
        GROUP BY "league" ORDER BY count(*) DESC, "league" ASC`,
   );
-  const statusRows = await prisma.$queryRawUnsafe<{ status: string | null; total: number }[]>(
+  const statusRows = await rawQuery<{ status: string | null; total: number }>(
     `SELECT "status", count(*)::int AS "total" FROM "sports_highlight_clips"
        WHERE "kind" = 'match' AND "status" IS NOT NULL GROUP BY "status"`,
   );
@@ -839,14 +839,14 @@ export async function readFeedClips(days: number, limit: number = FEED_INDEX_LIM
   try {
     await ensureMigrated();
     const where = `WHERE "kind" = 'match' AND ($1::timestamptz IS NULL OR "occurred_at" >= $1)`;
-    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+    const rows = await rawQuery<ClipRow>(
       `SELECT ${COLUMNS}, "id" FROM "sports_highlight_clips"
          ${where}
          ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
          LIMIT $2`,
       since, wanted,
     );
-    const counted = await prisma.$queryRawUnsafe<{ total: number }[]>(
+    const counted = await rawQuery<{ total: number }>(
       `SELECT count(*)::int AS "total" FROM "sports_highlight_clips" ${where}`,
       since,
     );
@@ -916,7 +916,7 @@ export async function readStoredClip(clipId: string): Promise<StoredClipRead> {
   if (!hasDatabase || !wanted) return empty;
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+    const rows = await rawQuery<ClipRow>(
       `SELECT ${COLUMNS} FROM "sports_highlight_clips"
          WHERE "kind" = 'match' AND lower("clip_id") = lower($1::text)
          ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
@@ -956,7 +956,7 @@ export async function readEventClips(eventId: string, limit: number = EVENT_CLIP
   const bounded = Math.max(1, Math.min(FEED_INDEX_LIMIT, asked || EVENT_CLIPS_LIMIT));
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<ClipRow[]>(
+    const rows = await rawQuery<ClipRow>(
       `SELECT ${COLUMNS} FROM "sports_highlight_clips"
          WHERE "kind" = 'match' AND ("event_id" = $1::text OR "event_id" LIKE $1::text || '-%')
          ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
@@ -1000,7 +1000,7 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
   const bounded = Math.max(1, Math.min(MAX_EVENT_REFS, asked || MAX_EVENT_REFS));
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<{ event_id: string | null; league: string | null; occurred_at: Date | null; clips: number }[]>(
+    const rows = await rawQuery<{ event_id: string | null; league: string | null; occurred_at: Date | null; clips: number }>(
       `SELECT "event_id", "league", max("occurred_at") AS "occurred_at", count(*)::int AS "clips"
          FROM "sports_highlight_clips"
         WHERE "kind" = 'match' AND "event_id" IS NOT NULL AND "league" IS NOT NULL
@@ -1036,7 +1036,7 @@ export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise
   const bounded = Math.max(1, Math.min(MAX_CLIP_REFS, asked || MAX_CLIP_REFS));
   try {
     await ensureMigrated();
-    const rows = await prisma.$queryRawUnsafe<{ clip_id: string | null; occurred_at: Date | null }[]>(
+    const rows = await rawQuery<{ clip_id: string | null; occurred_at: Date | null }>(
       `SELECT "clip_id", "occurred_at" FROM "sports_highlight_clips"
          WHERE "kind" = 'match' AND "clip_id" IS NOT NULL
          ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
@@ -1085,7 +1085,7 @@ async function queryStore(clips: StoredClip[]): Promise<number> {
   for (let start = 0; start < rows.length; start += MAX_INSERT_ROWS) {
     const batch = insertSql(rows.slice(start, start + MAX_INSERT_ROWS));
     if (!batch) continue;
-    const result = await prisma.$executeRawUnsafe(batch.sql, ...batch.params);
+    const result = await rawExecute(batch.sql, ...batch.params);
     written += typeof result === 'number' ? result : 0;
   }
   return written;
@@ -1098,7 +1098,7 @@ async function queryProbeable(keys: string[], reprobeEmptyAfterMs: number): Prom
   // A collection that answered with clips is never asked again: the clips are
   // stored permanently. One that answered empty is worth asking again later,
   // because ESPN publishes highlights hours after full time.
-  const rows = await prisma.$queryRawUnsafe<{ external_key: string }[]>(
+  const rows = await rawQuery<{ external_key: string }>(
     `SELECT "external_key" FROM "sports_highlight_probes"
        WHERE "external_key" = ANY($1::text[])
          AND ("clips_found" > 0 OR "probed_at" > $2::timestamptz)`,
@@ -1116,7 +1116,7 @@ async function queryRecordProbes(entries: { key: string; clips: number }[]): Pro
   // Two columns, two values: `probed_at` and `attempts` take their defaults on
   // insert and are set explicitly on conflict, where a re-read of the same
   // collection is a new attempt rather than a new row.
-  await prisma.$executeRawUnsafe(
+  await rawExecute(
     `INSERT INTO "sports_highlight_probes" ("external_key", "clips_found")
        VALUES ${tuples}
        ON CONFLICT ("external_key") DO UPDATE SET
@@ -1131,7 +1131,7 @@ async function queryFreshCells(keys: string[], cellTtlMs: number): Promise<Set<s
   const wanted = [...new Set(keys.filter((key) => key.startsWith('sweep:')))].slice(0, 2_000);
   if (!wanted.length) return new Set();
   await ensureMigrated();
-  const rows = await prisma.$queryRawUnsafe<{ external_key: string }[]>(
+  const rows = await rawQuery<{ external_key: string }>(
     `SELECT "external_key" FROM "sports_highlight_sweeps"
        WHERE "external_key" = ANY($1::text[]) AND "swept_at" > $2::timestamptz`,
     wanted, new Date(Date.now() - cellTtlMs),
@@ -1146,7 +1146,7 @@ async function queryRecordCells(entries: { key: string; games: number; clips: nu
   const tuples = rows.map((_, index) => `($${index * 3 + 1}, $${index * 3 + 2}, $${index * 3 + 3})`).join(', ');
   // Three columns, three values; `swept_at` defaults on insert and is refreshed
   // on conflict, which is what makes it the sweeper's cursor.
-  await prisma.$executeRawUnsafe(
+  await rawExecute(
     `INSERT INTO "sports_highlight_sweeps" ("external_key", "games", "clips")
        VALUES ${tuples}
        ON CONFLICT ("external_key") DO UPDATE SET
