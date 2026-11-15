@@ -16,7 +16,7 @@ connection pool.
 | `src/prisma/db.ts` | The Prisma 8 client (`db`) and the shared `pg` pool |
 | `src/prisma/connection.ts` | Where the database comes from: the one `prisma deploy` wired to the service, otherwise `DATABASE_URL` |
 | `module.ts`, `service.ts` | What `prisma deploy` and `prisma dev` deploy (see "Deploying") |
-| `.github/workflows/prisma-deploy.yml` | Deploys to Prisma Cloud on every push |
+| `.github/workflows/prisma-deploy.yml` | Deploys to Prisma Cloud on every push to `main` |
 | `src/lib/prisma.ts` | What app code imports: `db`, the `hasDatabase` offline flag, `ensureDbConnection()`, and the raw SQL helpers `rawQuery` / `rawExecute` / `rawTransaction` |
 | `migrations/app/` | Migrations planned from contract changes. Committed |
 | `src/lib/migrate.ts` | Idempotent boot DDL: tables outside the Prisma schema (group calls, sports picks, highlights) and the triggers/functions Prisma can't express |
@@ -72,14 +72,15 @@ The app is declared for `prisma deploy` in three files:
 
 | File | Purpose |
 | --- | --- |
-| `module.ts` | The app: a Postgres database, this Next.js service wired to it, and a public URL. Its `appRoot("hyper-social-connection", …)` name is the Prisma project the app deploys into |
+| `module.ts` | The app: a Postgres database, this Next.js service wired to it, and a public URL. Its `appRoot("hyper-social-connection-", …)` name is the Prisma project the app deploys into |
 | `service.ts` | The Next.js service: what it depends on (the database) and what it exposes (HTTP) |
 | `prisma.config.ts` → `composer` | Points the CLI at `module.ts` and sets the region a new project is created in |
 
-`.github/workflows/prisma-deploy.yml` runs on every push: `npm ci`,
-`npm run build`, then `prisma deploy`. The default branch deploys to
-`production`; any other branch deploys a preview environment with its own
-service and its own empty database.
+`.github/workflows/prisma-deploy.yml` runs on every push to `main`: `npm ci`,
+`npm run build`, then `prisma deploy` to the `production` environment. Other
+branches are not deployed. Removing the `branches` filter in the workflow gives
+every branch a preview environment with its own service and its own empty
+database.
 
 To turn it on, connect the repository to a Prisma workspace: in the Prisma
 Console, or with `npx prisma auth login` then `npx prisma git connect`. The
@@ -87,10 +88,11 @@ workflow needs no secret after that. Until the repository is connected the job
 finishes green with the notice "deploy skipped, no credential".
 
 A deploy finds its project **by name** in the connected workspace and creates
-it when no project has that name. If the project you created in the Console is
-called something other than `hyper-social-connection`, change the name in
-`module.ts` to match before the first deploy; otherwise the deploy creates a
-second project and the one in the Console stays empty.
+it when no project has that name. The name in `module.ts` is
+`hyper-social-connection-` (with the trailing hyphen), the project connected in
+the Console. If the project is ever renamed, change `module.ts` to match;
+otherwise the next deploy creates a second project and the original stops
+receiving deploys.
 
 Each deploy applies the committed migrations in `migrations/app` to that
 environment's database before the service starts, so a schema change ships as:
@@ -103,11 +105,16 @@ the placeholder `-`). It receives the database it was wired to, and
 Every other variable still comes from the environment. `next build` copies the
 repository's `.env` into the server it produces, so a deploy currently runs
 with the values committed in `.env`, including `NEXT_PUBLIC_SITE_URL` and the
-storage keys.
+storage keys. The alternative that keeps them out of git is the project's own
+variables: `npx prisma project env add --file .env --role production` uploads
+them once, and services receive them at their next deploy.
 
 To run the same thing locally, with no Prisma account: `npm run prisma:dev`
 starts a local Postgres, applies the migrations and serves the app;
-`npx prisma dev stop` ends it. To deploy from this machine instead of from
+`npm run prisma:dev:stop` ends it. Use the scripts rather than a bare
+`prisma dev`: they run the app under the name `hyper-social-connection`,
+because the trailing hyphen of the real project name makes every second
+`prisma dev` start fail (the reason is in `module.ts`). To deploy from this machine instead of from
 GitHub: `npx prisma auth login`, then `npm run prisma:deploy`.
 
 ### Prisma Compute (`prisma.compute.json`)

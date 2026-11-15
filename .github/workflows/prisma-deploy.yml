@@ -1,8 +1,9 @@
-# Deploys this app to Prisma Cloud on every push.
+# Deploys this app to Prisma Cloud when `main` changes.
 #
-#   push to the default branch  ->  the `production` environment
-#   push to any other branch    ->  a preview environment named after the branch,
-#                                   with its own service and its own empty database
+# A push to `main` deploys the `production` environment of the Prisma project
+# "hyper-social-connection-". Other branches are not deployed. To give every
+# branch its own preview environment (its own service and its own empty
+# database), remove the `branches` filter below.
 #
 # What it deploys is declared in module.ts (see PRISMA_SETUP.md, "Deploying").
 #
@@ -11,15 +12,13 @@
 # (`id-token: write` below) and receives a deploy token that lasts 30 minutes.
 # Until the repository is connected the job finishes green and reports
 # "deploy skipped, no credential" rather than failing.
-#
-# Preview environments are removed by Prisma when their branch is deleted, so
-# there is no teardown job here.
 name: prisma-deploy
 
 on:
   push:
+    branches: [main]
 
-# One deploy per branch at a time. A newer push waits for the running deploy
+# One deploy at a time. A newer push waits for the running deploy
 # instead of cancelling it: a deploy stopped halfway can leave a migration
 # partly applied.
 concurrency:
