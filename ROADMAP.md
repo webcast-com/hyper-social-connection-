@@ -6,7 +6,7 @@
 - Phase 4: Feature Expansion & Next-Level Capabilities ✅
   - Feed Tabs: "For You" (global engagement feed), "Following" (personalized creators feed), and "Saved" (bookmarks).
   - Bookmarks & Saved Posts collection (`bookmarks` table + instant bookmark toggle).
-  - Repost & Quote Post system (`RepostModal.tsx` + `repost_of_id` foreign key with embedded original post preview).
+  - Repost & Quote Post system (the share sheet, `ShareSheet.tsx`, + `repost_of_id` foreign key with embedded original post preview).
   - Interactive Full-Screen Image Lightbox with zoom in/out, download, and Escape key controls (`ImageLightbox.tsx`).
   - Content Moderation & Reporting modal (`reports` table + `ReportModal.tsx`).
   - Chat Enhancements: Live active status indicator, quick emoji reaction badges (❤️, 👍, 😂, 🔥, 👏).
@@ -118,7 +118,7 @@
     arbitrary content as the desk. Sample boards (ESPN unreachable) refuse to
     anchor: placeholder values are never stored as though they were reported.
   - Cards that cannot be engaged with stay laid out and say why — disabled
-    controls plus "Sign in to like, comment on, save and share this card." for
+    controls plus "Sign in to like, comment on and save this card, or to share it on Hyper." for
     guests and "Engagement is unavailable on sample cards." on sample data. The
     stale "Comments stay in this browser" footnotes are gone.
   - Engagement is read back in one bounded pass per homepage render

@@ -5,7 +5,7 @@ import { and, or } from '@prisma/orm-postgres/orm-client';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 import { canViewProfileDetails } from '@/lib/profile';
-import { buildProfileUrl, isShareChannel, type ShareChannel } from '@/lib/share';
+import { buildProfileUrl, isShareChannel, postPath, type ShareChannel } from '@/lib/share';
 import { getSiteUrl } from '@/lib/site-url';
 
 async function getUserId(): Promise<number | null> {
@@ -135,20 +135,226 @@ export async function shareProfileToMessage(profileId: number, receiverId: numbe
     // Absolute link — chat renders plain text, and the link should stay
     // valid if the recipient copies it out of the app.
     const profileLink = buildProfileUrl(getSiteUrl(), profileId, check.profile.username ?? null);
-    const message = await db.orm.public.Message.create({
-      senderId: userId,
+    const sent = await deliverShareMessage(
+      userId,
       receiverId,
-      content: `${body ? `${body}\n` : ''}👤 ${check.profile.name} — ${profileLink}`,
-    });
+      `${body ? `${body}\n` : ''}👤 ${check.profile.name} — ${profileLink}`,
+    );
+    if (!sent.success) return sent;
     await recordShare(profileId, userId, 'message');
-    await notify(receiverId, userId, 'message');
-    revalidatePath(`/messages/${receiverId}`);
-    void message;
   } catch (e) {
     console.warn('[action:shareProfileToMessage]', (e as Error)?.message);
     return { success: false, message: 'Could not send that message' };
   }
   return { success: true, message: 'Profile sent' };
+}
+
+/* ── Posts, and everything else the share sheet carries ─────────────────── */
+
+type ShareResult = { success: boolean; message: string };
+
+/** A note or a caption stays inside what the composers already allow. */
+const MAX_NOTE = 500;
+const MAX_CONTENT = 2000;
+
+/**
+ * Puts one shared item in somebody's inbox.
+ *
+ * The receiver comes from the client, so this applies the rules an ordinary
+ * message is held to (`sendMessage`): nothing crosses a block in either
+ * direction, and a member who takes messages from nobody, or only from people
+ * they are connected to, is not reached by a share either. The sheet lists
+ * people the sharer follows; this is what makes that list a courtesy rather
+ * than the check.
+ */
+async function deliverShareMessage(senderId: number, receiverId: number, content: string): Promise<ShareResult> {
+  if (!Number.isInteger(receiverId) || receiverId <= 0 || receiverId === senderId) {
+    return { success: false, message: 'Pick someone to send this to' };
+  }
+  const target = await db.orm.public.User.where({ id: receiverId }).select('id', 'messagePrivacy', 'notifyMessages').first();
+  if (!target) return { success: false, message: 'That person could not be found' };
+
+  const blocked = await db.orm.public.Block
+    .where((m) => or(
+      and(m.blockerId.eq(senderId), m.blockedId.eq(receiverId)),
+      and(m.blockerId.eq(receiverId), m.blockedId.eq(senderId)),
+    ))
+    .select('blockerId')
+    .first();
+  const unavailable = { success: false, message: 'You cannot send messages to this person' };
+  if (blocked) return unavailable;
+
+  const privacy = target.messagePrivacy || 'everyone';
+  if (privacy === 'nobody') return unavailable;
+  if (privacy === 'followers') {
+    const connected = await db.orm.public.Follow
+      .where((m) => or(
+        and(m.followerId.eq(senderId), m.followingId.eq(receiverId)),
+        and(m.followerId.eq(receiverId), m.followingId.eq(senderId)),
+      ))
+      .select('followerId')
+      .first();
+    if (!connected) return unavailable;
+  }
+
+  await db.orm.public.Message.create({ senderId, receiverId, content });
+  // The message always arrives; the alert about it respects the receiver's setting.
+  if (target.notifyMessages !== 0) await notify(receiverId, senderId, 'message');
+  revalidatePath(`/messages/${receiverId}`);
+  return { success: true, message: 'Sent' };
+}
+
+/**
+ * May this member pass this post on?
+ *
+ * A post that is not published yet is its author's alone, a block in either
+ * direction hides both members' posts from each other, and a post written inside
+ * a group that is not public stays in that group: it can be shared with the
+ * group's own members, and nowhere a non-member would read it.
+ */
+async function assertPostShareable(postId: number, viewerId: number, intoGroupId: number | null) {
+  const missing = { ok: false as const, message: 'This post is unavailable' };
+  if (!Number.isInteger(postId) || postId <= 0) return missing;
+  const post = await db.orm.public.Post
+    .where({ id: postId })
+    .include('user', (rel) => rel.select('id', 'name'))
+    .include('group', (rel) => rel.select('id', 'privacy'))
+    .first();
+  if (!post) return missing;
+  if (post.scheduledAt && post.scheduledAt.getTime() > Date.now() && post.userId !== viewerId) return missing;
+
+  if (post.userId !== viewerId) {
+    const blocked = await db.orm.public.Block
+      .where((m) => or(
+        and(m.blockerId.eq(viewerId), m.blockedId.eq(post.userId)),
+        and(m.blockerId.eq(post.userId), m.blockedId.eq(viewerId)),
+      ))
+      .select('blockerId')
+      .first();
+    if (blocked) return missing;
+  }
+
+  if (post.group && post.group.privacy !== 'public' && intoGroupId !== post.group.id) {
+    return { ok: false as const, message: 'Posts from a private group can only be shared inside that group' };
+  }
+  return { ok: true as const, post };
+}
+
+/** One line that says what a shared post is, for a message that carries its link. */
+function postLabel(post: { content: string; user?: { name: string | null } | null }) {
+  const text = post.content.replace(/\s+/g, ' ').trim();
+  const snippet = text.length > 80 ? `${text.slice(0, 79).trimEnd()}…` : text;
+  const author = post.user?.name?.trim();
+  return [author, snippet ? `“${snippet}”` : ''].filter(Boolean).join(': ') || 'A post on Hyper';
+}
+
+/**
+ * Share a post — to the sharer's own feed, or into a group they belong to. It
+ * is a repost: the new post carries `repostOfId`, so the original is shown inside
+ * it and its author hears about it, exactly as with the repost this replaces.
+ */
+export async function sharePostToFeed(
+  postId: number,
+  options: { message?: string; groupId?: number | null } = {},
+): Promise<ShareResult> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Sign in to share posts' };
+
+  const groupId = options.groupId ?? null;
+  const message = (options.message || '').trim().slice(0, MAX_NOTE);
+
+  try {
+    if (groupId) {
+      const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('userId').first();
+      if (!membership) return { success: false, message: 'Join the group before sharing there' };
+    }
+    const check = await assertPostShareable(postId, userId, groupId);
+    if (!check.ok) return { success: false, message: check.message };
+
+    const post = await db.orm.public.Post.create({
+      userId,
+      content: message || '🔁 Reposted',
+      repostOfId: postId,
+      groupId,
+      privacy: 'public',
+    });
+    await notify(check.post.userId, userId, 'repost', post.id);
+  } catch (e) {
+    console.warn('[action:sharePostToFeed]', (e as Error)?.message);
+    return { success: false, message: 'Could not share right now' };
+  }
+
+  revalidatePath('/');
+  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/notifications');
+  if (groupId) revalidatePath(`/groups/${groupId}`);
+  return { success: true, message: groupId ? 'Shared to the group' : 'Shared to your feed' };
+}
+
+/** Send a post to another member as a direct message: a line about it, and its link. */
+export async function sharePostToMessage(postId: number, receiverId: number, note?: string): Promise<ShareResult> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Sign in to share posts' };
+
+  try {
+    const check = await assertPostShareable(postId, userId, null);
+    if (!check.ok) return { success: false, message: check.message };
+    const body = (note || '').trim().slice(0, MAX_NOTE);
+    const link = `${getSiteUrl().replace(/\/+$/, '')}${postPath(postId)}`;
+    const sent = await deliverShareMessage(userId, receiverId, `${body ? `${body}\n` : ''}📝 ${postLabel(check.post)} — ${link}`);
+    return sent.success ? { success: true, message: 'Post sent' } : sent;
+  } catch (e) {
+    console.warn('[action:sharePostToMessage]', (e as Error)?.message);
+    return { success: false, message: 'Could not send that message' };
+  }
+}
+
+/**
+ * Share something that is not a post of its own — a league clip, a match, a
+ * prediction — as a post about it, to the sharer's feed or a group they belong
+ * to. The text is the member's own post, written by the card they shared from;
+ * it is held to the same length a post is and published under their name, the
+ * way the cards' own Share has always worked.
+ */
+export async function shareContentToFeed(
+  content: string,
+  options: { groupId?: number | null } = {},
+): Promise<ShareResult> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Sign in to share' };
+  const text = (typeof content === 'string' ? content : '').trim().slice(0, MAX_CONTENT);
+  if (!text) return { success: false, message: 'There is nothing to share' };
+  const groupId = options.groupId ?? null;
+
+  try {
+    if (groupId) {
+      const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('userId').first();
+      if (!membership) return { success: false, message: 'Join the group before sharing there' };
+    }
+    await db.orm.public.Post.create({ userId, content: text, groupId, privacy: 'public' });
+  } catch (e) {
+    console.warn('[action:shareContentToFeed]', (e as Error)?.message);
+    return { success: false, message: 'Could not share right now' };
+  }
+
+  revalidatePath('/');
+  revalidatePath(`/profile/${userId}`);
+  if (groupId) revalidatePath(`/groups/${groupId}`);
+  return { success: true, message: groupId ? 'Shared to the group' : 'Shared to your feed' };
+}
+
+/** Send that same text to one member as a direct message. */
+export async function shareContentToMessage(receiverId: number, content: string): Promise<ShareResult> {
+  const userId = await getUserId();
+  if (!userId) return { success: false, message: 'Sign in to share' };
+  const text = (typeof content === 'string' ? content : '').trim().slice(0, MAX_CONTENT);
+  if (!text) return { success: false, message: 'There is nothing to send' };
+  try {
+    return await deliverShareMessage(userId, receiverId, text);
+  } catch (e) {
+    console.warn('[action:shareContentToMessage]', (e as Error)?.message);
+    return { success: false, message: 'Could not send that message' };
+  }
 }
 
 /**

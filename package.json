@@ -26,6 +26,7 @@
     "test:call-layout": "playwright test --config=playwright.call-layout.config.ts",
     "test:uploads": "playwright test --config=playwright.uploads.config.ts",
     "test:sports": "tsx --test tests/sports/*.test.ts",
+    "test:share": "tsx --test tests/share/*.test.ts",
     "test:sports-layout": "playwright test --config=playwright.sports.config.ts",
     "test:mobile-navigation": "playwright test --config=playwright.mobile-navigation.config.ts",
     "check:espn": "tsx scripts/check-espn.ts",

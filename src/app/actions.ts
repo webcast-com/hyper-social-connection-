@@ -941,31 +941,6 @@ export async function deleteComment(commentId: number) {
   revalidatePath('/');
 }
 
-export async function repostPost(postId: number, quoteContent?: string) {
-  const userId = await getUserId();
-  if (!userId) return;
-  try {
-    const content = (quoteContent || '').trim() || '🔁 Reposted';
-    const newPost = await db.orm.public.Post.create({
-      userId,
-      content,
-      repostOfId: postId,
-      privacy: 'public',
-    });
-
-    // Notify author of original post
-    const originalPost = await db.orm.public.Post.where({ id: postId }).select('userId').first();
-    if (originalPost && originalPost.userId !== userId) {
-      await createNotification(originalPost.userId, userId, 'repost', newPost?.id || postId);
-    }
-  } catch (e) {
-    console.warn('[action:repostPost] DB unavailable:', (e as Error)?.message);
-  }
-  revalidatePath('/');
-  revalidatePath(`/profile/${userId}`);
-  revalidatePath('/notifications');
-}
-
 export async function reportPost(postId: number, reason: string, details?: string) {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in to report' };

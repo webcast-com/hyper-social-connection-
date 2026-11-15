@@ -21,7 +21,7 @@ import {
 import Link from 'next/link';
 import EmojiPicker from './EmojiPicker';
 import ReportModal from './ReportModal';
-import RepostModal from './RepostModal';
+import { SharePostSheet } from './ShareSheets';
 import EditPostModal from './EditPostModal';
 import ImageLightbox from './ImageLightbox';
 import PostPoll from './PostPoll';
@@ -560,11 +560,11 @@ export default function Post({
         />
       )}
 
-      {/* Repost modal */}
+      {/* The share sheet — the one a profile opens: feed, groups, send to, elsewhere. */}
       {showShare && (
-        <RepostModal
+        <SharePostSheet
           post={post}
-          currentUser={currentUser}
+          canShareInternally={!!currentUser?.id}
           onClose={() => setShowShare(false)}
         />
       )}

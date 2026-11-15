@@ -3,7 +3,8 @@
 import { getViewer } from '@/lib/viewer';
 import { anchorRef } from '@/lib/sports-anchor';
 import { ensureAnchorPost } from '@/lib/sports-anchor-store';
-import { createComment, repostPost, toggleBookmark, toggleLike } from './actions';
+import { createComment, toggleBookmark, toggleLike } from './actions';
+import { sharePostToFeed, sharePostToMessage } from './share-actions';
 
 /**
  * Engagement for the sports cards on the homepage.
@@ -63,9 +64,30 @@ export async function saveSportsAnchor(kind: string, id: string): Promise<void> 
   await toggleBookmark(postId);
 }
 
-/** Repost a card into the member's own feed, with an optional note. */
-export async function shareSportsAnchor(kind: string, id: string, formData: FormData): Promise<void> {
+/**
+ * Share a card from the share sheet: into the member's feed or one of their
+ * groups, as a repost of the card's post, with an optional note. The card is
+ * anchored first, like any other engagement with it, and from there it is a
+ * post being shared — the same rules, the same notification.
+ */
+export async function shareSportsAnchorToFeed(
+  kind: string,
+  id: string,
+  options: { message?: string; groupId?: number | null } = {},
+): Promise<{ success: boolean; message: string }> {
   const postId = await anchorPostId(kind, id);
-  if (!postId) return;
-  await repostPost(postId, boundedText(formData.get('note')) || undefined);
+  if (!postId) return { success: false, message: 'This card cannot be shared right now' };
+  return sharePostToFeed(postId, options);
+}
+
+/** Send a card to one member as a direct message, by the link to its post. */
+export async function shareSportsAnchorToMessage(
+  kind: string,
+  id: string,
+  receiverId: number,
+  note?: string,
+): Promise<{ success: boolean; message: string }> {
+  const postId = await anchorPostId(kind, id);
+  if (!postId) return { success: false, message: 'This card cannot be sent right now' };
+  return sharePostToMessage(postId, receiverId, note);
 }

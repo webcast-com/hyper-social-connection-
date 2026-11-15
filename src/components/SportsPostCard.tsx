@@ -12,10 +12,15 @@ import {
   Copy,
   Check,
   Maximize2,
-  Send,
-  X,
 } from 'lucide-react';
-import { commentOnSportsAnchor, likeSportsAnchor, saveSportsAnchor, shareSportsAnchor } from '@/app/sports-actions';
+import {
+  commentOnSportsAnchor,
+  likeSportsAnchor,
+  saveSportsAnchor,
+  shareSportsAnchorToFeed,
+  shareSportsAnchorToMessage,
+} from '@/app/sports-actions';
+import ShareSheet from './ShareSheet';
 import type { SportsAnchorEngagement, SportsAnchorRef } from '@/lib/sports-anchor';
 
 /**
@@ -64,6 +69,8 @@ export default function SportsPostCard({
   permalink,
   onExpand,
   menuLinks,
+  shareNoun = 'card',
+  shareImage = null,
   anchor = null,
   engagement = null,
   signedIn = false,
@@ -94,9 +101,12 @@ export default function SportsPostCard({
    * visible link, above the card-wide one so it stays clickable.
    */
   permalink?: { href: string; label: string };
-  /** Lets the share menu offer the image in the post lightbox. The caller owns
+  /** Lets the more menu offer the image in the post lightbox. The caller owns
       the lightbox, so it can expand whatever media the card is showing. */
   onExpand?: () => void;
+  /** What the share sheet calls this card ("highlight", "player") and shows beside its name. */
+  shareNoun?: string;
+  shareImage?: string | null;
   /** Extra destinations in the more menu, e.g. the player profile. */
   menuLinks?: { label: string; href: string }[];
   /** The card's identity, so engagement can find or create its anchor post. */
@@ -126,7 +136,7 @@ export default function SportsPostCard({
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      // The share menu also carries the link as text, so a denied clipboard is
+      // The share sheet also carries the link as text, so a denied clipboard is
       // not an error the reader has to act on.
     }
     setCopied(true);
@@ -136,7 +146,7 @@ export default function SportsPostCard({
   const engagementNote = !anchor
     ? 'Engagement is unavailable on sample cards. It returns with the live feed.'
     : !signedIn
-      ? 'Sign in to like, comment on, save and share this card.'
+      ? 'Sign in to like, comment on and save this card, or to share it on Hyper.'
       : postId
         ? 'Likes and comments are saved to your account and visible to everyone.'
         : 'Your first like, comment or save opens the discussion post for this card.';
@@ -204,6 +214,16 @@ export default function SportsPostCard({
                 {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
                 <span>{copied ? 'Link Copied!' : 'Copy Link'}</span>
               </button>
+              {onExpand && (
+                <button
+                  type="button"
+                  onClick={() => { setShowMenu(false); onExpand(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                >
+                  <Maximize2 className="w-4 h-4 text-gray-500" />
+                  <span>Expand Image</span>
+                </button>
+              )}
               {(menuLinks ?? []).map((link) => (
                 <Link
                   key={link.href}
@@ -316,9 +336,9 @@ export default function SportsPostCard({
 
         <button
           type="button"
-          onClick={() => setShowShare(!showShare)}
+          onClick={() => setShowShare(true)}
           aria-label={`Share ${title}`}
-          aria-expanded={showShare}
+          aria-haspopup="dialog"
           className={`${rowButton} text-gray-600 dark:text-gray-300`}
         >
           <Share2 className="w-4 h-4" />
@@ -350,58 +370,27 @@ export default function SportsPostCard({
           </button>
         )}
 
-        {showShare && (
-          <div className="absolute right-2 bottom-full mb-1 z-30 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1.5 animate-fade-in">
-            <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Share this</p>
-            {canEngage && (
-              <form action={shareSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="px-3 pb-2">
-                <label className="sr-only" htmlFor={`share-note-${anchor!.id}`}>Add a note to your repost</label>
-                <input
-                  id={`share-note-${anchor!.id}`}
-                  name="note"
-                  type="text"
-                  maxLength={500}
-                  placeholder="Add a note (optional)"
-                  className="mb-1.5 w-full rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Share to your feed</span>
-                </button>
-              </form>
-            )}
-            <button
-              type="button"
-              onClick={() => void copyLink()}
-              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-            >
-              {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-500" />}
-              <span>{copied ? 'Link Copied!' : 'Copy Link'}</span>
-            </button>
-            {onExpand && (
-              <button
-                type="button"
-                onClick={() => { setShowShare(false); onExpand(); }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                <Maximize2 className="w-4 h-4 text-gray-500" />
-                <span>Expand Image</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowShare(false)}
-              className="w-full px-4 py-2 text-left text-sm text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-            >
-              <X className="w-4 h-4" />
-              <span>Close</span>
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* The share sheet — the one a profile opens. A card that cannot be
+          anchored (a guest, no database) can still be shared by its link. */}
+      {showShare && (
+        <ShareSheet
+          subject={{
+            noun: shareNoun,
+            title,
+            subtitle,
+            image: shareImage ?? authorImage,
+            link: permalink?.href ?? href,
+            text: `${title} — ${subtitle} on Hyper`,
+            feedHint: 'Reposts this card to your followers, with your note above it if you add one.',
+          }}
+          canShareInternally={canEngage}
+          onClose={() => setShowShare(false)}
+          shareToFeed={(message, groupId) => shareSportsAnchorToFeed(anchor!.kind, anchor!.id, { message, groupId })}
+          sendTo={(receiverId, note) => shareSportsAnchorToMessage(anchor!.kind, anchor!.id, receiverId, note)}
+        />
+      )}
 
       {/* The saved thread, then the composer. Both belong to the anchor post, so
           a comment written here is the one everyone else reads. `relative z-10`

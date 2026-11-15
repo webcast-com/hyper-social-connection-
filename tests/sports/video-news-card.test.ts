@@ -214,16 +214,30 @@ test('a player that errors mid-clip offers the ESPN link instead of a black rect
   }
 });
 
-test('comment and share compose a post the way the other feed cards do', async () => {
+test('comment composes a post in the card, and share opens the share sheet a profile uses', async () => {
   const signedOut = await mountClip();
   try {
     const card = signedOut.card();
-    assert.match(card.textContent, /Sign in to comment on or share this clip\./);
+    assert.match(card.textContent, /Sign in to comment on this clip or share it on Hyper\./);
     const comment = [...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Comment')!;
     const share = [...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Share')!;
     assert.equal(comment.disabled, true);
-    assert.equal(share.disabled, true);
     assert.equal(card.querySelector('textarea'), null, 'no composer for a signed-out reader');
+
+    // A guest can still pass the clip on: the sheet opens with the link and the
+    // other networks, and none of the tabs that need an account.
+    assert.equal(share.disabled, false);
+    await signedOut.click(share);
+    const guestSheet = signedOut.document.querySelector('[role="dialog"][aria-labelledby="share-sheet-title"]');
+    assert.ok(guestSheet);
+    const guestTabs = [...guestSheet.querySelectorAll('button')].map((button: any) => button.textContent.trim());
+    assert.ok(guestTabs.includes('Elsewhere'));
+    for (const label of ['Feed', 'Groups', 'Send to']) assert.ok(!guestTabs.includes(label), `${label} needs an account`);
+    assert.ok(!guestSheet.textContent.includes('Share to your feed'));
+    assert.equal(guestSheet.querySelector('textarea'), null);
+    assert.match(guestSheet.textContent, /Facebook/);
+    assert.match(guestSheet.textContent, /WhatsApp/);
+    await signedOut.click(findButton(signedOut.document, 'Close share dialog')!);
   } finally {
     await signedOut.unmount();
   }
@@ -245,11 +259,19 @@ test('comment and share compose a post the way the other feed cards do', async (
 
     const share = [...card.querySelectorAll('button')].find((node: any) => node.textContent.trim() === 'Share')!;
     await signedIn.click(share);
-    assert.match(card.textContent, /Share this clip/);
-    assert.equal(card.querySelector('textarea')!.getAttribute('aria-label'), 'Add a note to your share');
-    // Posting is the app's own action: it is not re-implemented on this card.
-    await signedIn.click([...card.querySelectorAll('button')].find((node: any) => node.textContent.includes('Share clip'))!);
-    assert.equal(card.querySelector('textarea'), null, 'the composer closes after the post is composed');
+    // Share is the share sheet a profile opens, not a composer inside the card.
+    assert.equal(card.querySelector('textarea'), null);
+    const sheet = signedIn.document.querySelector('[role="dialog"][aria-labelledby="share-sheet-title"]');
+    assert.ok(sheet, 'the sheet is a dialog on the page');
+    assert.equal(sheet.querySelector('h2').textContent.trim(), 'Share clip');
+    const tabs = [...sheet.querySelectorAll('button')].map((button: any) => button.textContent.trim());
+    for (const label of ['Feed', 'Groups', 'Send to', 'Elsewhere']) assert.ok(tabs.includes(label), label);
+    assert.match(sheet.textContent, /Share to your feed/);
+    assert.match(sheet.textContent, /Posts this clip to your followers/);
+    assert.equal(sheet.querySelector('textarea')!.getAttribute('placeholder'), 'Say something about this clip (optional)\u2026');
+    assert.equal(sheet.querySelector('input[aria-label="Clip link"]').value, clip().page, 'the clip\u2019s own page');
+    await signedIn.click(findButton(signedIn.document, 'Close share dialog')!);
+    assert.equal(signedIn.document.querySelector('[role="dialog"]'), null);
   } finally {
     await signedIn.unmount();
   }

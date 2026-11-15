@@ -84,9 +84,12 @@ presses play again still gets a fresh attempt.
   `document.createElement('video').canPlayType('application/vnd.apple.mpegurl')`
   reports support, so Chrome and Firefox never receive a playlist they cannot
   play.
-- **A real post, not a fake one.** Comment and Share follow the prediction card's
-  idiom exactly: compose `FormData` and call `createPost`, which revalidates this
-  page. Signed-out readers get disabled controls and a one-line notice.
+- **A real post, not a fake one.** Comment follows the prediction card's idiom
+  exactly: compose `FormData` and call `createPost`, which revalidates this page.
+  Share opens the share sheet the profile page uses (`SHARE_SHEET.md`); a feed
+  share is the same text post Share used to write. Signed-out readers get a
+  disabled Comment and a one-line notice, and Share gives them the link and the
+  other networks.
 
 ## Feed wiring
 

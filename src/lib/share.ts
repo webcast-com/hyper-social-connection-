@@ -118,10 +118,33 @@ export const EXTERNAL_NETWORKS: ExternalNetwork[] = [
   },
 ];
 
+/** A profile's address on this site, without the origin. */
+export function profilePath(profileId: number, username?: string | null) {
+  return `/profile/${profileId}${username ? `?u=${enc(username)}` : ''}`;
+}
+
 /** Absolute, shareable URL for a profile. */
 export function buildProfileUrl(origin: string, profileId: number, username?: string | null) {
+  return absoluteShareUrl(origin, profilePath(profileId, username));
+}
+
+/**
+ * The address a share carries. A path on this site (`/post/12`) is given the
+ * origin; a full `http(s)` address (a clip on the provider's site) is kept. Anything
+ * else — `javascript:`, a protocol-relative `//host` — is not a link this site
+ * hands to another network, and becomes the site's own front page.
+ */
+export function absoluteShareUrl(origin: string, link: string) {
   const base = origin.replace(/\/+$/, '');
-  return `${base}/profile/${profileId}${username ? `?u=${enc(username)}` : ''}`;
+  const value = (link || '').trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/') && !value.startsWith('//')) return `${base}${value}`;
+  return `${base}/`;
+}
+
+/** A post's address on this site, without the origin. */
+export function postPath(postId: number) {
+  return `/post/${postId}`;
 }
 
 /** Absolute, shareable URL for a group (used by group invites). */
@@ -131,4 +154,19 @@ export function buildGroupUrl(origin: string, groupId: number) {
 
 export function defaultShareText(name: string) {
   return `Check out ${name} on Hyper`;
+}
+
+/**
+ * A card's feed text ends in a line of hashtags, which belong on a post and read
+ * as noise in a private message. Only whole trailing lines made of nothing but
+ * hashtags are dropped; a hashtag inside a sentence is the writer's own.
+ */
+export function messageTextFromPost(text: string): string {
+  const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
+  while (lines.length > 1) {
+    const last = lines[lines.length - 1].trim();
+    if (last === '' || /^(#[\p{L}\p{N}_]+\s*)+$/u.test(last)) lines.pop();
+    else break;
+  }
+  return lines.join('\n').trim();
 }

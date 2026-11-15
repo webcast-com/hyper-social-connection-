@@ -157,6 +157,8 @@ function LeaderPostCard({
       engagement={engagement}
       signedIn={signedIn}
       onExpand={() => setShowLightbox(true)}
+      shareNoun="player"
+      shareImage={photo && !brokenPhoto ? photo : null}
       menuLinks={[{ label: 'Open Player Profile', href: playerHref }]}
     />
     {showLightbox && photo && !brokenPhoto && (

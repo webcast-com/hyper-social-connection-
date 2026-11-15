@@ -8,6 +8,12 @@ import { boardsFor, engagementFixture, leaderKeyFor, mountBoard, findButton } fr
  * and a working Like / Comment / Share row.
  */
 
+/** The share sheet is a dialog on the page, not part of the card. */
+const shareSheet = (document: any) => document.querySelector('[role="dialog"][aria-labelledby="share-sheet-title"]');
+const sheetTabs = (sheet: any) => [...sheet.querySelectorAll('button')]
+  .map((button: any) => button.textContent.trim())
+  .filter((label: string) => ['Feed', 'Groups', 'Send to', 'Elsewhere'].includes(label));
+
 test('a player card uses the post card layout with the team crest as the author image', async () => {
   const mount = await mountBoard(await boardsFor());
   try {
@@ -87,16 +93,26 @@ test('a signed-in member sees the card\u2019s saved engagement and acts through 
     await type(composer, 'What a season');
     await submit(composer.closest('form'));
 
-    // Share offers a real repost with an optional note, plus link and lightbox.
+    // Share opens the share sheet a profile opens: feed, groups, a message, elsewhere.
     await click(findButton(document, 'Share Luka Don\u010di\u0107'));
-    assert.ok(card.querySelector('form input[name="note"]'), 'reposting to the feed is a form action');
-    assert.match(card.textContent, /Share to your feed/);
-    assert.match(card.textContent, /Copy Link/);
-    assert.match(card.textContent, /Expand Image/);
+    const sheet = shareSheet(document);
+    assert.ok(sheet, 'the sheet is a dialog');
+    assert.equal(sheet.querySelector('h2').textContent.trim(), 'Share player');
+    assert.deepEqual(sheetTabs(sheet), ['Feed', 'Groups', 'Send to', 'Elsewhere']);
+    assert.match(sheet.textContent, /Luka Don\u010di\u0107/);
+    assert.match(sheet.textContent, /Share to your feed/);
+    assert.ok(sheet.querySelector('textarea'), 'with room for a note');
+    assert.match(sheet.querySelector('input[aria-label="Player link"]').value, /^https:\/\/hyper\.co\.ke\//);
+    assert.equal(card.querySelector('form input[name="note"]'), null, 'the card\u2019s own share menu is gone');
+    await click(findButton(document, 'Close share dialog'));
+    assert.equal(shareSheet(document), null);
 
-    // Save is a form action, and the more menu reaches the discussion post.
+    // Save is a form action, and the more menu reaches the discussion post, the
+    // link and the lightbox the share menu used to carry.
     assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').getAttribute('type'), 'submit');
     await click(findButton(document, 'More options'));
+    assert.match(card.textContent, /Copy Link/);
+    assert.match(card.textContent, /Expand Image/);
     const discussion = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Open discussion')!;
     assert.equal(discussion.getAttribute('href'), '/post/77');
   } finally {
@@ -115,7 +131,7 @@ test('a guest, or a board that is not a live ESPN answer, gets a read-only card 
     assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').disabled, true);
     assert.equal(card.querySelectorAll('form').length, 0, 'nothing to submit while signed out');
     await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
-    assert.match(card.textContent, /Sign in to like, comment on, save and share this card\./);
+    assert.match(card.textContent, /Sign in to like, comment on and save this card, or to share it on Hyper\./);
     assert.match(card.textContent, /Sign in to join this conversation\./);
   } finally {
     mount.unmount();
