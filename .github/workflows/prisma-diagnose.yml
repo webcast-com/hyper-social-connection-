@@ -1,0 +1,78 @@
+# TEMPORARY. Read-only check of why the Prisma deploy token is rejected.
+# Runs on this working branch only and must be deleted before any merge.
+name: prisma-diagnose
+
+on:
+  push:
+    branches: ['arena/868fbc2f-hyper-social-connection']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe the Prisma Management API (GET requests only)
+        run: |
+          cat > probe.mjs <<'JS'
+          const api = 'https://api.prisma.io';
+          const APP = 'hyper-social-connection-';
+          const oidc = await fetch(`${process.env.ACTIONS_ID_TOKEN_REQUEST_URL}&audience=prisma-cloud`, {
+            headers: { authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
+          });
+          console.log('github oidc:', oidc.status);
+          const oidcToken = (await oidc.json()).value;
+          const ex = await fetch(`${api}/v1/auth/github-actions/token`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ token: oidcToken }),
+          });
+          console.log('exchange:', ex.status);
+          if (!ex.ok) { console.log(await ex.text()); process.exit(0); }
+          const { data } = await ex.json();
+          const token = data.value;
+          console.log(`::add-mask::${token}`);
+          console.log('exchange fields:', Object.keys(data).join(', '));
+          console.log('workspaceId:', data.workspaceId);
+          try {
+            const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+            const shown = {};
+            for (const [k, v] of Object.entries(claims)) {
+              shown[k] = typeof v === 'string' && v.length > 80 ? `${v.slice(0, 12)}…(${v.length} chars)` : v;
+            }
+            console.log('token claims:', JSON.stringify(shown));
+          } catch { console.log('token is not a JWT (opaque)'); }
+          const get = async (path) => {
+            const r = await fetch(`${api}${path}`, { headers: { authorization: `Bearer ${token}` } });
+            const text = await r.text();
+            let body; try { body = JSON.parse(text); } catch { body = text.slice(0, 300); }
+            return { status: r.status, body };
+          };
+          const projects = await get('/v1/projects');
+          console.log('GET /v1/projects:', projects.status);
+          if (projects.status !== 200) { console.log(JSON.stringify(projects.body).slice(0, 600)); }
+          const list = Array.isArray(projects.body?.data) ? projects.body.data : [];
+          for (const p of list) {
+            console.log('  project', JSON.stringify({ id: p.id, name: p.name, logicalId: p.logicalId ?? null, workspace: p.workspace?.id, createdAt: p.createdAt }));
+          }
+          const match = list.find((p) => p.logicalId === APP) ?? list.find((p) => p.name === APP);
+          console.log('match for app name:', match ? match.id : 'NONE (a deploy would try to create the project)');
+          for (const p of list) {
+            const b = await get(`/v1/projects/${p.id}/branches`);
+            console.log(`GET /v1/projects/${p.id}/branches:`, b.status);
+            if (b.status !== 200) console.log(JSON.stringify(b.body).slice(0, 600));
+            for (const br of (Array.isArray(b.body?.data) ? b.body.data : [])) {
+              console.log('  branch', JSON.stringify({ id: br.id, gitName: br.gitName, isDefault: br.isDefault }));
+            }
+          }
+          for (const path of ['/v1/me', '/v1/workspaces']) {
+            const r = await get(path);
+            console.log(`GET ${path}:`, r.status, r.status === 200 ? '' : JSON.stringify(r.body).slice(0, 300));
+          }
+          JS
+          node probe.mjs
