@@ -35,7 +35,10 @@ export type StoredObject = {
   driver: StorageDriver;
 };
 
-const LOCAL_DIR = path.join(process.cwd(), 'public', 'uploads');
+// `turbopackIgnore`: without it the build cannot tell which files under the
+// working directory this reaches, so it copies the whole repository into the
+// standalone server (.next/standalone). `public/` is shipped separately.
+const LOCAL_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), 'public', 'uploads');
 const OBJECT_PREFIX = 'media/';
 const SIGNED_GET_TTL_SECONDS = 60 * 60; // 1 hour — enough for a video session
 const SIGNED_PUT_TTL_SECONDS = 10 * 60; // 10 minutes to start the upload
@@ -103,7 +106,7 @@ export function publicMediaUrl(filename: string) {
 }
 
 export function localMediaPath(filename: string) {
-  return path.join(LOCAL_DIR, filename);
+  return path.join(/* turbopackIgnore: true */ LOCAL_DIR, filename);
 }
 
 export async function localMediaExists(filename: string) {
@@ -150,7 +153,7 @@ export async function putMediaObject(opts: {
 
   await mkdir(LOCAL_DIR, { recursive: true });
   const dest = localMediaPath(opts.filename);
-  await pipeline(Readable.from(opts.body), createWriteStream(dest));
+  await pipeline(Readable.from(opts.body), createWriteStream(/* turbopackIgnore: true */ dest));
   return { filename: opts.filename, url, key, driver: 'local' };
 }
 
@@ -225,7 +228,7 @@ export async function inspectMediaObject(
     const info = await statLocalMedia(filename);
     if (!info) return null;
     const { open } = await import('node:fs/promises');
-    const handle = await open(info.path, 'r');
+    const handle = await open(/* turbopackIgnore: true */ info.path, 'r');
     try {
       const head = Buffer.alloc(Math.min(SNIFF_BYTES, info.size));
       await handle.read(head, 0, head.length, 0);

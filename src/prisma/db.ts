@@ -9,17 +9,31 @@
  * hand-written SQL in `src/lib/prisma.ts` (`rawQuery` / `rawExecute`) borrows
  * connections from the same pool, so the app never holds two sets of
  * connections to one database.
+ *
+ * Which database that is comes from `./connection`: the one Prisma Composer
+ * wired to this service when the app is deployed with `prisma deploy`, or
+ * `DATABASE_URL` everywhere else.
  */
 import postgres from "@prisma/orm-postgres/runtime";
 import { contractFromJson } from "@prisma/orm-postgres/static";
 import { Pool } from "pg";
+import { databaseConnection } from "./connection";
 import type { Contract } from "./contract.d";
 import contractJson from "./contract.json" with { type: "json" };
 
 export const contract = contractFromJson<Contract>(contractJson);
 
 function createPool(): Pool {
-  const created = new Pool({ connectionString: process.env["DATABASE_URL"] });
+  // Under Prisma Composer, run on the pool it built for this service.
+  if (databaseConnection.source === "composer" && databaseConnection.pool) {
+    return databaseConnection.pool;
+  }
+
+  // With no database configured the pool is never used: `hasDatabase` in
+  // src/lib/prisma.ts is false and every caller checks it first.
+  const created = new Pool({
+    connectionString: databaseConnection.source === "none" ? undefined : databaseConnection.url,
+  });
   // An idle connection dropped by the server must not take the process down.
   created.on("error", (err) => {
     console.warn("[db] idle Postgres connection error:", err?.message || err);
@@ -28,7 +42,10 @@ function createPool(): Pool {
 }
 
 function createClient(pg: Pool) {
-  return postgres({ contract, pg });
+  // The explicit binding form, not `pg: pool`: that form recognises the pool
+  // with `instanceof`, which fails when the pool was created by another copy
+  // of `pg` (Composer's, once bundled).
+  return postgres({ contract, binding: { kind: "pgPool", pool: pg } });
 }
 
 type Db = ReturnType<typeof createClient>;

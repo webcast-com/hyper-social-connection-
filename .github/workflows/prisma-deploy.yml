@@ -1,0 +1,48 @@
+# Deploys this app to Prisma Cloud on every push.
+#
+#   push to the default branch  ->  the `production` environment
+#   push to any other branch    ->  a preview environment named after the branch,
+#                                   with its own service and its own empty database
+#
+# What it deploys is declared in module.ts (see PRISMA_SETUP.md, "Deploying").
+#
+# No secret is needed once the repository is connected in the Prisma Console:
+# the job proves which repository it is to Prisma with a GitHub-issued token
+# (`id-token: write` below) and receives a deploy token that lasts 30 minutes.
+# Until the repository is connected the job finishes green and reports
+# "deploy skipped, no credential" rather than failing.
+#
+# Preview environments are removed by Prisma when their branch is deleted, so
+# there is no teardown job here.
+name: prisma-deploy
+
+on:
+  push:
+
+# One deploy per branch at a time. A newer push waits for the running deploy
+# instead of cancelling it: a deploy stopped halfway can leave a migration
+# partly applied.
+concurrency:
+  group: prisma-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # The action runs the Prisma CLI with Bun.
+      - uses: oven-sh/setup-bun@v2
+      # Runs `npm ci`, then the build command, then `prisma deploy`.
+      - uses: prisma/cloud-deploy-action@v1
+        with:
+          build-command: npm run build
+          module: module.ts
