@@ -198,3 +198,25 @@ body.app-page-bg {
 /* ── Homepage players & top scorers ────────────────────────────────────
    The board reuses the feed's own post card markup and Tailwind classes
    (src/components/Post.tsx), so it needs no bespoke rules here. */
+
+/* ── Sports board ───────────────────────────────────────────────────────────
+   A scoreline that changed between two refreshes is tinted for a moment. Only
+   colour moves, never size, so a three-digit score cannot leave its card. */
+@keyframes score-pop {
+  0%, 55% { color: #dc2626; }
+}
+.score-pop {
+  animation: score-pop 1.6s ease-out;
+}
+.dark .score-pop {
+  animation-name: score-pop-dark;
+}
+@keyframes score-pop-dark {
+  0%, 55% { color: #f87171; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-pop,
+  .dark .score-pop {
+    animation: none;
+  }
+}

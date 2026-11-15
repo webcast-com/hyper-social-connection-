@@ -36,6 +36,18 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 - Sample fixtures are labeled consistently across summaries and event cards. Unrelated predictions are not attached by array index.
 - Shared header/navigation and safe-area-aware page padding remain available to signed-in and signed-out visitors.
 
+### The board's featured match
+
+When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture:
+
+- **Only a live fixture ESPN reported is featured.** A sample fixture, a race and an upcoming or finished match never are, so a board with nothing live looks exactly as it did before, and the 700px rule above is unchanged for it. When a match is featured, that card is the first score on the page and the first competition card starts below it (about 900px at 320px wide).
+- **It is a second view, not an extra fixture.** The match stays in its competition below; the featured card is a labelled `section`, not an `article`, and has no heading, so counts of cards and competition headings are unaffected. With a single fixture in view there is nothing to feature it over, so no card is drawn.
+- **It follows the filters.** It is picked from the filtered view and sits under the controls, so changing a filter never moves the control being used.
+- **Sports are not ranked against each other.** The first live fixture in the board's order decides the sport; within it the most combined scoring wins, then the football match furthest into its clock, then board order.
+- **Nothing is invented.** Away is first, as on every board card; an unreported score is a dash and counts as nothing when ranking; the progress bar is drawn only from a football minute the provider gave (`54'`, `HT`).
+
+The same file supplies three additions to the board's own card, none of which changes its markup for an existing state: the loser of a finished match is dimmed (never in a draw or with an unreported score), an upcoming fixture inside the next 24 hours shows a countdown (`in 2h 15m`, refreshed each minute from the board's clock), and a scoreline that changes between two refreshes is tinted for a moment (colour only, off under reduced motion). A logo that fails to load is replaced by the side's code. A back-to-top button appears after 600px of scroll and sits above the mobile tab bar.
+
 ## The homepage match centre
 
 One component, `src/components/SportsMatchCentre.tsx`, renders both homepage
