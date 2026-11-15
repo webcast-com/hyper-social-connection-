@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { types as pgTypes } from "pg";
+import { databaseConnection } from "../prisma/connection";
 import { db, pool } from "../prisma/db";
 
 export { db };
@@ -8,14 +9,19 @@ export { db };
 const FORCE_OFFLINE =
   process.env.FORCE_OFFLINE_MODE === "true" || process.env.DB_MODE === "offline";
 
-const rawHasDatabase = !!process.env.DATABASE_URL && !FORCE_OFFLINE;
+// A database is configured when Prisma Composer wired one to this service
+// (`prisma deploy` / `prisma dev`) or DATABASE_URL is set; see
+// src/prisma/connection.ts.
+const rawHasDatabase = databaseConnection.source !== "none" && !FORCE_OFFLINE;
 
 if (FORCE_OFFLINE) {
   console.log("[db] FORCE_OFFLINE_MODE enabled — running in demo mode (no DB queries)");
-} else if (!rawHasDatabase) {
-  console.log("[db] No DATABASE_URL — running in demo/offline mode");
-} else {
+} else if (databaseConnection.source === "composer") {
+  console.log("[db] Database provided by Prisma Composer — will attempt Postgres connection (may fall back)");
+} else if (databaseConnection.source === "env") {
   console.log("[db] DATABASE_URL detected — will attempt Postgres connection (may fall back)");
+} else {
+  console.log("[db] No database configured — running in demo/offline mode");
 }
 
 /**

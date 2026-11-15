@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Also emit a self-contained server (.next/standalone). `prisma deploy`
+  // ships that tree. Vercel and Netlify build their own output and ignore it,
+  // and `next dev` is unaffected.
+  output: "standalone",
+  // Keep the image-optimisation binaries out of the standalone server. The app
+  // renders plain <img> and never uses next/image, so they are ~33 MB of dead
+  // weight in every deploy. Remove this if next/image is ever adopted.
+  outputFileTracingExcludes: {
+    "*": ["node_modules/@next/swc-*/**", "node_modules/sharp/**", "node_modules/@img/**"],
+  },
   // Allow the Arena live-preview host (and other e2b.app subdomains) to load
   // dev resources like fonts and HMR in development.
   allowedDevOrigins: ["*.e2b.app", "3000-i160o1qa97nd824tz8cst.e2b.app"],

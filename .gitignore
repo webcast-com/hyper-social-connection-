@@ -22,3 +22,7 @@ playwright-report/
 
 # Generated standalone NFL / basketball dashboard
 public/nfl-basketball/
+
+# Prisma Composer: generated deploy / local-dev state
+.prisma-composer/
+.alchemy/
