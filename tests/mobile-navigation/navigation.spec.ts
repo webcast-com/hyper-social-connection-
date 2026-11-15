@@ -17,11 +17,14 @@ test.beforeAll(async () => {
     define: { 'process.env.NODE_ENV': '"development"', 'process.env': '{}' },
     plugins: [{ name: 'navigation-server-boundaries', setup(builder) {
       builder.onResolve({ filter: /^@\/lib\/(viewer|prisma)$/ }, (args) => ({ path: args.path, namespace: 'mobile-data' }));
+      // The Prisma filter combinators are server code (they pull in node:crypto).
+      builder.onResolve({ filter: /^@prisma\/orm-postgres\/orm-client$/ }, () => ({ path: 'orm-client', namespace: 'mobile-data' }));
       builder.onResolve({ filter: /^@\/app\/actions$/ }, () => ({ path: 'actions', namespace: 'mobile-data' }));
       builder.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'router', namespace: 'mobile-data' }));
       builder.onLoad({ filter: /.*/, namespace: 'mobile-data' }, (args) => ({ contents:
         args.path.endsWith('viewer') ? 'export const getViewer = async () => ({id:1,name:"Test User"});'
-          : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const prisma = {};'
+          : args.path === 'orm-client' ? 'export const and = (...conditions) => ({ and: conditions }); export const or = (...conditions) => ({ or: conditions }); export const not = (condition) => ({ not: condition });'
+          : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const db = {}; export const rawQuery = async () => []; export const rawExecute = async () => 0; export const rawTransaction = async () => undefined; export const ensureDbConnection = async () => false; export const markDatabaseDown = () => {}; export const closeDb = async () => {};'
             : args.path === 'router' ? 'const router = {refresh(){},push(){}}; export const useRouter = () => router; export const usePathname = () => window.mobileReviewPath; export function redirect(url){throw new Error(url)};'
               : names.map((name) => name === 'getNotifications'
                 ? 'export const getNotifications = async () => Array.from({length:18},(_,i)=>({notification:{id:i+1,actorId:2,type:"message",isRead:0,createdAt:"2026-10-22T12:00:00Z"},actor:{id:2,name:"Test Contact",avatar:null}}));'

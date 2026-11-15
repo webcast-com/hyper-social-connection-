@@ -1,8 +1,8 @@
 # Database setup
 
 This app runs on **any PostgreSQL database**, accessed through **Prisma ORM**
-(`prisma/schema.prisma` → generated client via the `@prisma/adapter-pg` driver
-adapter), driven entirely by the `DATABASE_URL` environment variable.
+8 (`prisma/schema.prisma` → the contract in `src/prisma/` → a client over one
+`pg` pool), driven entirely by the `DATABASE_URL` environment variable.
 
 Works out of the box with:
 
@@ -161,21 +161,25 @@ bucket at Prisma Object Store and the whole stack stays in one project.
 ## 3. Create the tables
 
 ```bash
-npx prisma generate   # generate the client into generated/prisma (required once per clone)
-npm run db:push       # prisma db push — sync the database with prisma/schema.prisma
+npm run db:migrate    # prisma db migrate — apply the committed migrations in migrations/app
+npm run db:check      # prisma db verify — confirm the database matches the contract
 ```
 
-`db push` is safe to re-run at any time — it applies only the missing pieces.
-(The server also self-heals schema drift on boot with idempotent
-`CREATE … IF NOT EXISTS` DDL in `src/lib/migrate.ts` — including the
-Postgres triggers Prisma cannot express — and auto-seeds demo users/posts
-when the database is empty.)
+**Do this before the app first runs against a new database.** `db:migrate` is
+safe to re-run at any time; when the database is up to date it does nothing.
 
-> **Restricted networks:** if `binaries.prisma.sh` is unreachable (some
-> sandboxes), prefix commands with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true` —
-> `prisma generate` works fine without the schema engine binary. `db push`
-> genuinely needs it, so run that from an unrestricted network (or let the
-> app's boot DDL create the schema instead).
+The server also runs idempotent `CREATE … IF NOT EXISTS` DDL on boot
+(`src/lib/migrate.ts`): the tables that live outside the Prisma schema, the
+Postgres triggers Prisma cannot express, and an auto-seed of demo users/posts
+when the database is empty. If that boot DDL reaches an empty database before
+`db:migrate` does, it creates the tables without the unique indexes and marker
+Prisma expects, and Prisma will refuse to migrate that database afterwards.
+The app still runs on it; to bring it under Prisma, start again from an empty
+database and migrate first.
+
+There is no client to generate. After changing `prisma/schema.prisma`, run
+`npm run db:generate`, `npm run db:plan -- --name <slug>` and
+`npm run db:migrate` (see [PRISMA_SETUP.md](PRISMA_SETUP.md)).
 
 ## 4. Verify
 

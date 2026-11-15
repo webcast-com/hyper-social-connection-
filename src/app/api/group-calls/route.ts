@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
 import { parsePositiveInt, readCallBody } from '@/lib/group-call-validation';
-import { hasDatabase, prisma } from '@/lib/prisma';
+import { hasDatabase, db } from '@/lib/prisma';
 import { buildRoomUrl, createCall, deactivateGroupCalls, endCall, getCallAccess, listGroupCalls } from '@/lib/group-call';
 
 export const runtime = 'nodejs';
@@ -14,20 +14,14 @@ type GroupAccess = {
 };
 
 async function getGroupAccess(groupId: number, userId: number): Promise<GroupAccess | null> {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    select: { id: true, name: true, adminId: true },
-  });
+  const group = await db.orm.public.Group.where({ id: groupId }).select('id', 'name', 'adminId').first();
   if (!group) return null;
 
   if (group.adminId === userId) {
     return { group, isMember: true };
   }
 
-  const membership = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId } },
-    select: { userId: true },
-  });
+  const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('userId').first();
 
   return { group, isMember: Boolean(membership) };
 }
@@ -173,10 +167,7 @@ export async function DELETE(req: NextRequest) {
     const access = await getCallAccess(callId, viewer.id);
     if (!access) return NextResponse.json({ error: 'Call not found.' }, { status: 404 });
 
-    const group = await prisma.group.findUnique({
-      where: { id: access.call.groupId },
-      select: { adminId: true },
-    });
+    const group = await db.orm.public.Group.where({ id: access.call.groupId }).select('adminId').first();
     const isHost = access.call.creatorId === viewer.id || group?.adminId === viewer.id;
     if (!isHost) {
       return NextResponse.json(

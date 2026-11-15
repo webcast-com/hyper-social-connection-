@@ -1,6 +1,7 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib/prisma';
+import { and, or } from '@prisma/orm-postgres/orm-client';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
@@ -12,9 +13,7 @@ async function getUserId(): Promise<number | null> {
 async function notify(userId: number, actorId: number, type: string) {
   if (userId === actorId) return;
   try {
-    await prisma.notification.create({
-      data: { userId, actorId, type, isRead: 0 },
-    });
+    await db.orm.public.Notification.create({ userId, actorId, type, isRead: 0 });
   } catch (e) {
     console.warn('[invite:notify]', (e as Error)?.message);
   }
@@ -25,18 +24,15 @@ async function notify(userId: number, actorId: number, type: string) {
  * always; ordinary members only when the group is public.
  */
 async function canInvite(groupId: number, userId: number) {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    select: { id: true, name: true, adminId: true, privacy: true },
-  });
+  const group = await db.orm.public.Group
+    .where({ id: groupId })
+    .select('id', 'name', 'adminId', 'privacy')
+    .first();
   if (!group) return { ok: false as const, message: 'Group not found' };
 
   if (group.adminId === userId) return { ok: true as const, group };
 
-  const membership = await prisma.groupMember.findFirst({
-    where: { groupId, userId },
-    select: { role: true },
-  });
+  const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('role').first();
   if (!membership) return { ok: false as const, message: 'Join the group before inviting people' };
 
   if (membership.role === 'admin' || membership.role === 'moderator') {
@@ -57,44 +53,36 @@ export async function inviteUserToGroup(groupId: number, inviteeId: number, mess
     const permission = await canInvite(groupId, userId);
     if (!permission.ok) return { success: false, message: permission.message };
 
-    const invitee = await prisma.user.findUnique({
-      where: { id: inviteeId },
-      select: { id: true, name: true },
-    });
+    const invitee = await db.orm.public.User.where({ id: inviteeId }).select('id', 'name').first();
     if (!invitee) return { success: false, message: 'That person could not be found' };
 
-    const blocked = await prisma.block.findFirst({
-      where: {
-        OR: [
-          { blockerId: userId, blockedId: inviteeId },
-          { blockerId: inviteeId, blockedId: userId },
-        ],
-      },
-      select: { blockerId: true },
-    });
+    const blocked = await db.orm.public.Block
+      .where((m) => or(
+        and(m.blockerId.eq(userId), m.blockedId.eq(inviteeId)),
+        and(m.blockerId.eq(inviteeId), m.blockedId.eq(userId)),
+      ))
+      .select('blockerId')
+      .first();
     if (blocked) return { success: false, message: 'You cannot invite this person' };
 
-    const alreadyMember = await prisma.groupMember.findFirst({
-      where: { groupId, userId: inviteeId },
-      select: { userId: true },
-    });
+    const alreadyMember = await db.orm.public.GroupMember
+      .where({ groupId, userId: inviteeId })
+      .select('userId')
+      .first();
     if (alreadyMember) return { success: false, message: `${invitee.name} is already a member` };
 
-    await prisma.groupInvite.upsert({
-      where: { groupId_inviteeId: { groupId, inviteeId } },
-      update: {
-        status: 'pending',
-        inviterId: userId,
-        message: (message || '').trim().slice(0, 300) || null,
-        createdAt: new Date(),
-      },
-      create: {
-        groupId,
-        inviterId: userId,
-        inviteeId,
-        message: (message || '').trim().slice(0, 300) || null,
-      },
-    });
+    // Re-send an earlier invite, or create a new one; (group, invitee) is
+    // unique in the database, so a concurrent double submit is skipped.
+    const note = (message || '').trim().slice(0, 300) || null;
+    const resent = await db.orm.public.GroupInvite
+      .where({ groupId, inviteeId })
+      .update({ status: 'pending', inviterId: userId, message: note, createdAt: new Date() });
+    if (!resent) {
+      await db.orm.public.GroupInvite.createAndCount(
+        [{ groupId, inviterId: userId, inviteeId, message: note }],
+        { onConflict: 'skip', conflictOn: ['groupId', 'inviteeId'] },
+      );
+    }
 
     await notify(inviteeId, userId, 'group_invite');
     revalidatePath(`/groups/${groupId}`);
@@ -112,10 +100,10 @@ export async function inviteToGroupByHandle(groupId: number, query: string, mess
   const needle = (query || '').trim().replace(/^@/, '').toLowerCase();
   if (!needle) return { success: false, message: 'Enter a username or email' };
   try {
-    const target = await prisma.user.findFirst({
-      where: { OR: [{ email: needle }, { username: needle }] },
-      select: { id: true },
-    });
+    const target = await db.orm.public.User
+      .where((m) => or(m.email.eq(needle), m.username.eq(needle)))
+      .select('id')
+      .first();
     if (!target) return { success: false, message: 'No user found with that username or email' };
     return await inviteUserToGroup(groupId, target.id, message);
   } catch (e) {
@@ -130,10 +118,10 @@ export async function respondToGroupInvite(inviteId: number, decision: 'accepted
   if (!userId) return { success: false, message: 'Sign in to respond' };
 
   try {
-    const invite = await prisma.groupInvite.findUnique({
-      where: { id: inviteId },
-      select: { id: true, groupId: true, inviteeId: true, inviterId: true, status: true },
-    });
+    const invite = await db.orm.public.GroupInvite
+      .where({ id: inviteId })
+      .select('id', 'groupId', 'inviteeId', 'inviterId', 'status')
+      .first();
     if (!invite || invite.inviteeId !== userId) {
       return { success: false, message: 'Invite not found' };
     }
@@ -142,19 +130,16 @@ export async function respondToGroupInvite(inviteId: number, decision: 'accepted
     }
 
     if (decision === 'accepted') {
-      await prisma.groupMember.upsert({
-        where: { groupId_userId: { groupId: invite.groupId, userId } },
-        update: {},
+      await db.orm.public.GroupMember.upsert({
         create: { groupId: invite.groupId, userId, role: 'member' },
+        update: {},
+        conflictOn: { groupId: invite.groupId, userId },
       });
-      await prisma.groupJoinRequest.deleteMany({ where: { groupId: invite.groupId, userId } });
+      await db.orm.public.GroupJoinRequest.where({ groupId: invite.groupId, userId }).deleteAndCount();
       await notify(invite.inviterId, userId, 'group_invite_accepted');
     }
 
-    await prisma.groupInvite.update({
-      where: { id: inviteId },
-      data: { status: decision },
-    });
+    await db.orm.public.GroupInvite.where({ id: inviteId }).update({ status: decision });
 
     revalidatePath(`/groups/${invite.groupId}`);
     revalidatePath('/groups');
@@ -175,15 +160,16 @@ export async function cancelGroupInvite(inviteId: number) {
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Sign in first' };
   try {
-    const invite = await prisma.groupInvite.findUnique({
-      where: { id: inviteId },
-      select: { id: true, groupId: true, inviterId: true, group: { select: { adminId: true } } },
-    });
+    const invite = await db.orm.public.GroupInvite
+      .where({ id: inviteId })
+      .select('id', 'groupId', 'inviterId')
+      .include('group', (rel) => rel.select('adminId'))
+      .first();
     if (!invite) return { success: false, message: 'Invite not found' };
-    if (invite.inviterId !== userId && invite.group.adminId !== userId) {
+    if (invite.inviterId !== userId && invite.group?.adminId !== userId) {
       return { success: false, message: 'You cannot cancel this invite' };
     }
-    await prisma.groupInvite.delete({ where: { id: inviteId } });
+    await db.orm.public.GroupInvite.where({ id: inviteId }).delete();
     revalidatePath(`/groups/${invite.groupId}`);
     return { success: true, message: 'Invite cancelled' };
   } catch (e) {
@@ -197,15 +183,13 @@ export async function getMyGroupInvites() {
   const userId = await getUserId();
   if (!userId) return [];
   try {
-    const rows = await prisma.groupInvite.findMany({
-      where: { inviteeId: userId, status: 'pending' },
-      include: {
-        group: { select: { id: true, name: true, coverPhoto: true, privacy: true, description: true } },
-        inviter: { select: { id: true, name: true, username: true, avatar: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-    });
+    const rows = await db.orm.public.GroupInvite
+      .where({ inviteeId: userId, status: 'pending' })
+      .include('group', (rel) => rel.select('id', 'name', 'coverPhoto', 'privacy', 'description'))
+      .include('inviter', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+      .orderBy((o) => o.createdAt.desc())
+      .limit(30)
+      .all();
     return rows.map((r) => ({
       id: r.id,
       message: r.message,
@@ -226,15 +210,13 @@ export async function getGroupPendingInvites(groupId: number) {
   try {
     const permission = await canInvite(groupId, userId);
     if (!permission.ok) return [];
-    const rows = await prisma.groupInvite.findMany({
-      where: { groupId, status: 'pending' },
-      include: {
-        invitee: { select: { id: true, name: true, username: true, avatar: true } },
-        inviter: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const rows = await db.orm.public.GroupInvite
+      .where({ groupId, status: 'pending' })
+      .include('invitee', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+      .include('inviter', (rel) => rel.select('id', 'name'))
+      .orderBy((o) => o.createdAt.desc())
+      .limit(50)
+      .all();
     return rows.map((r) => ({
       id: r.id,
       invitee: r.invitee,
@@ -256,29 +238,16 @@ export async function getInviteCandidates(groupId: number, query = '') {
   if (!userId) return [];
   const needle = (query || '').trim().replace(/^@/, '');
   try {
+    const followed = db.orm.public.Follow.where({ followerId: userId });
     const [follows, members, invites] = await Promise.all([
-      prisma.follow.findMany({
-        where: {
-          followerId: userId,
-          ...(needle
-            ? {
-                following: {
-                  OR: [
-                    { name: { contains: needle, mode: 'insensitive' } },
-                    { username: { contains: needle, mode: 'insensitive' } },
-                  ],
-                },
-              }
-            : {}),
-        },
-        include: { following: { select: { id: true, name: true, username: true, avatar: true } } },
-        take: 50,
-      }),
-      prisma.groupMember.findMany({ where: { groupId }, select: { userId: true } }),
-      prisma.groupInvite.findMany({
-        where: { groupId, status: 'pending' },
-        select: { inviteeId: true },
-      }),
+      (needle
+        ? followed.where((f) => f.following.some((u) => or(u.name.ilike(`%${needle}%`), u.username.ilike(`%${needle}%`))))
+        : followed)
+        .include('following', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+        .limit(50)
+        .all(),
+      db.orm.public.GroupMember.where({ groupId }).select('userId').all(),
+      db.orm.public.GroupInvite.where({ groupId, status: 'pending' }).select('inviteeId').all(),
     ]);
 
     const excluded = new Set<number>([

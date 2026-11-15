@@ -1,16 +1,17 @@
 // Prisma schema — the app's complete data model. Prisma is the ONLY ORM.
 //
+// This file is the source of the Prisma ORM 8 contract: `npm run db:generate`
+// (`prisma contract emit`) compiles it into src/prisma/contract.json and
+// contract.d.ts, which the client in src/prisma/db.ts reads. There is no
+// generated client any more, so there is no `generator` block. After editing
+// this file: `npm run db:generate`, `npm run db:plan -- --name <slug>`, then
+// `npm run db:migrate`.
+//
 // Field names are camelCase (the shape the app code has always consumed) and
-// @map to the physical snake_case columns, so the existing database is a
-// byte-for-byte match — `prisma db push` against it is a no-op.
+// @map to the physical snake_case columns.
 //
 // Postgres-specific triggers/functions (post like & comment counters) live in
 // src/lib/social-ddl.ts, applied as raw SQL on boot.
-
-generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-}
 
 datasource db {
   provider = "postgresql"

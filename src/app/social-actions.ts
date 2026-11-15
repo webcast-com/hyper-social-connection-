@@ -1,6 +1,7 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib/prisma';
+import { and, or } from '@prisma/orm-postgres/orm-client';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 
@@ -13,34 +14,28 @@ export async function toggleBlock(targetId: number) {
   const userId = await getUserId();
   if (!userId || userId === targetId) return { success: false, blocked: false };
   try {
-    const existing = await prisma.block.findFirst({
-      where: { blockerId: userId, blockedId: targetId },
-    });
+    const existing = await db.orm.public.Block.where({ blockerId: userId, blockedId: targetId }).first();
     if (existing) {
-      await prisma.block.deleteMany({ where: { blockerId: userId, blockedId: targetId } });
+      await db.orm.public.Block.where({ blockerId: userId, blockedId: targetId }).deleteAndCount();
       revalidatePath(`/profile/${targetId}`);
       revalidatePath('/');
       revalidatePath('/settings');
       return { success: true, blocked: false };
     }
-    await prisma.block.create({ data: { blockerId: userId, blockedId: targetId } });
-    await prisma.follow.deleteMany({
-      where: {
-        OR: [
-          { followerId: userId, followingId: targetId },
-          { followerId: targetId, followingId: userId },
-        ],
-      },
-    });
-    await prisma.followRequest.deleteMany({
-      where: {
-        OR: [
-          { followerId: userId, followingId: targetId },
-          { followerId: targetId, followingId: userId },
-        ],
-      },
-    });
-    await prisma.mute.deleteMany({ where: { muterId: userId, mutedId: targetId } });
+    await db.orm.public.Block.create({ blockerId: userId, blockedId: targetId });
+    await db.orm.public.Follow
+      .where((m) => or(
+        and(m.followerId.eq(userId), m.followingId.eq(targetId)),
+        and(m.followerId.eq(targetId), m.followingId.eq(userId)),
+      ))
+      .deleteAndCount();
+    await db.orm.public.FollowRequest
+      .where((m) => or(
+        and(m.followerId.eq(userId), m.followingId.eq(targetId)),
+        and(m.followerId.eq(targetId), m.followingId.eq(userId)),
+      ))
+      .deleteAndCount();
+    await db.orm.public.Mute.where({ muterId: userId, mutedId: targetId }).deleteAndCount();
   } catch (e) {
     console.warn('[action:toggleBlock]', (e as Error)?.message);
     return { success: false, blocked: false };
@@ -55,17 +50,15 @@ export async function toggleMute(targetId: number) {
   const userId = await getUserId();
   if (!userId || userId === targetId) return { success: false, muted: false };
   try {
-    const existing = await prisma.mute.findFirst({
-      where: { muterId: userId, mutedId: targetId },
-    });
+    const existing = await db.orm.public.Mute.where({ muterId: userId, mutedId: targetId }).first();
     if (existing) {
-      await prisma.mute.deleteMany({ where: { muterId: userId, mutedId: targetId } });
+      await db.orm.public.Mute.where({ muterId: userId, mutedId: targetId }).deleteAndCount();
       revalidatePath('/');
       revalidatePath(`/profile/${targetId}`);
       revalidatePath('/settings');
       return { success: true, muted: false };
     }
-    await prisma.mute.create({ data: { muterId: userId, mutedId: targetId } });
+    await db.orm.public.Mute.create({ muterId: userId, mutedId: targetId });
   } catch (e) {
     console.warn('[action:toggleMute]', (e as Error)?.message);
     return { success: false, muted: false };
@@ -81,13 +74,11 @@ export async function reportUser(targetId: number, reason: string, details?: str
   if (!userId) return { success: false, message: 'Must be logged in' };
   if (userId === targetId) return { success: false, message: 'You cannot report yourself' };
   try {
-    await prisma.report.create({
-      data: {
-        reporterId: userId,
-        reportedUserId: targetId,
-        reason: reason || 'other',
-        details: details || null,
-      },
+    await db.orm.public.Report.create({
+      reporterId: userId,
+      reportedUserId: targetId,
+      reason: reason || 'other',
+      details: details || null,
     });
   } catch (e) {
     console.warn('[action:reportUser]', (e as Error)?.message);
@@ -99,25 +90,19 @@ export async function reviewFollowRequest(requesterId: number, decision: 'approv
   const userId = await getUserId();
   if (!userId) return { success: false, message: 'Must be logged in' };
   try {
-    const req = await prisma.followRequest.findFirst({
-      where: { followerId: requesterId, followingId: userId, status: 'pending' },
-    });
+    const req = await db.orm.public.FollowRequest
+      .where({ followerId: requesterId, followingId: userId, status: 'pending' })
+      .first();
     if (!req) return { success: false, message: 'Request not found' };
 
     if (decision === 'approved') {
-      await prisma.follow.createMany({
-        data: { followerId: requesterId, followingId: userId },
-        skipDuplicates: true,
-      });
+      await db.orm.public.Follow.createAndCount([{ followerId: requesterId, followingId: userId }], { onConflict: 'skip' });
     }
-    await prisma.followRequest.updateMany({
-      where: { followerId: requesterId, followingId: userId },
-      data: { status: decision },
-    });
+    await db.orm.public.FollowRequest
+      .where({ followerId: requesterId, followingId: userId })
+      .updateAndCount({ status: decision });
     if (decision === 'approved') {
-      await prisma.notification.create({
-        data: { userId: requesterId, actorId: userId, type: 'follow', isRead: 0 },
-      }).catch(() => {});
+      await db.orm.public.Notification.create({ userId: requesterId, actorId: userId, type: 'follow', isRead: 0 }).catch(() => {});
     }
   } catch (e) {
     console.warn('[action:reviewFollowRequest]', (e as Error)?.message);
@@ -134,29 +119,15 @@ export async function transferGroupOwnership(groupId: number, newOwnerId: number
   if (!userId) return { success: false, message: 'Must be logged in' };
   if (newOwnerId === userId) return { success: false, message: 'You already own this group' };
   try {
-    const group = await prisma.group.findFirst({
-      where: { id: groupId, adminId: userId },
-      select: { id: true },
-    });
+    const group = await db.orm.public.Group.where({ id: groupId, adminId: userId }).select('id').first();
     if (!group) return { success: false, message: 'Only the owner can transfer this group' };
 
-    const member = await prisma.groupMember.findFirst({
-      where: { groupId, userId: newOwnerId },
-    });
+    const member = await db.orm.public.GroupMember.where({ groupId, userId: newOwnerId }).first();
     if (!member) return { success: false, message: 'The new owner must already be a member' };
 
-    await prisma.group.update({
-      where: { id: groupId },
-      data: { adminId: newOwnerId },
-    });
-    await prisma.groupMember.updateMany({
-      where: { groupId, userId: newOwnerId },
-      data: { role: 'admin' },
-    });
-    await prisma.groupMember.updateMany({
-      where: { groupId, userId },
-      data: { role: 'admin' },
-    });
+    await db.orm.public.Group.where({ id: groupId }).update({ adminId: newOwnerId });
+    await db.orm.public.GroupMember.where({ groupId, userId: newOwnerId }).updateAndCount({ role: 'admin' });
+    await db.orm.public.GroupMember.where({ groupId, userId }).updateAndCount({ role: 'admin' });
   } catch (e) {
     console.warn('[action:transferGroupOwnership]', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
@@ -177,23 +148,18 @@ export async function createGroupEvent(groupId: number, formData: FormData) {
     return { success: false, message: 'Pick a valid date and time' };
   }
   try {
-    const membership = await prisma.groupMember.findFirst({
-      where: { groupId, userId },
-      select: { role: true },
-    });
-    const group = await prisma.group.findUnique({ where: { id: groupId }, select: { adminId: true } });
+    const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('role').first();
+    const group = await db.orm.public.Group.where({ id: groupId }).select('adminId').first();
     const canCreate = group?.adminId === userId || membership?.role === 'admin' || membership?.role === 'moderator';
     if (!canCreate) return { success: false, message: 'Only admins or moderators can create events' };
 
-    await prisma.groupEvent.create({
-      data: {
-        groupId,
-        createdById: userId,
-        title: title.slice(0, 120),
-        description: String(formData.get('description') || '').trim().slice(0, 400) || null,
-        location: String(formData.get('location') || '').trim().slice(0, 120) || null,
-        startsAt,
-      },
+    await db.orm.public.GroupEvent.create({
+      groupId,
+      createdById: userId,
+      title: title.slice(0, 120),
+      description: String(formData.get('description') || '').trim().slice(0, 400) || null,
+      location: String(formData.get('location') || '').trim().slice(0, 120) || null,
+      startsAt,
     });
   } catch (e) {
     console.warn('[action:createGroupEvent]', (e as Error)?.message);
@@ -207,23 +173,18 @@ export async function rsvpGroupEvent(eventId: number, status: 'going' | 'maybe' 
   const userId = await getUserId();
   if (!userId) return { success: false };
   try {
-    const event = await prisma.groupEvent.findUnique({
-      where: { id: eventId },
-      select: { groupId: true },
-    });
+    const event = await db.orm.public.GroupEvent.where({ id: eventId }).select('groupId').first();
     if (!event) return { success: false };
-    const member = await prisma.groupMember.findFirst({
-      where: { groupId: event.groupId, userId },
-    });
+    const member = await db.orm.public.GroupMember.where({ groupId: event.groupId, userId }).first();
     if (!member) return { success: false };
 
     if (status === 'none') {
-      await prisma.groupEventRsvp.deleteMany({ where: { eventId, userId } });
+      await db.orm.public.GroupEventRsvp.where({ eventId, userId }).deleteAndCount();
     } else {
-      await prisma.groupEventRsvp.upsert({
-        where: { eventId_userId: { eventId, userId } },
-        update: { status },
+      await db.orm.public.GroupEventRsvp.upsert({
         create: { eventId, userId, status },
+        update: { status },
+        conflictOn: { eventId, userId },
       });
     }
     revalidatePath(`/groups/${event.groupId}`);
@@ -239,19 +200,19 @@ export async function getSafetyLists() {
   if (!userId) return { blocked: [], muted: [], followRequests: [] };
   try {
     const [blocked, muted, followRequests] = await Promise.all([
-      prisma.block.findMany({
-        where: { blockerId: userId },
-        include: { blocked: { select: { id: true, name: true, username: true, avatar: true } } },
-      }),
-      prisma.mute.findMany({
-        where: { muterId: userId },
-        include: { muted: { select: { id: true, name: true, username: true, avatar: true } } },
-      }),
-      prisma.followRequest.findMany({
-        where: { followingId: userId, status: 'pending' },
-        include: { follower: { select: { id: true, name: true, username: true, avatar: true } } },
-        orderBy: { createdAt: 'desc' },
-      }),
+      db.orm.public.Block
+        .where({ blockerId: userId })
+        .include('blocked', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+        .all(),
+      db.orm.public.Mute
+        .where({ muterId: userId })
+        .include('muted', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+        .all(),
+      db.orm.public.FollowRequest
+        .where({ followingId: userId, status: 'pending' })
+        .include('follower', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+        .orderBy((o) => o.createdAt.desc())
+        .all(),
     ]);
     return {
       blocked: blocked.map((b) => b.blocked),

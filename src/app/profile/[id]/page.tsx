@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import Post from '@/components/Post';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
@@ -29,12 +29,12 @@ export async function generateMetadata({
 
   if (hasDatabase && profileId !== null) {
     try {
-      profile = await prisma.user.findUnique({
-        where: { id: profileId },
+      profile = await db.orm.public.User
+        .where({ id: profileId })
         // `email` decides whether this is a person's page at all; it is never
         // rendered, described or shared.
-        select: { name: true, bio: true, avatar: true, profileVisibility: true, email: true },
-      });
+        .select('name', 'bio', 'avatar', 'profileVisibility', 'email')
+        .first();
     } catch (err) {
       console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
     }
@@ -116,7 +116,7 @@ export default async function Profile({ params }: { params: Promise<{ id: string
 
   if (hasDatabase) {
     try {
-      const profileRow = await prisma.user.findUnique({ where: { id: profileId } });
+      const profileRow = await db.orm.public.User.where({ id: profileId }).first();
       if (!profileRow) {
         // The database is reachable and has no such member, so this is a 404 — not a
         // sample person from the hardcoded demo map, and not a 200 whose body says
@@ -128,25 +128,22 @@ export default async function Profile({ params }: { params: Promise<{ id: string
       } else {
         profileUser = profileRow;
 
-        allPosts = await prisma.post.findMany({ where: { userId: profileId }, orderBy: { createdAt: 'desc' } });
-        allUsers = await prisma.user.findMany();
-        allLikes = await prisma.like.findMany();
-        allComments = await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
+        allPosts = await db.orm.public.Post
+          .where({ userId: profileId })
+          .orderBy((o) => o.createdAt.desc())
+          .all();
+        allUsers = await db.orm.public.User.all();
+        allLikes = await db.orm.public.Like.all();
+        allComments = await db.orm.public.Comment.orderBy((o) => o.createdAt.desc()).all();
 
         if (currentUser.id) {
           const [isFollowingRow, requestRow, blockRow, muteRow] = await Promise.all([
-            prisma.follow.findFirst({
-              where: { followerId: currentUser.id, followingId: profileId },
-            }),
-            prisma.followRequest.findFirst({
-              where: { followerId: currentUser.id, followingId: profileId, status: 'pending' },
-            }),
-            prisma.block.findFirst({
-              where: { blockerId: currentUser.id, blockedId: profileId },
-            }),
-            prisma.mute.findFirst({
-              where: { muterId: currentUser.id, mutedId: profileId },
-            }),
+            db.orm.public.Follow.where({ followerId: currentUser.id, followingId: profileId }).first(),
+            db.orm.public.FollowRequest
+              .where({ followerId: currentUser.id, followingId: profileId, status: 'pending' })
+              .first(),
+            db.orm.public.Block.where({ blockerId: currentUser.id, blockedId: profileId }).first(),
+            db.orm.public.Mute.where({ muterId: currentUser.id, mutedId: profileId }).first(),
           ]);
           isFollowing = !!isFollowingRow;
           followRequested = !!requestRow;
@@ -154,15 +151,15 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           isMuted = !!muteRow;
         }
 
-        const followerRows = await prisma.follow.findMany({
-          where: { followingId: profileId },
-          include: { follower: true },
-        });
+        const followerRows = await db.orm.public.Follow
+          .where({ followingId: profileId })
+          .include('follower')
+          .all();
         followersRes = followerRows.map((f) => ({ user: f.follower }));
-        const followingRows = await prisma.follow.findMany({
-          where: { followerId: profileId },
-          include: { following: true },
-        });
+        const followingRows = await db.orm.public.Follow
+          .where({ followerId: profileId })
+          .include('following')
+          .all();
         followingRes = followingRows.map((f) => ({ user: f.following }));
         if (allUsers.length === 0) allUsers = [currentUser, profileUser];
       }
@@ -197,10 +194,10 @@ export default async function Profile({ params }: { params: Promise<{ id: string
   const viewerFollowsShared = new Set<number>();
   if (hasDatabase && currentUser.id) {
     try {
-      const followRows = await prisma.follow.findMany({
-        where: { followerId: currentUser.id },
-        select: { followingId: true },
-      });
+      const followRows = await db.orm.public.Follow
+        .where({ followerId: currentUser.id })
+        .select('followingId')
+        .all();
       for (const f of followRows) viewerFollowsShared.add(f.followingId);
     } catch {
       // Without follow data, treat profiles as not followed — details fall

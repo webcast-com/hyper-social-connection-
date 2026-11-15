@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
+import { and, or } from '@prisma/orm-postgres/orm-client';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -24,19 +25,17 @@ export default async function MessageDetail({ params }: { params: Promise<{ id: 
   let chatMessages: any[] = [];
   if (hasDatabase) {
     try {
-      allUsers = await prisma.user.findMany();
-      receiver = await prisma.user.findUnique({ where: { id: receiverId } });
+      allUsers = await db.orm.public.User.all();
+      receiver = await db.orm.public.User.where({ id: receiverId }).first();
       if (!receiver) redirect('/messages');
 
-      chatMessages = await prisma.message.findMany({
-        where: {
-          OR: [
-            { senderId: viewer.id, receiverId },
-            { senderId: receiverId, receiverId: viewer.id },
-          ],
-        },
-        orderBy: { createdAt: 'asc' },
-      });
+      chatMessages = await db.orm.public.Message
+        .where((m) => or(
+          and(m.senderId.eq(viewer.id), m.receiverId.eq(receiverId)),
+          and(m.senderId.eq(receiverId), m.receiverId.eq(viewer.id)),
+        ))
+        .orderBy((o) => o.createdAt.asc())
+        .all();
     } catch (err) {
       console.warn('[messages:id] DB query failed:', (err as Error)?.message);
       allUsers = [viewer];

@@ -27,9 +27,43 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
     bundle: true, write: false, format: 'cjs', platform: 'node', packages: 'external',
     plugins: [{ name: 'seo-server-fixtures', setup(builder) {
       builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed|highlights-index)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
+      // The filter combinators the pages import next to the client; stubbed so a
+      // callback filter is recorded as plain data rather than compiled to SQL.
+      builder.onResolve({ filter: /^@prisma\/orm-postgres\/orm-client$/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
       builder.onLoad({ filter: /.*/, namespace: 'seo-boundary' }, () => ({ contents: `
         export const hasDatabase = fixture.hasDatabase ?? true;
-        export const prisma = fixture.db;
+        // A stand-in for the Prisma ORM 8 client: \`db.orm.public.<Model>\` is a
+        // chainable collection that records the query it was asked for and hands
+        // it to the fixture's \`all\` / \`first\` for that model (keyed in lower
+        // case: \`db.user\` answers \`db.orm.public.User\`). An object filter lands
+        // in \`query.where\`; a callback filter is recorded in \`query.filters\` as
+        // \`{ field: { op: value } }\`, with a relation filter nested under its name.
+        const field = (name) => new Proxy({}, { get: (_target, op) => (arg) => {
+          if (op === 'some' || op === 'none' || op === 'every') return { [name]: typeof arg === 'function' ? arg(model) : arg };
+          if (op === 'isNull') return { [name]: null };
+          return { [name]: { [op]: arg } };
+        } });
+        const model = new Proxy({}, { get: (_target, name) => field(name) });
+        const collection = (handlers = {}) => {
+          const make = (query) => ({
+            where: (arg) => make(typeof arg === 'function'
+              ? { ...query, filters: [...query.filters, arg(model)] }
+              : { ...query, where: { ...query.where, ...arg } }),
+            select: (...fields) => make({ ...query, select: fields }),
+            include: (relation) => make({ ...query, include: [...query.include, relation] }),
+            orderBy: () => make(query),
+            limit: (take) => make({ ...query, take }),
+            all: async () => handlers.all(query),
+            first: async () => handlers.first(query),
+          });
+          return make({ where: {}, filters: [], include: [] });
+        };
+        export const db = { orm: { public: new Proxy({}, {
+          get: (_target, name) => collection((fixture.db ?? {})[name[0].toLowerCase() + name.slice(1)]),
+        }) } };
+        export const and = (...conditions) => ({ and: conditions });
+        export const or = (...conditions) => ({ or: conditions });
+        export const not = (condition) => ({ not: condition });
         export const getMatchDetails = async () => fixture.board;
         export const getViewer = async () => null;
         export const getProfileShareCount = async () => 0;
@@ -149,7 +183,7 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
 test('dynamic sitemap queries require public profiles, public groups and public published posts', async () => {
   await withEnv(publicEnv, async () => {
     const queries: Record<string, unknown> = {};
-    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async (query: unknown) => {
+    const db = Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { all: async (query: unknown) => {
       queries[kind] = query;
       if (kind === 'user') {
         // A member, the sports desk that authors anchor posts, and two of the five
@@ -182,7 +216,8 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     assert.match(JSON.stringify(queries.user), /"profileVisibility":"public"/);
     assert.match(JSON.stringify(queries.group), /"privacy":"public"/);
     assert.match(JSON.stringify(queries.post), /"privacy":"public"/);
-    assert.match(JSON.stringify(queries.post), /"group":\{"privacy":"public"\}/);
+    assert.match(JSON.stringify(queries.post), /"user":\{"profileVisibility":\{"eq":"public"\}\}/);
+    assert.match(JSON.stringify(queries.post), /"group":\{"privacy":\{"eq":"public"\}\}/);
     assert.match(JSON.stringify(queries.post), /"scheduledAt":\{"lte":/);
     // A member's profile is submitted; the desk and the seeded demo accounts are
     // not, for the same reason Discover and the contacts rail leave them out.
@@ -203,7 +238,7 @@ test('dynamic sitemap queries require public profiles, public groups and public 
 test('a static route is dated by the newest thing it renders, and by nothing it cannot derive', async () => {
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', {
-      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [{ id: 7, createdAt: new Date('2026-01-01T09:00:00.000Z'), email: 'wanjiru@gmail.com' }] } ])),
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { all: async () => [{ id: 7, createdAt: new Date('2026-01-01T09:00:00.000Z'), email: 'wanjiru@gmail.com' }] } ])),
       clipRefs: { ok: true, refs: [
         // A clip with no reported time sorts last in the read, so the head of the
         // list is the newest instant this site actually holds.
@@ -284,7 +319,7 @@ test('a stored highlight clip gets an indexable page of its own, with the clip a
 test('a fixture with stored clips gets one match URL, and only when the id reverses into a route that serves', async () => {
   await withEnv(publicEnv, async () => {
     const loaded = await loadMetadataModule('src/app/sitemap.ts', {
-      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { findMany: async () => [] }])),
+      db: Object.fromEntries(['user', 'group', 'post'].map((kind) => [kind, { all: async () => [] }])),
       eventRefs: { ok: true, refs: [
         // One fixture reported twice: a scoreboard carrying more than one
         // competition appends to the stored id, but it is still one match page.
@@ -316,7 +351,7 @@ test('a group or post address that is not an id describes nobody, and asks the d
     const asked: string[] = [];
     const groupRow = { name: 'Real Group', description: 'A description.', coverPhoto: null, privacy: 'public' };
     const groups = await loadMetadataModule('src/app/groups/[id]/page.tsx', {
-      db: { group: { findUnique: async (query: { where: { id: number } }) => { asked.push(`group:${query.where.id}`); return query.where.id === 1 ? groupRow : null; } } },
+      db: { group: { first: async (query: { where: { id: number } }) => { asked.push(`group:${query.where.id}`); return query.where.id === 1 ? groupRow : null; } } },
     });
     for (const id of ['1e3', 'abc', '0', '-2', '12abc']) {
       const metadata = await groups.generateMetadata({ params: Promise.resolve({ id }) });
@@ -329,7 +364,7 @@ test('a group or post address that is not an id describes nobody, and asks the d
 
     const postRow = { content: 'A real post.', privacy: 'public', scheduledAt: null, user: { profileVisibility: 'public' }, group: null };
     const posts = await loadMetadataModule('src/app/post/[id]/page.tsx', {
-      db: { post: { findUnique: async (query: { where: { id: number } }) => { asked.push(`post:${query.where.id}`); return query.where.id === 16 ? postRow : null; } } },
+      db: { post: { first: async (query: { where: { id: number } }) => { asked.push(`post:${query.where.id}`); return query.where.id === 16 ? postRow : null; } } },
     });
     for (const id of ['0x10', '1e3', 'abc', '0', '12abc']) {
       const metadata = await posts.generateMetadata({ params: Promise.resolve({ id }) });
@@ -346,7 +381,7 @@ test('public posts get a dedicated article canonical and private/unpublished pos
   await withEnv(publicEnv, async () => {
     const base = { content: 'PRIVATE-CONTENT-MARKER', privacy: 'public', user: { profileVisibility: 'public' }, group: null, scheduledAt: null };
     let row: unknown = base;
-    const loaded = await loadMetadataModule('src/app/post/[id]/page.tsx', { db: { post: { findUnique: async () => row } } });
+    const loaded = await loadMetadataModule('src/app/post/[id]/page.tsx', { db: { post: { first: async () => row } } });
     const input = { params: Promise.resolve({ id: '7' }) };
     const metadata = await loaded.generateMetadata(input);
     assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/post/7');
@@ -365,7 +400,7 @@ test('private profile and group metadata are noindex and omit private descriptio
     for (const kind of ['profile', 'groups']) {
       const model = kind === 'profile' ? 'user' : 'group';
       const row = { name: 'Reported Name', bio: 'PRIVATE-BIO', description: 'PRIVATE-DESCRIPTION', avatar: null, coverPhoto: 'PRIVATE-COVER', profileVisibility: 'private', privacy: 'private' };
-      const loaded = await loadMetadataModule(`src/app/${kind}/[id]/page.tsx`, { db: { [model]: { findUnique: async () => row } } });
+      const loaded = await loadMetadataModule(`src/app/${kind}/[id]/page.tsx`, { db: { [model]: { first: async () => row } } });
       const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
       assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
       assert.ok(!JSON.stringify(metadata).includes('PRIVATE-'));
@@ -384,7 +419,7 @@ test('a profile is indexed only when it belongs to a person who chose to be publ
     ];
     for (const entry of cases) {
       const row = { name: 'Reported Name', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: entry.email };
-      const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', { db: { user: { findUnique: async () => row } } });
+      const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', { db: { user: { first: async () => row } } });
       const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
       assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, entry.index, entry.label);
       // `follow` stays on either way, as it does for a private profile: what a page
@@ -404,7 +439,7 @@ test('profile metadata describes the member its URL names, and nobody else', asy
     const asked: unknown[] = [];
     const row = { name: 'Member Twelve', bio: 'A bio.', avatar: null, profileVisibility: 'public', email: 'member12@gmail.com' };
     const loaded = await loadMetadataModule('src/app/profile/[id]/page.tsx', {
-      db: { user: { findUnique: async (query: { where: { id: number } }) => { asked.push(query.where.id); return query.where.id === 12 ? row : null; } } },
+      db: { user: { first: async (query: { where: { id: number } }) => { asked.push(query.where.id); return query.where.id === 12 ? row : null; } } },
     });
 
     // The old parse read `/profile/12abc` as member 12 and described them, while the

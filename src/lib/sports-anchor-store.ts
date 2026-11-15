@@ -19,7 +19,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { hasDatabase, prisma } from '@/lib/prisma';
+import { db, hasDatabase, rawQuery } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
 import { findStoredHighlightClip } from '@/lib/highlights-index';
 import { isSafeMediaUrl } from '@/lib/media-url';
@@ -90,7 +90,7 @@ async function createSportsDesk(): Promise<number | null> {
   // nobody will ever read.
   const values = '$1, $2, $3, $4, $5, \'broadcaster\', 18, \'male\', \'single\', \'public\', \'nobody\', \'everyone\', 0, 0, 0, 0';
   try {
-    const rows = await prisma.$queryRawUnsafe<{ id: number }[]>(
+    const rows = await rawQuery<{ id: number }>(
       `INSERT INTO "users" (${columns}) VALUES (${values})
        ON CONFLICT ("email") DO UPDATE SET "account_type" = 'broadcaster'
        RETURNING "id"`,
@@ -101,7 +101,7 @@ async function createSportsDesk(): Promise<number | null> {
     // A member may already hold @hypersports; the desk does not need a handle.
     console.warn('[sports-desk] create with username failed, retrying without one:', (error as Error)?.message);
     try {
-      const rows = await prisma.$queryRawUnsafe<{ id: number }[]>(
+      const rows = await rawQuery<{ id: number }>(
         `INSERT INTO "users" (${columns}) VALUES (${values})
          ON CONFLICT ("email") DO UPDATE SET "account_type" = 'broadcaster'
          RETURNING "id"`,
@@ -110,7 +110,7 @@ async function createSportsDesk(): Promise<number | null> {
       return rows[0]?.id ?? null;
     } catch (retryError) {
       console.warn('[sports-desk] unavailable:', (retryError as Error)?.message);
-      const existing = await prisma.user.findUnique({ where: { email: SPORTS_DESK.email }, select: { id: true } });
+      const existing = await db.orm.public.User.where({ email: SPORTS_DESK.email }).select('id').first();
       return existing?.id ?? null;
     }
   }
@@ -165,7 +165,7 @@ export async function createAnchorPost(draft: SportsAnchorDraft): Promise<number
   const imageUrl = isSafeMediaUrl(draft.imageUrl) ? draft.imageUrl : null;
   const videoUrl = isSafeMediaUrl(draft.videoUrl) ? draft.videoUrl : null;
   try {
-    const inserted = await prisma.$queryRawUnsafe<{ id: number }[]>(
+    const inserted = await rawQuery<{ id: number }>(
       `INSERT INTO "posts" ("user_id", "content", "image_url", "video_url", "privacy", "kind", "external_key")
        VALUES ($1, $2, $3, $4, 'public', $5, $6)
        ON CONFLICT ("external_key") DO NOTHING
@@ -178,7 +178,7 @@ export async function createAnchorPost(draft: SportsAnchorDraft): Promise<number
   }
   // Already anchored — by an earlier interaction or by a concurrent one.
   try {
-    const existing = await prisma.$queryRawUnsafe<{ id: number }[]>(
+    const existing = await rawQuery<{ id: number }>(
       'SELECT "id" FROM "posts" WHERE "external_key" = $1', draft.externalKey,
     );
     return existing[0]?.id ?? null;
@@ -210,7 +210,7 @@ export async function loadAnchorEngagement(
   let ids: { id: number; external_key: string }[] = [];
   try {
     const placeholders = keys.map((_, index) => `$${index + 1}`).join(', ');
-    ids = await prisma.$queryRawUnsafe<{ id: number; external_key: string }[]>(
+    ids = await rawQuery<{ id: number; external_key: string }>(
       `SELECT "id", "external_key" FROM "posts" WHERE "external_key" IN (${placeholders})`, ...keys,
     );
   } catch (error) {
@@ -223,19 +223,24 @@ export async function loadAnchorEngagement(
   const keyByPostId = new Map(ids.map((row) => [row.id, row.external_key]));
   try {
     const [posts, comments, liked, saved] = await Promise.all([
-      prisma.post.findMany({ where: { id: { in: postIds } }, select: { id: true, likesCount: true, commentsCount: true } }),
-      prisma.comment.findMany({
-        where: { postId: { in: postIds } },
-        orderBy: { createdAt: 'asc' },
-        take: MAX_COMMENTS_PER_CARD * postIds.length,
-        include: { user: { select: { id: true, name: true, avatar: true } } },
-      }),
-      viewerId ? prisma.like.findMany({ where: { postId: { in: postIds }, userId: viewerId }, select: { postId: true } }) : Promise.resolve([]),
-      viewerId ? prisma.bookmark.findMany({ where: { postId: { in: postIds }, userId: viewerId }, select: { postId: true } }) : Promise.resolve([]),
+      db.orm.public.Post.where((m) => m.id.in(postIds)).select('id', 'likesCount', 'commentsCount').all(),
+      db.orm.public.Comment
+        .where((m) => m.postId.in(postIds))
+        .include('user', (rel) => rel.select('id', 'name', 'avatar'))
+        .orderBy((o) => o.createdAt.asc())
+        .limit(MAX_COMMENTS_PER_CARD * postIds.length)
+        .all(),
+      viewerId
+        ? db.orm.public.Like.where({ userId: viewerId }).where((m) => m.postId.in(postIds)).select('postId').all()
+        : Promise.resolve([]),
+      viewerId
+        ? db.orm.public.Bookmark.where({ userId: viewerId }).where((m) => m.postId.in(postIds)).select('postId').all()
+        : Promise.resolve([]),
     ]);
 
     const commentsByPost = new Map<number, SportsAnchorEngagement['comments']>();
     for (const comment of comments) {
+      if (!comment.user) continue;
       const list = commentsByPost.get(comment.postId) ?? [];
       list.push({
         id: comment.id,

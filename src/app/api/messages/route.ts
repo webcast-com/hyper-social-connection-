@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
+import { and, or } from '@prisma/orm-postgres/orm-client';
 import { getViewer } from '@/lib/viewer';
 
 export const dynamic = 'force-dynamic';
@@ -29,17 +30,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const rows = await prisma.message.findMany({
-      where: {
-        id: { gt: Number.isFinite(after) ? after : 0 },
-        OR: [
-          { senderId: viewer.id, receiverId: withId },
-          { senderId: withId, receiverId: viewer.id },
-        ],
-      },
-      orderBy: { id: 'asc' },
-      take: 200,
-    });
+    const rows = await db.orm.public.Message
+      .where((m) => m.id.gt(Number.isFinite(after) ? after : 0))
+      .where((m) => or(
+        and(m.senderId.eq(viewer.id), m.receiverId.eq(withId)),
+        and(m.senderId.eq(withId), m.receiverId.eq(viewer.id)),
+      ))
+      .orderBy((o) => o.id.asc())
+      .limit(200)
+      .all();
 
     return NextResponse.json({
       messages: rows.map((r) => ({

@@ -1,7 +1,8 @@
 import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
 import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
+import { or } from '@prisma/orm-postgres/orm-client';
 import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
@@ -207,33 +208,33 @@ export default async function Home() {
 
   if (hasDatabase) {
     try {
-      allPosts = await prisma.post.findMany({ orderBy: { createdAt: 'desc' } });
-      allUsers = await prisma.user.findMany();
-      allLikes = await prisma.like.findMany();
-      allComments = await prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
-      activeStories = await prisma.story.findMany({
-        where: { expiresAt: { gte: new Date() } },
-        orderBy: { createdAt: 'desc' },
-      });
+      allPosts = await db.orm.public.Post.orderBy((o) => o.createdAt.desc()).all();
+      allUsers = await db.orm.public.User.all();
+      allLikes = await db.orm.public.Like.all();
+      allComments = await db.orm.public.Comment.orderBy((o) => o.createdAt.desc()).all();
+      activeStories = await db.orm.public.Story
+        .where((m) => m.expiresAt.gte(new Date()))
+        .orderBy((o) => o.createdAt.desc())
+        .all();
 
-      allPolls = await prisma.poll.findMany();
-      allPollOptions = await prisma.pollOption.findMany();
-      allPollVotes = await prisma.pollVote.findMany();
-      allGroups = await prisma.group.findMany();
+      allPolls = await db.orm.public.Poll.all();
+      allPollOptions = await db.orm.public.PollOption.all();
+      allPollVotes = await db.orm.public.PollVote.all();
+      allGroups = await db.orm.public.Group.all();
 
       if (currentUser.id) {
-        userFollows = await prisma.follow.findMany({ where: { followerId: currentUser.id } });
-        userBookmarks = await prisma.bookmark.findMany({ where: { userId: currentUser.id } });
-        const memberships = await prisma.groupMember.findMany({
-          where: { userId: currentUser.id },
-          select: { groupId: true },
-        });
+        userFollows = await db.orm.public.Follow.where({ followerId: currentUser.id }).all();
+        userBookmarks = await db.orm.public.Bookmark.where({ userId: currentUser.id }).all();
+        const memberships = await db.orm.public.GroupMember
+          .where({ userId: currentUser.id })
+          .select('groupId')
+          .all();
         viewerGroupIds = memberships.map((m) => m.groupId);
         const [blocks, mutes] = await Promise.all([
-          prisma.block.findMany({
-            where: { OR: [{ blockerId: currentUser.id }, { blockedId: currentUser.id }] },
-          }),
-          prisma.mute.findMany({ where: { muterId: currentUser.id } }),
+          db.orm.public.Block
+            .where((m) => or(m.blockerId.eq(currentUser.id), m.blockedId.eq(currentUser.id)))
+            .all(),
+          db.orm.public.Mute.where({ muterId: currentUser.id }).all(),
         ]);
         hiddenAuthorIds = new Set<number>([
           ...blocks.map((b) => (b.blockerId === currentUser.id ? b.blockedId : b.blockerId)),
@@ -245,8 +246,8 @@ export default async function Home() {
       console.error(
         '[home] DATABASE FEED QUERY FAILED — showing demo fallback instead of real data.\n' +
         '       Most common cause: schema drift or an unreachable DATABASE_URL.\n' +
-        '       Fix: run `npx prisma db push` with DATABASE_URL set — it syncs\n' +
-        '       your Postgres database with prisma/schema.prisma. Check connectivity at /api/health.\n' +
+        '       Fix: run `npm run db:migrate` with DATABASE_URL set — it applies the\n' +
+        '       committed Prisma migrations. `npm run db:check` shows drift; /api/health shows connectivity.\n' +
         '       Error: ' + dbFeedError,
       );
     }
@@ -716,7 +717,7 @@ export default async function Home() {
             <p className="opacity-80">
               The app is configured for a database, but the feed query failed
               ({dbFeedError.slice(0, 120)}). This is usually a schema drift — run
-              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">npx prisma db push</code>
+              <code className="mx-1 px-1 rounded bg-amber-100 dark:bg-amber-900/40">npm run db:migrate</code>
               with DATABASE_URL set, then check <code className="px-1 rounded bg-amber-100 dark:bg-amber-900/40">/api/health</code>.
             </p>
           </div>

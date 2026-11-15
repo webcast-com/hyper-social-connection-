@@ -49,9 +49,9 @@ Two further facts no amount of fetching changes:
 | Page | `/sports/highlights` — two labelled sections, filters, paging, a sweep button |
 | Schema | `CREATE TABLE IF NOT EXISTS` in `src/lib/migrate.ts`, the repo's existing pattern |
 
-**`npm run db:generate` is not needed**: `build` does not run `prisma generate`,
-and these tables are created by `ensureMigrated()` with idempotent DDL and read
-with parameterised `$queryRawUnsafe`/`$executeRawUnsafe`, exactly like the
+**`npm run db:generate` is not needed**: these tables are outside the Prisma
+contract. They are created by `ensureMigrated()` with idempotent DDL and read
+with parameterised `rawQuery`/`rawExecute` (`src/lib/prisma.ts`), exactly like the
 25-odd existing tables and like `sports-anchor-store.ts`.
 
 ### Tables

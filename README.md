@@ -34,10 +34,10 @@ cp .env.example .env.local
 npm run dev        # http://localhost:3000
 ```
 
-With a database connected, run once to create the tables:
+With a database connected, run once to create the tables, before starting the app against it:
 
 ```bash
-npm run db:push
+npm run db:migrate
 ```
 
 Tables are also auto-created on first boot (`CREATE … IF NOT EXISTS`), and an empty database is auto-seeded with demo users and posts.
@@ -53,11 +53,11 @@ Tables are also auto-created on first boot (`CREATE … IF NOT EXISTS`), and an 
 | `npm start`         | Serve the production build                      |
 | `npm run lint`      | ESLint (0 errors; img warnings are intentional) |
 | `npm run typecheck` | TypeScript `--noEmit`                           |
-| `npm run db:push`   | Sync the database with `src/db/schema.ts`       |
+| `npm run db:migrate` | Apply the committed Prisma migrations          |
 
 ## 🗄️ Database
 
-Everything is plain PostgreSQL accessed through **Prisma ORM** (`prisma/schema.prisma`, driver adapter `@prisma/adapter-pg`). See **[DATABASE.md](DATABASE.md)** for:
+Everything is plain PostgreSQL accessed through **Prisma ORM 8** (`prisma/schema.prisma` → contract in `src/prisma/`; see [PRISMA_SETUP.md](PRISMA_SETUP.md)). See **[DATABASE.md](DATABASE.md)** for:
 
 - provider connection-string guides (Neon, RDS, Railway, local, …)
 - TLS options (`DATABASE_SSL=false` for local databases without TLS)

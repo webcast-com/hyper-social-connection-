@@ -1,4 +1,4 @@
-import { prisma, hasDatabase, ensureDbConnection } from '@/lib/prisma';
+import { db, hasDatabase, ensureDbConnection } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { ensureSeeded } from '@/lib/seed';
 
@@ -27,9 +27,7 @@ export async function getViewer() {
     const session = await getSession();
     if (!session?.userId) return null;
 
-    const signedIn = await prisma.user.findUnique({
-      where: { id: session.userId },
-    });
+    const signedIn = await db.orm.public.User.where({ id: session.userId }).first();
     return signedIn || null;
   } catch (error) {
     console.warn('[viewer] DB query failed:', (error as Error)?.message);

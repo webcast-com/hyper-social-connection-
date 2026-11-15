@@ -1,5 +1,8 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../../generated/prisma/client";
+import type { PoolClient } from "pg";
+import { types as pgTypes } from "pg";
+import { db, pool } from "../prisma/db";
+
+export { db };
 
 // Force offline / demo mode via env (useful in sandboxes with restricted DB access)
 const FORCE_OFFLINE =
@@ -22,22 +25,102 @@ if (FORCE_OFFLINE) {
  */
 export let hasDatabase = rawHasDatabase;
 
-function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-  return new PrismaClient({ adapter, log: [{ emit: "event", level: "error" }] });
+/* ── Hand-written SQL ─────────────────────────────────────────────────────
+ *
+ * Typed queries go through `db.orm.public.<Model>`. The helpers below are for
+ * the SQL this app writes by hand with positional `$1` parameters: the boot
+ * DDL, and the tables that live outside the Prisma contract (group-call
+ * relay, highlights index, sports picks). They run on the same pool as `db`.
+ */
+
+const OID_INT8 = 20;
+const OID_DATE = 1082;
+const OID_TIMESTAMP = 1114;
+
+function parseUtc(value: string, fallback: (value: string) => unknown): unknown {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback(value) : parsed;
 }
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+/**
+ * Result decoding for hand-written SQL, applied per query so the typed client's
+ * own codecs are untouched:
+ *  - `bigint` (e.g. COUNT(*)) is a JS BigInt rather than a string;
+ *  - `timestamp` / `date` columns are read as UTC, never the server's local
+ *    zone — every DateTime in the schema is a UTC `timestamp(6)`.
+ */
+const rawTypes = {
+  getTypeParser(oid: number, format?: "text" | "binary") {
+    const fallback = pgTypes.getTypeParser(oid, format as "text") as (value: string) => unknown;
+    if (format === "binary") return fallback;
+    if (oid === OID_INT8) return (value: string) => BigInt(value);
+    if (oid === OID_TIMESTAMP) return (value: string) => parseUtc(`${value.replace(" ", "T")}Z`, () => fallback(value));
+    if (oid === OID_DATE) return (value: string) => parseUtc(`${value}T00:00:00Z`, () => fallback(value));
+    return fallback;
+  },
+};
+
+type Queryable = Pick<PoolClient, "query">;
+
+async function run(target: Queryable, text: string, values: unknown[]) {
+  // No values → simple protocol, which also accepts multi-statement DDL.
+  return target.query({ text, values: values.length ? values : undefined, types: rawTypes as never });
+}
+
+/** Run a SELECT (or anything with RETURNING) and get its rows. */
+export async function rawQuery<T = Record<string, unknown>>(text: string, ...values: unknown[]): Promise<T[]> {
+  const result = await run(pool, text, values);
+  return (result.rows ?? []) as T[];
+}
+
+/** Run a statement and get the number of rows it affected. */
+export async function rawExecute(text: string, ...values: unknown[]): Promise<number> {
+  const result = await run(pool, text, values);
+  return result.rowCount ?? 0;
+}
+
+export type RawTransaction = {
+  query<T = Record<string, unknown>>(text: string, ...values: unknown[]): Promise<T[]>;
+  execute(text: string, ...values: unknown[]): Promise<number>;
+};
 
 /**
- * Prisma Client singleton (server-side only). The guard prevents Next.js dev
- * hot-reload from creating a new client (and a new connection pool) on every
- * reload.
+ * Run hand-written SQL statements in one transaction on one connection.
+ * Commits when `fn` resolves, rolls back when it throws.
  */
-export const prisma: PrismaClient = globalForPrisma.prisma ?? createPrismaClient();
+export async function rawTransaction<T>(fn: (tx: RawTransaction) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  let broken: Error | undefined;
+  try {
+    await client.query("BEGIN");
+    const tx: RawTransaction = {
+      async query<R>(text: string, ...values: unknown[]) {
+        return ((await run(client, text, values)).rows ?? []) as R[];
+      },
+      async execute(text: string, ...values: unknown[]) {
+        return (await run(client, text, values)).rowCount ?? 0;
+      },
+    };
+    const result = await fn(tx);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      // The connection is unusable; destroy it instead of returning it.
+      broken = rollbackError as Error;
+    }
+    throw error;
+  } finally {
+    client.release(broken);
+  }
+}
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+/** Close the client and its pool. For scripts; a server keeps them open. */
+export async function closeDb(): Promise<void> {
+  await db.close();
+  if (!pool.ended) await pool.end();
 }
 
 /**
@@ -51,7 +134,7 @@ export async function ensureDbConnection(): Promise<boolean> {
   connectionTested = true;
 
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await rawQuery("SELECT 1");
     console.log("[db] Postgres connection verified");
     return true;
   } catch (err: any) {

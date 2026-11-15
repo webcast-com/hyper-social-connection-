@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma, hasDatabase, ensureDbConnection } from '@/lib/prisma';
+import { db, hasDatabase, ensureDbConnection } from '@/lib/prisma';
 import { loginUser } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { ensureSeeded } from '@/lib/seed';
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     await ensureSeeded();
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await db.orm.public.User.where({ email }).first();
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

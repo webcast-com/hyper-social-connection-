@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { getPageMetadata } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
+import { and } from '@prisma/orm-postgres/orm-client';
 import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
 import { Users, Sparkles, Trophy } from 'lucide-react';
@@ -24,22 +25,20 @@ export default async function Discover() {
   if (hasDatabase) {
     try {
       followingIds = currentUser.id
-        ? (await prisma.follow.findMany({
-            where: { followerId: currentUser.id },
-            select: { followingId: true },
-          })).map((f) => ({ id: f.followingId }))
+        ? (await db.orm.public.Follow.where({ followerId: currentUser.id }).select('followingId').all())
+            .map((f) => ({ id: f.followingId }))
         : [];
-      discoverUsers = await prisma.user.findMany({
-        // People to follow, so the sports desk that authors anchor posts is left
-        // out; members still reach it from any card it authored.
-        where: { id: { not: currentUser.id || 0 }, email: { not: SPORTS_DESK.email } },
-        take: 20,
-      });
-      trendingPosts = (await prisma.post.findMany({
-        include: { user: true },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      })).map((post) => ({ post, user: post.user }));
+      // People to follow, so the sports desk that authors anchor posts is left
+      // out; members still reach it from any card it authored.
+      discoverUsers = await db.orm.public.User
+        .where((m) => and(m.id.neq(currentUser.id || 0), m.email.neq(SPORTS_DESK.email)))
+        .limit(20)
+        .all();
+      trendingPosts = (await db.orm.public.Post
+        .include('user')
+        .orderBy((o) => o.createdAt.desc())
+        .limit(5)
+        .all()).map((post) => ({ post, user: post.user }));
     } catch (err) {
       console.warn('[discover] DB query failed:', (err as Error)?.message);
     }

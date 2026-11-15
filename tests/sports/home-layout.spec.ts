@@ -22,6 +22,8 @@ test.beforeAll(async () => {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
       builder.onResolve({ filter: /^@\/lib\/(viewer|prisma|espn-odds-feed|espn-match-feed|espn-leaders-feed)$/ }, (args) => ({ path: args.path, namespace: 'home-data' }));
+      // The Prisma filter combinators are server code (they pull in node:crypto).
+      builder.onResolve({ filter: /^@prisma\/orm-postgres\/orm-client$/ }, () => ({ path: 'orm-client', namespace: 'home-data' }));
       builder.onResolve({ filter: /^@\/app\/actions$/ }, () => ({ path: 'actions', namespace: 'home-data' }));
       builder.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'router', namespace: 'home-data' }));
       builder.onLoad({ filter: /.*/, namespace: 'home-data' }, (args) => ({ contents:
@@ -29,7 +31,8 @@ test.beforeAll(async () => {
           : args.path.endsWith('espn-odds-feed') ? 'export const getEspnOdds = async () => window.oddsReviewBoard;'
           : args.path.endsWith('viewer') ? 'export const getViewer = async () => window.homeReviewUser;'
           : args.path.endsWith('espn-leaders-feed') ? 'export const getSportsLeaderBoards = async () => window.homeReviewLeaders; export const getSportsLeaders = async (sport) => window.homeReviewLeaders[sport];'
-          : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const prisma = {};'
+          : args.path === 'orm-client' ? 'export const and = (...conditions) => ({ and: conditions }); export const or = (...conditions) => ({ or: conditions }); export const not = (condition) => ({ not: condition });'
+          : args.path.endsWith('prisma') ? 'export const hasDatabase = false; export const db = {}; export const rawQuery = async () => []; export const rawExecute = async () => 0; export const rawTransaction = async () => undefined; export const ensureDbConnection = async () => false; export const markDatabaseDown = () => {}; export const closeDb = async () => {};'
             : args.path === 'router' ? 'const router = {refresh(){},push(){},replace(){}}; export const useRouter = () => router; export const usePathname = () => "/"; export const notFound = () => { throw new Error("Not found"); };'
               : names.map((name) => name === 'createPost' ? 'export const createPost = async (data) => { window.predictionPosts.push(Object.fromEntries(data.entries())); };' : `export const ${name} = async () => {};`).join('\n'),
       }));

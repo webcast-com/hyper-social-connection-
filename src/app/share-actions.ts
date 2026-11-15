@@ -1,6 +1,7 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
+import { db } from '@/lib/prisma';
+import { and, or } from '@prisma/orm-postgres/orm-client';
 import { revalidatePath } from 'next/cache';
 import { getViewer } from '@/lib/viewer';
 import { canViewProfileDetails } from '@/lib/profile';
@@ -15,9 +16,7 @@ async function getUserId(): Promise<number | null> {
 async function notify(userId: number, actorId: number, type: string, postId?: number) {
   if (userId === actorId) return;
   try {
-    await prisma.notification.create({
-      data: { userId, actorId, type, postId: postId ?? null, isRead: 0 },
-    });
+    await db.orm.public.Notification.create({ userId, actorId, type, postId: postId ?? null, isRead: 0 });
   } catch (e) {
     console.warn('[share:notify]', (e as Error)?.message);
   }
@@ -31,9 +30,7 @@ async function recordShare(
   groupId?: number | null,
 ) {
   try {
-    await prisma.profileShare.create({
-      data: { profileId, sharerId, channel, groupId: groupId ?? null },
-    });
+    await db.orm.public.ProfileShare.create({ profileId, sharerId, channel, groupId: groupId ?? null });
   } catch (e) {
     console.warn('[share:record]', (e as Error)?.message);
   }
@@ -44,30 +41,28 @@ async function recordShare(
  * otherwise sharing would leak a private profile into a public feed.
  */
 async function assertShareable(profileId: number, viewerId: number | null) {
-  const profile = await prisma.user.findUnique({
-    where: { id: profileId },
-    select: { id: true, name: true, username: true, profileVisibility: true },
-  });
+  const profile = await db.orm.public.User
+    .where({ id: profileId })
+    .select('id', 'name', 'username', 'profileVisibility')
+    .first();
   if (!profile) return { ok: false as const, message: 'Profile not found' };
 
   if (viewerId && viewerId !== profileId) {
-    const blocked = await prisma.block.findFirst({
-      where: {
-        OR: [
-          { blockerId: viewerId, blockedId: profileId },
-          { blockerId: profileId, blockedId: viewerId },
-        ],
-      },
-      select: { blockerId: true },
-    });
+    const blocked = await db.orm.public.Block
+      .where((m) => or(
+        and(m.blockerId.eq(viewerId), m.blockedId.eq(profileId)),
+        and(m.blockerId.eq(profileId), m.blockedId.eq(viewerId)),
+      ))
+      .select('blockerId')
+      .first();
     if (blocked) return { ok: false as const, message: 'This profile is unavailable' };
   }
 
   const isFollower = viewerId
-    ? !!(await prisma.follow.findFirst({
-        where: { followerId: viewerId, followingId: profileId },
-        select: { followerId: true },
-      }))
+    ? !!(await db.orm.public.Follow
+      .where({ followerId: viewerId, followingId: profileId })
+      .select('followerId')
+      .first())
     : false;
 
   const visible = canViewProfileDetails({
@@ -100,21 +95,16 @@ export async function shareProfileToFeed(
     if (!check.ok) return { success: false, message: check.message };
 
     if (groupId) {
-      const membership = await prisma.groupMember.findFirst({
-        where: { groupId, userId },
-        select: { userId: true },
-      });
+      const membership = await db.orm.public.GroupMember.where({ groupId, userId }).select('userId').first();
       if (!membership) return { success: false, message: 'Join the group before sharing there' };
     }
 
-    const post = await prisma.post.create({
-      data: {
-        userId,
-        content: message || `Check out ${check.profile.name} on Hyper 👋`,
-        sharedProfileId: profileId,
-        groupId,
-        privacy: 'public',
-      },
+    const post = await db.orm.public.Post.create({
+      userId,
+      content: message || `Check out ${check.profile.name} on Hyper 👋`,
+      sharedProfileId: profileId,
+      groupId,
+      privacy: 'public',
     });
 
     await recordShare(profileId, userId, groupId ? 'group' : 'feed', groupId);
@@ -145,12 +135,10 @@ export async function shareProfileToMessage(profileId: number, receiverId: numbe
     // Absolute link — chat renders plain text, and the link should stay
     // valid if the recipient copies it out of the app.
     const profileLink = buildProfileUrl(getSiteUrl(), profileId, check.profile.username ?? null);
-    const message = await prisma.message.create({
-      data: {
-        senderId: userId,
-        receiverId,
-        content: `${body ? `${body}\n` : ''}👤 ${check.profile.name} — ${profileLink}`,
-      },
+    const message = await db.orm.public.Message.create({
+      senderId: userId,
+      receiverId,
+      content: `${body ? `${body}\n` : ''}👤 ${check.profile.name} — ${profileLink}`,
     });
     await recordShare(profileId, userId, 'message');
     await notify(receiverId, userId, 'message');
@@ -180,12 +168,12 @@ export async function getShareableGroups() {
   const userId = await getUserId();
   if (!userId) return [];
   try {
-    const rows = await prisma.groupMember.findMany({
-      where: { userId },
-      include: { group: { select: { id: true, name: true, privacy: true, coverPhoto: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const rows = await db.orm.public.GroupMember
+      .where({ userId })
+      .include('group', (rel) => rel.select('id', 'name', 'privacy', 'coverPhoto'))
+      .orderBy((o) => o.createdAt.desc())
+      .limit(50)
+      .all();
     return rows.map((r) => r.group).filter(Boolean);
   } catch (e) {
     console.warn('[action:getShareableGroups]', (e as Error)?.message);
@@ -199,24 +187,14 @@ export async function getShareableRecipients(query = '') {
   if (!userId) return [];
   const needle = query.trim().replace(/^@/, '');
   try {
-    const rows = await prisma.follow.findMany({
-      where: {
-        followerId: userId,
-        ...(needle
-          ? {
-              following: {
-                OR: [
-                  { name: { contains: needle, mode: 'insensitive' } },
-                  { username: { contains: needle, mode: 'insensitive' } },
-                ],
-              },
-            }
-          : {}),
-      },
-      include: { following: { select: { id: true, name: true, username: true, avatar: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
+    const follows = db.orm.public.Follow.where({ followerId: userId });
+    const rows = await (needle
+      ? follows.where((f) => f.following.some((u) => or(u.name.ilike(`%${needle}%`), u.username.ilike(`%${needle}%`))))
+      : follows)
+      .include('following', (rel) => rel.select('id', 'name', 'username', 'avatar'))
+      .orderBy((o) => o.createdAt.desc())
+      .limit(20)
+      .all();
     return rows.map((r) => r.following);
   } catch (e) {
     console.warn('[action:getShareableRecipients]', (e as Error)?.message);
@@ -227,7 +205,7 @@ export async function getShareableRecipients(query = '') {
 /** How many times a profile has been shared (shown on the profile page). */
 export async function getProfileShareCount(profileId: number) {
   try {
-    return await prisma.profileShare.count({ where: { profileId } });
+    return (await db.orm.public.ProfileShare.where({ profileId }).aggregate((a) => ({ n: a.count() }))).n;
   } catch {
     return 0;
   }

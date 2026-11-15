@@ -1,0 +1,10 @@
+{
+  "name": "hyper-prisma-next-shim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exposes this repo's Prisma 8 CLI under the `prisma-next` command name that Prisma Compute's deploy step invokes.",
+  "type": "module",
+  "bin": {
+    "prisma-next": "cli.mjs"
+  }
+}

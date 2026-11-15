@@ -3,7 +3,7 @@ import { getPageMetadata } from '@/lib/seo';
 import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
-import { prisma, hasDatabase } from '@/lib/prisma';
+import { db, hasDatabase } from '@/lib/prisma';
 import { sharedProfileCardData } from '@/lib/profile';
 import { routeIdFromParam } from '@/lib/route-id';
 import { notFound } from 'next/navigation';
@@ -24,7 +24,11 @@ type Params = { params: Promise<{ id: string }> };
 async function loadPost(postId: number) {
   if (!hasDatabase) return null;
   try {
-    return await prisma.post.findUnique({ where: { id: postId }, include: { user: { select: { profileVisibility: true } }, group: { select: { privacy: true } } } });
+    return await db.orm.public.Post
+      .where({ id: postId })
+      .include('user', (rel) => rel.select('profileVisibility'))
+      .include('group', (rel) => rel.select('privacy'))
+      .first();
   } catch (err) {
     console.warn('[post] DB query failed:', (err as Error)?.message);
     return null;
@@ -35,7 +39,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const postId = routeIdFromParam(id);
   const post = postId ? await loadPost(postId) : null;
-  const isPublic = !!post && post.privacy === 'public' && post.user.profileVisibility === 'public'
+  const isPublic = !!post && post.privacy === 'public' && post.user?.profileVisibility === 'public'
     && (!post.group || post.group.privacy === 'public') && (!post.scheduledAt || post.scheduledAt <= new Date());
   const content = isPublic ? post.content.replace(/\s+/g, ' ').trim() : '';
   const snippet = content.slice(0, 60);
@@ -60,22 +64,22 @@ export default async function PostPage({ params }: Params) {
 
   if (postId && hasDatabase) {
     try {
-      const row = await prisma.post.findUnique({ where: { id: postId } });
+      const row = await db.orm.public.Post.where({ id: postId }).first();
       if (row) {
-        const allUsers = await prisma.user.findMany();
+        const allUsers = await db.orm.public.User.all();
         const usersById = new Map(allUsers.map((u) => [u.id, u]));
 
-        const postLikes = await prisma.like.findMany({ where: { postId: row.id } });
-        const postComments = await prisma.comment.findMany({
-          where: { postId: row.id },
-          orderBy: { createdAt: 'desc' },
-        });
+        const postLikes = await db.orm.public.Like.where({ postId: row.id }).all();
+        const postComments = await db.orm.public.Comment
+          .where({ postId: row.id })
+          .orderBy((o) => o.createdAt.desc())
+          .all();
 
         let postPoll: any = null;
-        const pollRow = await prisma.poll.findFirst({ where: { postId: row.id } });
+        const pollRow = await db.orm.public.Poll.where({ postId: row.id }).first();
         if (pollRow) {
-          const opts = await prisma.pollOption.findMany({ where: { pollId: pollRow.id } });
-          const votes = await prisma.pollVote.findMany({ where: { pollId: pollRow.id } });
+          const opts = await db.orm.public.PollOption.where({ pollId: pollRow.id }).all();
+          const votes = await db.orm.public.PollVote.where({ pollId: pollRow.id }).all();
           const userVote = votes.find((v) => v.userId === currentUser?.id);
           postPoll = {
             id: pollRow.id,
@@ -95,22 +99,22 @@ export default async function PostPage({ params }: Params) {
         // Embedded original for reposts.
         let repostOf: any = null;
         if (row.repostOfId) {
-          const orig = await prisma.post.findUnique({ where: { id: row.repostOfId } });
+          const orig = await db.orm.public.Post.where({ id: row.repostOfId }).first();
           if (orig) repostOf = { ...orig, user: usersById.get(orig.userId) };
         }
 
         // Group badge (posts can belong to a community).
         let postGroup: any = null;
         if (row.groupId) {
-          const g = await prisma.group.findUnique({ where: { id: row.groupId } });
+          const g = await db.orm.public.Group.where({ id: row.groupId }).first();
           if (g) postGroup = { id: g.id, name: g.name };
         }
 
         if (currentUser?.id) {
-          const followRows = await prisma.follow.findMany({
-            where: { followerId: currentUser.id },
-            select: { followingId: true },
-          });
+          const followRows = await db.orm.public.Follow
+            .where({ followerId: currentUser.id })
+            .select('followingId')
+            .all();
           viewerFollowIds = followRows.map((f) => f.followingId);
         }
         const viewerFollowSet = new Set(viewerFollowIds);
@@ -147,10 +151,7 @@ export default async function PostPage({ params }: Params) {
   let bookmarked = false;
   if (post && currentUser?.id) {
     try {
-      const b = await prisma.bookmark.findMany({
-        where: { userId: currentUser.id },
-        select: { postId: true },
-      });
+      const b = await db.orm.public.Bookmark.where({ userId: currentUser.id }).select('postId').all();
       bookmarked = b.some((bk) => bk.postId === post.id);
     } catch {
       bookmarked = false;

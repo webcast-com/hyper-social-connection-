@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { prisma, hasDatabase } from "@/lib/prisma";
+import { db, hasDatabase } from "@/lib/prisma";
+import { or } from "@prisma/orm-postgres/orm-client";
 import { getSiteUrl } from "@/lib/site-url";
 import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
 import { clipHref } from "@/lib/highlight-clip";
@@ -53,33 +54,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       clipRefs = (await readRecentClipRefs(SITEMAP_CLIPS)).refs;
       // And the fixtures they belong to, which are pages for the same reason.
       eventRefs = (await readRecentEventRefs(SITEMAP_MATCHES)).refs;
-      profileRows = await prisma.user.findMany({
-        where: { profileVisibility: "public" },
-        take: 1000,
-        orderBy: { createdAt: "desc" },
+      profileRows = await db.orm.public.User
+        .where({ profileVisibility: "public" })
         // `email` is read only to decide whether the account is a person worth
         // submitting, and it never leaves this function.
-        select: { id: true, createdAt: true, email: true },
-      });
-      groupRows = await prisma.group.findMany({
-        where: { privacy: "public" },
-        take: 1000,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true },
-      });
+        .select('id', 'createdAt', 'email')
+        .orderBy((o) => o.createdAt.desc())
+        .limit(1000)
+        .all();
+      groupRows = await db.orm.public.Group
+        .where({ privacy: "public" })
+        .select('id', 'createdAt')
+        .orderBy((o) => o.createdAt.desc())
+        .limit(1000)
+        .all();
       // Recent public posts get permalinks in the sitemap (capped).
-      postRows = await prisma.post.findMany({
-        where: {
-          privacy: "public", user: { profileVisibility: "public" },
-          AND: [
-            { OR: [{ groupId: null }, { group: { privacy: "public" } }] },
-            { OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, createdAt: true },
-        take: 200,
-      });
+      postRows = await db.orm.public.Post
+        .where({ privacy: "public" })
+        .where((p) => p.user.some((u) => u.profileVisibility.eq("public")))
+        .where((p) => or(p.groupId.isNull(), p.group.some((g) => g.privacy.eq("public"))))
+        .where((p) => or(p.scheduledAt.isNull(), p.scheduledAt.lte(new Date())))
+        .select('id', 'createdAt')
+        .orderBy((o) => o.createdAt.desc())
+        .limit(200)
+        .all();
     } catch (err) {
       profileRows = []; groupRows = []; postRows = []; clipRefs = []; eventRefs = [];
       // DB unreachable — fall back to the static routes only.
