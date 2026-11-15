@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearEspnCache,
   formatKickoff,
+  leadersUrls,
   fetchBasketballSnapshot,
   isEspnDisabled,
   leagueKeyForCompetition,
@@ -300,6 +301,55 @@ describe("ESPN request layer", () => {
     expect(urls[0]).toContain("seasontype=2");
     expect(urls).toContain("/espn/apis/site/v2/sports/football/nfl/scoreboard?limit=100&week=9&seasontype=2");
     expect(standingsUrls("nba")[0]).toContain("/apis/v2/sports/basketball/nba/standings");
+  });
+
+  it("asks the site API's v3 leaders endpoint, directly and through the same-origin proxy", () => {
+    // `site.web.api.espn.com/apis/common/v3/.../leaders` answers 404, which left
+    // the leaders rail and the Top scorers screen on demo data for good.
+    expect(leadersUrls("nba")).toEqual([
+      "https://site.api.espn.com/apis/site/v3/sports/basketball/nba/leaders?limit=5",
+      "/espn/apis/site/v3/sports/basketball/nba/leaders?limit=5",
+    ]);
+    expect(leadersUrls("nfl")[0]).toBe("https://site.api.espn.com/apis/site/v3/sports/football/nfl/leaders?limit=5");
+  });
+
+  it("reads the v3 leaders payload: categories under `leaders`, team beside the athlete", () => {
+    const payload = {
+      leaders: {
+        id: "0",
+        name: "Total",
+        categories: [
+          {
+            name: "pointsPerGame",
+            displayName: "Points Per Game",
+            abbreviation: "PTS",
+            leaders: [
+              {
+                displayValue: "38.6",
+                value: 38.63,
+                athlete: {
+                  id: "3945274",
+                  displayName: "Luka Doncic",
+                  headshot: { href: "https://a.espncdn.com/i/headshots/nba/players/full/3945274.png" },
+                  position: { abbreviation: "G" },
+                },
+                team: { id: "13", abbreviation: "LAL", displayName: "Los Angeles Lakers" },
+              },
+              {
+                displayValue: "33.1",
+                athlete: { id: "4278073", displayName: "Shai Gilgeous-Alexander" },
+                team: { id: "25", abbreviation: "OKC", displayName: "Oklahoma City Thunder" },
+              },
+            ],
+          },
+        ],
+      },
+    };
+    expect(normalizeLeaders(payload)[0]).toMatchObject({
+      name: "Luka Doncic", team: "Los Angeles Lakers", teamAbbr: "LAL", metric: "Points Per Game", value: "38.6", position: "G",
+    });
+    const [points] = normalizeLeaderboard(payload, { limit: 5 });
+    expect(points.entries.map((entry) => entry.name)).toEqual(["Luka Doncic", "Shai Gilgeous-Alexander"]);
   });
 
   it("asks for the wider Division I board for college basketball", () => {

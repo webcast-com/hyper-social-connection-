@@ -155,7 +155,7 @@ import "./styles.css";
 | NCAA basketball scores (men / women) | `site.api.espn.com/apis/site/v2/sports/basketball/{mens,womens}-college-basketball/scoreboard?limit=500&groups=50` |
 | College football scores | `site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard` |
 | NFL standings (AFC/NFC → divisions) | `site.api.espn.com/apis/v2/sports/football/nfl/standings` |
-| Season leaders (best effort) | `site.web.api.espn.com/apis/common/v3/sports/{basketball/nba,football/nfl}/leaders` |
+| Season leaders (best effort) | `site.api.espn.com/apis/site/v3/sports/{basketball/nba,football/nfl}/leaders?limit=5` |
 | Team page (info, schedule, roster) | `site.api.espn.com/apis/site/v2/sports/basketball/{nba,…}/teams/{id,abbr}/…` |
 | Player page stats (best effort) | `site.web.api.espn.com/apis/common/v3/sports/{basketball/nba,football/nfl}/athletes/{id}` |
 | Newsroom | `site.api.espn.com/apis/site/v2/sports/{basketball/nba,football/nfl}/news` |

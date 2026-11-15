@@ -50,8 +50,18 @@ const LEADER_LEAGUES: Record<SportsLeaderSport, { league: string; path: string; 
   football: { league: 'nfl', path: 'football/nfl', headshotPath: 'nfl' },
 };
 
-const leadersUrl = (sport: SportsLeaderSport) =>
-  `https://site.web.api.espn.com/apis/common/v3/sports/${LEADER_LEAGUES[sport].path}/leaders`;
+/**
+ * ESPN's season leaders for one league.
+ *
+ * This is the site API's v3 endpoint. The `site.web.api.espn.com/apis/common/v3`
+ * path this module used to ask answers 404 for both leagues, which is why the
+ * board used to show nothing ESPN had reported. `limit` is how many players each
+ * statistic carries: every entry repeats its team's full logo and link set, so
+ * the payload grows quickly and a board that shows one player per statistic
+ * should not download ten.
+ */
+export const leadersUrl = (sport: SportsLeaderSport, limit = 5) =>
+  `https://site.api.espn.com/apis/site/v3/sports/${LEADER_LEAGUES[sport].path}/leaders?limit=${Math.max(1, Math.min(25, Math.trunc(limit) || 1))}`;
 
 const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 

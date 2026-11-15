@@ -81,14 +81,20 @@ const SPORT_TABS: { id: SportsLeaderSport; label: string; competition: string }[
 ];
 
 export default function DiscoveryTopScorers({ boards }: { boards: Record<SportsLeaderSport, SportsTopScorerBoard> }) {
-  const [sport, setSport] = useState<SportsLeaderSport>('basketball');
+  // Open on a sport ESPN answered for; there are no bundled players to fall
+  // back on, so a failed basketball feed must not hide a football board.
+  const [sport, setSport] = useState<SportsLeaderSport>(
+    () => (!boards.basketball?.groups.length && boards.football?.groups.length ? 'football' : 'basketball'),
+  );
   const board = boards[sport] ?? boards.basketball;
   const tab = SPORT_TABS.find((entry) => entry.id === sport)!;
   const rows = board.groups.flatMap((group) => group.entries);
   const seen = new Set<string>();
   const players = rows.filter((player) => (seen.has(player.key) ? false : (seen.add(player.key), true)));
 
-  if (!players.length) return null;
+  // No sample ladder stands in for a feed ESPN did not answer: with nothing
+  // reported for either sport there is no section at all.
+  if (!SPORT_TABS.some((entry) => boards[entry.id]?.groups.length)) return null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
@@ -116,9 +122,9 @@ export default function DiscoveryTopScorers({ boards }: { boards: Record<SportsL
       </div>
 
       <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-        {board.status === 'live'
+        {players.length
           ? `${tab.competition} season leaders from ESPN.`
-          : `${tab.competition} leaders board · sample values while ESPN is unreachable.`}
+          : `ESPN did not return ${tab.competition} leaders just now. No sample players are shown in their place.`}
       </p>
 
       <div className="space-y-3">

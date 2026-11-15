@@ -47,7 +47,7 @@ export default async function Discover() {
   const filteredUsers = discoverUsers.filter(u => !followingIdsSet.has(u.id));
 
   // Every player on the top-scorer boards, in the same layout as the people
-  // below. A failed leaders feed resolves to the bundled sample board.
+  // below. A failed leaders feed resolves to an empty board: no sample players.
   const topScorerBoards = await getSportsTopScorerBoards();
 
   const isGuest = !currentUser || currentUser.id === 0;

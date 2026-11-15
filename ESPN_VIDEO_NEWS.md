@@ -111,8 +111,7 @@ const forYouPosts = interleaveFeedCards(
   before.
 - With no clips the For You feed is **identical** to the feed before this card
   kind existed (`tests/sports/feed-interleave.test.ts` asserts exactly that), and
-  the member posts list is never mutated, so the Following and Saved tabs are
-  unaffected.
+  the member posts list is never mutated, so the Following tab is unaffected.
 
 The page starts the fan-out before awaiting the other feeds
 (`const videoNewsPromise = getSportsVideoNewsForRender()`) so its cost overlaps

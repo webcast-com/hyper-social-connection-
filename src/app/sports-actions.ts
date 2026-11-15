@@ -56,7 +56,7 @@ export async function commentOnSportsAnchor(kind: string, id: string, formData: 
   await createComment(postId, payload);
 }
 
-/** Save a card to the member's Saved tab. */
+/** Save a card to the member's bookmarks. */
 export async function saveSportsAnchor(kind: string, id: string): Promise<void> {
   const postId = await anchorPostId(kind, id);
   if (!postId) return;

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getSportsLeaders } from '../../src/lib/espn-leaders-feed';
-import { basketballLeaders, nflLeaders } from '../../vendor/nfl-nba/src/data/sportsData';
+import { siteV3Leaders } from './leaders-v3-fixture';
 
 const livePayload = {
   categories: [
@@ -25,36 +25,57 @@ test('a live leaders feed becomes the homepage board with ESPN headshots', async
     assert.deepEqual(board.rows.map((row) => row.name), ['Luka Dončić', 'Nikola Jokić']);
     assert.equal(board.rows[0].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/3945274.png');
   }, async (input) => {
-    assert.match(String(input), /^https:\/\/site\.web\.api\.espn\.com\/apis\/common\/v3\/sports\/basketball\/nba\/leaders$/);
+    // The site API's v3 path. `site.web.api.espn.com/apis/common/v3/.../leaders`
+    // answers 404, so asking it would leave the board permanently empty.
+    assert.equal(String(input), 'https://site.api.espn.com/apis/site/v3/sports/basketball/nba/leaders?limit=1');
     return Response.json(livePayload);
   });
 });
 
-test('an unreachable feed falls back to the bundled leaders board and is marked unavailable', async () => {
+test('the payload ESPN serves today is read: categories under `leaders`, team beside the athlete', async () => {
+  await withFetch(async () => {
+    const board = await getSportsLeaders('basketball', true);
+    assert.equal(board.status, 'live');
+    assert.deepEqual(board.rows.map((row) => [row.name, row.metric, row.value]), [
+      ['Luka Doncic', 'Points Per Game', '38.6'],
+      ['Nikola Jokic', 'Rebounds Per Game', '13.4'],
+    ]);
+    const [luka] = board.rows;
+    assert.equal(luka.athleteId, '3945274');
+    assert.equal(luka.team, 'Los Angeles Lakers', 'the team sits on the entry, not inside the athlete');
+    assert.equal(luka.teamAbbr, 'LAL');
+    assert.equal(luka.teamId, '13');
+    assert.equal(luka.teamLogo, 'https://a.espncdn.com/i/teamlogos/nba/500/lal.png');
+    assert.equal(luka.position, 'G');
+    assert.equal(luka.jersey, '77');
+    assert.equal(luka.headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/3945274.png');
+  }, async () => Response.json(siteV3Leaders));
+});
+
+test('an unreachable feed is marked unavailable and shows no players: there is no sample board', async () => {
   await withFetch(async () => {
     const board = await getSportsLeaders('football', true);
     assert.equal(board.status, 'unavailable');
     assert.equal(board.source.ok, false);
     assert.equal(board.source.errorKind, 'network');
     assert.equal(board.league, 'nfl');
-    assert.ok(board.rows.length >= 4);
-    assert.deepEqual(board.rows.map((row) => row.name), (nflLeaders as unknown as { name: string }[]).slice(0, 6).map((entry) => entry.name));
-    assert.ok(board.rows.every((row) => row.headshot === null), 'sample rows carry no headshot so the portrait art is used');
+    assert.deepEqual(board.rows, [], 'nothing stands in for players ESPN did not report');
+    assert.equal(board.source.url, 'https://site.api.espn.com/apis/site/v3/sports/football/nfl/leaders?limit=1');
   }, async () => { throw new TypeError('fetch failed', { cause: { code: 'ECONNRESET' } }); });
 });
 
-test('an HTTP error or an empty payload also falls back instead of emptying the board', async () => {
+test('an HTTP error or an empty payload is reported as unavailable, with no invented players', async () => {
   await withFetch(async () => {
     const blocked = await getSportsLeaders('basketball', true);
     assert.equal(blocked.status, 'unavailable');
     assert.equal(blocked.source.httpStatus, 403);
-    assert.equal(blocked.rows.length, (basketballLeaders as unknown as unknown[]).length > 6 ? 6 : (basketballLeaders as unknown as unknown[]).length);
+    assert.deepEqual(blocked.rows, []);
   }, async () => new Response('forbidden', { status: 403 }));
   await withFetch(async () => {
     const empty = await getSportsLeaders('basketball', true);
     assert.equal(empty.status, 'unavailable');
     assert.equal(empty.source.errorKind, 'invalid-response');
-    assert.ok(empty.rows.length > 0);
+    assert.deepEqual(empty.rows, []);
   }, async () => Response.json({ categories: [] }));
 });
 
@@ -70,7 +91,7 @@ test('a successful board is cached and shared by concurrent callers', async () =
   }, async () => { calls += 1; return Response.json(livePayload); });
 });
 
-test('top-scorer boards return every player per statistic, and fall back to the bundled ladder', async () => {
+test('top-scorer boards return every player per statistic, and no sample ladder when ESPN fails', async () => {
   const { getSportsTopScorers } = await import('../../src/lib/espn-leaders-feed');
   const ladder = {
     categories: [
@@ -95,14 +116,22 @@ test('top-scorer boards return every player per statistic, and fall back to the 
     assert.equal(board.groups[0].entries[0].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/3945274.png');
     assert.equal(board.groups[0].entries[1].headshot, 'https://a.espncdn.com/i/headshots/nba/players/full/1.png');
   }, async (input) => {
-    assert.match(String(input), /basketball\/nba\/leaders$/);
+    assert.equal(String(input), 'https://site.api.espn.com/apis/site/v3/sports/basketball/nba/leaders?limit=5');
     return Response.json(ladder);
   });
   await withFetch(async () => {
+    const board = await getSportsTopScorers('basketball', true);
+    assert.equal(board.status, 'live');
+    assert.deepEqual(board.groups.map((group) => group.metric), ['Points Per Game', 'Rebounds Per Game']);
+    assert.deepEqual(board.groups[0].entries.map((row) => [row.name, row.teamAbbr, row.value]), [
+      ['Luka Doncic', 'LAL', '38.6'],
+      ['Shai Gilgeous-Alexander', 'OKC', '33.1'],
+    ], 'today\u2019s ESPN shape: every listed player, with the team read from the entry');
+  }, async () => Response.json(siteV3Leaders));
+  await withFetch(async () => {
     const board = await getSportsTopScorers('football', true);
     assert.equal(board.status, 'unavailable');
-    assert.ok(board.groups.length >= 3, 'the bundled NFL board has several statistics');
-    assert.ok(board.groups.every((group) => group.entries.length >= 4), 'each statistic keeps its full ladder');
+    assert.deepEqual(board.groups, [], 'no bundled ladder stands in for a feed ESPN did not answer');
     assert.equal(board.source.errorKind, 'network');
   }, async () => { throw new TypeError('fetch failed'); });
 });

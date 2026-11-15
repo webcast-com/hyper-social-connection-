@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FEED_BUDGET_MS, feedHighlightClips, getHighlightClipsForFeed, orderHighlightClips,
+  ALL_STORED_DAYS, FEED_BUDGET_MS, STORED_BOARD_DAYS, feedHighlightClips, getHighlightClipsForFeed, orderHighlightClips,
+  recentHighlightClips,
 } from '../../src/lib/highlights-board';
 import { FEED_INDEX_LIMIT, type FeedClipsRead } from '../../src/lib/highlights-index';
 import { HIGHLIGHTS_FEED_SLOTS, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS, interleaveFeedCards } from '../../src/lib/feed-interleave';
@@ -176,6 +177,47 @@ test('the read is asked for the window and ceiling it is given', async () => {
   const fake = fakeRead({ clips: [] });
   await getHighlightClipsForFeed({ board: null, days: 3, limit: 25, read: fake.read });
   assert.deepEqual(fake.calls, [{ days: 3, limit: 25 }]);
+});
+
+/* ── The Highlights tab's list, and For You's share of it ───────────────── */
+
+test('the Highlights tab is supplied by every stored clip: the read is asked for no window', async () => {
+  const fake = fakeRead({ clips: [clip({ id: 'last-season', startAt: '2026-03-01T15:00:00.000Z' })], remaining: 12 });
+  const feed = await getHighlightClipsForFeed({ board: null, days: ALL_STORED_DAYS, read: fake.read });
+
+  // Zero days is `readFeedClips`' "no window": the same rows the Match Highlights
+  // page pages through, bounded by the read's ceiling and nothing else.
+  assert.deepEqual(fake.calls, [{ days: 0, limit: FEED_INDEX_LIMIT }]);
+  assert.deepEqual(feed.clips.map((item) => item.id), ['last-season'], 'a clip months old is carried');
+  assert.equal(feed.remaining, 12, 'and what the ceiling cut is still reported');
+});
+
+test('For You keeps the recent clips from that list, in the same order', () => {
+  const now = Date.parse('2026-11-15T12:00:00.000Z');
+  const all = orderHighlightClips([
+    clip({ id: 'today', startAt: '2026-11-15T09:00:00.000Z' }),
+    clip({ id: 'six-days', startAt: '2026-11-09T13:00:00.000Z' }),
+    clip({ id: 'eight-days', startAt: '2026-11-07T11:00:00.000Z' }),
+    clip({ id: 'last-season', startAt: '2026-03-01T15:00:00.000Z' }),
+    clip({ id: 'no-time', startAt: null }),
+  ]);
+
+  assert.deepEqual(recentHighlightClips(all, null, STORED_BOARD_DAYS, now).map((item) => item.id), ['today', 'six-days'],
+    'the window the feed has always had: older clips and clips with no time stay out of For You');
+  assert.deepEqual(all.map((item) => item.id), ['today', 'six-days', 'eight-days', 'last-season', 'no-time'],
+    'while the full list — the Highlights tab — is untouched');
+  assert.deepEqual(recentHighlightClips(all, null, 1, now).map((item) => item.id), ['today']);
+});
+
+test('a real clip on the board stays in For You whatever its time, as the merge always kept it', () => {
+  const now = Date.parse('2026-11-15T12:00:00.000Z');
+  const untimed = clip({ id: 'board-untimed', startAt: null });
+  const old = clip({ id: 'stored-old', startAt: '2026-03-01T15:00:00.000Z' });
+  const all = feedHighlightClips([old], board([untimed]));
+
+  assert.deepEqual(recentHighlightClips(all, board([untimed]), STORED_BOARD_DAYS, now).map((item) => item.id), ['board-untimed']);
+  // A board ESPN did not answer is the bundled samples: being on it earns nothing.
+  assert.deepEqual(recentHighlightClips([untimed, old], board([untimed], 'unavailable'), STORED_BOARD_DAYS, now), []);
 });
 
 /* ── Placement in the feed ──────────────────────────────────────────────── */

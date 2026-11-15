@@ -6,21 +6,27 @@ import SportsFeedCard from '@/components/SportsFeedCard';
 import SportsPredictionFeedCard from '@/components/SportsPredictionFeedCard';
 import SportsVideoNewsCard from '@/components/SportsVideoNewsCard';
 import { HighlightPostCard } from '@/components/SportsHighlightsFeed';
-import { Sparkles, Users, Bookmark, Compass, Radio } from 'lucide-react';
+import { Sparkles, Users, Clapperboard, Compass, Radio } from 'lucide-react';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import { summariseLiveCards } from '@/lib/match-centre';
 import { FEED_RENDER_BATCH } from '@/lib/feed-interleave';
 
-type Tab = 'for-you' | 'following' | 'live' | 'saved';
+type Tab = 'for-you' | 'following' | 'live' | 'highlights';
 
 /**
  * The tabs of the main feed.
  *
- * For You is everything: the member posts, every fixture the board reports, every
- * highlight clip the window holds, and the league video and prediction cards,
- * each kind placed by its own pass in `feed-interleave.ts` and revealed in
- * batches. Nothing here decides how many of any kind there are.
+ * For You is everything: the member posts, every fixture the board reports, the
+ * recent highlight clips, and the league video and prediction cards, each kind
+ * placed by its own pass in `feed-interleave.ts` and revealed in batches. Nothing
+ * here decides how many of any kind there are.
+ *
+ * `highlightPosts` is the Highlights tab, which took the place of Saved: every
+ * match clip the Match Highlights page's stored index supplied, newest first, as
+ * the same post cards For You renders. `highlightsRemaining` is how many stored
+ * clips that read did not carry, so the tab can point at the page that pages
+ * through the rest instead of ending silently. Both default to empty.
  *
  * `livePosts` is the sports desk on its own: one card per fixture, live first,
  * then upcoming and results, then league video news. It is built by the page from
@@ -31,7 +37,8 @@ type Tab = 'for-you' | 'following' | 'live' | 'saved';
 export default function FeedTabs({
   forYouPosts,
   followingPosts,
-  savedPosts,
+  highlightPosts = [],
+  highlightsRemaining = 0,
   livePosts = [],
   currentUser,
   bookmarkedPostIds,
@@ -39,7 +46,10 @@ export default function FeedTabs({
 }: {
   forYouPosts: any[];
   followingPosts: any[];
-  savedPosts: any[];
+  /** Highlight cards for the Highlights tab: every clip the page read, newest first. */
+  highlightPosts?: any[];
+  /** Stored clips the page's read did not carry; they are on /sports/highlights. */
+  highlightsRemaining?: number;
   /** Sports cards for the Live tab: fixtures, predictions and league video. */
   livePosts?: any[];
   currentUser: any;
@@ -61,7 +71,7 @@ export default function FeedTabs({
   const postsToRender =
     activeTab === 'for-you' ? forYouPosts :
     activeTab === 'following' ? followingPosts :
-    activeTab === 'live' ? livePosts : savedPosts;
+    activeTab === 'live' ? livePosts : highlightPosts;
   const shown = postsToRender.slice(0, revealed);
   const remaining = postsToRender.length - shown.length;
 
@@ -76,13 +86,16 @@ export default function FeedTabs({
       {/* Sticky Tab Selector. Four tabs do not fit a 320px column with icons and
           labels, so the icons — which are decorative, the label carries the
           meaning — appear from `sm` up and the labels truncate rather than push
-          the strip wider than the viewport. */}
+          the strip wider than the viewport. Below `sm` each tab is as wide as
+          its own label needs (`flex-auto`), because four equal quarters of a
+          320px column are too narrow for "Highlights"; from `sm` up they are
+          equal again. */}
       <div role="group" aria-label="Feed sections" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-16 z-20 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
         <button
           type="button"
           onClick={() => select('for-you')}
           aria-pressed={activeTab === 'for-you'}
-          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-auto sm:flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'for-you'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -96,7 +109,7 @@ export default function FeedTabs({
           type="button"
           onClick={() => select('following')}
           aria-pressed={activeTab === 'following'}
-          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-auto sm:flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'following'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -112,7 +125,7 @@ export default function FeedTabs({
           type="button"
           onClick={() => select('live')}
           aria-pressed={activeTab === 'live'}
-          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
+          className={`min-w-0 min-h-11 flex-auto sm:flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
             activeTab === 'live'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -125,16 +138,16 @@ export default function FeedTabs({
 
         <button
           type="button"
-          onClick={() => select('saved')}
-          aria-pressed={activeTab === 'saved'}
-          className={`min-w-0 min-h-11 flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
-            activeTab === 'saved'
+          onClick={() => select('highlights')}
+          aria-pressed={activeTab === 'highlights'}
+          className={`min-w-0 min-h-11 flex-auto sm:flex-1 py-2.5 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all ${
+            activeTab === 'highlights'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          <Bookmark className="hidden sm:block w-4 h-4 shrink-0" />
-          <span className="min-w-0 truncate">Saved</span>
+          <Clapperboard className="hidden sm:block w-4 h-4 shrink-0" />
+          <span className="min-w-0 truncate">Highlights</span>
         </button>
       </div>
 
@@ -174,9 +187,22 @@ export default function FeedTabs({
               Live matches, upcoming fixtures, results and league video appear here
               when ESPN reports them. Nothing is invented to fill the gap.
             </EmptyState>
-          ) : activeTab === 'saved' ? (
-            <EmptyState variant="bookmark" title="No saved posts yet">
-              Click the bookmark icon on any post to save it for later reading.
+          ) : activeTab === 'highlights' ? (
+            <EmptyState
+              variant="search"
+              title="No match highlights right now"
+              action={
+                <Link
+                  href="/sports/highlights"
+                  className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <Clapperboard className="w-4 h-4" />
+                  <span>Match Highlights</span>
+                </Link>
+              }
+            >
+              Every clip ESPN publishes for a match appears here as soon as this
+              site has read it. Nothing is invented to fill the gap.
             </EmptyState>
           ) : (
             <EmptyState variant="feed" title="No posts yet!">
@@ -196,6 +222,18 @@ export default function FeedTabs({
                     : hasVideo
                       ? 'No fixtures are listed right now. League video ESPN has published is below.'
                       : 'No fixtures or league video are listed right now.'}
+              </p>
+            )}
+            {/* The Highlights tab says where its clips come from and where the
+                filters are. Not a live region: nothing here changes on its own. */}
+            {activeTab === 'highlights' && (
+              <p className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
+                <span className="min-w-0">
+                  {highlightPosts.length} match {highlightPosts.length === 1 ? 'highlight' : 'highlights'}, newest first.
+                </span>
+                <Link href="/sports/highlights" className="inline-flex min-h-11 shrink-0 items-center font-bold text-blue-600 hover:underline dark:text-blue-400">
+                  Filter on Match Highlights →
+                </Link>
               </p>
             )}
             {shown.map((post) => (
@@ -235,6 +273,17 @@ export default function FeedTabs({
                 Show {Math.min(FEED_RENDER_BATCH, remaining)} more
                 <span className="font-semibold text-gray-500 dark:text-gray-400"> · {remaining} remaining in this tab</span>
               </button>
+            )}
+            {/* The read that fills this tab has a ceiling. When it was the ceiling
+                that stopped it, the tab says so and links to the page that pages
+                through every stored clip, rather than ending as though that were all. */}
+            {activeTab === 'highlights' && remaining <= 0 && highlightsRemaining > 0 && (
+              <Link
+                href="/sports/highlights"
+                className="flex min-h-11 w-full min-w-0 items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-bold text-blue-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700"
+              >
+                {highlightsRemaining} older {highlightsRemaining === 1 ? 'clip' : 'clips'} on Match Highlights →
+              </Link>
             )}
           </>
         )}

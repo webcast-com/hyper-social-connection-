@@ -31,7 +31,7 @@ import type { SportsAnchorEngagement, SportsAnchorRef } from '@/lib/sports-ancho
  * The engagement is real. A card is provider data with no post behind it, so the
  * first like, comment, save or share creates its *anchor post* — one post per
  * card, authored by the Hyper Sports desk — and from then on the counts, the
- * thread, the Saved tab, the repost and the `/post/[id]` permalink are the same
+ * thread, the bookmark, the repost and the `/post/[id]` permalink are the same
  * ones a member's post uses. Like `Post.tsx`, the controls are form actions: the
  * server responds, the page revalidates, and the numbers come back from the
  * database rather than from local state that a reload would erase.

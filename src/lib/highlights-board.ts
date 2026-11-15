@@ -298,6 +298,42 @@ export function feedHighlightClips(
   return orderHighlightClips(merged);
 }
 
+/**
+ * `days` for a read with no window: every stored match clip, newest first, the
+ * set the Match Highlights page pages through. `readFeedClips` treats a window
+ * of zero days as "no window", so this is that read's own vocabulary.
+ */
+export const ALL_STORED_DAYS = 0;
+
+/**
+ * The clips For You carries, taken from the full list the Highlights tab shows.
+ *
+ * For You mixes clips between member posts, so it keeps the recent window it has
+ * always had: a clip from last month between two posts from this morning reads
+ * as news that is not. The Highlights tab has no such neighbours and carries the
+ * whole list. This is the same rule the windowed read applied in SQL — a stored
+ * clip stays when its own time is inside the window, and a stored clip with no
+ * time reported does not — plus the one thing SQL never saw: a real clip on the
+ * board the sweep has not stored yet is kept whatever its time, exactly as the
+ * merge has always kept it.
+ */
+export function recentHighlightClips(
+  clips: readonly SportsHighlightClip[],
+  board: SportsHighlightsBoard | null | undefined,
+  days: number = STORED_BOARD_DAYS,
+  now: number = Date.now(),
+): SportsHighlightClip[] {
+  const onBoard = new Set(
+    board && (board.status === 'live' || board.status === 'partial') ? board.clips.map((clip) => clip.id) : [],
+  );
+  const since = now - days * 86_400_000;
+  return clips.filter((clip) => {
+    if (onBoard.has(clip.id)) return true;
+    const at = clip.startAt ? Date.parse(clip.startAt) : Number.NaN;
+    return Number.isFinite(at) && at >= since;
+  });
+}
+
 export type FeedHighlights = {
   /** Every clip the feed carries, newest first. */
   clips: SportsHighlightClip[];
@@ -318,8 +354,9 @@ export type FeedHighlights = {
  * waits.
  *
  * There is no cap on what the feed is willing to show. `FEED_INDEX_LIMIT` bounds
- * one query and one payload; the seven-day window bounds what a reader sees, and
- * `remaining` says when the ceiling, not the window, was what stopped the read.
+ * one query and one payload; `days` bounds what a reader sees — seven by default,
+ * or `ALL_STORED_DAYS` for every stored clip — and `remaining` says when the
+ * ceiling, not the window, was what stopped the read.
  */
 export async function getHighlightClipsForFeed(options: {
   board?: SportsHighlightsBoard | null;

@@ -104,7 +104,7 @@ test('a signed-in member sees the card\u2019s saved engagement and acts through 
   }
 });
 
-test('a guest, or a sample board, gets a read-only card that says why', async () => {
+test('a guest, or a board that is not a live ESPN answer, gets a read-only card that says why', async () => {
   // Signed out on a live board: every control is present, none of them fake a result.
   const boards = await boardsFor();
   const mount = await mountBoard(boards);
@@ -121,8 +121,10 @@ test('a guest, or a sample board, gets a read-only card that says why', async ()
     mount.unmount();
   }
 
-  // Signed in, but the board is the bundled sample: placeholder values are never
-  // stored as though a member had posted them.
+  // Signed in, but the board is not marked live. The feed no longer produces
+  // rows for such a board — there is no bundled sample — so this is the guard
+  // behind that: whatever the rows are, a board ESPN did not answer is never
+  // anchored, and nothing is stored as though a member had posted it.
   const sample: any = await boardsFor();
   sample.basketball.status = 'unavailable';
   const sampleMount = await mountBoard(sample, { signedIn: true });
@@ -130,12 +132,51 @@ test('a guest, or a sample board, gets a read-only card that says why', async ()
     const { document, click } = sampleMount;
     const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Don\u010di\u0107'))!;
     assert.equal(findButton(document, 'Like Luka Don\u010di\u0107').disabled, true);
-    assert.equal(card.querySelectorAll('form').length, 0, 'a sample card has no anchor post');
+    assert.equal(card.querySelectorAll('form').length, 0, 'a card with no live feed behind it has no anchor post');
     await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
     assert.match(card.textContent, /Engagement is unavailable on sample cards/);
     assert.match(card.textContent, /Comments open when this card has a live feed behind it\./);
   } finally {
     sampleMount.unmount();
+  }
+});
+
+test('a feed ESPN did not answer shows no players: the other sport opens, and nothing is invented', async () => {
+  const unavailable = (sport: string, league: string) => ({
+    sport, league, rows: [], status: 'unavailable',
+    source: { ok: false, url: 'https://espn.test/leaders', httpStatus: 404, error: 'ESPN HTTP 404', errorKind: 'http' },
+  });
+
+  // Basketball failed, the NFL answered: the board opens on the NFL instead of
+  // disappearing, and the basketball tab says what happened in plain words.
+  const boards: any = await boardsFor();
+  const nflName = boards.football.rows[0].name;
+  boards.basketball = unavailable('basketball', 'nba');
+  const mount = await mountBoard(boards);
+  try {
+    const { document, click } = mount;
+    const sportButton = (label: string) => [...document.querySelectorAll('button')].find((node: any) => node.textContent.trim() === label)!;
+    assert.equal(sportButton('NFL').getAttribute('aria-pressed'), 'true', 'the sport that answered is the one shown');
+    assert.ok(document.querySelectorAll('article').length > 0);
+    assert.match(document.body.textContent, new RegExp(nflName));
+    assert.match(document.body.textContent, /NFL season leaders from ESPN/);
+
+    await click(sportButton('Basketball'));
+    assert.equal(document.querySelectorAll('article').length, 0, 'no card is rendered for a sport ESPN did not answer');
+    assert.match(document.body.textContent, /ESPN did not return Basketball leaders just now\. No sample players are shown in their place\./);
+    assert.doesNotMatch(document.body.textContent, /sample values/);
+    assert.ok(sportButton('NFL'), 'the switch stays, so the board that did answer is one tap away');
+  } finally {
+    mount.unmount();
+  }
+
+  // Neither sport answered: no section, no heading, no placeholder players.
+  const none = await mountBoard({ basketball: unavailable('basketball', 'nba'), football: unavailable('football', 'nfl') });
+  try {
+    assert.equal(none.document.querySelector('section[aria-label="Players & top scorers"]'), null);
+    assert.equal(none.document.querySelectorAll('article').length, 0);
+  } finally {
+    none.unmount();
   }
 });
 

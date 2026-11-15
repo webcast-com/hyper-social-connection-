@@ -80,5 +80,5 @@ test('interleaving reads the member posts without changing them', () => {
   const visible = posts(6);
   const snapshot = ids(visible);
   homeFeed(visible, cards('sports', 2), cards('prediction', 2), cards('video-news', 2));
-  assert.deepEqual(ids(visible), snapshot, 'the Following and Saved tabs read this same list');
+  assert.deepEqual(ids(visible), snapshot, 'the Following tab reads this same list');
 });

@@ -279,6 +279,63 @@ the first batch showing the two newest as cards at their slots ahead of 24 more,
 both "Match highlights" sections still showing their own four, and the page at 200
 with no trace of them once the seed was removed.
 
+### The feed's Highlights tab
+
+The feed's fourth tab is **Highlights**; it took the place of Saved. It is
+supplied by the same stored index the Match Highlights page (`/sports/highlights`)
+pages through: the homepage's one clip read now asks for **no window**
+(`ALL_STORED_DAYS`), so it returns every stored match clip newest first, up to the
+read's ceiling (`FEED_INDEX_LIMIT`, 300), merged with any real clip on the board
+the sweep has not stored yet. It is still one lean read — rows and a count — and
+still no ESPN request.
+
+- **Highlights** shows that whole list as the same `HighlightPostCard` For You
+  renders, revealed in batches like every tab, under a line that counts the clips
+  and links to the page with the competition, state and age filters. When the
+  ceiling, not the index, was what stopped the read, the tab ends with
+  "N older clips on Match Highlights" rather than ending as though that were all.
+- **For You** takes the recent clips from that same list (`recentHighlightClips`:
+  the seven-day window it has always had, plus any real board clip), so the cards
+  between member posts are the same ones as before this tab existed.
+- A board ESPN did not answer still contributes nothing to either. An empty tab
+  says so and links to the page; nothing is invented.
+- League video is not in this tab. It is a different card with its own feed, and
+  stays where it was: For You and Live here, and its own section on the page.
+
+Saved posts are not deleted and the Save buttons still work, but **no view lists
+them any more**: the Saved tab was the only one. That is a known gap, not an
+oversight.
+
+At 320px the four labels are as wide as their text needs (`flex-auto` below `sm`)
+instead of four equal quarters, which were too narrow for "Highlights".
+
+### Players & top scorers: ESPN only, no sample players
+
+The leaders board on the homepage and the Top scorers section on Discover showed
+sample players because the endpoint they asked had stopped existing:
+`site.web.api.espn.com/apis/common/v3/sports/{sport}/{league}/leaders` answers
+**404** for both the NBA and the NFL (checked 2026-11-15). ESPN serves the same
+data from `site.api.espn.com/apis/site/v3/sports/{sport}/{league}/leaders`, which
+is what `leadersUrl` in `src/lib/espn-leaders.ts` now builds. `limit` is players
+per statistic — every entry repeats its team's whole logo and link set — so the
+homepage asks for 1 and Discover for 5.
+
+The payload's shape differs from the old one (`leaders` is an object, the
+statistics are its `categories`, and the `team` sits on the entry beside the
+`athlete`); the normalisers already walked nested lists and read either team
+position, and `tests/sports/leaders-v3-fixture.ts` locks today's shape.
+
+The bundled fallback is gone (`bundledRows`, `bundledTopScorers`). A feed ESPN
+does not answer is an `unavailable` board with **no rows**: if the other sport
+answered, the board opens on that one and the failed tab says "ESPN did not
+return … leaders just now"; if neither did, the section is not rendered.
+
+The Basketball & NFL dashboard asked the same dead path, so its leaders rail and
+Top scorers screen never left demo data. `leadersUrls` in
+`vendor/nfl-nba/src/api/espn.js` now asks the v3 endpoint, and the same-origin
+proxy (`src/lib/nfl-basketball-proxy.ts`) serves that one endpoint from `site/v3`.
+The dashboard's own demo data for its first paint is unchanged.
+
 ## Highlights and fixtures as pages of their own
 
 The site stores every clip it has ever read — production holds 667, each with a

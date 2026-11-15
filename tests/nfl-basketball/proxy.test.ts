@@ -8,6 +8,20 @@ test('only documented dashboard leagues and endpoints reach the correct fixed ES
   const url = dashboardEspnUrl('site', parts('apis/site/v2/sports/basketball/nba/scoreboard'), new URLSearchParams('limit=100&dates=20261001'));
   assert.equal(url, 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?limit=100&dates=20261001');
   assert.equal(dashboardEspnUrl('web', parts('apis/common/v3/sports/football/nfl/athletes/123'), new URLSearchParams()), 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/123');
+  // Season leaders moved to the site API's v3 path (the `common/v3` one answers
+  // 404), so that one endpoint, and only that one, is served from `site/v3`.
+  assert.equal(
+    dashboardEspnUrl('site', parts('apis/site/v3/sports/basketball/nba/leaders'), new URLSearchParams('limit=5')),
+    'https://site.api.espn.com/apis/site/v3/sports/basketball/nba/leaders?limit=5',
+  );
+  assert.equal(
+    dashboardEspnUrl('site', parts('apis/site/v3/sports/football/nfl/leaders'), new URLSearchParams()),
+    'https://site.api.espn.com/apis/site/v3/sports/football/nfl/leaders',
+  );
+  for (const path of ['apis/site/v3/sports/basketball/nba/scoreboard', 'apis/site/v3/sports/soccer/eng-1/leaders', 'apis/site/v3/sports/basketball/nba/leaders/extra']) {
+    assert.equal(dashboardEspnUrl('site', parts(path), new URLSearchParams()), null);
+  }
+  assert.equal(dashboardEspnUrl('web', parts('apis/site/v3/sports/basketball/nba/leaders'), new URLSearchParams()), null);
   for (const path of ['apis/site/v2/sports/soccer/eng-1/scoreboard', 'apis/site/v2/sports/football/nfl/anything', 'apis/site/v2/sports/football/nfl/teams/../news', 'apis/common/v3/sports/football/nfl/leaders']) {
     assert.equal(dashboardEspnUrl('site', parts(path), new URLSearchParams()), null);
   }

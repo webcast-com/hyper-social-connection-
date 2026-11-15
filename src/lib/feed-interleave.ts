@@ -10,8 +10,8 @@
  *
  * Slots are positions in the list as it stands when that pass runs, and a pass
  * never writes past the end: a short feed just appends. The input list is not
- * mutated, so the Following and Saved tabs, which read the same posts, are
- * unaffected by what the For You tab inserts.
+ * mutated, so the Following tab, which reads the same posts, is unaffected by
+ * what the For You tab inserts.
  */
 
 /** Slots for the match and prediction cards, in the order they are built. */

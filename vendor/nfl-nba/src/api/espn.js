@@ -10,7 +10,7 @@
  * Endpoints used:
  *   - scoreboard: /apis/site/v2/sports/{sport}/{league}/scoreboard
  *   - standings:  /apis/v2/sports/{sport}/{league}/standings
- *   - leaders:    /apis/common/v3/sports/{sport}/{league}/leaders (best effort)
+ *   - leaders:    /apis/site/v3/sports/{sport}/{league}/leaders (best effort)
  *
  * Requests go straight to ESPN from the browser (their public API sends
  * permissive CORS headers). Each request also has a same-origin proxy fallback
@@ -37,6 +37,8 @@ export const ESPN_WEB_PROXY = "/espn-web";
 const SCOREBOARD_TTL = 30 * 1000;
 const STANDINGS_TTL = 5 * 60 * 1000;
 const LEADERS_TTL = 60 * 60 * 1000;
+/** Players ESPN is asked for per statistic on the leaders endpoint. */
+const LEADERS_PER_STAT = 5;
 const DETAIL_TTL = 60 * 1000;
 const NEWS_TTL = 5 * 60 * 1000;
 const REQUEST_TIMEOUT = 12 * 1000;
@@ -349,8 +351,12 @@ export function standingsUrls(leagueKey, { season } = {}) {
 
 export function leadersUrls(leagueKey) {
   const league = requireLeague(leagueKey);
-  const path = `/apis/common/v3/sports/${league.path}/leaders`;
-  return withProxyFallback(ESPN_WEB_BASE, ESPN_WEB_PROXY, path);
+  // The site API's v3 endpoint: `site.web.api.espn.com/apis/common/v3/.../leaders`
+  // now answers 404. Five players per statistic is all either screen shows, and
+  // each entry repeats its team's whole logo set, so the limit keeps the payload
+  // (and the same-origin proxy's size cap) in hand.
+  const path = `/apis/site/v3/sports/${league.path}/leaders${buildQuery({ limit: LEADERS_PER_STAT })}`;
+  return withProxyFallback(ESPN_SITE_BASE, ESPN_SITE_PROXY, path);
 }
 
 export function teamUrls(leagueKey, teamId) {
