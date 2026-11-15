@@ -65,14 +65,23 @@ jobs:
           for (const p of list) {
             const b = await get(`/v1/projects/${p.id}/branches`);
             console.log(`GET /v1/projects/${p.id}/branches:`, b.status);
-            if (b.status !== 200) console.log(JSON.stringify(b.body).slice(0, 600));
-            for (const br of (Array.isArray(b.body?.data) ? b.body.data : [])) {
-              console.log('  branch', JSON.stringify({ id: br.id, gitName: br.gitName, isDefault: br.isDefault }));
+            const branches = Array.isArray(b.body?.data) ? b.body.data : [];
+            const def = branches.find((br) => br.isDefault);
+            console.log('  branches:', branches.length, 'default:', def ? `${def.id} (${def.gitName})` : 'none');
+            for (const kind of ['apps', 'databases', 'buckets']) {
+              const all = await get(`/v1/${kind}?projectId=${p.id}`);
+              const rows = Array.isArray(all.body?.data) ? all.body.data : [];
+              console.log(`GET /v1/${kind}?projectId: ${all.status}, ${rows.length} in project`);
+              if (all.status !== 200) console.log(JSON.stringify(all.body).slice(0, 400));
+              for (const r of rows) {
+                console.log('   ', kind, JSON.stringify({ id: r.id, name: r.name, branch: r.branch?.id ?? r.branchId ?? null, logicalId: r.logicalId ?? null, region: r.region?.id ?? r.region ?? null, createdAt: r.createdAt, isDefault: r.isDefault ?? null }));
+              }
+              if (def) {
+                const onDef = await get(`/v1/${kind}?projectId=${p.id}&branchId=${def.id}`);
+                const n = Array.isArray(onDef.body?.data) ? onDef.body.data : [];
+                console.log(`    on default branch: ${onDef.status}, ${n.length}: ${n.map((r) => r.name).join(', ')}`);
+              }
             }
-          }
-          for (const path of ['/v1/me', '/v1/workspaces']) {
-            const r = await get(path);
-            console.log(`GET ${path}:`, r.status, r.status === 200 ? '' : JSON.stringify(r.body).slice(0, 300));
           }
           JS
           node probe.mjs
