@@ -170,11 +170,18 @@ test('offline sitemap lists only indexable static routes on the real domain, wit
     // With nothing stored there is no fixture this site can say anything about, so
     // no match URL is submitted: the route exists, the page is a shell.
     assert.ok(!rows.some((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/')));
-    // The dashboard's 96 team, player and hub URLs are one client-rendered document
-    // over the vendor's bundled sample data. They are reachable and labelled, but
-    // not submitted: crawl budget on this site is scarce and those pages carry
-    // nothing a reader could not get from the two hubs.
-    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')), 'no dashboard URLs are submitted');
+    // The dashboard's hubs, sections and feed-backed team pages each answer for
+    // themselves now, so they are submitted — and need no database to be listed.
+    const dashboard = rows.filter((row) => row.url.includes('/nfl-basketball/'));
+    for (const path of ['/basketball', '/nfl', '/basketball/upcoming', '/nfl/top-scorers', '/nfl/news', '/basketball/team/boston-celtics', '/nfl/team/kansas-city-chiefs']) {
+      assert.ok(dashboard.some((row) => row.url === `https://hyper.co.ke/nfl-basketball${path}`), `${path} is submitted`);
+    }
+    // What is not a page worth a visit is not asked for: the redirecting entry
+    // URL, sample-only teams and fixtures, players, and the coming-soon screens.
+    assert.ok(!rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball'));
+    for (const fragment of ['/match/', '/player/', '/team/nairobi-city-thunder', '/cricket', '/team/BOS']) {
+      assert.ok(!dashboard.some((row) => row.url.includes(fragment)), `${fragment} is not submitted`);
+    }
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
     assert.ok(rows.every((row) => row.lastModified === undefined));
@@ -230,7 +237,9 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     for (const path of ['/login', '/signup', '/search']) {
       assert.ok(!rows.some((row) => row.url.endsWith(path)), `${path} is not submitted`);
     }
-    assert.ok(!rows.some((row) => row.url.includes('/nfl-basketball/')));
+    // The dashboard's pages are listed alongside the database-backed ones, once each.
+    assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/nfl-basketball/basketball'));
+    assert.equal(new Set(rows.map((row) => row.url)).size, rows.length, 'no URL is submitted twice');
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nba')));
     assert.ok(!rows.some((row) => row.url.endsWith('/sports/nfl')));
   });

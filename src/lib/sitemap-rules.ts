@@ -14,6 +14,7 @@
  */
 import type { MetadataRoute } from 'next';
 import { isAppAccount } from './app-accounts';
+import { dashboardSitemapRoutes } from './dashboard-seo';
 
 /**
  * Whether an account is worth asking a crawler to visit.
@@ -79,12 +80,33 @@ export function staticSitemapRoutes(
     // them, so there is no date to report — only a promise that it changes hourly.
     { url: at('/sports/predictions'), changeFrequency: 'hourly', priority: 0.6 },
     { url: at('/sports/highlights'), ...dated(freshness.newestClip), changeFrequency: 'hourly', priority: 0.8 },
-    // The dashboard's 96 hubs, teams and players are deliberately **not** listed.
-    // They are one client-rendered document serving the vendor's bundled sample
-    // dataset — the pages themselves say "Sample schedule" — so asking a crawler to
-    // spend 96 of its visits on this site there left it little for pages that carry
-    // something true. `dashboardSitemapRoutes()` stays for when they do.
+    // The Basketball & NFL dashboard's pages are submitted too, by
+    // `dashboardSitemapEntries` below.
     { url: at('/about'), changeFrequency: 'monthly', priority: 0.6 },
     { url: at('/privacy'), changeFrequency: 'monthly', priority: 0.4 },
   ];
+}
+
+/**
+ * The Basketball & NFL dashboard's pages: the two hubs, their upcoming, top
+ * scorers and news sections, and every team page that loads from a live feed.
+ *
+ * These were left out while every dashboard address was one document with the
+ * same body, and an unknown team answered 200. Each address now answers for
+ * itself — its own title, headline, canonical and status — so the list here is
+ * exactly the list of pages that are indexable and name themselves as canonical
+ * (`dashboardSitemapRoutes`, which the page metadata is resolved from as well, so
+ * the two cannot disagree). What that leaves out is left out on purpose: sample
+ * fixtures, teams in a league with no feed, player pages with no profile to
+ * load, the "coming soon" screens, and match pages, which come and go.
+ *
+ * No `lastmod`: the scores come from ESPN in the reader's browser, and this site
+ * stores nothing that says when a team's page last changed.
+ */
+export function dashboardSitemapEntries(baseUrl: string): MetadataRoute.Sitemap {
+  return dashboardSitemapRoutes().map((route) => ({
+    url: `${baseUrl}${route.path}`,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
 }

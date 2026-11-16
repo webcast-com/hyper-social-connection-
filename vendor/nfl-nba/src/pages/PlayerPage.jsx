@@ -14,6 +14,7 @@ import {
 } from "../utils/entities";
 import { metricShort, EmptyState, Panel, PanelHead, TeamLogo } from "../components/ui";
 import { IconArrowUpRight, IconChart, IconUsers } from "../components/Icons";
+import { useLiveMeta } from "../seo/RouteMetaProvider";
 
 /**
  * A player page always shows a face: the ESPN headshot when there is one, the
@@ -83,6 +84,8 @@ export default function PlayerPage({ sport = "basketball" }) {
       active = false;
     };
   }, [player?.espnId, player?.league, config.leagueKey]);
+
+  useLiveMeta(player && profile?.name ? { name: profile.name } : null);
 
   if (!player) {
     return (

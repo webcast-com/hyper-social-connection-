@@ -19,7 +19,7 @@ describe("App shell", () => {
     ["Basketball", "Football", "Cricket", "Badminton", "Hockey"].forEach((label) => {
       expect(getByRole("link", { name: label })).toBeTruthy();
     });
-    expect(getByText("Basketball Center")).toBeTruthy();
+    expect(getByText("Basketball live scores, fixtures and standings")).toBeTruthy();
   });
 
   it("routes under the integrated dashboard prefix", () => {
@@ -30,7 +30,7 @@ describe("App shell", () => {
     );
     expect(getByRole("link", { name: "Basketball" }).getAttribute("href")).toBe("/nfl-basketball/basketball");
     expect(getByRole("link", { name: "Football" }).getAttribute("href")).toBe("/nfl-basketball/nfl");
-    expect(getByText("NFL Center")).toBeTruthy();
+    expect(getByText("NFL live scores, fixtures and standings")).toBeTruthy();
   });
 
   it("switches the color theme", () => {

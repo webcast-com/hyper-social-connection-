@@ -257,3 +257,116 @@ test('a logo that fails to load is replaced by the side’s code', async () => {
     await mounted.unmount();
   }
 });
+
+/**
+ * The markup of a card's face with what legitimately differs taken out: the
+ * pill's wording and tint, and the attribute names tests find the scoreline by.
+ */
+const faceOf = (node: any) => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach((button: any) => button.parentElement.remove());
+  const pill = copy.querySelector('span.rounded-full');
+  return {
+    pill: pill.textContent,
+    rest: (() => { pill.remove(); return copy.innerHTML.replace(/data-(featured|match)-(score|progress)/g, 'data-$2'); })(),
+  };
+};
+
+test('a board card is drawn exactly like the featured match: same frame, same face, only the pill differs', async () => {
+  const live = event();
+  const featured = await mount('featured', { event: live });
+  const card = await mount('card', { event: live });
+  try {
+    const featuredLink = featured.container.querySelector('section a');
+    const article = card.container.querySelector('article');
+    const cardLink = article.querySelector('a');
+    // Same container, same frame.
+    const section = featured.container.querySelector('section');
+    assert.match(section.className, /@container/);
+    assert.match(article.className, /@container/);
+    const frame = (className: string) => className.split(' ').filter((name) => /^(rounded|border|bg-|from-|via-|to-|p-|@xl:p-|shadow|dark:(border|from|via|to)-)/.test(name)).sort();
+    assert.deepEqual(frame(article.firstElementChild.className), frame(featuredLink.className));
+    assert.ok(frame(featuredLink.className).length >= 10);
+    // Same face.
+    const a = faceOf(featuredLink);
+    const b = faceOf(cardLink);
+    assert.equal(a.pill, 'Featured');
+    assert.equal(b.pill, 'Live');
+    assert.equal(b.rest, a.rest);
+    // And the card keeps what the featured match shows: clock, bar, venue.
+    assert.match(cardLink.textContent, /Live · 54'/);
+    assert.equal(article.querySelector('[data-match-progress] span').style.width, '60%');
+    assert.equal(article.querySelector('[data-match-score]').textContent, '1–2');
+    assert.match(cardLink.textContent, /Emirates Stadium/);
+  } finally {
+    await featured.unmount();
+    await card.unmount();
+  }
+});
+
+test('a board card says what its fixture is: live, final, upcoming or a sample', async () => {
+  const pillOf = (container: any) => container.querySelector('article span.rounded-full');
+  const upcoming = await mount('card', { event: event({ status: 'upcoming', detail: null, venue: undefined, home: side('Arsenal', null), away: side('Chelsea', null) }) });
+  try {
+    assert.equal(pillOf(upcoming.container).textContent, 'Upcoming');
+    // No pulsing dot on anything that is not in play.
+    assert.equal(pillOf(upcoming.container).querySelector('.animate-pulse'), null);
+    // Not started: "VS" where the scoreline will be, never 0–0 or a dash.
+    assert.equal(upcoming.container.querySelector('[data-match-score]').textContent, 'VS');
+    assert.equal(upcoming.container.querySelector('[data-match-progress]'), null);
+    assert.match(upcoming.container.textContent, /Venue TBC/);
+    assert.equal(upcoming.container.querySelector('a').getAttribute('aria-label'), 'Open Chelsea vs Arsenal match details');
+  } finally {
+    await upcoming.unmount();
+  }
+  const final = await mount('card', { event: event({ status: 'final', detail: 'FT' }) });
+  try {
+    assert.equal(pillOf(final.container).textContent, 'Final');
+    assert.equal(final.container.querySelector('[data-match-score]').textContent, '1–2');
+    assert.match(final.container.querySelector('a').textContent, /FT/);
+    assert.doesNotMatch(final.container.textContent, /Live/);
+    assert.equal(final.container.querySelector('[data-match-progress]'), null);
+  } finally {
+    await final.unmount();
+  }
+  const liveCard = await mount('card', { event: event() });
+  try {
+    assert.equal(pillOf(liveCard.container).textContent, 'Live');
+    assert.ok(pillOf(liveCard.container).querySelector('.animate-pulse'));
+  } finally {
+    await liveCard.unmount();
+  }
+  // A sample is labelled a sample whatever state it pretends to be in: it is
+  // never called live, draws no progress bar and links nowhere.
+  const sample = await mount('card', { event: event({ source: 'demo', details: undefined }) });
+  try {
+    assert.equal(pillOf(sample.container).textContent, 'Sample fixture');
+    assert.doesNotMatch(sample.container.textContent, /Live/);
+    assert.equal(sample.container.querySelector('[data-match-progress]'), null);
+    assert.equal(sample.container.querySelectorAll('a').length, 0);
+    assert.doesNotMatch(sample.container.textContent, /Match details/);
+    assert.equal(sample.container.querySelector('[data-match-score]').textContent, '1–2');
+  } finally {
+    await sample.unmount();
+  }
+});
+
+test('a race keeps its positions under the same card heading, with no scoreline and no link', async () => {
+  const race = event({
+    sport: 'motorsport', league: 'f1', leagueName: 'Formula 1', detail: 'Lap 12',
+    race: { title: 'Review Grand Prix', entries: [{ name: 'Leading Driver', position: 1 }] },
+  } as Partial<SportsEvent>);
+  const mounted = await mount('card', { event: race });
+  try {
+    const article = mounted.container.querySelector('article');
+    assert.equal(article.querySelector('span.rounded-full').textContent, 'Live');
+    assert.match(article.textContent, /Review Grand Prix/);
+    assert.match(article.textContent, /Leading Driver/);
+    assert.match(article.textContent, /Live · Lap 12/);
+    assert.equal(article.querySelector('[data-match-score]'), null);
+    assert.equal(article.querySelectorAll('a').length, 0);
+    assert.doesNotMatch(article.textContent, /VS/);
+  } finally {
+    await mounted.unmount();
+  }
+});

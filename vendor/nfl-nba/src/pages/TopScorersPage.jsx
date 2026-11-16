@@ -6,6 +6,7 @@ import { isEspnDisabled, loadLeaderboard } from "../api/espn";
 import { buildPlayerIndex, findPlayer, slugify } from "../utils/entities";
 import { Panel, PanelHead } from "../components/ui";
 import { IconChart } from "../components/Icons";
+import { routeMeta } from "../seo/routeMeta";
 
 /**
  * Portrait ladder: ESPN headshot -> bundled artwork -> initials.
@@ -72,7 +73,7 @@ export default function TopScorersPage({ sport = "basketball" }) {
     <main className="sh-detail">
       <header className="sh-page-head">
         <span className="sh-detail-kicker">{config.hubLabel} leaderboards</span>
-        <h1 className="sh-detail-title">Top scorers</h1>
+        <h1 className="sh-detail-title">{routeMeta(`${config.hub}/top-scorers`).heading}</h1>
         <p className="sh-page-sub">
           The leaders for every major category, updated from the {config.label} feed.
         </p>

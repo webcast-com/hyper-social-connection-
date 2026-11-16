@@ -5,7 +5,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
 import { clipHref } from "@/lib/highlight-clip";
 import { matchHref, storedMatchReference } from "@/lib/espn-match";
-import { isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
+import { dashboardSitemapEntries, isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
 
 /**
  * How many stored highlight clips get a URL of their own here.
@@ -27,7 +27,8 @@ const SITEMAP_MATCHES = 500;
 /**
  * Sitemap generator — served at /sitemap.xml.
  *
- * Static routes are always included. When a database is configured, recent
+ * Static routes and the Basketball & NFL dashboard's pages are always included.
+ * When a database is configured, recent
  * post permalinks plus profile and group pages are added too. Regenerated on
  * every request so new users, groups and posts show up immediately.
  */
@@ -148,5 +149,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return [...staticRoutes, ...clipRoutes, ...matchRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
+  // The dashboard's hubs, sections and team pages need no database: they are
+  // listed whether or not the queries above succeeded.
+  const dashboardRoutes = dashboardSitemapEntries(baseUrl);
+
+  return [...staticRoutes, ...dashboardRoutes, ...clipRoutes, ...matchRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
 }

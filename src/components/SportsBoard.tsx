@@ -166,6 +166,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         <a href="/scorehub" className="font-bold underline hover:no-underline">ScoreHub</a>
         {' '}— a separate dashboard using the same ESPN scores.
         <span aria-hidden="true" className="px-1 text-amber-400">·</span>
+        {/* The dashboard is a separate document served by a route handler, not a page of this app: it needs a full page load. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/nfl-basketball/" className="font-bold text-blue-600 underline hover:no-underline dark:text-blue-400">Basketball &amp; NFL dashboard</a>
         {' '}— a separate sports experience with live feeds when available and sample content otherwise.
       </div>}
@@ -319,9 +321,10 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
                 {group.leagueName}
                 <span className="ml-2 font-normal normal-case tracking-normal">{competitionCountry(group.league) ?? SPORTS_REGIONS.find((item) => item.id === competitionRegion(group.league))?.name} · {group.events.length}</span>
               </h2>
-              <div className={view === 'cards' ? "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2" : "grid min-w-0 grid-cols-1 gap-2"}>
+              {/* Every fixture wears the featured match's face; the layout only chooses one a row or two. */}
+              <div className={view === 'cards' ? "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2" : "grid min-w-0 grid-cols-1 gap-3"}>
                 {group.events.map((ev) => (
-                  <SportsEventCard key={ev.id} event={ev} compact={view === 'list'} returnTo={returnTo} now={now} />
+                  <SportsEventCard key={ev.id} event={ev} returnTo={returnTo} now={now} />
                 ))}
               </div>
             </section>

@@ -7,9 +7,10 @@ import type { SportsEvent } from '../../src/lib/sports';
  * The sports board renders every sport in the same match card.
  *
  * Basketball used to be kept off the board, so nothing proved the card could
- * carry a basketball fixture. It does: same article, same team rows, same
- * score, same match-details link — only the competition, the clock and the
- * scores differ.
+ * carry a basketball fixture. It does: same article, same crests, same
+ * scoreline, same link to the match — only the competition, the clock and the
+ * scores differ. And the card is drawn like the featured match above the
+ * competitions: the same frame and the same face.
  */
 
 const event = (over: Partial<SportsEvent> & Pick<SportsEvent, 'sport' | 'league'>): SportsEvent => ({
@@ -59,10 +60,12 @@ test('a basketball fixture is rendered by the board’s own match card', async (
   const mount = await mountCard(basketball);
   try {
     const card = mount.article;
-    // The same card football uses, unchanged.
-    assert.match(card.className, /min-w-0 h-full bg-white dark:bg-gray-800 rounded-2xl border/);
+    // The same card football uses: a container, so its sizes follow its own
+    // width, around the frame the featured match is drawn in.
+    assert.match(card.className, /@container/);
+    assert.match(card.firstElementChild!.className, /rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/);
     assert.match(card.textContent, /NBA/);
-    assert.match(card.textContent, /LIVE · Q3 4:52/);
+    assert.match(card.textContent, /Live · Q3 4:52/);
     assert.match(card.textContent, /Los Angeles Lakers/);
     assert.match(card.textContent, /Boston Celtics/);
     assert.match(card.textContent, /Crypto.com Arena/);
@@ -71,9 +74,17 @@ test('a basketball fixture is rendered by the board’s own match card', async (
     // Both crests, from ESPN's own basketball logo path.
     const logos = [...card.querySelectorAll('img')].map((img: any) => img.getAttribute('src'));
     assert.deepEqual(logos, ['https://a.espncdn.com/i/teamlogos/nba/500/bos.png', 'https://a.espncdn.com/i/teamlogos/nba/500/lal.png']);
-    // The card opens the basketball match, not a football-shaped page.
-    const details = [...card.querySelectorAll('a')].find((node: any) => node.textContent.includes('View match details'))!;
-    assert.equal(details.getAttribute('href'), '/sports/matches/nba/401234567');
+    // The whole card is one link, and it opens the basketball match, not a
+    // football-shaped page.
+    const links = [...card.querySelectorAll('a')];
+    assert.equal(links.length, 1);
+    assert.equal(links[0].getAttribute('href'), '/sports/matches/nba/401234567');
+    assert.equal(links[0].getAttribute('aria-label'), 'Open Boston Celtics (74) vs Los Angeles Lakers (78) match details');
+    assert.match(links[0].textContent!, /Match details/);
+    // "Copy to post" stays a button of its own, outside the link.
+    const copy = [...card.querySelectorAll('button')];
+    assert.deepEqual(copy.map((node: any) => node.textContent), ['Copy to post']);
+    assert.equal(copy[0].closest('a'), null);
   } finally {
     await mount.unmount();
   }

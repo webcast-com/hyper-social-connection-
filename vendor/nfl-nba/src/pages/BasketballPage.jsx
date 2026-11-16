@@ -277,7 +277,7 @@ export default function BasketballPage({
 
   return (
     <main className="sh-dash">
-      <h1 className="sh-sr-only">Basketball Center</h1>
+      <h1 className="sh-sr-only">Basketball live scores, fixtures and standings</h1>
 
       <LeagueSidebar
         title="Popular Leagues"

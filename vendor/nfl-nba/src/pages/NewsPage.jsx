@@ -4,6 +4,7 @@ import { detailSport } from "../data/detailConfig";
 import { basketballNews, nflNews, demoNewsImages } from "../data/newsData";
 import { isEspnDisabled, loadNews } from "../api/espn";
 import { EmptyState } from "../components/ui";
+import { routeMeta } from "../seo/routeMeta";
 
 function fromEspn(article, fallbackImage) {
   return {
@@ -84,7 +85,7 @@ export default function NewsPage({ sport = "basketball" }) {
     <main className="sh-detail">
       <header className="sh-page-head">
         <span className="sh-detail-kicker">{config.hubLabel} newsroom</span>
-        <h1 className="sh-detail-title">Latest news</h1>
+        <h1 className="sh-detail-title">{routeMeta(`${config.hub}/news`).heading}</h1>
         <p className="sh-page-sub">
           Match reports, previews and analysis from across the {config.label}.
         </p>

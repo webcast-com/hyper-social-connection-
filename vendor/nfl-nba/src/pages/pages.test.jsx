@@ -12,7 +12,7 @@ const gameCards = (container) => container.querySelectorAll(".sh-game");
 describe("BasketballPage", () => {
   it("renders the full demo scoreboard", () => {
     const { container, getByText } = render(<BasketballPage />);
-    expect(getByText("Basketball Center")).toBeTruthy();
+    expect(getByText("Basketball live scores, fixtures and standings")).toBeTruthy();
     expect(gameCards(container)).toHaveLength(8); // NBA, EuroLeague, BAL, WNBA, ACB, NBL + NCAA men/women
     expect(container.querySelectorAll(".sh-date")).toHaveLength(10);
     expect(container.querySelectorAll(".sh-player")).toHaveLength(4);
@@ -114,7 +114,7 @@ describe("NFLPage", () => {
         <NFLPage />
       </MemoryRouter>
     );
-    expect(getByText("NFL Center")).toBeTruthy();
+    expect(getByText("NFL live scores, fixtures and standings")).toBeTruthy();
     expect(gameCards(container)).toHaveLength(5); // NFL + College Football
     expect(container.querySelectorAll(".sh-table")).toHaveLength(4);
     expect(getAllByRole("tab", { name: "LIVE" }).length).toBe(1);

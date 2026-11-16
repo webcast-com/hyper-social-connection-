@@ -46,3 +46,36 @@ declare module '*/vendor/nfl-nba/src/utils/entities' {
   export function slugify(value: string): string;
   export function teamKeyFor(value: string): string;
 }
+
+declare module '*/vendor/nfl-nba/src/seo/routeMeta' {
+  export type Sport = 'basketball' | 'football';
+  export type RouteLink = { name: string; path: string };
+  export type RouteEntity = { type: 'team' | 'player' | 'match'; name: string | null; competition?: string | null; sample?: boolean };
+  export type RouteTeam = { key: string; name: string; code?: string; competitionId?: string; competition?: string };
+  export type RoutePlayer = { key: string; name: string; team?: string; espnId?: string | number };
+  /** What one dashboard URL is. Paths are relative to the router base. */
+  export type RouteMeta = {
+    kind: 'hub' | 'section' | 'team' | 'player' | 'match' | 'coming-soon' | 'redirect' | 'not-found';
+    sport: Sport | null;
+    path: string;
+    title: string;
+    heading: string;
+    description: string;
+    keywords: string[];
+    index: boolean;
+    status: number;
+    crumbs: RouteLink[];
+    links: RouteLink[];
+    entity: RouteEntity | null;
+  };
+  /** What a screen has learned about its own page since it was served. */
+  export type LiveRouteData = { name?: string; home?: string | null; away?: string | null; competition?: string | null; notFound?: boolean };
+  export const SPORT_LABELS: Record<Sport, { label: string; hub: string; schemaSport: string }>;
+  export const MATCH_COMPETITIONS: Record<Sport, Record<string, string>>;
+  export function routeMeta(pathname: string, search?: string, live?: LiveRouteData | null): RouteMeta;
+  export function documentTitle(meta: Pick<RouteMeta, 'title'>): string;
+  export function sportIndex(sport: Sport): { teams: Map<string, RouteTeam>; players: Map<string, RoutePlayer> };
+  export function teamHasFeed(sport: Sport, team: RouteTeam | null | undefined): boolean;
+  export function playerHasFeed(player: RoutePlayer | null | undefined): boolean;
+  export function indexableRoutes(): { kind: RouteMeta['kind']; path: string }[];
+}
