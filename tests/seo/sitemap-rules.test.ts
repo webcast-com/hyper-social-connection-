@@ -5,8 +5,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SPORTS_DESK } from '../../src/lib/sports-anchor';
+import { dashboardSeoFor } from '../../src/lib/dashboard-seo';
 import {
-  isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness,
+  dashboardSitemapEntries, isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness,
 } from '../../src/lib/sitemap-rules';
 
 const BASE = 'https://hyper.co.ke';
@@ -88,4 +89,41 @@ test('a member is submitted, and so is an account this rule cannot identify', ()
   assert.equal(isSubmittableProfile({ email: '' }), true);
   assert.equal(isSubmittableProfile({}), true);
   assert.equal(isSubmittableProfile(null), false, 'nothing to identify is nothing to submit');
+});
+
+test('every dashboard URL submitted is a page that is served, indexable and its own canonical', () => {
+  const rows = dashboardSitemapEntries(BASE);
+  // Two hubs, six sections, and the team pages that load from a live feed.
+  assert.ok(rows.length >= 80 && rows.length <= 120, `${rows.length} dashboard URLs`);
+  assert.equal(new Set(rows.map((row) => row.url)).size, rows.length, 'each once');
+  for (const row of rows) {
+    const url = new URL(row.url);
+    assert.ok(url.pathname.startsWith('/nfl-basketball/'), row.url);
+    assert.equal(url.search, '', `${row.url} carries no query`);
+    // Submitting a URL that 404s, is noindex, or points elsewhere as canonical
+    // spends crawl budget to be told the page is not wanted.
+    const seo = dashboardSeoFor(url.pathname);
+    assert.equal(seo.status, 200, `${row.url} is served`);
+    assert.equal(seo.index, true, `${row.url} is indexable`);
+    assert.equal(seo.canonical, row.url, `${row.url} is its own canonical`);
+    // Nothing this site stores says when a scores page last changed.
+    assert.equal(row.lastModified, undefined, `${row.url} claims no date`);
+  }
+  const of = (path: string) => rows.find((row) => row.url === `${BASE}/nfl-basketball${path}`);
+  assert.deepEqual(of('/basketball'), { url: `${BASE}/nfl-basketball/basketball`, changeFrequency: 'hourly', priority: 0.8 });
+  assert.deepEqual(of('/nfl/upcoming'), { url: `${BASE}/nfl-basketball/nfl/upcoming`, changeFrequency: 'hourly', priority: 0.6 });
+  assert.deepEqual(of('/nfl/team/kansas-city-chiefs'), { url: `${BASE}/nfl-basketball/nfl/team/kansas-city-chiefs`, changeFrequency: 'daily', priority: 0.5 });
+});
+
+test('dashboard pages that could only show sample data, or are no page at all, are not submitted', () => {
+  const submitted = new Set(dashboardSitemapEntries(BASE).map((row) => row.url.slice(BASE.length)));
+  for (const path of [
+    '/nfl-basketball', // redirects to the basketball hub
+    '/nfl-basketball/basketball/team/nairobi-city-thunder', // a league with no feed
+    '/nfl-basketball/basketball/team/BOS', // an alias of the Celtics' page
+    '/nfl-basketball/basketball/player/luka-doncic',
+    '/nfl-basketball/basketball/match/1',
+    '/nfl-basketball/cricket',
+  ]) assert.ok(!submitted.has(path), `${path} is not submitted`);
+  assert.ok(![...submitted].some((path) => path.includes('/match/') || path.includes('/player/')));
 });

@@ -273,9 +273,9 @@ export function dashboardRobots(seo: Pick<DashboardSeo, 'index'>): string {
 
 /**
  * Dashboard URLs that are pages in their own right: the two hubs, their
- * sections, and every team and player page that can load real data. Not
- * submitted today — see `staticSitemapRoutes` — and kept so that the list a
- * sitemap would use is the same list the pages are indexed by.
+ * sections, and every team and player page that can load real data. Submitted
+ * by `dashboardSitemapEntries` in `sitemap-rules.ts`, so the list the sitemap
+ * uses is the same list the pages are indexed by.
  */
 export function dashboardSitemapRoutes(): { path: string; changeFrequency: 'hourly' | 'daily'; priority: number }[] {
   return indexableRoutes().map((route) => ({

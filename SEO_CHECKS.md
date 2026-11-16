@@ -82,11 +82,13 @@ every client-side navigation (`vendor/nfl-nba/src/seo/RouteMetaProvider.jsx`).
   and the app shows a "Page not found" screen.
 - **Loading.** Web fonts moved from an `@import` in the stylesheet to `<link>`s
   in the document with `preconnect`, so they no longer wait for the stylesheet.
-- **Sitemap.** Unchanged: dashboard addresses are still not submitted
-  (`src/lib/sitemap-rules.ts`). `dashboardSitemapRoutes()` returns exactly the
-  indexable hub, section and team pages for when they are.
+- **Sitemap.** `/sitemap.xml` now lists the 90 indexable dashboard pages: the two
+  hubs, six sections and 82 team pages (`dashboardSitemapEntries` in
+  `src/lib/sitemap-rules.ts`). They carry no `lastmod`, since nothing stored says
+  when a scores page changed. Sample-only teams and fixtures, player pages, match
+  pages, the coming-soon screens and the redirecting entry URL are not listed.
 - Preview deployments stay `noindex, nofollow` on every dashboard page.
 
-Checks: `npm run test:seo` (80), `npm --prefix vendor/nfl-nba test` (182),
+Checks: `npm run test:seo` (82), `npm --prefix vendor/nfl-nba test` (182),
 `npm run test:nfl-basketball` (3). Not verified here: how Google or Bing render
 and rank these pages, and live ESPN responses (the sandbox cannot reach ESPN).
