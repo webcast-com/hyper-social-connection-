@@ -260,6 +260,94 @@ test('a long board offers a way back to the top once scrolled', async ({ page })
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
+/** What a match card looks like, as the browser computed it. */
+const cardLook = (root: import('@playwright/test').Locator) => root.evaluate((element) => {
+  const frame = element.firstElementChild!;
+  const score = element.querySelector('[data-featured-score], [data-match-score]')!;
+  const crest = element.querySelector('img, span.grid')!;
+  const name = element.querySelector('span[title]')!;
+  const pill = element.querySelector('span.rounded-full.uppercase')!;
+  const style = (node: Element) => getComputedStyle(node);
+  return {
+    width: Math.round(frame.getBoundingClientRect().width),
+    frame: [style(frame).borderTopColor, style(frame).borderTopWidth, style(frame).borderRadius, style(frame).backgroundImage, style(frame).paddingTop, style(frame).paddingLeft, style(frame).boxShadow],
+    pill: [style(pill).fontSize, style(pill).fontWeight, style(pill).textTransform, style(pill).letterSpacing, style(pill).borderRadius, style(pill).backgroundColor, style(pill).color],
+    score: [style(score).fontSize, style(score).fontWeight, style(score).fontFamily, style(score).color],
+    crest: [Math.round(crest.getBoundingClientRect().width), Math.round(crest.getBoundingClientRect().height)],
+    name: [style(name).fontSize, style(name).fontWeight, style(name).color],
+  };
+});
+
+for (const width of [320, 768, 1280]) {
+  test(`a match card is drawn exactly like the featured match at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    // On the whole board the Premier League match is both featured and listed.
+    const featured = page.getByRole('region', { name: 'Featured match', exact: true });
+    // The featured fixture's own card, in its competition below.
+    const card = page.getByRole('article').filter({ hasText: 'Premier League Away' }).first();
+    await expect(featured).toHaveCount(1);
+    const want = await cardLook(featured);
+    const got = await cardLook(card);
+    // List layout: one card a row, as wide as the featured match less the
+    // competition's own padding, so the two step up in size together.
+    expect(got.frame).toEqual(want.frame);
+    expect(got.pill).toEqual(want.pill);
+    expect(got.score).toEqual(want.score);
+    expect(got.crest).toEqual(want.crest);
+    expect(got.name).toEqual(want.name);
+    await expect(card.locator('span.rounded-full.uppercase')).toHaveText('Live');
+    await expect(featured.locator('span.rounded-full.uppercase')).toHaveText('Featured');
+    // The whole card is the link's target, the way the featured match is.
+    const link = card.getByRole('link');
+    await expect(link).toHaveCount(1);
+    await card.scrollIntoViewIfNeeded();
+    const target = await card.evaluate((element) => {
+      const frame = element.firstElementChild!.getBoundingClientRect();
+      const hit = document.elementFromPoint(frame.left + 6, frame.top + 6);
+      return { inside: !!hit?.closest('a'), href: hit?.closest('a')?.getAttribute('href') ?? null };
+    });
+    expect(target).toEqual({ inside: true, href: '/sports/matches/epl/401234567' });
+    // "Copy to post" is still a button, and still a full-size touch target.
+    const copy = page.getByRole('article').getByRole('button', { name: 'Copy to post', exact: true }).first();
+    expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await copy.scrollIntoViewIfNeeded();
+    const copyHit = await copy.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === element;
+    });
+    expect(copyHit).toBe(true);
+    await assertFit(page);
+    await featured.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `test-results/sports/cards-list-${width}.png` });
+
+    // Two a row: every card is still the same face, at the size the featured
+    // match has when it is that narrow, and nothing spills out of a card.
+    await page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'cards', exact: true }).click();
+    for (const each of await page.getByRole('article').all()) {
+      const fit = await each.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
+      expect(fit.scroll).toBeLessThanOrEqual(fit.width);
+    }
+    const grid = await cardLook(card);
+    expect(grid.frame.slice(0, 4)).toEqual(want.frame.slice(0, 4));
+    expect(grid.pill).toEqual(want.pill);
+    await assertFit(page);
+    await featured.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `test-results/sports/cards-grid-${width}.png` });
+    // The site ships dark: the two must match there as well. The frame's
+    // colours are transitioned, so let them settle before reading them.
+    await page.evaluate(() => document.documentElement.classList.add('dark'));
+    await page.waitForTimeout(500);
+    const darkWant = await cardLook(featured);
+    const darkGot = await cardLook(card);
+    expect(darkGot.frame.slice(0, 4)).toEqual(darkWant.frame.slice(0, 4));
+    expect(darkGot.frame[3]).not.toEqual(want.frame[3]);
+    expect(darkGot.name[2]).toEqual(darkWant.name[2]);
+    expect(darkGot.score[3]).toEqual(darkWant.score[3]);
+    expect(darkGot.pill.slice(0, 5)).toEqual(darkWant.pill.slice(0, 5));
+    await page.screenshot({ path: `test-results/sports/cards-grid-dark-${width}.png` });
+  });
+}
+
 for (const width of [320, 375, 768, 1024, 1440]) {
   test(`competition cards keep full three-digit scores and long names inside their bounds at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -413,12 +501,14 @@ test('HTTP 403 shows an access restriction and safe response metadata without cl
 
 test('score cards link to real match details, excluding samples and motorsport', async ({ page }) => {
   await page.evaluate(() => window.renderSports('live'));
-  const first = page.getByRole('link', { name: 'View match details', exact: true }).first();
-  await expect(first).toHaveAttribute('href', /^\/sports\/matches\/[^/]+\/401234567$/);
+  // Each card is one link to its match, the way the featured match is.
+  const cardLinks = page.getByRole('article').getByRole('link', { name: /^Open .* match details$/ });
+  await expect(cardLinks.first()).toHaveAttribute('href', /^\/sports\/matches\/[^/]+\/401234567$/);
+  await expect(page.getByRole('article').first().getByRole('link')).toHaveCount(1);
   await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
-  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+  await expect(cardLinks).toHaveCount(0);
   await page.evaluate(() => window.renderSports('demo'));
-  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+  await expect(cardLinks).toHaveCount(0);
 });
 
 test('country filtering narrows competitions and sport changes clear an incompatible country', async ({ page }) => {
@@ -452,7 +542,7 @@ test('desktop country browser selects a league, and status/list/card controls pr
   for (const label of ['cards', 'list']) {
     await layouts.getByRole('button', { name: label, exact: true }).click();
     await expect(page.getByRole('article')).toHaveCount(1);
-    await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent(`/sports?league=epl${label === 'cards' ? '&view=cards' : ''}`)}`);
+    await expect(page.getByRole('article').getByRole('link', { name: /^Open .* match details$/ })).toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent(`/sports?league=epl${label === 'cards' ? '&view=cards' : ''}`)}`);
   }
   await page.getByRole('group', { name: 'Quick match status', exact: true }).getByRole('button', { name: 'Results', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No events in this view', exact: true })).toBeVisible();
