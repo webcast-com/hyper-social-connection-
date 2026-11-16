@@ -41,3 +41,52 @@ Live DNS/TLS/redirects, Search Console ownership and Google indexing/rankings we
 - Privacy text reflects implemented data categories, cookies, visibility, service providers, calls, user choices and retention limitations. It does not invent a company address, legal certification, deletion deadline or working inbox. The operator should review the notice for their actual operations and applicable law before treating it as a finalized policy.
 - Set `PRIVACY_CONTACT_EMAIL` to a monitored public privacy-request address. Without one, the page transparently states that a dedicated contact has not yet been published; no fake contact is substituted.
 - Verified public HTTP 200, index/follow, canonical and footer links for About, Privacy, login, signup and search against the production build in offline mode. Also checked sitemap membership and public/private robots boundaries. New browser checks cover both information pages at 320/768/1440px, dark mode and guest access. Current totals: **15 SEO + 89 sports unit/API + 62 browser tests passed**; TypeScript, changed-file lint, whitespace checks and production build passed.
+
+
+## Basketball & NFL dashboard pages (`/nfl-basketball/**`)
+
+The dashboard is a client-rendered app: one built document for every address.
+What each address *is* now lives in one place, `vendor/nfl-nba/src/seo/routeMeta.js`,
+and is used twice — by the server when it answers the request
+(`src/lib/dashboard-seo.ts`, `src/lib/dashboard-document.ts`) and by the app on
+every client-side navigation (`vendor/nfl-nba/src/seo/RouteMetaProvider.jsx`).
+
+| Address | Status | Indexing |
+| --- | --- | --- |
+| `/nfl-basketball` | 308 to `/nfl-basketball/basketball` | — |
+| Hubs (`/basketball`, `/nfl`) and sections (`/upcoming`, `/top-scorers`, `/news`) | 200 | index |
+| `team/:key` in a league with an ESPN feed | 200 | index |
+| `team/:code` (`BOS`) | 200 | canonical is the `team/:key` address |
+| `team/:key` in a league with no feed (BAL, ACB) | 200 | noindex: the page is sample data |
+| `player/:key` | 200 | noindex until the player has an ESPN profile to load |
+| `match/:espnEventId` | 200 | index; `?competition=` is kept in the canonical only when it selects another feed (college) |
+| `match/1`…`15` (bundled sample fixtures) | 200 | noindex: the scores are invented |
+| `cricket`, `badminton`, `hockey` (coming soon) | 200 | noindex |
+| Unknown team, player, match id or path | **404** | noindex, no canonical |
+| A missing file (`assets/…`, anything with an extension) | 404, plain text | noindex |
+
+- **Head.** Title (with `| Hyper`), description (70–170 characters), up to 12
+  page-specific keywords, canonical on the public origin, `og:*` including the
+  1200×630 image, Twitter card, and JSON-LD: `CollectionPage` + `ItemList` of team
+  pages on a hub, `SportsTeam` on a team page, `BreadcrumbList` everywhere. A match
+  publishes no `SportsEvent`: the server knows neither its date nor its teams.
+- **Body.** The root element is served holding the page's breadcrumb, `<h1>`,
+  description and onward links (a hub links to every team). The app replaces it on
+  first render with the same headline. No score is ever written by the server.
+- **After navigation.** The app rewrites title, description, canonical, `og:url`,
+  sharing titles and the robots tag, and removes structured data that described
+  the page that was left. A match page is renamed after its two teams once ESPN
+  answers, and marked noindex if ESPN has no such game.
+- **Not found.** An address with no screen used to be answered 200 with the
+  basketball hub's metadata, and the app redirected to the hub. It is now a 404
+  and the app shows a "Page not found" screen.
+- **Loading.** Web fonts moved from an `@import` in the stylesheet to `<link>`s
+  in the document with `preconnect`, so they no longer wait for the stylesheet.
+- **Sitemap.** Unchanged: dashboard addresses are still not submitted
+  (`src/lib/sitemap-rules.ts`). `dashboardSitemapRoutes()` returns exactly the
+  indexable hub, section and team pages for when they are.
+- Preview deployments stay `noindex, nofollow` on every dashboard page.
+
+Checks: `npm run test:seo` (80), `npm --prefix vendor/nfl-nba test` (182),
+`npm run test:nfl-basketball` (3). Not verified here: how Google or Bing render
+and rank these pages, and live ESPN responses (the sandbox cannot reach ESPN).

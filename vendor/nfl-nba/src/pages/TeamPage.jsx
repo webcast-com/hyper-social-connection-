@@ -15,6 +15,7 @@ import { gameClockLabel } from "../utils/dates";
 import { EmptyState, Panel, PanelHead, TeamLogo } from "../components/ui";
 import { StandingsPanel } from "../components/Standings";
 import { IconArrowUpRight, IconCalendar, IconUsers } from "../components/Icons";
+import { useLiveMeta } from "../seo/RouteMetaProvider";
 
 function statusChip(game) {
   if (game.status === "LIVE") return { label: game.clock || "Live", tone: "is-live" };
@@ -75,6 +76,9 @@ export default function TeamPage({ sport = "basketball" }) {
       active = false;
     };
   }, [team?.code, leagueKey]);
+
+  // ESPN's name for the team is the fuller one ("Oklahoma City Thunder").
+  useLiveMeta(team && detail?.info?.name ? { name: detail.info.name } : null);
 
   const demoGames = useMemo(() => gamesForTeam(config.games, team), [config.games, team]);
   const matches = detail?.games?.length ? detail.games : demoGames;

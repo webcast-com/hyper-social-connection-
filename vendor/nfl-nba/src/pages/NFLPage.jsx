@@ -140,7 +140,7 @@ export default function NFLPage({
 
   return (
     <main className="sh-dash">
-      <h1 className="sh-sr-only">NFL Center</h1>
+      <h1 className="sh-sr-only">NFL live scores, fixtures and standings</h1>
 
       <LeagueSidebar
         title="Competition"

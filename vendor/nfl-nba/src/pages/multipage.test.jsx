@@ -68,7 +68,7 @@ describe("sub navigation", () => {
 describe("news page", () => {
   it("renders the basketball newsroom", () => {
     const { container, getByRole } = renderAt("/basketball/news");
-    expect(getByRole("heading", { level: 1 }).textContent).toBe("Latest news");
+    expect(getByRole("heading", { level: 1 }).textContent).toBe("Basketball news");
     expect(container.textContent).toContain("Basketball newsroom");
     expect(container.querySelectorAll(".sh-news-card").length).toBeGreaterThanOrEqual(6);
     expect(container.textContent).toContain("Nairobi City Thunder book their place in the BAL final");
@@ -115,7 +115,7 @@ describe("news page", () => {
 describe("top scorers page", () => {
   it("renders every basketball leaderboard", () => {
     const { container, getByRole } = renderAt("/basketball/top-scorers");
-    expect(getByRole("heading", { level: 1 }).textContent).toBe("Top scorers");
+    expect(getByRole("heading", { level: 1 }).textContent).toBe("Basketball top scorers");
     expect(container.querySelectorAll(".sh-scorers-grid .sh-detail-panel")).toHaveLength(4);
     expect(container.textContent).toContain("Points per game");
     expect(container.textContent).toContain("Rebounds per game");
@@ -168,7 +168,7 @@ describe("top scorers page", () => {
 describe("upcoming page", () => {
   it("lists only matches still to be played", () => {
     const { container, getByRole } = renderAt("/basketball/upcoming");
-    expect(getByRole("heading", { level: 1 }).textContent).toBe("Upcoming");
+    expect(getByRole("heading", { level: 1 }).textContent).toBe("Upcoming basketball fixtures");
     const fixtures = container.querySelectorAll(".sh-detail-fixture");
     expect(fixtures).toHaveLength(6); // 3 live + BAL, Liga ACB and NCAA women
     expect(container.textContent).toContain("In progress");

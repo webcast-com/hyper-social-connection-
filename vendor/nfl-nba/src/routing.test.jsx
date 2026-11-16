@@ -15,7 +15,7 @@ describe("integrated dashboard navigation", () => {
   it.each(["/nfl-basketball", "/nfl-basketball/"])("opens the entry URL %s and redirects to basketball", async (entry) => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
     const view = render(<MemoryRouter basename={routerBase("/nfl-basketball/")} initialEntries={[entry]}><App /></MemoryRouter>);
-    expect(await view.findByText("Basketball Center")).toBeTruthy();
+    expect(await view.findByText("Basketball live scores, fixtures and standings")).toBeTruthy();
     expect(view.getByRole("link", { name: "Football" }).getAttribute("href")).toBe("/nfl-basketball/nfl");
   });
 
@@ -29,16 +29,16 @@ describe("integrated dashboard navigation", () => {
     const tabs = within(view.getByRole("navigation", { name: "Sports" }));
     expect(tabs.getByRole("link", { name: "Football" }).getAttribute("href")).toBe("/nfl-basketball/nfl");
     fireEvent.click(tabs.getByRole("link", { name: "Football" }));
-    expect(await view.findByText("NFL Center")).toBeTruthy();
+    expect(await view.findByText("NFL live scores, fixtures and standings")).toBeTruthy();
     const sections = within(view.getByRole("navigation", { name: "Sections" }));
     expect(sections.getByRole("link", { name: "News" }).getAttribute("href")).toBe("/nfl-basketball/nfl/news");
     fireEvent.click(sections.getByRole("link", { name: "News" }));
-    expect((await view.findByRole("heading", { level: 1 })).textContent).toBe("Latest news");
+    expect((await view.findByRole("heading", { level: 1 })).textContent).toBe("NFL news");
     expect(view.container.textContent).toContain("Football newsroom");
     fireEvent.click(sections.getByRole("link", { name: "Upcoming" }));
     expect(view.container.textContent).toContain("Football schedule");
     fireEvent.click(tabs.getByRole("link", { name: "Basketball" }));
-    expect(await view.findByText("Basketball Center")).toBeTruthy();
+    expect(await view.findByText("Basketball live scores, fixtures and standings")).toBeTruthy();
   });
 
   it("wires the rail to real destinations and marks unavailable features", async () => {
@@ -55,7 +55,7 @@ describe("integrated dashboard navigation", () => {
     fireEvent.click(shortcuts.getByRole("link", { name: "News" }));
     expect(await view.findByText("Football newsroom")).toBeTruthy();
     fireEvent.click(shortcuts.getByRole("link", { name: "Overview" }));
-    expect(await view.findByText("NFL Center")).toBeTruthy();
+    expect(await view.findByText("NFL live scores, fixtures and standings")).toBeTruthy();
   });
 
   it.each([

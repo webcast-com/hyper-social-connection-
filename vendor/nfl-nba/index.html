@@ -8,6 +8,19 @@
          for the standalone dev server too. -->
     <title>Basketball &amp; NFL Scores — Live Scores, Standings &amp; Top Scorers</title>
     <meta name="description" content="Live basketball and NFL scores, fixtures, standings, top scorers and news for the NBA, WNBA, EuroLeague, NBL, NCAA Division I and the NFL." />
+    <!-- This file is also reachable at its own address (…/index.html), where it
+         is a copy of the basketball hub with no canonical. The host removes
+         this tag from every route it serves and decides indexing per route. -->
+    <meta name="robots" content="noindex, follow" />
+    <meta name="theme-color" content="#05070f" />
+    <!-- The typefaces load beside the app's stylesheet rather than after it (an
+         @import inside the stylesheet is not discovered until that file has
+         arrived), and the connection the scores come over is opened early. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" />
+    <link rel="preconnect" href="https://site.api.espn.com" crossorigin />
+    <link rel="dns-prefetch" href="https://a.espncdn.com" />
   </head>
   <body>
     <div id="root"></div>

@@ -15,15 +15,19 @@ and allow the nested `npm ci` to access the npm registry. `npm run
 build:nfl-basketball` can also rebuild it explicitly. The source snapshot in
 `vendor/nfl-nba` does not automatically follow changes to main.
 
-Next serves generated assets directly and rewrites dashboard deep links to its
-SPA entry point. Browser requests initially go directly to ESPN as in the
+Next serves generated assets directly. Every dashboard address is answered by a
+route handler under `src/app/nfl-basketball/` that writes that route's metadata
+and headline into the built document (see "Basketball & NFL dashboard pages" in
+`SEO_CHECKS.md`); the fallback rewrite in `next.config.ts` is no longer reached.
+Browser requests initially go directly to ESPN as in the
 original; narrowly scoped, fixed-host `/espn` and `/espn-web` GET endpoints
 provide the original same-origin fallback for supported NBA/NFL dashboard
 endpoints. They validate league, path and query, reject redirects, and bound
 request time, response size and per-instance concurrency. These routes do not
 accept a user-supplied host or forward credentials. The original dashboard
-uses bundled sample content if data is unavailable; its pages carry a noindex
-header to avoid indexing sample content. Live ESPN availability and CORS are
+uses bundled sample content if data is unavailable. Pages that can only ever
+show that sample content (a sample fixture, a team in a league with no feed)
+carry a noindex header; the rest are indexable. Live ESPN availability and CORS are
 dependent on the deployment and cannot be verified in the restricted sandbox.
 
 Commentary team crests use a bounded large size for both provider images and abbreviation fallbacks, including at narrow widths. A failed image does not prevent a newly supplied logo from loading. ESPN endpoints and requests are unchanged.

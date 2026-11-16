@@ -12,6 +12,7 @@ import { gameClockLabel } from "../utils/dates";
 import { EmptyState, Panel, PanelHead, TeamLogo } from "../components/ui";
 import { IconClock, IconPlay } from "../components/Icons";
 import { FootballDrives, MatchBoxScore, MatchGameInfo, MatchScoreBreakdown } from "../components/MatchDetailSections";
+import { useLiveMeta } from "../seo/RouteMetaProvider";
 
 function findDemoGame(games, matchId) {
   return games.find((game) => String(game.id) === String(matchId)) ?? null;
@@ -118,6 +119,19 @@ export default function MatchPage({ sport = "basketball" }) {
   const activePeriod = selectedPeriod === "all" || periods.includes(selectedPeriod) ? selectedPeriod : "all";
   const visiblePlays = activePeriod === "all" ? plays : plays.filter((play) => play.period === activePeriod);
 
+  // The URL only carries an id. Once the two teams are known the page is named
+  // after them; once ESPN has answered that it has no such game, the page says
+  // it is not one to index.
+  const known = Boolean(demoGame || summary);
+  useLiveMeta(
+    known
+      ? { home: teams.home?.name ?? null, away: teams.away?.name ?? null, competition: competitionName }
+      : loading
+        ? null
+        : { notFound: true }
+  );
+  const fixtureName = teams.home?.name && teams.away?.name ? `${teams.home.name} vs ${teams.away.name}` : "Match";
+
   const backLink = (
     <Link className="sh-detail-back" to={config.hub}>
       Back to {config.hubLabel}
@@ -173,6 +187,7 @@ export default function MatchPage({ sport = "basketball" }) {
       </nav>
 
       <header className="sh-detail-hero sh-match-hero">
+        <h1 className="sh-sr-only">{fixtureName}</h1>
         <div className="sh-match-team">
           <TeamLogo src={teams.home?.logo} code={teams.home?.code} size="lg" />
           <div>

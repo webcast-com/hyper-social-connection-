@@ -7,6 +7,7 @@ import { gameClockLabel } from "../utils/dates";
 import { matchPath } from "../utils/dashboard";
 import { EmptyState, Panel, PanelHead, TeamLogo } from "../components/ui";
 import { IconCalendar } from "../components/Icons";
+import { routeMeta } from "../seo/routeMeta";
 
 function dayLabel(game) {
   if (game.status === "LIVE") return "In progress";
@@ -41,7 +42,7 @@ export default function UpcomingPage({ sport = "basketball" }) {
     <main className="sh-detail">
       <header className="sh-page-head">
         <span className="sh-detail-kicker">{config.hubLabel} schedule</span>
-        <h1 className="sh-detail-title">Upcoming</h1>
+        <h1 className="sh-detail-title">{routeMeta(`${config.hub}/upcoming`).heading}</h1>
         <p className="sh-page-sub">
           Everything still to play, with kick-off times in your own time zone.
         </p>

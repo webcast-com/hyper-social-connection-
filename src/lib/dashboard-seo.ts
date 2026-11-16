@@ -1,17 +1,28 @@
 /**
  * Search metadata for the standalone Basketball & NFL dashboard.
  *
- * The dashboard is a client-rendered SPA, so every route serves the same
- * document. These definitions let the route handlers under
- * `src/app/nfl-basketball/**` inject a distinct title, description, canonical,
- * keyword set and structured data per competition, team, player and match, so
- * each dashboard URL is a real, indexable page rather than a duplicate shell.
+ * The dashboard is a client-rendered SPA, so every route is served from one
+ * built document. What each URL *is* — title, description, canonical address,
+ * heading, breadcrumb, onward links and whether it deserves a place in an index
+ * — is defined once, in the dashboard itself (`vendor/nfl-nba/src/seo/
+ * routeMeta.js`), and the app applies the same definition on every client-side
+ * navigation. This module turns that definition into what a server response
+ * needs: absolute URLs on the public origin, structured data, sharing tags and
+ * an HTTP status.
  *
- * Keywords are derived from the dashboard's own competition, team and player
- * data, which is the same data the pages render.
+ * Three rules decide indexing, and they are the dashboard's, not this file's:
+ *
+ * - A URL the app has no screen for (an unknown team, a malformed match id, a
+ *   path it would bounce to a hub) is a 404, not a second copy of the hub.
+ * - A page that can only ever show the bundled sample data — a sample fixture,
+ *   a team from a competition with no ESPN feed, a player with no ESPN id — is
+ *   served, and kept out of the index.
+ * - Everything else is indexable and names itself as its own canonical, with
+ *   alias addresses (a team's code, a match's redundant `?competition=`)
+ *   pointing at the one address that is the page.
  */
-import { getSiteUrl } from './site-url';
-import { slugify } from '../../vendor/nfl-nba/src/utils/entities';
+import { getSiteUrl, isPreviewDeployment } from './site-url';
+import { documentTitle, indexableRoutes, routeMeta, sportIndex, SPORT_LABELS, teamHasFeed, type RouteMeta } from '../../vendor/nfl-nba/src/seo/routeMeta';
 import {
   basketballCompetitions,
   nflCompetitions,
@@ -28,6 +39,13 @@ import {
 export const DASHBOARD_ROOT = '/nfl-basketball';
 export const DASHBOARD_BASKETBALL = `${DASHBOARD_ROOT}/basketball`;
 export const DASHBOARD_NFL = `${DASHBOARD_ROOT}/nfl`;
+
+/* ── Name lists ─────────────────────────────────────────────────────────────
+ * Competition, team and player names from the dashboard's data. They feed the
+ * keyword lists of the homepage, About and Sports pages (`sports-keywords.ts`),
+ * which is why their contents and order are left exactly as they were. The
+ * dashboard's own pages no longer carry them: see `keywords` below.
+ */
 
 type Row = { team?: string; name?: string };
 
@@ -47,13 +65,13 @@ const fixtureTeams = (games: unknown[]) => games
   .flatMap((game) => [(game as { home?: string; homeTeam?: string }).home ?? (game as { homeTeam?: string }).homeTeam, (game as { away?: string; awayTeam?: string }).away ?? (game as { awayTeam?: string }).awayTeam])
   .filter((name): name is string => Boolean(name));
 
-/** Basketball teams the dashboard shows: NCAA standings and the fixture list. */
+/** Basketball team names: NCAA standings and the fixture list. */
 export const DASHBOARD_BASKETBALL_TEAMS: string[] = [...new Set([
   ...standingsTeams([...ncaaBasketballStandings, ...ncaaWomenStandings]),
   ...fixtureTeams(basketballGames as unknown[]),
 ])];
 
-/** NFL teams the dashboard shows: NFL standings and the fixture list. */
+/** NFL team names: NFL standings and the fixture list. */
 export const DASHBOARD_NFL_TEAMS: string[] = [...new Set([
   ...standingsTeams([...nflStandings, ...collegeFootballStandings]),
   ...fixtureTeams(nflGames as unknown[]),
@@ -86,219 +104,183 @@ const GENERIC_KEYWORDS = [
   'ESPN scores', 'Hyper sports',
 ];
 
-/** The full keyword set shared by the dashboard's hub pages. */
+/** The full keyword set, for the site pages that summarise all sports coverage. */
 export const DASHBOARD_KEYWORDS: string[] = [...new Set([
   ...GENERIC_KEYWORDS, ...DASHBOARD_COMPETITIONS, ...DASHBOARD_TEAMS, ...DASHBOARD_PLAYERS,
 ])];
 
-const bySlug = (values: string[]) => new Map(values.map((value) => [slugify(value), value]));
-const TEAM_BY_KEY: Record<'basketball' | 'football', Map<string, string>> = {
-  basketball: bySlug(DASHBOARD_BASKETBALL_TEAMS),
-  football: bySlug(DASHBOARD_NFL_TEAMS),
-};
-const PLAYER_BY_KEY: Record<'basketball' | 'football', Map<string, string>> = {
-  basketball: bySlug(DASHBOARD_BASKETBALL_PLAYERS),
-  football: bySlug(DASHBOARD_NFL_PLAYERS),
-};
-const COMPETITION_BY_KEY = bySlug(DASHBOARD_COMPETITIONS);
+/* ── Per-route metadata ───────────────────────────────────────────────────── */
+
+export type DashboardLink = { name: string; href: string };
 
 export type DashboardSeo = {
+  kind: RouteMeta['kind'];
+  /** The document title, with the site's name. */
   title: string;
   description: string;
+  /** A short, page-specific list. Empty for pages that are not indexed. */
   keywords: string;
-  canonical: string;
+  /**
+   * The one address that is this page, on the public origin — or null when the
+   * URL is no page at all, because a 404 that names a canonical contradicts
+   * itself.
+   */
+  canonical: string | null;
+  /** The same address as a site path, query included. */
+  path: string;
   index: boolean;
+  status: 200 | 404;
+  /** The page's headline, for the content the document carries before the app starts. */
+  heading: string;
+  /** Breadcrumb trail from the site's homepage to this page. */
+  crumbs: DashboardLink[];
+  /** Where a reader, or a crawler, goes from here. */
+  links: DashboardLink[];
+  image: { url: string; width: number; height: number; alt: string };
   jsonLd: unknown[];
 };
 
 const origin = () => getSiteUrl();
 const absolute = (path: string) => new URL(path, origin()).toString();
+const sitePath = (dashboardPath: string) => `${DASHBOARD_ROOT}${dashboardPath}`;
 
-const breadcrumb = (trail: { name: string; path: string }[]) => ({
+/** Links a crawler is shown on one page. A hub lists every team; nothing lists more. */
+const MAX_LINKS = 80;
+
+const breadcrumbList = (crumbs: DashboardLink[]) => ({
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
-  itemListElement: trail.map((entry, index) => ({
-    '@type': 'ListItem', position: index + 1, name: entry.name, item: absolute(entry.path),
+  itemListElement: crumbs.map((entry, index) => ({
+    '@type': 'ListItem', position: index + 1, name: entry.name, item: absolute(entry.href),
   })),
 });
 
-const webPage = (path: string, name: string, description: string) => ({
+const webPage = (type: 'WebPage' | 'CollectionPage' | 'ProfilePage', url: string, name: string, description: string, image: string, mainEntity?: string) => ({
   '@context': 'https://schema.org',
-  '@type': 'WebPage',
+  '@type': type,
+  '@id': `${url}#webpage`,
+  url,
   name,
   description,
-  url: absolute(path),
-  isPartOf: { '@type': 'WebSite', name: 'Hyper', url: origin() },
+  inLanguage: 'en',
+  isPartOf: { '@type': 'WebSite', name: 'Hyper', url: `${origin()}/` },
+  primaryImageOfPage: { '@type': 'ImageObject', url: image },
+  ...(mainEntity ? { mainEntity: { '@id': mainEntity } } : {}),
 });
 
-const hubSeo = (
-  path: string,
-  name: string,
-  description: string,
-  extraKeywords: string[],
-): DashboardSeo => ({
-  title: name,
-  description,
-  keywords: [...new Set([...extraKeywords, ...DASHBOARD_KEYWORDS])].join(', '),
-  canonical: absolute(path),
-  index: true,
-  jsonLd: [
-    webPage(path, name, description),
-    breadcrumb([{ name: 'Hyper', path: '/' }, { name, path }]),
-    {
-      '@context': 'https://schema.org',
-      '@type': 'ItemList',
-      name: `${name} competitions`,
-      itemListElement: extraKeywords.slice(0, 20).map((entry, index) => ({ '@type': 'ListItem', position: index + 1, name: entry })),
-    },
-  ],
-});
-
-const BASKETBALL_HUB = hubSeo(
-  DASHBOARD_BASKETBALL,
-  'Basketball Scores — NBA, WNBA, EuroLeague & NCAA Live Scores',
-  'Live basketball scores, fixtures, standings and top scorers for the NBA, WNBA, EuroLeague, NBL and NCAA Division I men’s and women’s college basketball, powered by ESPN.',
-  DASHBOARD_COMPETITIONS.filter((name) => !/NFL|football/i.test(name)),
-);
-
-const NFL_HUB = hubSeo(
-  DASHBOARD_NFL,
-  'NFL Scores — Live American Football Scores, Standings & Fixtures',
-  'Live NFL scores, fixtures, conference standings and top scorers for every NFL team and college football programme, powered by ESPN.',
-  [...DASHBOARD_COMPETITIONS.filter((name) => /NFL|football/i.test(name)), ...DASHBOARD_TEAMS.filter((team) => /Chiefs|Eagles|49ers|Cowboys|Bills|Ravens|Lions|Packers/i.test(team))],
-);
-
-const SUB_PAGES: Record<string, { label: string; kind: string }> = {
-  upcoming: { label: 'Upcoming fixtures', kind: 'fixtures' },
-  'top-scorers': { label: 'Top scorers', kind: 'leaders' },
-  news: { label: 'News', kind: 'news' },
-};
-
-const subPageSeo = (path: string, hub: DashboardSeo, sport: 'basketball' | 'football', page: string) => {
-  const info = SUB_PAGES[page];
-  const sportLabel = sport === 'basketball' ? 'Basketball' : 'NFL';
-  const name = `${sportLabel} ${info.label} — Hyper Sports`;
-  const description = sport === 'basketball'
-    ? `${info.label} for NBA, WNBA, EuroLeague, NBL and NCAA Division I basketball, with tip-off times, live scores and player stats from ESPN.`
-    : `${info.label} for the NFL and college football, with kick-off times, live scores and player stats from ESPN.`;
-  return {
-    ...hub,
-    title: name,
-    description,
-    canonical: absolute(path),
-    jsonLd: [webPage(path, name, description), breadcrumb([{ name: 'Hyper', path: '/' }, { name: sport === 'basketball' ? 'Basketball' : 'NFL', path: hub.canonical.replace(origin(), '') }, { name: info.label, path }])],
-  };
-};
-
-const teamSeo = (path: string, key: string, sport: 'basketball' | 'football', hub: DashboardSeo): DashboardSeo => {
-  const team = TEAM_BY_KEY[sport].get(key);
-  // A team that does not belong to this sport has no page here: the SPA falls
-  // back to its hub, so the SEO does too instead of inventing a thin page.
-  if (!team) return hub;
-  const name = `${team} — Scores, Roster, Stats & Fixtures`;
-  const sportLabel = sport === 'basketball' ? 'basketball' : 'NFL football';
-  const description = `${team} ${sportLabel} scores, latest results, upcoming fixtures, roster, reported player statistics and standings on Hyper Sports.`;
-  return {
-    title: name,
-    description,
-    keywords: [...new Set([team, ...DASHBOARD_KEYWORDS])].join(', '),
-    canonical: absolute(path),
-    index: true,
-    jsonLd: [
-      webPage(path, name, description),
-      breadcrumb([{ name: 'Hyper', path: '/' }, { name: sport === 'basketball' ? 'Basketball' : 'NFL', path: sport === 'basketball' ? DASHBOARD_BASKETBALL : DASHBOARD_NFL }, { name: team, path }]),
-      { '@context': 'https://schema.org', '@type': 'SportsTeam', name: team, sport: sport === 'basketball' ? 'Basketball' : 'American football', url: absolute(path) },
-    ],
-  };
-};
-
-const playerSeo = (path: string, key: string, sport: 'basketball' | 'football', hub: DashboardSeo): DashboardSeo => {
-  const player = PLAYER_BY_KEY[sport].get(key);
-  if (!player) return hub;
-  const name = `${player} — Player Stats, News & Fixtures`;
-  const sportLabel = sport === 'basketball' ? 'basketball' : 'NFL';
-  const description = `${player} ${sportLabel} player profile: season statistics, recent performances, team fixtures and news on Hyper Sports.`;
-  return {
-    title: name,
-    description,
-    keywords: [...new Set([player, ...DASHBOARD_KEYWORDS])].join(', '),
-    canonical: absolute(path),
-    index: true,
-    jsonLd: [
-      webPage(path, name, description),
-      { '@context': 'https://schema.org', '@type': 'Athlete', name: player, sport: sport === 'basketball' ? 'Basketball' : 'American football', url: absolute(path) },
-    ],
-  };
-};
-
-const matchSeo = (path: string, matchId: string, sport: 'basketball' | 'football'): DashboardSeo => {
-  const sportLabel = sport === 'basketball' ? 'Basketball' : 'NFL';
-  const name = `${sportLabel} Match ${matchId} — Live Score, Box Score & Play-by-Play`;
-  const description = `Live score, period-by-period scoring, box score, team statistics and play-by-play commentary for ${sportLabel.toLowerCase()} match ${matchId} on Hyper Sports.`;
-  return {
-    title: name,
-    description,
-    keywords: [...new Set([`${sportLabel} match ${matchId}`, 'live score', 'box score', 'play-by-play', ...DASHBOARD_KEYWORDS])].join(', '),
-    canonical: absolute(path),
-    index: true,
-    jsonLd: [
-      webPage(path, name, description),
-      { '@context': 'https://schema.org', '@type': 'SportsEvent', name, url: absolute(path), sport: sport === 'basketball' ? 'Basketball' : 'American football' },
-    ],
-  };
-};
-
-/** Fallback for routes the dashboard does not define (it redirects to a hub). */
-const HOMEPAGE_DESCRIPTION = 'Live basketball and NFL scores, fixtures, standings, top scorers and news from ESPN on Hyper.';
-const HOMEPAGE: DashboardSeo = {
-  title: 'Basketball & NFL Scores — Hyper Sports Dashboard',
-  description: HOMEPAGE_DESCRIPTION,
-  keywords: DASHBOARD_KEYWORDS.join(', '),
-  canonical: absolute(DASHBOARD_BASKETBALL),
-  index: true,
-  jsonLd: [webPage(DASHBOARD_ROOT, 'Basketball & NFL Scores — Hyper Sports Dashboard', HOMEPAGE_DESCRIPTION)],
-};
-
-/** Resolve the SEO for any dashboard URL. Unknown routes canonicalise to a hub. */
-export function dashboardSeoFor(pathname: string): DashboardSeo {
-  const path = pathname.replace(/\/+$/, '') || DASHBOARD_ROOT;
-  if (path === DASHBOARD_ROOT) return { ...HOMEPAGE, jsonLd: [webPage(DASHBOARD_ROOT, HOMEPAGE.title, HOMEPAGE.description), breadcrumb([{ name: 'Hyper', path: '/' }, { name: 'Basketball & NFL', path: DASHBOARD_ROOT }])] };
-  const match = path.match(/^\/nfl-basketball\/(basketball|nfl)(?:\/([^/]+))?(?:\/([^/]+))?$/);
-  if (!match) return HOMEPAGE;
-  const [, routeSport, first, second] = match;
-  // The dashboard's football routes are named /nfl, the data calls them football.
-  const sport: 'basketball' | 'football' = routeSport === 'nfl' ? 'football' : 'basketball';
-  const hub = sport === 'basketball' ? BASKETBALL_HUB : NFL_HUB;
-  if (!first) return hub;
-  if (SUB_PAGES[first]) return subPageSeo(path, hub, sport, first);
-  if (first === 'team' && second) return teamSeo(path, second, sport, hub);
-  if (first === 'player' && second) return playerSeo(path, second, sport, hub);
-  if (first === 'match' && second) return matchSeo(path, second, sport);
-  return HOMEPAGE;
+/**
+ * Structured data for a page that is indexed. Only what the server knows to be
+ * true goes in: a team's name, sport and league; a hub's list of team pages. A
+ * match is described as a page and a breadcrumb and nothing more — a
+ * `SportsEvent` needs a start time and two competitors, and the server has
+ * neither until the app has asked ESPN.
+ */
+function structuredData(meta: RouteMeta, url: string, crumbs: DashboardLink[], image: string): unknown[] {
+  const sport = meta.sport ? SPORT_LABELS[meta.sport].schemaSport : null;
+  const trail = breadcrumbList(crumbs);
+  if ((meta.kind === 'hub' || meta.kind === 'redirect') && meta.sport) {
+    const hubSport = meta.sport;
+    const config = SPORT_LABELS[hubSport];
+    const teams = [...sportIndex(hubSport).teams.values()].filter((team) => teamHasFeed(hubSport, team));
+    return [
+      webPage('CollectionPage', url, meta.heading, meta.description, image, `${url}#teams`),
+      trail,
+      {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        '@id': `${url}#teams`,
+        name: `${meta.sport === 'basketball' ? 'Basketball' : 'NFL'} teams`,
+        numberOfItems: teams.length,
+        itemListElement: teams.map((team, index) => ({
+          '@type': 'ListItem', position: index + 1, name: team.name, url: absolute(sitePath(`${config.hub}/team/${team.key}`)),
+        })),
+      },
+    ];
+  }
+  if (meta.kind === 'team' && meta.entity) {
+    return [
+      webPage('WebPage', url, meta.heading, meta.description, image, `${url}#team`),
+      trail,
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SportsTeam',
+        '@id': `${url}#team`,
+        name: meta.entity.name,
+        sport,
+        url,
+        ...(meta.entity.competition ? { memberOf: { '@type': 'SportsOrganization', name: meta.entity.competition } } : {}),
+      },
+    ];
+  }
+  if (meta.kind === 'player' && meta.entity) {
+    return [
+      webPage('ProfilePage', url, meta.heading, meta.description, image, `${url}#player`),
+      trail,
+      { '@context': 'https://schema.org', '@type': 'Person', '@id': `${url}#player`, name: meta.entity.name, url },
+    ];
+  }
+  return [webPage('WebPage', url, meta.heading, meta.description, image), trail];
 }
 
-/** Dashboard URLs worth listing in sitemap.xml. */
-export function dashboardSitemapRoutes(): { path: string; changeFrequency: 'hourly' | 'daily'; priority: number }[] {
-  const routes: { path: string; changeFrequency: 'hourly' | 'daily'; priority: number }[] = [
-    { path: DASHBOARD_BASKETBALL, changeFrequency: 'hourly', priority: 0.8 },
-    { path: DASHBOARD_NFL, changeFrequency: 'hourly', priority: 0.8 },
+/**
+ * Resolve the SEO for any dashboard URL.
+ *
+ * @param pathname the request path, site-relative (`/nfl-basketball/…`)
+ * @param search   the request's query string; only a match's `competition` can
+ *                 be part of the page's address, everything else is dropped
+ */
+export function dashboardSeoFor(pathname: string, search = ''): DashboardSeo {
+  const trimmed = pathname.replace(/\/+$/, '');
+  const inside = trimmed === DASHBOARD_ROOT || trimmed.startsWith(`${DASHBOARD_ROOT}/`);
+  // Anything outside the dashboard is no dashboard page; the resolver is asked
+  // for a path it has no screen for, and answers "not found".
+  const meta = routeMeta(inside ? trimmed.slice(DASHBOARD_ROOT.length) : '/-', search);
+
+  const path = sitePath(meta.path);
+  const found = meta.status !== 404;
+  const url = absolute(path);
+  const image = { url: absolute('/og-image.png'), width: 1200, height: 630, alt: meta.heading };
+  const crumbs: DashboardLink[] = [
+    { name: 'Hyper', href: '/' },
+    { name: 'Sports', href: '/sports' },
+    ...meta.crumbs.map((crumb) => ({ name: crumb.name, href: sitePath(crumb.path) })),
   ];
-  for (const sport of ['basketball', 'nfl']) {
-    for (const page of Object.keys(SUB_PAGES)) {
-      routes.push({ path: `${DASHBOARD_ROOT}/${sport}/${page}`, changeFrequency: 'hourly', priority: 0.6 });
-    }
-  }
-  for (const team of DASHBOARD_BASKETBALL_TEAMS) {
-    routes.push({ path: `${DASHBOARD_BASKETBALL}/team/${slugify(team)}`, changeFrequency: 'daily', priority: 0.5 });
-  }
-  for (const team of DASHBOARD_NFL_TEAMS) {
-    routes.push({ path: `${DASHBOARD_NFL}/team/${slugify(team)}`, changeFrequency: 'daily', priority: 0.5 });
-  }
-  for (const player of DASHBOARD_BASKETBALL_PLAYERS) {
-    routes.push({ path: `${DASHBOARD_BASKETBALL}/player/${slugify(player)}`, changeFrequency: 'daily', priority: 0.5 });
-  }
-  for (const player of DASHBOARD_NFL_PLAYERS) {
-    routes.push({ path: `${DASHBOARD_NFL}/player/${slugify(player)}`, changeFrequency: 'daily', priority: 0.5 });
-  }
-  return routes;
+  const index = found && meta.index;
+
+  return {
+    kind: meta.kind,
+    title: documentTitle(meta),
+    description: meta.description,
+    keywords: index ? [...new Set(meta.keywords)].slice(0, 12).join(', ') : '',
+    canonical: found ? url : null,
+    path: found ? path : trimmed || DASHBOARD_ROOT,
+    index,
+    status: found ? 200 : 404,
+    heading: meta.heading,
+    crumbs,
+    links: meta.links.slice(0, MAX_LINKS).map((link) => ({ name: link.name, href: sitePath(link.path) })),
+    image,
+    jsonLd: index ? structuredData(meta, url, crumbs, image.url) : [],
+  };
+}
+
+/** What the `X-Robots-Tag` header and the robots meta tag say for one route. */
+export function dashboardRobots(seo: Pick<DashboardSeo, 'index'>): string {
+  // A preview deployment is never indexed, whatever the page.
+  if (isPreviewDeployment()) return 'noindex, nofollow';
+  return seo.index ? 'index, follow' : 'noindex, follow';
+}
+
+/**
+ * Dashboard URLs that are pages in their own right: the two hubs, their
+ * sections, and every team and player page that can load real data. Not
+ * submitted today — see `staticSitemapRoutes` — and kept so that the list a
+ * sitemap would use is the same list the pages are indexed by.
+ */
+export function dashboardSitemapRoutes(): { path: string; changeFrequency: 'hourly' | 'daily'; priority: number }[] {
+  return indexableRoutes().map((route) => ({
+    path: sitePath(route.path),
+    changeFrequency: route.kind === 'hub' || route.kind === 'section' ? 'hourly' as const : 'daily' as const,
+    priority: route.kind === 'hub' ? 0.8 : route.kind === 'section' ? 0.6 : 0.5,
+  }));
 }

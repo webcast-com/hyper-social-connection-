@@ -9,8 +9,10 @@ import NewsPage from "./pages/NewsPage";
 import TopScorersPage from "./pages/TopScorersPage";
 import UpcomingPage from "./pages/UpcomingPage";
 import MatchPage from "./pages/MatchPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import { IconRail, TopBar } from "./components/Shell";
 import { SubNav } from "./components/SubNav";
+import { RouteMeta } from "./seo/RouteMetaProvider";
 
 const THEME_KEY = "scorehub:theme";
 
@@ -40,6 +42,7 @@ export default function App() {
 
   return (
     <div className="sh-app">
+      <RouteMeta>
       <IconRail />
       <div className="sh-shell">
         <TopBar theme={theme} onThemeChange={setTheme} onSearch={focusSearch} />
@@ -63,9 +66,10 @@ export default function App() {
           <Route path="/cricket" element={<ComingSoonPage sport="Cricket" />} />
           <Route path="/badminton" element={<ComingSoonPage sport="Badminton" />} />
           <Route path="/hockey" element={<ComingSoonPage sport="Hockey" />} />
-          <Route path="*" element={<Navigate to="/basketball" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
+      </RouteMeta>
     </div>
   );
 }
