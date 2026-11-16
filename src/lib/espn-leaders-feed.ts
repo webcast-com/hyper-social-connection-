@@ -3,61 +3,23 @@
  *
  * Follows the same shape as the other Hyper Sports feeds (`espn-standings-feed`,
  * `espn-insights-feed`): a short-lived cache, an in-flight guard so concurrent
- * renders share one request, and a bundled fallback when ESPN does not answer.
- * A failure here must never break the homepage, so errors resolve to an
- * `unavailable` board instead of rejecting.
+ * renders share one request. There is no bundled fallback: when ESPN does not
+ * answer, the board is `unavailable` and carries no players, so nothing a reader
+ * sees was invented. A failure here must never break the homepage, so errors
+ * resolve to that empty board instead of rejecting.
  */
-import { basketballLeaders, nflLeaders } from '../../vendor/nfl-nba/src/data/sportsData';
 import { ESPN_REQUEST_HEADERS, EspnEndpointError, espnErrorMessage, espnFailureDetails } from './espn-endpoints';
-import { normalizeLeaders, type SportsLeaderBoard, type SportsLeaderRow, type SportsLeaderSport } from './espn-leaders';
-import { bundledTopScorers, normalizeTopScorers, type SportsTopScorerBoard } from './sports-top-scorers';
-
-const LEADERS_URL: Record<SportsLeaderSport, string> = {
-  basketball: 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/leaders',
-  football: 'https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/leaders',
-};
+import { leadersUrl, normalizeLeaders, type SportsLeaderBoard, type SportsLeaderSport } from './espn-leaders';
+import { normalizeTopScorers, TOP_SCORERS_PER_STAT, type SportsTopScorerBoard } from './sports-top-scorers';
 
 const cache = new Map<string, { at: number; board: SportsLeaderBoard }>();
 const pending = new Map<string, Promise<SportsLeaderBoard>>();
 const LIVE_TTL = 15 * 60_000;
 const FAILURE_TTL = 60_000;
 
-const slugify = (value: string) => value
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '');
-
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2)
-  .map((part) => part[0]?.toUpperCase() ?? '').join('');
-
-/** The dashboard's bundled leaderboard, used when ESPN is unreachable. */
-const bundledRows = (sport: SportsLeaderSport): SportsLeaderRow[] => {
-  const leaders = (sport === 'football' ? nflLeaders : basketballLeaders) as unknown as {
-    name: string; team?: string; metric?: string; value?: string; initials?: string; position?: string; teamAbbr?: string;
-  }[];
-  return leaders.slice(0, 6).map((player) => ({
-    key: slugify(player.name),
-    // A bundled sample has no ESPN identity, so it links to no player or team
-    // page: an invented id would open somebody else's profile.
-    athleteId: null,
-    teamId: null,
-    name: player.name,
-    team: player.team ?? '—',
-    teamAbbr: player.teamAbbr ?? null,
-    teamLogo: null,
-    position: player.position ?? null,
-    metric: player.metric ?? 'Season leaders',
-    value: String(player.value ?? '—'),
-    initials: player.initials ?? initials(player.name),
-    headshot: null,
-    jersey: null,
-  }));
-};
-
 async function fetchLeaders(sport: SportsLeaderSport): Promise<SportsLeaderBoard> {
-  const url = LEADERS_URL[sport];
+  // The homepage shows one player per statistic, so it asks for one.
+  const url = leadersUrl(sport, 1);
   const signal = AbortSignal.timeout(6000);
   let httpStatus: number | null = null;
   try {
@@ -73,7 +35,7 @@ async function fetchLeaders(sport: SportsLeaderSport): Promise<SportsLeaderBoard
       url, signal.aborted ? 'timeout' : httpStatus !== null ? 'invalid-response' : 'network', httpStatus,
     );
     return {
-      sport, league: sport === 'football' ? 'nfl' : 'nba', rows: bundledRows(sport), status: 'unavailable',
+      sport, league: sport === 'football' ? 'nfl' : 'nba', rows: [], status: 'unavailable',
       source: { ok: false, ...espnFailureDetails(failure, url) },
     };
   }
@@ -105,14 +67,14 @@ const topScorerCache = new Map<string, { at: number; board: SportsTopScorerBoard
 const topScorerPending = new Map<string, Promise<SportsTopScorerBoard>>();
 
 async function fetchTopScorers(sport: SportsLeaderSport): Promise<SportsTopScorerBoard> {
-  const url = LEADERS_URL[sport];
+  const url = leadersUrl(sport, TOP_SCORERS_PER_STAT);
   const signal = AbortSignal.timeout(6000);
   let httpStatus: number | null = null;
   try {
     const response = await fetch(url, { headers: ESPN_REQUEST_HEADERS, cache: 'no-store', signal });
     httpStatus = response.status;
     if (!response.ok) throw new EspnEndpointError(`ESPN HTTP ${httpStatus}`, url, 'http', httpStatus, undefined);
-    const groups = normalizeTopScorers(await response.json(), sport);
+    const groups = normalizeTopScorers(await response.json(), sport, TOP_SCORERS_PER_STAT);
     if (!groups.length) throw new EspnEndpointError('ESPN returned no leader lists', url, 'invalid-response', httpStatus, undefined);
     return { sport, league: sport === 'football' ? 'nfl' : 'nba', groups, status: 'live', source: { ok: true, url, httpStatus } };
   } catch (error) {
@@ -121,7 +83,7 @@ async function fetchTopScorers(sport: SportsLeaderSport): Promise<SportsTopScore
       url, signal.aborted ? 'timeout' : httpStatus !== null ? 'invalid-response' : 'network', httpStatus,
     );
     return {
-      sport, league: sport === 'football' ? 'nfl' : 'nba', groups: bundledTopScorers(sport), status: 'unavailable',
+      sport, league: sport === 'football' ? 'nfl' : 'nba', groups: [], status: 'unavailable',
       source: { ok: false, ...espnFailureDetails(failure, url) },
     };
   }

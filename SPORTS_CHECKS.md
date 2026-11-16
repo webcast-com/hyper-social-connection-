@@ -36,6 +36,27 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 - Sample fixtures are labeled consistently across summaries and event cards. Unrelated predictions are not attached by array index.
 - Shared header/navigation and safe-area-aware page padding remain available to signed-in and signed-out visitors.
 
+### The board's featured match
+
+When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture (`tests/sports/layout.spec.ts`):
+
+- **Only a live fixture ESPN reported is featured.** A sample fixture, a race and an upcoming or finished match never are, so a board with nothing live looks exactly as it did before, and the 700px rule above is unchanged for it. When a match is featured, that card is the first score on the page and the first competition card starts below it (about 900px at 320px wide).
+- **It is a second view, not an extra fixture.** The match stays in its competition below; the featured card is a labelled `section`, not an `article`, and has no heading, so counts of cards and competition headings are unaffected. With a single fixture in view there is nothing to feature it over, so no card is drawn.
+- **It follows the filters.** It is picked from the filtered view and sits under the controls, so changing a filter never moves the control being used.
+- **Sports are not ranked against each other.** The first live fixture in the board's order decides the sport; within it the most combined scoring wins, then the football match furthest into its clock, then board order.
+- **Nothing is invented.** Away is first, as on every board card; an unreported score is a dash and counts as nothing when ranking; the progress bar is drawn only from a football minute the provider gave (`54'`, `HT`).
+
+The same file supplies three additions to the board's own card, none of which changes its markup for an existing state: the loser of a finished match is dimmed (never in a draw or with an unreported score), an upcoming fixture inside the next 24 hours shows a countdown (`in 2h 15m`, refreshed each minute from the board's clock), and a scoreline that changes between two refreshes is tinted for a moment (colour only, off under reduced motion). A logo that fails to load is replaced by the side's code. A back-to-top button appears after 600px of scroll and sits above the mobile tab bar.
+
+### Matchday mode
+
+The **Matchday** control beside "Reset filters" opens `SportsMatchday`: the fixtures in the current view at large size, six to a page, in a dialog that fills the window. It sits in the existing count row, which keeps its 44px height at 320px, so nothing below it moves.
+
+- **The same fixtures as the board.** It is handed the filtered list and the board's clock, in the board's order, and fetches nothing: a refresh of the board is a refresh of the dialog. Nothing is rendered while it is closed, so the board's card, heading, link and status counts are unaffected.
+- **A native modal `<dialog>`.** Focus stays inside, Escape and "Exit matchday" close it, the page behind is inert and does not scroll, and focus returns to the launcher. Without `showModal` the launcher does nothing rather than open a layer that cannot be left.
+- **The board's honesty rules.** Away first; an unreported score is a dash; a sample fixture's pill reads "Sample fixture" and has no match link; a race is drawn as its title and reported positions, never as a scoreline; the loser of a finished match is dimmed.
+- **Paging.** `matchdayPage` clamps a page past the end to the last page, so a view that shrinks under the reader never shows an empty page while fixtures remain. Opening always starts on page 1.
+
 ## The homepage match centre
 
 One component, `src/components/SportsMatchCentre.tsx`, renders both homepage
@@ -257,6 +278,76 @@ then confirmed the rendered page: all 30 clips serialized to the client with no 
 the first batch showing the two newest as cards at their slots ahead of 24 more,
 both "Match highlights" sections still showing their own four, and the page at 200
 with no trace of them once the seed was removed.
+
+### The feed's Highlights tab
+
+The feed's fourth tab is **Highlights**; it took the place of Saved. It is
+supplied by the same stored index the Match Highlights page (`/sports/highlights`)
+pages through: the homepage's one clip read now asks for **no window**
+(`ALL_STORED_DAYS`), so it returns every stored match clip newest first, up to the
+read's ceiling (`FEED_INDEX_LIMIT`, 300), merged with any real clip on the board
+the sweep has not stored yet. It is still one lean read — rows and a count — and
+still no ESPN request.
+
+- **Highlights** shows that whole list as the same `HighlightPostCard` For You
+  renders, revealed in batches like every tab, under a line that counts the clips
+  and links to the page with the competition, state and age filters. When the
+  ceiling, not the index, was what stopped the read, the tab ends with
+  "N older clips on Match Highlights" rather than ending as though that were all.
+- **For You** takes the recent clips from that same list (`recentHighlightClips`:
+  the seven-day window it has always had, plus any real board clip), so the cards
+  between member posts are the same ones as before this tab existed.
+- A board ESPN did not answer still contributes nothing to either. An empty tab
+  says so and links to the page; nothing is invented.
+- League video is not in this tab. It is a different card with its own feed, and
+  stays where it was: For You and Live here, and its own section on the page.
+
+Saved posts moved to the member's own profile: a **Saved** section beside Posts
+(`ProfilePostTabs`, `src/lib/saved-posts.ts`), reached from the header: the
+avatar is a **profile menu** (`ProfileMenu`) with *Your profile* and *Saved*.
+The menu's link is `/profile/{id}?tab=saved` and carries no `#fragment` — the
+router doubled one on a second visit and did not scroll — so the menu asks for
+the section and the section scrolls itself into view (`src/lib/saved-section.ts`),
+which also covers pressing Saved when it is already the address. Pressing the
+Posts / Saved switch rewrites `?tab=` without a request to the server. It keeps the tab's rules — no post by a
+blocked or muted author, nothing still scheduled — and lists the most recently
+saved first. Bookmarks are private: the loader takes the viewer's id, the page
+calls it only when the viewer is the profile's owner, and on anyone else's
+profile (or signed out) there is no switch and no saved list in the payload,
+whatever `?tab=` says. Checked in a browser against the local database: three
+saved posts in save order, removing one from its menu drops it and the count
+without leaving the section, another member's saved post absent from their
+profile's HTML, and no overflow at 320px.
+
+At 320px the four labels are as wide as their text needs (`flex-auto` below `sm`)
+instead of four equal quarters, which were too narrow for "Highlights".
+
+### Players & top scorers: ESPN only, no sample players
+
+The leaders board on the homepage and the Top scorers section on Discover showed
+sample players because the endpoint they asked had stopped existing:
+`site.web.api.espn.com/apis/common/v3/sports/{sport}/{league}/leaders` answers
+**404** for both the NBA and the NFL (checked 2026-11-15). ESPN serves the same
+data from `site.api.espn.com/apis/site/v3/sports/{sport}/{league}/leaders`, which
+is what `leadersUrl` in `src/lib/espn-leaders.ts` now builds. `limit` is players
+per statistic — every entry repeats its team's whole logo and link set — so the
+homepage asks for 1 and Discover for 5.
+
+The payload's shape differs from the old one (`leaders` is an object, the
+statistics are its `categories`, and the `team` sits on the entry beside the
+`athlete`); the normalisers already walked nested lists and read either team
+position, and `tests/sports/leaders-v3-fixture.ts` locks today's shape.
+
+The bundled fallback is gone (`bundledRows`, `bundledTopScorers`). A feed ESPN
+does not answer is an `unavailable` board with **no rows**: if the other sport
+answered, the board opens on that one and the failed tab says "ESPN did not
+return … leaders just now"; if neither did, the section is not rendered.
+
+The Basketball & NFL dashboard asked the same dead path, so its leaders rail and
+Top scorers screen never left demo data. `leadersUrls` in
+`vendor/nfl-nba/src/api/espn.js` now asks the v3 endpoint, and the same-origin
+proxy (`src/lib/nfl-basketball-proxy.ts`) serves that one endpoint from `site/v3`.
+The dashboard's own demo data for its first paint is unchanged.
 
 ## Highlights and fixtures as pages of their own
 

@@ -6,6 +6,7 @@ import { Clapperboard, ExternalLink, MessageCircle, Play, Send, Share2, X } from
 import { createPost } from '@/app/actions';
 import { SPORT_LABELS } from '@/lib/sports-catalog';
 import type { SportsVideoNewsClip } from '@/lib/espn-video-news';
+import { ShareContentSheet } from './ShareSheets';
 
 /**
  * A league video clip in the feeds section.
@@ -29,7 +30,7 @@ import type { SportsVideoNewsClip } from '@/lib/espn-video-news';
  */
 
 type PlayState = 'idle' | 'loading' | 'playing' | 'unplayable';
-type Mode = 'comment' | 'share' | null;
+type Mode = 'comment' | null;
 
 const relativeTime = (publishedAt: string | null) => {
   if (!publishedAt) return null;
@@ -60,6 +61,7 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
   const [source, setSource] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(null);
   const [text, setText] = useState('');
+  const [showShare, setShowShare] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const isSignedIn = !!currentUser?.id;
@@ -221,8 +223,8 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
         </button>
         <button
           type="button"
-          onClick={() => { setMode(mode === 'share' ? null : 'share'); setText(''); }}
-          disabled={!isSignedIn}
+          onClick={() => { setMode(null); setShowShare(true); }}
+          aria-haspopup="dialog"
           className={controlClass}
         >
           <Share2 className="h-4 w-4" />
@@ -232,7 +234,7 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
 
       {!isSignedIn && (
         <div className="border-t border-violet-100 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-800 dark:border-violet-900/50 dark:bg-violet-950/30 dark:text-violet-300">
-          Sign in to comment on or share this clip.
+          Sign in to comment on this clip or share it on Hyper.
         </div>
       )}
 
@@ -240,7 +242,7 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
         <div className="border-t border-gray-100 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-slate-900/50">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-black text-gray-900 dark:text-white">
-              {mode === 'comment' ? 'Comment on this clip' : 'Share this clip'}
+              Comment on this clip
             </h4>
             <button
               type="button"
@@ -255,9 +257,9 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
           <textarea
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder={mode === 'comment' ? 'Add your take on this clip...' : 'Say something before sharing, or leave empty to share the clip.'}
+            placeholder="Add your take on this clip..."
             rows={3}
-            aria-label={mode === 'comment' ? 'Write a comment about this clip' : 'Add a note to your share'}
+            aria-label="Write a comment about this clip"
             className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
           />
 
@@ -269,10 +271,29 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
               className="inline-flex min-h-11 items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Send className="h-3.5 w-3.5" />
-              {isPending ? 'Posting…' : mode === 'comment' ? 'Post comment' : 'Share clip'}
+              {isPending ? 'Posting…' : 'Post comment'}
             </button>
           </div>
         </div>
+      )}
+
+      {/* The share sheet — the one a profile opens. A guest gets the link and
+          the other networks; the feed, groups and messages need an account. */}
+      {showShare && (
+        <ShareContentSheet
+          subject={{
+            noun: 'clip',
+            title: clip.title,
+            subtitle: `${clip.teams.length ? clip.teams.join(' · ') : clip.leagueName} · ${SPORT_LABELS[clip.sport]} video`,
+            image: clip.thumbnail,
+            link: clip.page,
+            text: `${clip.title} — ${clip.leagueName} video on Hyper`,
+            feedHint: 'Posts this clip to your followers, with your note if you add one.',
+          }}
+          compose={(note) => shareText(clip, note)}
+          canShareInternally={isSignedIn}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </article>
   );

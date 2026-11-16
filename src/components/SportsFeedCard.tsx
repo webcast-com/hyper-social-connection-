@@ -22,8 +22,9 @@ import SportsScoreCard from './SportsScoreCard';
 import { matchPollOptions, type SportsEvent, type SportsPrediction } from '@/lib/sports';
 import { SPORT_LABELS } from '@/lib/sports-catalog';
 import { createPost } from '@/app/actions';
+import { ShareContentSheet } from './ShareSheets';
 
-type ActionMode = 'comment' | 'share' | 'poll';
+type ActionMode = 'comment' | 'poll';
 
 function statusStyles(status: SportsEvent['status']) {
   if (status === 'live') return 'bg-red-500 text-white shadow-red-500/25';
@@ -75,8 +76,7 @@ function TeamBadge({ team, align = 'left' }: { team: SportsEvent['home']; align?
 
 function modeTitle(mode: ActionMode) {
   if (mode === 'comment') return 'Comment on this match';
-  if (mode === 'poll') return 'Create a match poll';
-  return 'Share this match';
+  return 'Create a match poll';
 }
 
 export default function SportsFeedCard({
@@ -93,6 +93,7 @@ export default function SportsFeedCard({
   const [text, setText] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(() => matchPollOptions(event));
   const [error, setError] = useState('');
+  const [showShare, setShowShare] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const isSignedIn = !!currentUser?.id;
@@ -111,8 +112,7 @@ export default function SportsFeedCard({
 
   const placeholder = useMemo(() => {
     if (mode === 'comment') return 'Add your take on this match...';
-    if (mode === 'poll') return `Ask a question, e.g. Who wins: ${matchLine(event)}?`;
-    return 'Say something before sharing, or leave empty to share the match.';
+    return `Ask a question, e.g. Who wins: ${matchLine(event)}?`;
   }, [event, mode]);
 
   const openMode = (nextMode: ActionMode) => {
@@ -251,8 +251,8 @@ export default function SportsFeedCard({
         </button>
         <button
           type="button"
-          onClick={() => openMode('share')}
-          disabled={!isSignedIn}
+          onClick={() => { setMode(null); setShowShare(true); }}
+          aria-haspopup="dialog"
           className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <Share2 className="h-4 w-4" />
@@ -262,7 +262,7 @@ export default function SportsFeedCard({
 
       {!isSignedIn && (
         <div className="border-t border-amber-100 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
-          Sign in to comment, create polls, or share matches.
+          Sign in to comment, create polls, or share matches on Hyper.
         </div>
       )}
 
@@ -336,10 +336,28 @@ export default function SportsFeedCard({
               className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Send className="h-3.5 w-3.5" />
-              {isPending ? 'Posting…' : mode === 'poll' ? 'Post poll' : mode === 'comment' ? 'Post comment' : 'Share match'}
+              {isPending ? 'Posting…' : mode === 'poll' ? 'Post poll' : 'Post comment'}
             </button>
           </div>
         </div>
+      )}
+
+      {/* The share sheet — the one a profile opens. */}
+      {showShare && (
+        <ShareContentSheet
+          subject={{
+            noun: 'match',
+            title: matchLine(event),
+            subtitle: `${event.leagueName} · ${statusLabel(event)}`,
+            image: event.home.logo || event.away.logo || null,
+            link: event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : bodyHref,
+            text: `${matchLine(event)} — ${event.leagueName} on Hyper`,
+            feedHint: 'Posts this match to your followers, with your note if you add one.',
+          }}
+          compose={(note) => matchPostText(event, note, prediction)}
+          canShareInternally={isSignedIn}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </article>
   );

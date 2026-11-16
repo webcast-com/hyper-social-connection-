@@ -11,6 +11,10 @@ import { useSportsFilters } from '@/lib/use-sports-filters';
 import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
 import SportsEventCard from '@/components/SportsEventCard';
+import SportsFeaturedMatch from '@/components/SportsFeaturedMatch';
+import SportsBackToTop from '@/components/SportsBackToTop';
+import SportsMatchday from '@/components/SportsMatchday';
+import { pickFeaturedEvent } from '@/lib/featured-match';
 import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
   filterSportsEvents,
@@ -109,6 +113,18 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
     [board.events, sport, status, region, league, query, country, date],
   );
   const groups = useMemo(() => groupEventsByLeague(filtered), [filtered]);
+  // The live match that leads the view. With one fixture on screen there is
+  // nothing to feature it over, so the card would only repeat it.
+  const featured = useMemo(() => (filtered.length > 1 ? pickFeaturedEvent(filtered) : null), [filtered]);
+  // The board's clock for kickoff countdowns. Unset until mounted, so the first
+  // render matches the server's, then refreshed once a minute.
+  const [now, setNow] = useState<number>();
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, []);
   const counts = new Map<string, number>();
   board.events.forEach((event) => counts.set(event.league, (counts.get(event.league) ?? 0) + 1));
   const browser = <SportsCompetitionBrowser competitions={leagueOptions} counts={counts} selected={league} onSelect={setLeague} />;
@@ -266,8 +282,12 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </button>)}
       </div>}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <p aria-live="polite">{filtered.length} events in {groups.length} competitions</p>
-        <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
+        <p aria-live="polite" className="min-w-0 flex-1">{filtered.length} events in {groups.length} competitions</p>
+        <div className="flex shrink-0 items-center gap-2">
+          <SportsMatchday events={filtered} returnTo={returnTo} now={now} refreshing={refreshing}
+            feedLabel={initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'} />
+          <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
+        </div>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
@@ -290,6 +310,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           {leaguePage ? `No ${page!.name} fixtures match this view. Reset filters or check again later; games appear only when reported by ESPN, including during the off-season.` : 'Try another region, sport or competition, or reset the filters. Fixtures appear when reported by a provider; some competitions may be out of season.'}
         </EmptyState>
       ) : (
+        <>
+        {featured && <SportsFeaturedMatch event={featured} returnTo={returnTo} />}
         <div className="space-y-4">
           {groups.map((group) => (
             <section key={group.league} className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-2 sm:p-3 dark:border-gray-700 dark:bg-gray-900/40">
@@ -299,12 +321,13 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
               </h2>
               <div className={view === 'cards' ? "grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2" : "grid min-w-0 grid-cols-1 gap-2"}>
                 {group.events.map((ev) => (
-                  <SportsEventCard key={ev.id} event={ev} compact={view === 'list'} returnTo={returnTo} />
+                  <SportsEventCard key={ev.id} event={ev} compact={view === 'list'} returnTo={returnTo} now={now} />
                 ))}
               </div>
             </section>
           ))}
         </div>
+        </>
       )}
         </div>
       </div>
@@ -312,6 +335,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         {page ? `${page.name} · ESPN-reported fixtures` : `${SPORTS_BOARD_COMPETITIONS.length} competitions · ${SPORTS_BOARD_SPORTS.length} sports · ESPN-reported fixtures`}
       </p>
       <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">{page ? 'Availability varies by season and provider. Dates filter loaded fixtures only; this page does not fetch full-season or historical schedules.' : 'Availability varies by season and provider. Date and country filters apply to loaded fixtures only; they do not request historical schedules.'}</p>
+      <SportsBackToTop />
     </div>
   );
 }

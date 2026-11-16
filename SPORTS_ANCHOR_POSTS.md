@@ -70,12 +70,17 @@ suggestions that must not contain it, not a member's own search.
 
 ## What the server does with a click
 
-`src/app/sports-actions.ts` holds four form actions — `likeSportsAnchor`,
-`commentOnSportsAnchor`, `saveSportsAnchor`, `shareSportsAnchor` — shaped as
+`src/app/sports-actions.ts` holds three form actions — `likeSportsAnchor`,
+`commentOnSportsAnchor`, `saveSportsAnchor` — shaped as
 `(formData) => Promise<void>`, the way `Post.tsx` already drives `toggleLike` and
 `createComment`. Each one resolves the viewer, validates the ref, ensures the
 anchor post, then delegates to the existing `toggleLike` / `createComment` /
-`toggleBookmark` / `repostPost`. There is exactly one implementation of each.
+`toggleBookmark`. There is exactly one implementation of each.
+
+Sharing has two more, `shareSportsAnchorToFeed` and `shareSportsAnchorToMessage`,
+which the share sheet calls (see `SHARE_SHEET.md`). They ensure the anchor post
+the same way and then hand over to `sharePostToFeed` / `sharePostToMessage`, the
+actions a member's own post is shared with.
 
 The post's text, image and video are **always re-derived server-side from this
 site's own feeds** (`resolveAnchorDraft`). A client cannot publish arbitrary
@@ -90,15 +95,17 @@ content is bounded to 1200 characters.
 the database via `loadAnchorEngagement` — one bounded pass per homepage render for
 every card about to be drawn (≤60 refs, ≤12 comments per card, four queries in
 parallel), not a query per card. The comment thread renders its authors and links
-to their profiles; the composer posts into that same thread; the share menu gained
-a note field and "Share to your feed" (a real repost); the more menu gained "Open
-discussion" → `/post/{id}`.
+to their profiles; the composer posts into that same thread; Share opens the share
+sheet the profile page uses (feed, groups, a message, other networks; a feed share
+is a real repost); the more menu gained "Open discussion" → `/post/{id}` and
+"Expand Image", which used to sit in the old share menu.
 
 When a card cannot be engaged with, it stays laid out and says why instead of
 pretending:
 
 - **Signed out:** Like and Save are disabled, no forms are rendered at all, and
-  the panel reads "Sign in to like, comment on, save and share this card."
+  the panel reads "Sign in to like, comment on and save this card, or to share it
+  on Hyper." Share still opens: a guest gets the link and the other networks.
 - **Sample board:** the same, with "Engagement is unavailable on sample cards" and
   "Comments open when this card has a live feed behind it."
 

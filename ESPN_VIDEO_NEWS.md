@@ -84,9 +84,12 @@ presses play again still gets a fresh attempt.
   `document.createElement('video').canPlayType('application/vnd.apple.mpegurl')`
   reports support, so Chrome and Firefox never receive a playlist they cannot
   play.
-- **A real post, not a fake one.** Comment and Share follow the prediction card's
-  idiom exactly: compose `FormData` and call `createPost`, which revalidates this
-  page. Signed-out readers get disabled controls and a one-line notice.
+- **A real post, not a fake one.** Comment follows the prediction card's idiom
+  exactly: compose `FormData` and call `createPost`, which revalidates this page.
+  Share opens the share sheet the profile page uses (`SHARE_SHEET.md`); a feed
+  share is the same text post Share used to write. Signed-out readers get a
+  disabled Comment and a one-line notice, and Share gives them the link and the
+  other networks.
 
 ## Feed wiring
 
@@ -111,8 +114,7 @@ const forYouPosts = interleaveFeedCards(
   before.
 - With no clips the For You feed is **identical** to the feed before this card
   kind existed (`tests/sports/feed-interleave.test.ts` asserts exactly that), and
-  the member posts list is never mutated, so the Following and Saved tabs are
-  unaffected.
+  the member posts list is never mutated, so the Following tab is unaffected.
 
 The page starts the fan-out before awaiting the other feeds
 (`const videoNewsPromise = getSportsVideoNewsForRender()`) so its cost overlaps

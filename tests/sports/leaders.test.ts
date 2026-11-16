@@ -83,7 +83,8 @@ test('portraits are deterministic per player and differ between sports', () => {
 });
 
 test('the full board keeps every player per statistic, not just the leader', async () => {
-  const { normalizeTopScorers, bundledTopScorers } = await import('../../src/lib/sports-top-scorers');
+  const scorers = await import('../../src/lib/sports-top-scorers');
+  const { normalizeTopScorers } = scorers;
   const groups = normalizeTopScorers(leadersPayload, 'basketball', 5);
   assert.deepEqual(groups.map((group) => group.metric), ['Points Per Game', 'Rebounds Per Game', 'Assists Per Game']);
   const points = groups[0];
@@ -95,11 +96,9 @@ test('the full board keeps every player per statistic, not just the leader', asy
   const capped = normalizeTopScorers(leadersPayload, 'basketball', 1);
   assert.deepEqual(capped.map((group) => group.entries.length), [1, 1, 1]);
 
-  const bundled = bundledTopScorers('basketball');
-  assert.ok(bundled.length >= 3);
-  assert.ok(bundled.every((group) => group.entries.length > 1), 'the bundled boards list the whole ladder');
-  assert.ok(bundled.some((group) => group.entries.some((row) => row.name === 'Luka Dončić')));
-  assert.ok(bundledTopScorers('football').every((group) => group.entries.every((row) => row.headshot === null)));
+  // The sample ladders are gone: the module can only report what ESPN did.
+  assert.equal('bundledTopScorers' in scorers, false);
+  assert.deepEqual(normalizeTopScorers({ nonsense: true }, 'football'), []);
 });
 
 test('duplicate statistics and malformed entries never repeat a player twice', async () => {

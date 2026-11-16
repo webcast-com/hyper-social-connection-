@@ -49,9 +49,9 @@ const slugify = (value: string) => value
 const hubFor = (sport: SportsLeaderSport) => (sport === 'football' ? '/nfl-basketball/nfl' : '/nfl-basketball/basketball');
 
 /**
- * The dashboard builds its crests from the ESPN CDN the same way, so a sample
- * board (which carries no logo URL) still shows the real crest. A code the CDN
- * does not know falls back to the abbreviation circle.
+ * The dashboard builds its crests from the ESPN CDN the same way, so a row ESPN
+ * reported without a logo URL still shows the real crest. A code the CDN does
+ * not know falls back to the abbreviation circle.
  */
 const crestFor = (player: SportsLeaderRow, sport: SportsLeaderSport) =>
   player.teamLogo
@@ -61,7 +61,6 @@ function LeaderPostCard({
   player,
   sport,
   league,
-  sample,
   anchor,
   engagement,
   signedIn,
@@ -69,8 +68,7 @@ function LeaderPostCard({
   player: SportsLeaderRow;
   sport: SportsLeaderSport;
   league: string;
-  sample: boolean;
-  /** Null on a sample board: placeholder values get no post to engage with. */
+  /** Null when the board is not a live ESPN answer: nothing to engage with. */
   anchor: SportsAnchorRef | null;
   engagement: SportsAnchorEngagement | null;
   signedIn: boolean;
@@ -147,7 +145,7 @@ function LeaderPostCard({
       authorFallback={player.teamAbbr || player.initials || player.name.charAt(0)}
       title={player.name}
       subtitle={`${player.position ?? '—'}${player.teamAbbr ? ` · ${player.teamAbbr}` : ''} · ${player.metric}`}
-      body={`${player.name} leads the ${league.toUpperCase()} in ${player.metric.toLowerCase()} with ${player.value}${sample ? ' (sample value while ESPN is unreachable)' : ''}.`}
+      body={`${player.name} leads the ${league.toUpperCase()} in ${player.metric.toLowerCase()} with ${player.value}.`}
       media={media}
       details={[
         { label: 'Team', value: player.teamAbbr || '—' },
@@ -159,6 +157,8 @@ function LeaderPostCard({
       engagement={engagement}
       signedIn={signedIn}
       onExpand={() => setShowLightbox(true)}
+      shareNoun="player"
+      shareImage={photo && !brokenPhoto ? photo : null}
       menuLinks={[{ label: 'Open Player Profile', href: playerHref }]}
     />
     {showLightbox && photo && !brokenPhoto && (
@@ -180,13 +180,22 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
   /** Guests read every card; only a member can engage with one. */
   signedIn?: boolean;
 }) {
-  const [sport, setSport] = useState<SportsLeaderSport>('basketball');
+  // Open on a sport ESPN answered for: with no bundled players to stand in, a
+  // basketball feed that failed would otherwise hide a football board that did
+  // not.
+  const [sport, setSport] = useState<SportsLeaderSport>(
+    () => (!boards.basketball?.rows.length && boards.football?.rows.length ? 'football' : 'basketball'),
+  );
   const board = boards[sport] ?? boards.basketball;
   const tab = SPORT_TABS.find((entry) => entry.id === sport)!;
   const hub = hubFor(sport);
-  const sample = board.status !== 'live';
+  // Only a board ESPN answered is anchored: a like or comment must never store
+  // a value ESPN did not report.
+  const live = board.status === 'live';
 
-  if (!board.rows.length) return null;
+  // Nothing is invented when ESPN reports no leaders for either sport: there is
+  // no sample board, so there is no section.
+  if (!SPORT_TABS.some((entry) => boards[entry.id]?.rows.length)) return null;
 
   return (
     // aria-label rather than aria-labelledby: the board renders twice on the
@@ -198,9 +207,7 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
             <span aria-hidden="true" className="text-amber-500">🏀</span> Players &amp; top scorers
           </h2>
           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-            {sample
-              ? `${board.league.toUpperCase()} leaders board · sample values`
-              : `${board.league.toUpperCase()} season leaders from ESPN`}
+            {board.league.toUpperCase()} season leaders from ESPN
           </p>
         </div>
         <div role="group" aria-label="Leaders sport" className="flex shrink-0 gap-1.5">
@@ -223,16 +230,20 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
       </div>
 
       <div className="space-y-4">
+        {/* One sport answered and this one did not: say so, and leave the switch
+            in place so the other board is still one tap away. */}
+        {!board.rows.length && (
+          <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
+            ESPN did not return {tab.label} leaders just now. No sample players are shown in their place.
+          </p>
+        )}
         {board.rows.map((player, index) => {
-          // A sample board is placeholder data, so it gets no anchor post: a
-          // like or comment there would store a value ESPN never reported.
-          const anchor = sample ? null : anchorRef('leader', leaderAnchorId(sport, player));
+          const anchor = live ? anchorRef('leader', leaderAnchorId(sport, player)) : null;
           return <LeaderPostCard
             key={`${player.key}-${index}`}
             player={player}
             sport={sport}
             league={board.league}
-            sample={sample}
             anchor={anchor}
             engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
             signedIn={signedIn}

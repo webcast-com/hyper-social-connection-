@@ -142,6 +142,8 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
       engagement={engagement}
       signedIn={signedIn}
       permalink={{ href: clipHref(clip), label: 'Highlight page' }}
+      shareNoun="highlight"
+      shareImage={clip.thumbnail}
       menuLinks={[
         { label: 'Open Competition', href: cardHref },
         ...(clip.page ? [{ label: 'Watch on ESPN', href: clip.page }] : []),

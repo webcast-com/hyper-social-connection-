@@ -3,10 +3,9 @@
  *
  * The discovery page lists every player on a leaderboard, not just the single
  * leader per statistic the homepage shows, so this module normalises the whole
- * board (top N per metric) and falls back to the bundled boards the Basketball
- * & NFL dashboard ships when ESPN does not answer.
+ * board (top N per metric). There is no bundled fallback: a board ESPN did not
+ * answer has no groups, and the page shows no players rather than sample ones.
  */
-import { basketballScorers, nflScorers } from '../../vendor/nfl-nba/src/data/scorerBoards';
 import type { SportsLeaderSport } from './espn-leaders';
 
 export type SportsTopScorerRow = {
@@ -99,8 +98,11 @@ const rowFrom = (entry: unknown, metric: string, short: string, headshotPath: st
   };
 };
 
+/** Players listed per statistic, and so how many the feed asks ESPN for. */
+export const TOP_SCORERS_PER_STAT = 5;
+
 /** The whole board: every player ESPN reports for each statistic. */
-export function normalizeTopScorers(payload: unknown, sport: SportsLeaderSport, limit = 5): SportsTopScorerBoard['groups'] {
+export function normalizeTopScorers(payload: unknown, sport: SportsLeaderSport, limit = TOP_SCORERS_PER_STAT): SportsTopScorerBoard['groups'] {
   const headshotPath = sport === 'football' ? 'nfl' : 'nba';
   const groups: SportsTopScorerBoard['groups'] = [];
   const seen = new Set<string>();
@@ -118,27 +120,3 @@ export function normalizeTopScorers(payload: unknown, sport: SportsLeaderSport, 
   }
   return groups;
 }
-
-/** The dashboard's bundled boards, used when ESPN is unreachable. */
-export const bundledTopScorers = (sport: SportsLeaderSport): SportsTopScorerBoard['groups'] => {
-  const boards = (sport === 'football' ? nflScorers : basketballScorers) as unknown as {
-    metric: string; short: string; entries: { name: string; team: string; teamAbbr?: string; value: string; initials?: string }[];
-  }[];
-  return boards.map((board) => ({
-    metric: board.metric,
-    short: board.short,
-    entries: board.entries.map((entry) => ({
-      key: slugify(entry.name),
-      name: entry.name,
-      team: entry.team,
-      teamAbbr: entry.teamAbbr ?? null,
-      teamLogo: null,
-      position: null,
-      metric: board.metric,
-      short: board.short,
-      value: entry.value,
-      initials: entry.initials ?? initials(entry.name),
-      headshot: null,
-    })),
-  }));
-};

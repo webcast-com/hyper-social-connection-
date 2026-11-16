@@ -8,7 +8,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 
 ## ✨ Features
 
-- **Feed** — For You (engagement-ranked), Following, and Saved tabs with optimistic likes, comments, reposts and bookmarks
+- **Feed** — For You (engagement-ranked), Following, Live and Highlights tabs with optimistic likes, comments, reposts and bookmarks (saved posts are listed on your own profile; the avatar menu in the header links there)
 - **Posts** — text, images, videos, link previews, polls, edit & delete, hashtags & mentions, privacy levels
 - **Stories** — 24-hour stories with a full-screen viewer (auto-advance, pause, keyboard nav)
 - **Chat** — direct messages with live updates, quick emoji reactions, active-status banner

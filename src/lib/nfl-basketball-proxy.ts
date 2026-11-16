@@ -20,13 +20,15 @@ export function dashboardEspnUrl(kind: 'site' | 'web', segments: string[], query
   if (segments.some((segment) => !/^[a-zA-Z0-9-]{1,40}$/.test(segment))) return null;
   const path = segments.join('/');
   const match = kind === 'site'
-    ? path.match(/^apis\/(site\/v2|v2)\/sports\/(basketball|football)\/([^/]+)\/(.+)$/)
+    ? path.match(/^apis\/(site\/v2|site\/v3|v2)\/sports\/(basketball|football)\/([^/]+)\/(.+)$/)
     : path.match(/^apis\/(common\/v3)\/sports\/(basketball|football)\/([^/]+)\/(.+)$/);
   if (!match || !leagues.has(`${match[2]}/${match[3]}`)) return null;
   const [, prefix, , , endpoint] = match;
   const allowed = prefix === 'site/v2'
     ? /^(scoreboard|news|summary|teams\/[A-Za-z0-9-]{1,40}(?:\/(?:schedule|roster))?)$/.test(endpoint)
     : prefix === 'v2' ? endpoint === 'standings'
+      // Season leaders moved to the site API's v3 path; nothing else is served from it.
+      : prefix === 'site/v3' ? endpoint === 'leaders'
       : /^(leaders|athletes\/[A-Za-z0-9-]{1,40})$/.test(endpoint);
   if (!allowed) return null;
   const board = `${match[2]}/${match[3]}`;

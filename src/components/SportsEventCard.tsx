@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { matchHref } from '@/lib/espn-match';
 import SportsRaceSummary from './SportsRaceSummary';
+import { kickoffCountdown, scoreKey, winningSide } from '@/lib/featured-match';
 import type { SportsEvent } from '@/lib/sports';
 
 function formatKickoff(iso: string) {
@@ -17,9 +18,15 @@ function formatKickoff(iso: string) {
   });
 }
 
+/**
+ * A side's crest: the logo the provider reported, or the side's code when there
+ * is no logo or the logo does not load, so a broken image is never left in the
+ * card.
+ */
 function TeamLogo({ team }: { team: SportsEvent['home'] }) {
-  return team.logo ? (
-    <img src={team.logo} alt="" className="mx-auto w-8 h-8 object-contain shrink-0" />
+  const [failed, setFailed] = useState<string | null>(null);
+  return team.logo && team.logo !== failed ? (
+    <img src={team.logo} alt="" onError={() => setFailed(team.logo ?? null)} className="mx-auto w-8 h-8 object-contain shrink-0" />
   ) : (
     <span className="mx-auto w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
       {(team.short || team.name).slice(0, 3).toUpperCase()}
@@ -31,7 +38,37 @@ function MatchTarget({ href, label, children }: { href?: string; label: string; 
   return href ? <Link href={href} prefetch={false} aria-label={label} className="block rounded-xl transition-colors hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 dark:hover:bg-blue-950/40">{children}</Link> : <div>{children}</div>;
 }
 
-export default function SportsEventCard({ event, compact = false, returnTo }: { event: SportsEvent; compact?: boolean; returnTo?: string }) {
+/**
+ * True for a moment after the scoreline changes between two refreshes, so the
+ * card can draw the eye to it. A match kicking off (no score, then a score) is
+ * not a change of score and does not flash.
+ */
+function useScoreFlash(score: string) {
+  const previous = useRef(score);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = score;
+    if (!before || !score || before === score) return;
+    setFlash(true);
+    const id = setTimeout(() => setFlash(false), 1600);
+    return () => clearTimeout(id);
+  }, [score]);
+  return flash;
+}
+
+/** The losing side of a finished match is dimmed; every other name keeps the card's colour. */
+const LOSER = ' text-gray-500 dark:text-gray-400';
+
+/**
+ * `now` is the board's clock. With it, an upcoming fixture inside the next day
+ * says how long until kickoff; without it the card shows the kickoff time alone.
+ */
+export default function SportsEventCard({ event, compact = false, returnTo, now }: { event: SportsEvent; compact?: boolean; returnTo?: string; now?: number }) {
+  const flash = useScoreFlash(scoreKey(event)) ? ' score-pop' : '';
+  const winner = winningSide(event);
+  const dim = (side: 'home' | 'away') => (winner && winner !== side ? LOSER : '');
+  const countdown = now === undefined ? null : kickoffCountdown(event, now);
   const back = safeSportsReturnPath(returnTo);
   const href = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
     ? `${matchHref(event.details)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
@@ -57,27 +94,28 @@ export default function SportsEventCard({ event, compact = false, returnTo }: { 
         ) : (
           <span className="min-w-0 break-words text-[11px] font-medium text-gray-500 dark:text-gray-400">
             {event.status === 'final' ? event.detail || 'FT' : formatKickoff(event.startAt)}
+            {countdown && <span data-kickoff-countdown className="font-semibold text-blue-600 dark:text-blue-400"> · {countdown}</span>}
           </span>
         )}
       </div>
 
       <MatchTarget href={href} label={`Open ${event.away.name}${showScore ? ` (${event.away.score ?? 'not reported'})` : ''} vs ${event.home.name}${showScore ? ` (${event.home.score ?? 'not reported'})` : ''} match details`}>
       {event.race ? <SportsRaceSummary race={event.race} /> : compact ? <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0 space-y-2">{[event.away, event.home].map((team, index) => <div key={index} className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><span className="shrink-0"><TeamLogo team={team} /></span><span className="min-w-0 break-words">{team.name}</span></div>)}</div>
-        <span aria-label={showScore ? `${event.away.name}: ${event.away.score ?? 'not reported'}; ${event.home.name}: ${event.home.score ?? 'not reported'}` : 'Scheduled match'} className="min-w-20 shrink-0 whitespace-nowrap rounded-xl bg-gray-50 px-2 py-3 text-center text-lg font-black tabular-nums text-gray-900 dark:bg-gray-900 dark:text-white">{showScore ? `${event.away.score ?? '–'}–${event.home.score ?? '–'}` : 'VS'}</span>
+        <div className="min-w-0 space-y-2">{[event.away, event.home].map((team, index) => <div key={index} className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white"><span className="shrink-0"><TeamLogo team={team} /></span><span className={`min-w-0 break-words${dim(index === 0 ? 'away' : 'home')}`}>{team.name}</span></div>)}</div>
+        <span aria-label={showScore ? `${event.away.name}: ${event.away.score ?? 'not reported'}; ${event.home.name}: ${event.home.score ?? 'not reported'}` : 'Scheduled match'} className={`min-w-20 shrink-0 whitespace-nowrap rounded-xl bg-gray-50 px-2 py-3 text-center text-lg font-black tabular-nums text-gray-900 dark:bg-gray-900 dark:text-white${flash}`}>{showScore ? `${event.away.score ?? '–'}–${event.home.score ?? '–'}` : 'VS'}</span>
       </div> : <div>
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
           <TeamLogo team={event.away} />
           <span className={showScore
-            ? 'shrink-0 whitespace-nowrap font-display font-extrabold text-lg tabular-nums text-gray-900 dark:text-white'
+            ? `shrink-0 whitespace-nowrap font-display font-extrabold text-lg tabular-nums text-gray-900 dark:text-white${flash}`
             : 'shrink-0 text-[10px] font-bold text-gray-400'}>
             {showScore ? `${event.away.score ?? '–'}–${event.home.score ?? '–'}` : 'VS'}
           </span>
           <TeamLogo team={event.home} />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-3 text-center text-xs font-semibold text-gray-900 sm:text-sm dark:text-white">
-          <span title={event.away.name} className="min-w-0 break-words">{event.away.name}</span>
-          <span title={event.home.name} className="min-w-0 break-words">{event.home.name}</span>
+          <span title={event.away.name} className={`min-w-0 break-words${dim('away')}`}>{event.away.name}</span>
+          <span title={event.home.name} className={`min-w-0 break-words${dim('home')}`}>{event.home.name}</span>
         </div>
       </div>}
 

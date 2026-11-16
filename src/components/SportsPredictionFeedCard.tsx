@@ -6,8 +6,9 @@ import { BarChart2, CalendarClock, MessageCircle, Send, Share2, Sparkles, Trophy
 import type { SportsPrediction } from '@/lib/sports';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { createPost } from '@/app/actions';
+import { ShareContentSheet } from './ShareSheets';
 
-type Mode = 'comment' | 'poll' | 'share';
+type Mode = 'comment' | 'poll';
 
 function predictionPostText(prediction: SportsPrediction, note?: string, asPoll = false) {
   const parts = [
@@ -23,8 +24,7 @@ function predictionPostText(prediction: SportsPrediction, note?: string, asPoll 
 
 function modeTitle(mode: Mode) {
   if (mode === 'poll') return 'Create a prediction poll';
-  if (mode === 'comment') return 'Comment on this prediction';
-  return 'Share this prediction';
+  return 'Comment on this prediction';
 }
 
 export default function SportsPredictionFeedCard({
@@ -36,6 +36,7 @@ export default function SportsPredictionFeedCard({
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [note, setNote] = useState('');
+  const [showShare, setShowShare] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const isSignedIn = !!currentUser?.id;
@@ -140,8 +141,8 @@ export default function SportsPredictionFeedCard({
         </button>
         <button
           type="button"
-          onClick={() => setMode('share')}
-          disabled={!isSignedIn}
+          onClick={() => { setMode(null); setShowShare(true); }}
+          aria-haspopup="dialog"
           className="flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg py-2 text-xs sm:gap-2 sm:text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
         >
           <Share2 className="h-4 w-4" />
@@ -151,7 +152,7 @@ export default function SportsPredictionFeedCard({
 
       {!isSignedIn && (
         <div className="border-t border-violet-100 bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-800 dark:border-violet-900/50 dark:bg-violet-950/30 dark:text-violet-300">
-          Sign in to comment, poll, or share predictions.
+          Sign in to comment, poll, or share predictions on Hyper.
         </div>
       )}
 
@@ -183,10 +184,27 @@ export default function SportsPredictionFeedCard({
               className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Send className="h-3.5 w-3.5" />
-              {isPending ? 'Posting…' : mode === 'poll' ? 'Post poll' : mode === 'comment' ? 'Post comment' : 'Share prediction'}
+              {isPending ? 'Posting…' : mode === 'poll' ? 'Post poll' : 'Post comment'}
             </button>
           </div>
         </div>
+      )}
+
+      {/* The share sheet — the one a profile opens. */}
+      {showShare && (
+        <ShareContentSheet
+          subject={{
+            noun: 'prediction',
+            title: `${prediction.homeTeam} vs ${prediction.awayTeam}`,
+            subtitle: `${prediction.competition || prediction.federation} · Pick: ${prediction.prediction}`,
+            link: '/sports/predictions',
+            text: `${prediction.homeTeam} vs ${prediction.awayTeam} — prediction on Hyper`,
+            feedHint: 'Posts this prediction to your followers, with your note if you add one.',
+          }}
+          compose={(text) => predictionPostText(prediction, text)}
+          canShareInternally={isSignedIn}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </article>
   );

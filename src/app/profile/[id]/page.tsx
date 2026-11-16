@@ -2,10 +2,9 @@ import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
-import Post from '@/components/Post';
+import ProfilePostTabs from '@/components/ProfilePostTabs';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
-import EmptyState from '@/components/EmptyState';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { canMessageUser, canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
@@ -15,6 +14,7 @@ import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
 import { getProfileShareCount } from '@/app/share-actions';
 import { isAppAccount } from '@/lib/app-accounts';
+import { loadSavedPosts } from '@/lib/saved-posts';
 
 export async function generateMetadata({
   params,
@@ -82,7 +82,13 @@ const DEMO_USERS_MAP: Record<number, any> = {
   5: { id: 5, name: 'Marcus Lee', email: 'marcus@example.com', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus', coverPhoto: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80', bio: '🎸 Musician and content creator.', createdAt: new Date(Date.now() - 10000000000) },
 };
 
-export default async function Profile({ params }: { params: Promise<{ id: string }> }) {
+export default async function Profile({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const viewer = await getViewer();
   const currentUser = viewer || {
     id: 0,
@@ -223,6 +229,13 @@ export default async function Profile({ params }: { params: Promise<{ id: string
 
   const photoPosts = enrichedPosts.filter(p => p.imageUrl);
   const isSelf = !!currentUser?.id && currentUser.id === profileUser.id;
+  // The Saved section: the viewer's own bookmarks, on their own profile only.
+  // The loader is given the viewer's id, never the profile's, so another
+  // member's saved list cannot be asked for — and is not loaded, rendered or
+  // sent to the browser on anybody else's profile.
+  const saved = isSelf ? await loadSavedPosts(currentUser.id, { viewerFollowIds: viewerFollowsShared }) : null;
+  const tabParam = (await searchParams)?.tab;
+  const initialTab = (Array.isArray(tabParam) ? tabParam[0] : tabParam) === 'saved' ? 'saved' : 'posts';
   const followsYou = followingRes.some(({ user: u }) => u?.id === currentUser?.id);
   const showDetails = canViewProfileDetails({
     isSelf,
@@ -402,24 +415,16 @@ export default async function Profile({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        {/* Right: Posts */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white ml-1">Posts</h2>
-          {enrichedPosts.length === 0 ? (
-            <EmptyState variant="feed" title="No posts yet">
-              When this user shares something, it will appear here.
-            </EmptyState>
-          ) : (
-            enrichedPosts.map(post => (
-              <Post
-                key={post.id}
-                post={post}
-                currentUser={currentUser}
-                viewerFollowIds={Array.from(viewerFollowsShared)}
-              />
-            ))
-          )}
-        </div>
+        {/* Right: Posts — and, on your own profile, what you have saved */}
+        <ProfilePostTabs
+          posts={enrichedPosts}
+          savedPosts={saved ? saved.posts : null}
+          savedUnavailable={saved ? !saved.ok : false}
+          initialTab={initialTab}
+          currentUser={currentUser}
+          viewerFollowIds={Array.from(viewerFollowsShared)}
+          bookmarkedPostIds={saved ? saved.posts.map((post) => post.id) : []}
+        />
       </div>
     </div>
   );

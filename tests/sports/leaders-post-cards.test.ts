@@ -8,6 +8,12 @@ import { boardsFor, engagementFixture, leaderKeyFor, mountBoard, findButton } fr
  * and a working Like / Comment / Share row.
  */
 
+/** The share sheet is a dialog on the page, not part of the card. */
+const shareSheet = (document: any) => document.querySelector('[role="dialog"][aria-labelledby="share-sheet-title"]');
+const sheetTabs = (sheet: any) => [...sheet.querySelectorAll('button')]
+  .map((button: any) => button.textContent.trim())
+  .filter((label: string) => ['Feed', 'Groups', 'Send to', 'Elsewhere'].includes(label));
+
 test('a player card uses the post card layout with the team crest as the author image', async () => {
   const mount = await mountBoard(await boardsFor());
   try {
@@ -87,16 +93,26 @@ test('a signed-in member sees the card\u2019s saved engagement and acts through 
     await type(composer, 'What a season');
     await submit(composer.closest('form'));
 
-    // Share offers a real repost with an optional note, plus link and lightbox.
+    // Share opens the share sheet a profile opens: feed, groups, a message, elsewhere.
     await click(findButton(document, 'Share Luka Don\u010di\u0107'));
-    assert.ok(card.querySelector('form input[name="note"]'), 'reposting to the feed is a form action');
-    assert.match(card.textContent, /Share to your feed/);
-    assert.match(card.textContent, /Copy Link/);
-    assert.match(card.textContent, /Expand Image/);
+    const sheet = shareSheet(document);
+    assert.ok(sheet, 'the sheet is a dialog');
+    assert.equal(sheet.querySelector('h2').textContent.trim(), 'Share player');
+    assert.deepEqual(sheetTabs(sheet), ['Feed', 'Groups', 'Send to', 'Elsewhere']);
+    assert.match(sheet.textContent, /Luka Don\u010di\u0107/);
+    assert.match(sheet.textContent, /Share to your feed/);
+    assert.ok(sheet.querySelector('textarea'), 'with room for a note');
+    assert.match(sheet.querySelector('input[aria-label="Player link"]').value, /^https:\/\/hyper\.co\.ke\//);
+    assert.equal(card.querySelector('form input[name="note"]'), null, 'the card\u2019s own share menu is gone');
+    await click(findButton(document, 'Close share dialog'));
+    assert.equal(shareSheet(document), null);
 
-    // Save is a form action, and the more menu reaches the discussion post.
+    // Save is a form action, and the more menu reaches the discussion post, the
+    // link and the lightbox the share menu used to carry.
     assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').getAttribute('type'), 'submit');
     await click(findButton(document, 'More options'));
+    assert.match(card.textContent, /Copy Link/);
+    assert.match(card.textContent, /Expand Image/);
     const discussion = [...card.querySelectorAll('a')].find((node: any) => node.textContent.trim() === 'Open discussion')!;
     assert.equal(discussion.getAttribute('href'), '/post/77');
   } finally {
@@ -104,7 +120,7 @@ test('a signed-in member sees the card\u2019s saved engagement and acts through 
   }
 });
 
-test('a guest, or a sample board, gets a read-only card that says why', async () => {
+test('a guest, or a board that is not a live ESPN answer, gets a read-only card that says why', async () => {
   // Signed out on a live board: every control is present, none of them fake a result.
   const boards = await boardsFor();
   const mount = await mountBoard(boards);
@@ -115,14 +131,16 @@ test('a guest, or a sample board, gets a read-only card that says why', async ()
     assert.equal(findButton(document, 'Save Luka Don\u010di\u0107').disabled, true);
     assert.equal(card.querySelectorAll('form').length, 0, 'nothing to submit while signed out');
     await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
-    assert.match(card.textContent, /Sign in to like, comment on, save and share this card\./);
+    assert.match(card.textContent, /Sign in to like, comment on and save this card, or to share it on Hyper\./);
     assert.match(card.textContent, /Sign in to join this conversation\./);
   } finally {
     mount.unmount();
   }
 
-  // Signed in, but the board is the bundled sample: placeholder values are never
-  // stored as though a member had posted them.
+  // Signed in, but the board is not marked live. The feed no longer produces
+  // rows for such a board — there is no bundled sample — so this is the guard
+  // behind that: whatever the rows are, a board ESPN did not answer is never
+  // anchored, and nothing is stored as though a member had posted it.
   const sample: any = await boardsFor();
   sample.basketball.status = 'unavailable';
   const sampleMount = await mountBoard(sample, { signedIn: true });
@@ -130,12 +148,51 @@ test('a guest, or a sample board, gets a read-only card that says why', async ()
     const { document, click } = sampleMount;
     const card = [...document.querySelectorAll('article')].find((node: any) => node.textContent.includes('Luka Don\u010di\u0107'))!;
     assert.equal(findButton(document, 'Like Luka Don\u010di\u0107').disabled, true);
-    assert.equal(card.querySelectorAll('form').length, 0, 'a sample card has no anchor post');
+    assert.equal(card.querySelectorAll('form').length, 0, 'a card with no live feed behind it has no anchor post');
     await click(findButton(document, 'Comment on Luka Don\u010di\u0107'));
     assert.match(card.textContent, /Engagement is unavailable on sample cards/);
     assert.match(card.textContent, /Comments open when this card has a live feed behind it\./);
   } finally {
     sampleMount.unmount();
+  }
+});
+
+test('a feed ESPN did not answer shows no players: the other sport opens, and nothing is invented', async () => {
+  const unavailable = (sport: string, league: string) => ({
+    sport, league, rows: [], status: 'unavailable',
+    source: { ok: false, url: 'https://espn.test/leaders', httpStatus: 404, error: 'ESPN HTTP 404', errorKind: 'http' },
+  });
+
+  // Basketball failed, the NFL answered: the board opens on the NFL instead of
+  // disappearing, and the basketball tab says what happened in plain words.
+  const boards: any = await boardsFor();
+  const nflName = boards.football.rows[0].name;
+  boards.basketball = unavailable('basketball', 'nba');
+  const mount = await mountBoard(boards);
+  try {
+    const { document, click } = mount;
+    const sportButton = (label: string) => [...document.querySelectorAll('button')].find((node: any) => node.textContent.trim() === label)!;
+    assert.equal(sportButton('NFL').getAttribute('aria-pressed'), 'true', 'the sport that answered is the one shown');
+    assert.ok(document.querySelectorAll('article').length > 0);
+    assert.match(document.body.textContent, new RegExp(nflName));
+    assert.match(document.body.textContent, /NFL season leaders from ESPN/);
+
+    await click(sportButton('Basketball'));
+    assert.equal(document.querySelectorAll('article').length, 0, 'no card is rendered for a sport ESPN did not answer');
+    assert.match(document.body.textContent, /ESPN did not return Basketball leaders just now\. No sample players are shown in their place\./);
+    assert.doesNotMatch(document.body.textContent, /sample values/);
+    assert.ok(sportButton('NFL'), 'the switch stays, so the board that did answer is one tap away');
+  } finally {
+    mount.unmount();
+  }
+
+  // Neither sport answered: no section, no heading, no placeholder players.
+  const none = await mountBoard({ basketball: unavailable('basketball', 'nba'), football: unavailable('football', 'nfl') });
+  try {
+    assert.equal(none.document.querySelector('section[aria-label="Players & top scorers"]'), null);
+    assert.equal(none.document.querySelectorAll('article').length, 0);
+  } finally {
+    none.unmount();
   }
 });
 

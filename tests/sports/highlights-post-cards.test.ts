@@ -72,6 +72,12 @@ async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard[
   };
 }
 
+/** The share sheet is a dialog on the page, not part of the card. */
+const shareSheet = (document: any) => document.querySelector('[role="dialog"][aria-labelledby="share-sheet-title"]');
+const sheetTabs = (sheet: any) => [...sheet.querySelectorAll('button')]
+  .map((button: any) => button.textContent.trim())
+  .filter((label: string) => ['Feed', 'Groups', 'Send to', 'Elsewhere'].includes(label));
+
 test('a highlight clip is a post card with the home crest and a playable video', async () => {
   const mount = await mountHighlights([clip()]);
   try {
@@ -150,11 +156,21 @@ test('a highlight card reads its saved thread and posts through form actions', a
     await type(composer, 'What a finish');
     await submit(composer.closest('form'));
 
-    // Sharing offers a real repost with an optional note, next to copy and expand.
+    // Sharing opens the share sheet a profile opens: feed, groups, a message, elsewhere.
+    assert.equal(shareSheet(document), null);
     await click(findButton(document, 'Share Arsenal vs Chelsea'));
-    assert.ok(card.querySelector('form input[name="note"]'), 'reposting to the feed is a form action');
-    assert.match(card.textContent, /Share to your feed/);
-    assert.match(card.textContent, /Copy Link/);
+    const sheet = shareSheet(document);
+    assert.ok(sheet, 'the sheet is a dialog');
+    assert.equal(sheet.querySelector('h2').textContent.trim(), 'Share highlight');
+    assert.deepEqual(sheetTabs(sheet), ['Feed', 'Groups', 'Send to', 'Elsewhere']);
+    assert.match(sheet.textContent, /Arsenal vs Chelsea/);
+    assert.match(sheet.textContent, /Share to your feed/);
+    assert.match(sheet.textContent, /Reposts this card to your followers/);
+    const link = sheet.querySelector('input[aria-label="Highlight link"]');
+    assert.match(link.value, /^https:\/\/hyper\.co\.ke\/sports\/highlights\//, 'the link is the clip\u2019s own page, with this site\u2019s origin');
+    assert.equal(card.querySelector('form input[name="note"]'), null, 'the card\u2019s own share menu is gone');
+    await click(findButton(document, 'Close share dialog'));
+    assert.equal(shareSheet(document), null);
     assert.match(card.textContent, /Highlights are ESPN clips\./);
 
     // And the more menu links to the post every reader shares.
@@ -176,7 +192,7 @@ test('a highlight card stays read-only for a guest and for a sample board', asyn
     assert.equal(findButton(document, 'Save Arsenal vs Chelsea').disabled, true);
     assert.equal(card.querySelectorAll('form').length, 0, 'nothing to submit while signed out');
     await click(findButton(document, 'Comment on Arsenal vs Chelsea'));
-    assert.match(card.textContent, /Sign in to like, comment on, save and share this card\./);
+    assert.match(card.textContent, /Sign in to like, comment on and save this card, or to share it on Hyper\./);
   } finally {
     mount.unmount();
   }

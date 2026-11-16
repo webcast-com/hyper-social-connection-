@@ -37,7 +37,7 @@ const videoPost = (id: string, over: Partial<SportsVideoNewsClip> = {}) => ({
 });
 
 type Props = {
-  forYouPosts?: unknown[]; followingPosts?: unknown[]; savedPosts?: unknown[]; livePosts?: unknown[];
+  forYouPosts?: unknown[]; followingPosts?: unknown[]; highlightPosts?: unknown[]; highlightsRemaining?: number; livePosts?: unknown[];
 };
 
 async function mountTabs(props: Props = {}) {
@@ -54,7 +54,8 @@ async function mountTabs(props: Props = {}) {
     root.render(React.createElement(FeedTabs as never, {
       forYouPosts: props.forYouPosts ?? [],
       followingPosts: props.followingPosts ?? [],
-      savedPosts: props.savedPosts ?? [],
+      highlightPosts: props.highlightPosts ?? [],
+      highlightsRemaining: props.highlightsRemaining ?? 0,
       livePosts: props.livePosts ?? [],
       currentUser: { id: 1, name: 'Review User' },
       bookmarkedPostIds: [],
@@ -82,7 +83,7 @@ async function mountTabs(props: Props = {}) {
 
 test('the Live tab sits beside the three tabs that were already there, and For You is still the default', async () => {
   const view = await mountTabs({ forYouPosts: [videoPost('a')] });
-  assert.deepEqual(view.tabs().map((button: any) => button.textContent.trim()), ['For You', 'Following', 'Live', 'Saved']);
+  assert.deepEqual(view.tabs().map((button: any) => button.textContent.trim()), ['For You', 'Following', 'Live', 'Highlights']);
   assert.equal(view.tab('For You')!.getAttribute('aria-pressed'), 'true');
   assert.equal(view.tab('Live')!.getAttribute('aria-pressed'), 'false');
   assert.equal(view.note(), null, 'the default tab makes no claim about live sport');
@@ -215,4 +216,117 @@ test('switching tab starts from the first batch again', async () => {
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH,
     'one tab\u2019s scrolling does not decide another\u2019s');
   await view.unmount();
+});
+
+/* ── The Highlights tab ─────────────────────────────────────────────────── */
+
+/** A highlight card exactly as the page builds one for the feed. */
+const highlightPost = (id: string, over: Record<string, unknown> = {}) => ({
+  id: `highlight-${id}`,
+  type: 'highlight',
+  clip: {
+    id,
+    title: `Highlight ${id}`,
+    description: 'A curled finish from the edge of the box.',
+    duration: 47,
+    thumbnail: `https://a.espncdn.com/media/2026/0907/${id}.jpg`,
+    mp4: `https://a.espncdn.com/media/video/2026/0907/${id}_3600k.mp4`,
+    hls: null,
+    page: `https://www.espn.com/video/clip/_/id/${id}`,
+    playable: true,
+    eventId: 'espn-epl-401111111',
+    eventName: 'Arsenal vs Chelsea',
+    sport: 'football',
+    league: 'epl',
+    leagueName: 'Premier League',
+    home: 'Arsenal',
+    away: 'Chelsea',
+    homeLogo: null,
+    awayLogo: null,
+    startAt: '2026-11-08T18:00:00.000Z',
+    status: 'final',
+    ...over,
+  },
+  anchor: null,
+  engagement: null,
+  createdAt: new Date(),
+});
+
+const linkTo = (container: any, href: string) =>
+  [...container.querySelectorAll('a')].filter((anchor: any) => anchor.getAttribute('href') === href);
+
+test('Highlights took the place of Saved, and shows the highlight cards it was given', async () => {
+  const view = await mountTabs({
+    forYouPosts: [videoPost('a')],
+    highlightPosts: [highlightPost('49861382', { title: 'Saka opens the scoring' }), highlightPost('49861383', { title: 'Palmer levels from the spot' })],
+  });
+  assert.equal(view.tab('Saved'), undefined, 'the Saved tab is gone');
+  assert.equal(view.tab('Highlights')!.getAttribute('aria-pressed'), 'false');
+  assert.doesNotMatch(view.container.textContent!, /Saka opens the scoring/, 'its cards stay in their own tab');
+
+  await view.press('Highlights');
+  assert.equal(view.tab('Highlights')!.getAttribute('aria-pressed'), 'true');
+  assert.equal(view.tab('For You')!.getAttribute('aria-pressed'), 'false');
+  assert.equal(view.container.querySelectorAll('article').length, 2);
+  assert.match(view.container.textContent!, /Saka opens the scoring/);
+  assert.match(view.container.textContent!, /Palmer levels from the spot/);
+  assert.doesNotMatch(view.container.textContent!, /Saka curls Arsenal ahead at Brighton/, 'and not the For You cards');
+  assert.match(view.container.textContent!, /2 match highlights, newest first\./);
+  assert.equal(view.note(), null, 'the count is not a live region: only the Live tab announces itself');
+  assert.equal(linkTo(view.container, '/sports/highlights').length, 1, 'one link to the page that filters them');
+  await view.unmount();
+});
+
+test('an empty Highlights tab says so and points at the highlights page', async () => {
+  const view = await mountTabs({ forYouPosts: [videoPost('a')] });
+  await view.press('Highlights');
+
+  assert.equal(view.container.querySelectorAll('article').length, 0);
+  assert.match(view.container.textContent!, /No match highlights right now/);
+  assert.match(view.container.textContent!, /Nothing is invented to fill the gap/);
+  const [link] = linkTo(view.container, '/sports/highlights');
+  assert.match(link.textContent!, /Match Highlights/);
+  await view.unmount();
+});
+
+test('the Highlights tab reveals its clips in batches like every other tab', async () => {
+  const total = FEED_RENDER_BATCH + 4;
+  const view = await mountTabs({
+    highlightPosts: Array.from({ length: total }, (_, index) => highlightPost(`bulk-${index}`)),
+  });
+  await view.press('Highlights');
+  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+
+  assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH);
+  assert.match(view.container.textContent!, new RegExp(`${total} match highlights, newest first`),
+    'the count is every clip the tab holds, not the batch on screen');
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.equal(view.container.querySelectorAll('article').length, total, 'every clip the page supplied is reachable');
+  assert.equal(showMore(view.container), undefined);
+  await view.unmount();
+});
+
+test('clips the read did not carry are pointed at, once everything it did carry is on screen', async () => {
+  const older = (container: any) =>
+    linkTo(container, '/sports/highlights').find((anchor: any) => /older clips? on Match Highlights/.test(anchor.textContent));
+  const total = FEED_RENDER_BATCH + 2;
+  const view = await mountTabs({
+    highlightPosts: Array.from({ length: total }, (_, index) => highlightPost(`deep-${index}`)),
+    highlightsRemaining: 37,
+  });
+  await view.press('Highlights');
+  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+
+  assert.equal(older(view.container), undefined, 'not while this tab still has clips of its own to reveal');
+  await act(async () => { showMore(view.container)!.click(); });
+  assert.match(older(view.container)!.textContent!, /37 older clips on Match Highlights/);
+
+  await view.press('For You');
+  assert.equal(older(view.container), undefined, 'the pointer belongs to the Highlights tab alone');
+  await view.unmount();
+
+  const complete = await mountTabs({ highlightPosts: [highlightPost('only')], highlightsRemaining: 0 });
+  await complete.press('Highlights');
+  assert.equal(older(complete.container), undefined, 'nothing is claimed when the read carried every stored clip');
+  await complete.unmount();
 });

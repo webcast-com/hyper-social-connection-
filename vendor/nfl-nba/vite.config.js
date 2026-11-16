@@ -17,7 +17,8 @@ const allowedHosts = [
 // same-origin fallback used by src/api/espn.js when a browser blocks the direct
 // call. They also make the endpoints easy to inspect during development:
 //   /espn/apis/site/v2/sports/basketball/nba/scoreboard
-//   /espn-web/apis/common/v3/sports/basketball/nba/leaders
+//   /espn/apis/site/v3/sports/basketball/nba/leaders?limit=5
+//   /espn-web/apis/common/v3/sports/basketball/nba/athletes/{id}
 const espnProxy = {
   "/espn-web": {
     target: "https://site.web.api.espn.com",

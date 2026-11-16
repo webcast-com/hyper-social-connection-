@@ -17,7 +17,7 @@ import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { orderCentreEvents } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
-import { getHighlightsBoardForRender, getHighlightClipsForFeed } from '@/lib/highlights-board';
+import { ALL_STORED_DAYS, getHighlightsBoardForRender, getHighlightClipsForFeed, recentHighlightClips } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 import { nudgePickGrading } from '@/lib/sports-picks-grader';
 import { dedupeAnchorRefs, highlightAnchorRefs, highlightClipsAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
@@ -139,7 +139,7 @@ export default async function Home() {
   const sportsBoard = await getSportsBoard();
   // Players and top scorers are the sports content visitors ask for most, so the
   // homepage renders the leaders board next to the scores. A failed leaders feed
-  // resolves to the bundled sample board and never blocks the page.
+  // resolves to an empty board — no sample players — and never blocks the page.
   const leaderBoards = await getSportsLeaderBoards();
   // Stored clips first: a Postgres read with no ESPN request, filled by the
   // sweeper. Only when storage cannot answer in time, or holds too few clips to
@@ -147,13 +147,16 @@ export default async function Home() {
   // the same sample fallback, the same cards. Started where the live feed used to
   // be started, so nothing else on this page competes with it any differently.
   const highlightBoard = await getHighlightsBoardForRender();
-  // The For You feed carries every highlight clip in the window, not the handful
-  // the highlights list beside it shows. The same stored rows and the same zero
-  // ESPN cost, read with the lean query — rows and a count, none of the index
-  // page's summaries — and merged with any real clip on the board the sweep has
-  // not stored yet. A board ESPN did not answer contributes nothing: its clips
-  // are samples, and a card in the middle of the feed has no heading to say so.
-  const feedHighlights = await getHighlightClipsForFeed({ board: highlightBoard });
+  // The feed is supplied by the same stored clips the Match Highlights page
+  // pages through: every match clip this site has read, newest first, not the
+  // handful the highlights list beside it shows. The same stored rows and the
+  // same zero ESPN cost, read with the lean query — rows and a count, none of
+  // the index page's summaries — and merged with any real clip on the board the
+  // sweep has not stored yet. The Highlights tab shows all of them; For You
+  // keeps the recent ones (see `recentHighlightClips`). A board ESPN did not
+  // answer contributes nothing: its clips are samples, and a card in the middle
+  // of the feed has no heading to say so.
+  const feedHighlights = await getHighlightClipsForFeed({ board: highlightBoard, days: ALL_STORED_DAYS });
   // The homepage is the busiest surface on the site, so it is also where coverage
   // grows: one bounded pass, scheduled past this response with `after` so it is
   // not frozen when the page finishes streaming, and rate-limited to one per ten
@@ -350,7 +353,6 @@ export default async function Home() {
   });
 
   const bookmarkedPostIds = userBookmarks.map((b) => b.postId);
-  const bookmarkedSet = new Set(bookmarkedPostIds);
 
   // This dynamic server route intentionally evaluates scheduled posts per request.
   // eslint-disable-next-line react-hooks/purity
@@ -413,9 +415,10 @@ export default async function Home() {
     createdAt: new Date(Date.now() - (index + 1) * 100_000),
   }));
 
-  // Every highlight clip the window holds, newest first, each one a post card a
+  // Every highlight clip the read carried, newest first, each one a post card a
   // reader can like, comment on and save like anything else in the feed. There is
-  // no cap on how many the feed carries; the tab reveals them in batches.
+  // no cap on how many the feed carries; the tab reveals them in batches. This is
+  // the Highlights tab's list.
   const highlightFeedPosts = feedHighlights.clips.map((clip, index) => {
     const anchor = anchorRef('highlight', highlightAnchorId(clip));
     return {
@@ -429,6 +432,11 @@ export default async function Home() {
     };
   });
 
+  // For You takes the recent ones from that same list — the same card objects,
+  // so a clip engages identically in either tab.
+  const recentHighlightIds = new Set(recentHighlightClips(feedHighlights.clips, highlightBoard).map((clip) => clip.id));
+  const forYouHighlightPosts = highlightFeedPosts.filter((post) => recentHighlightIds.has(post.clip.id));
+
   // Each card kind gets its own pass over the feed, so adding league video news
   // or highlights cannot move the match and prediction cards already there.
   const forYouPosts = interleaveFeedCards(
@@ -437,7 +445,7 @@ export default async function Home() {
       videoNewsFeedPosts,
       VIDEO_NEWS_FEED_SLOTS,
     ),
-    highlightFeedPosts,
+    forYouHighlightPosts,
     HIGHLIGHTS_FEED_SLOTS,
   );
 
@@ -473,7 +481,6 @@ export default async function Home() {
   // of the card beside it.
   const feedEventIds = sportsFeedPosts.map((post) => post.event.id);
   const followingPosts = visiblePosts.filter((p) => followingIds.has(p.userId) || p.userId === currentUser.id);
-  const savedPosts = visiblePosts.filter((p) => bookmarkedSet.has(p.id));
 
   // The sports desk authors anchor posts, but it is not a person to suggest,
   // list as a contact or invite anywhere.
@@ -740,7 +747,8 @@ export default async function Home() {
         <FeedTabs
           forYouPosts={forYouPosts}
           followingPosts={followingPosts}
-          savedPosts={savedPosts}
+          highlightPosts={highlightFeedPosts}
+          highlightsRemaining={feedHighlights.remaining}
           livePosts={livePosts}
           currentUser={currentUser}
           bookmarkedPostIds={bookmarkedPostIds}
