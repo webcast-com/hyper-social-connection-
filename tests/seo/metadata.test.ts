@@ -112,7 +112,7 @@ test('homepage search and sharing metadata describe the app consistently', async
   await withEnv(publicEnv, () => {
     const home = getHomeMetadata();
     const site = getSiteMetadata(getSiteUrl());
-    assert.deepEqual(home.title, { absolute: 'Hyper — Social Network, Communities & Sports' });
+    assert.deepEqual(home.title, { absolute: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers' });
     assert.equal(home.description, site.description);
     assert.equal(home.openGraph?.description, home.description);
     assert.equal(home.twitter?.description, home.description);

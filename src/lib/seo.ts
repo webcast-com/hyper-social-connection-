@@ -34,7 +34,7 @@ export function getPageMetadata({ title, description, path, index = true, type =
 /** Homepage metadata and site identity stay aligned across search and sharing.
  * `keywords` carries the competition, team and player names the site covers. */
 export function getHomeMetadata(keywords?: string[]): Metadata {
-  const title = 'Hyper — Social Network, Communities & Sports';
+  const title = 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers';
   const description = SITE_DESCRIPTION;
   return {
     title: { absolute: title },

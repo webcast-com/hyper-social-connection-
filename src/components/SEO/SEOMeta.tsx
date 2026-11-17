@@ -16,7 +16,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       google: '0_cko3izuhuWqNHJ2touhJTuXeoA2Kuxtbe4A8vXIwc',
     },
     title: {
-      default: 'Hyper — Social Network, Communities & Sports',
+      default: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers',
       template: '%s | Hyper',
     },
     description: SITE_DESCRIPTION,
@@ -42,7 +42,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
       locale: 'en_US',
       url: siteUrl,
       siteName: SITE_NAME,
-      title: 'Hyper — Social Network, Communities & Sports',
+      title: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers',
       description: SITE_DESCRIPTION,
       images: [
         {
@@ -55,7 +55,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Hyper — Social Network, Communities & Sports',
+      title: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers',
       description: SITE_DESCRIPTION,
       images: ['/og-image.png'],
     },

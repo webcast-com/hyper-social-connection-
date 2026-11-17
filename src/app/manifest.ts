@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Hyper — Social Connection',
+    name: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers',
     short_name: 'Hyper',
     description: 'Connect with friends, share stories, join communities, and explore new conversations.',
     start_url: '/',

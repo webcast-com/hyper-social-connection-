@@ -1,4 +1,4 @@
-# hyper — Hyper Social Connection
+# hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers
 
 A full-featured social media platform built with **Next.js 16**, **React 19**, **TypeScript**, **Tailwind CSS 4** and **PostgreSQL** (via Prisma ORM).
 
