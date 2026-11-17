@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { matchHref } from '@/lib/espn-match';
+import { matchLine, matchPostText, matchStatusLabel } from '@/lib/match-post';
 import { scoreCardLabel, scoreCardTarget, usesScoreCard } from '@/lib/score-card';
 import { winningSide } from '@/lib/featured-match';
 import SportsMatchFace, { MATCH_CARD, MATCH_FRAME, matchFaceTone } from './SportsMatchFace';
@@ -28,33 +29,6 @@ function statusStyles(status: SportsEvent['status']) {
   if (status === 'live') return 'bg-red-500 text-white shadow-red-500/25';
   if (status === 'final') return 'bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900';
   return 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300';
-}
-
-function statusLabel(event: SportsEvent) {
-  if (event.source === 'demo') return 'Sample fixture';
-  if (event.status === 'live') return `LIVE ${event.detail || ''}`.trim();
-  if (event.status === 'final') return event.detail || 'Final';
-  return event.detail || 'Upcoming';
-}
-
-function matchLine(event: SportsEvent) {
-  if (event.race) return event.race.title;
-  const score = event.status === 'upcoming'
-    ? 'vs'
-    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
-  return `${event.away.short || event.away.name} ${score} ${event.home.short || event.home.name}`;
-}
-
-function matchPostText(event: SportsEvent, note?: string, prediction?: SportsPrediction | null) {
-  const parts = [
-    `🏆 ${matchLine(event)}`,
-    `${event.leagueName} · ${statusLabel(event)}`,
-    prediction ? `🔮 Prediction: ${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}` : '',
-    event.venue ? `📍 ${event.venue}` : '',
-    note?.trim() ? `\n${note.trim()}` : '',
-    '\n#Sports #MatchDay',
-  ].filter(Boolean);
-  return parts.join('\n');
 }
 
 function modeTitle(mode: ActionMode) {
@@ -172,7 +146,7 @@ export default function SportsFeedCard({
           {scoreCard && (
             <span className={`max-w-full break-words rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyles(event.source === 'demo' ? 'upcoming' : event.status)}`}>
               {event.status === 'live' && event.source !== 'demo' && <Radio className="mr-1 inline h-3 w-3 animate-pulse" />}
-              {statusLabel(event)}
+              {matchStatusLabel(event)}
             </span>
           )}
         </div>
@@ -319,7 +293,7 @@ export default function SportsFeedCard({
           subject={{
             noun: 'match',
             title: matchLine(event),
-            subtitle: `${event.leagueName} · ${statusLabel(event)}`,
+            subtitle: `${event.leagueName} · ${matchStatusLabel(event)}`,
             image: event.home.logo || event.away.logo || null,
             link: event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : bodyHref,
             text: `${matchLine(event)} — ${event.leagueName} on Hyper`,
