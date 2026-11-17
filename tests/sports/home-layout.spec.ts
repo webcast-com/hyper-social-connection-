@@ -365,10 +365,12 @@ test('match outages preserve source diagnostics without fake lineups or statisti
 });
 
 test('real feed and odds cards link to match details while sample cards never do', async ({ page }) => {
+  // A feed match card is the sports board's card: the whole card is the link,
+  // named the way the board names it.
   await page.evaluate(() => window.renderHomeReview(false));
-  await expect(page.getByRole('link', { name: 'View match details', exact: true }).first()).toHaveAttribute('href', '/sports/matches/epl/401234567');
+  await expect(page.getByRole('link', { name: /^Open .+ match details/ }).first()).toHaveAttribute('href', '/sports/matches/epl/401234567');
   await page.evaluate(() => window.renderHomeReview(false, true));
-  await expect(page.getByRole('link', { name: 'View match details', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /^Open .+ match details/ })).toHaveCount(0);
   await page.evaluate(() => window.renderPredictionsReview('ready'));
   const link = page.getByRole('link', { name: 'View match details', exact: true }).first();
   await expect(link).toHaveAttribute('href', '/sports/matches/epl/401234567');

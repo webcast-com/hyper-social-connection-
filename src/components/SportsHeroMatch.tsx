@@ -87,7 +87,7 @@ export default function SportsHeroMatch({ event, href }: { event: SportsEvent; h
 
   return (
     <Link href={href} prefetch={false} data-hero-match={event.id}
-      aria-label={`${status.label}: ${spoken}. Open match details`}
+      aria-label={`${status.label}: ${spoken}. ${href === '/sports' ? 'Open sports scores' : 'Open match details'}`}
       className="score-hero focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
       <img className="score-hero__bg" src={heroBackdrop(event)} alt="" decoding="async" />
       <span aria-hidden="true" className="score-hero__veil" />

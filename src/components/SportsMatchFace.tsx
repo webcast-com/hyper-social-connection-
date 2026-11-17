@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import SportsRaceSummary from './SportsRaceSummary';
 import { matchProgressPercent } from '@/lib/featured-match';
 import type { SportsEvent } from '@/lib/sports';
@@ -41,6 +41,17 @@ const PILL: Record<MatchFaceTone, { label: string; className: string; pulse: boo
   sample: { label: 'Sample fixture', className: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300', pulse: false },
 };
 
+const noop = () => () => {};
+/**
+ * False on the server and while the page hydrates, true afterwards. A kickoff is
+ * a time of day in the reader's own zone, which the server does not know, so the
+ * card writes it only once it is running in the reader's browser — otherwise the
+ * server's clock and the reader's would disagree about the same text.
+ */
+function useHydrated() {
+  return useSyncExternalStore(noop, () => true, () => false);
+}
+
 function formatKickoff(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
@@ -74,6 +85,7 @@ function Side({ team, dimmed }: { team: SportsEvent['home']; dimmed: boolean }) 
 
 /** The line under the scoreline: the provider's clock, the result, or the kickoff. */
 function StatusLine({ event, tone, countdown }: { event: SportsEvent; tone: MatchFaceTone; countdown?: string | null }) {
+  const hydrated = useHydrated();
   const base = 'mt-0.5 max-w-full break-words text-center text-[10px] font-bold uppercase';
   if (tone === 'featured' || tone === 'live') {
     return <span className={`${base} text-red-600 dark:text-red-400`}>Live{event.detail ? ` · ${event.detail}` : ''}</span>;
@@ -82,6 +94,8 @@ function StatusLine({ event, tone, countdown }: { event: SportsEvent; tone: Matc
   // says what it is, and nothing here dresses it up as a real state.
   if (tone === 'sample') return null;
   if (tone === 'final') return <span className={`${base} text-gray-500 dark:text-gray-400`}>{event.detail || 'FT'}</span>;
+  // Until the reader's zone is known the line keeps its place and says nothing.
+  if (!hydrated) return <span aria-hidden="true" className={`${base} invisible`}>00:00</span>;
   const kickoff = formatKickoff(event.startAt);
   if (!kickoff && !countdown) return null;
   return (
