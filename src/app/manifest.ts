@@ -23,6 +23,14 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
+        // Full bleed, with the badge inside the safe circle, for launchers that
+        // cut the icon to their own shape.
+        src: '/icon-maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
         src: '/apple-touch-icon.png',
         sizes: '180x180',
         type: 'image/png',
