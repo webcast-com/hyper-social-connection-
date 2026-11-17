@@ -66,7 +66,7 @@ export default function Login() {
               <img src="/logo-wordmark-white.svg" alt="Hyper" width={651} height={242} className="h-11 sm:h-14 w-auto select-none" draggable={false} />
             </Link>
             <p className="mt-3 text-blue-100 text-sm sm:text-base leading-relaxed">
-              Connect with friends, share stories, and explore communities.
+              Brings fans, athletes, teams, influencers, and brands into one shared experience — to connect, contribute, and grow together.
             </p>
           </div>
 
