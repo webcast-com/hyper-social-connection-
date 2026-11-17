@@ -49,7 +49,7 @@ export function getSiteMetadata(siteUrl: string): Metadata {
           url: '/og-image.png',
           width: 1200,
           height: 630,
-          alt: 'Hyper — Connect with the world',
+          alt: 'Hyper — The Sports Community Platform for Athletes, Fans, Clubs & Organizers: fans and athletes celebrating beside live score cards',
         },
       ],
     },
