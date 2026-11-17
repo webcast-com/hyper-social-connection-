@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ESPN_LEAGUES, SPORT_EMOJI, SPORT_LABELS } from '../../src/lib/sports-catalog';
 import type { SportsEvent } from '../../src/lib/sports';
 
 const root = join(__dirname, '..', '..');
@@ -61,4 +62,30 @@ test('the server never writes a kickoff time: it does not know the reader’s ti
   assert.match(nairobi, /Everton/);
   assert.match(nairobi, /Liverpool/);
   assert.match(nairobi, /Anfield/);
+});
+
+test('every sport has an emoji of its own, and the two footballs are not confused', () => {
+  assert.deepEqual(Object.keys(SPORT_EMOJI).sort(), Object.keys(SPORT_LABELS).sort());
+  assert.equal(SPORT_EMOJI.football, '⚽');
+  assert.equal(SPORT_EMOJI.basketball, '🏀');
+  assert.equal(SPORT_EMOJI['american-football'], '🏈');
+  assert.equal(SPORT_EMOJI.rugby, '🏉');
+  assert.equal(SPORT_EMOJI.baseball, '⚾');
+  assert.equal(SPORT_EMOJI['ice-hockey'], '🏒');
+  assert.equal(SPORT_EMOJI.tennis, '🎾');
+  const values = Object.values(SPORT_EMOJI);
+  assert.equal(new Set(values).size, values.length, 'no two sports share an emoji');
+});
+
+test('no competition the board covers falls back to the trophy', () => {
+  for (const league of ESPN_LEAGUES) {
+    assert.notEqual(SPORT_EMOJI[league.kind], SPORT_EMOJI.other, `${league.name} has its sport’s emoji`);
+  }
+});
+
+test('a feed match card wears its sport’s emoji instead of one trophy for every game', () => {
+  assert.match(feedCard, /\{SPORT_EMOJI\[event\.sport\] \?\? SPORT_EMOJI\.other\}/);
+  assert.doesNotMatch(feedCard, /<Trophy/);
+  // The words beside it name the sport, so the emoji is hidden from assistive technology.
+  assert.match(feedCard, /aria-hidden="true" data-sport-emoji=\{event\.sport\}/);
 });

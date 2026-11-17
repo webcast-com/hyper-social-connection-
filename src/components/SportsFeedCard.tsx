@@ -10,7 +10,6 @@ import {
   Send,
   Share2,
   Trash2,
-  Trophy,
   X,
 } from 'lucide-react';
 import { matchHref } from '@/lib/espn-match';
@@ -19,7 +18,7 @@ import { winningSide } from '@/lib/featured-match';
 import SportsMatchFace, { MATCH_CARD, MATCH_FRAME, matchFaceTone } from './SportsMatchFace';
 import SportsScoreCard from './SportsScoreCard';
 import { matchPollOptions, type SportsEvent, type SportsPrediction } from '@/lib/sports';
-import { SPORT_LABELS } from '@/lib/sports-catalog';
+import { SPORT_EMOJI, SPORT_LABELS } from '@/lib/sports-catalog';
 import { createPost } from '@/app/actions';
 import { ShareContentSheet } from './ShareSheets';
 
@@ -152,8 +151,10 @@ export default function SportsFeedCard({
       <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-blue-50 px-4 py-2 dark:border-amber-900/50 dark:from-amber-950/40 dark:via-slate-900 dark:to-blue-950/30">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-white shadow-sm">
-              <Trophy className="h-5 w-5" />
+            {/* The sport's own emoji, not one trophy for every game. The words beside
+                it already name the sport, so the emoji is decoration. */}
+            <div aria-hidden="true" data-sport-emoji={event.sport} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-300 text-[22px] leading-none shadow-sm ring-1 ring-black/5 dark:from-slate-700 dark:to-slate-900 dark:ring-white/10">
+              {SPORT_EMOJI[event.sport] ?? SPORT_EMOJI.other}
             </div>
             <div className="min-w-0">
               <Link href="/sports" className="block truncate text-sm font-bold text-gray-900 hover:underline dark:text-white">
