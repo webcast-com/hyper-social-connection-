@@ -5,7 +5,13 @@ import {
   liveFixtureCount, selectMatchCentreRows,
   MATCH_CENTRE_ROWS, MATCH_CENTRE_ROWS_COMPACT,
 } from '@/lib/match-centre';
-import type { SportsBoard } from '@/lib/sports';
+import SportsHeroMatch from './SportsHeroMatch';
+import type { SportsBoard, SportsEvent } from '@/lib/sports';
+
+/** The match page for a fixture the provider reported, otherwise the board: never a dead click. */
+function eventHref(event: SportsEvent) {
+  return event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : '/sports';
+}
 
 /**
  * The homepage's one live-sport surface: the compact mobile summary and the
@@ -16,6 +22,10 @@ import type { SportsBoard } from '@/lib/sports';
  * `shownEventIds` names the fixtures the feed already carries as cards, which
  * the centre deprioritises rather than drops — see `match-centre.ts` for why a
  * quiet day must still fill its rows.
+ *
+ * The first of those fixtures is drawn as a hero, the way the NFL & basketball
+ * dashboard draws its featured game (`SportsHeroMatch`); the rest stay as rows
+ * under it.
  */
 export default function SportsMatchCentre({
   board, compact = false, shownEventIds = [],
@@ -48,9 +58,12 @@ export default function SportsMatchCentre({
           All competitions
         </Link>
       </div>
-      <div className="space-y-1">
-        {rows.map((event) => (
-          <Link key={event.id} prefetch={false} href={event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : '/sports'} className="block min-w-0 rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+      <div className="score-hero-wrap">
+        <SportsHeroMatch event={rows[0]} href={eventHref(rows[0])} />
+      </div>
+      {rows.length > 1 && <div className="mt-2 space-y-1">
+        {rows.slice(1).map((event) => (
+          <Link key={event.id} prefetch={false} href={eventHref(event)} className="block min-w-0 rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
             <div className="flex min-w-0 items-start justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400 mb-1">
               <span title={event.leagueName} className="min-w-0 flex-1 break-words">{event.leagueName}</span>
               <span className="max-w-[45%] break-words text-right text-[10px] font-semibold">
@@ -66,7 +79,7 @@ export default function SportsMatchCentre({
             </div>}
           </Link>
         ))}
-      </div>
+      </div>}
     </section>
   );
 }

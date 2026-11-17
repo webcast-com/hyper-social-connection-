@@ -40,6 +40,8 @@ export type ScoreCardView = {
   logos: string[];
   broadcast: string;
   competition: string;
+  /** The photograph behind the card: its address, and whether it is hidden from assistive technology. */
+  backdrop: { src: string | null; hidden: boolean };
   text: string;
 };
 
@@ -69,6 +71,10 @@ function viewOf(container: any): ScoreCardView {
     logos: all('[data-team-logo]').map((image: any) => image.getAttribute('src')),
     broadcast: card?.querySelector('[data-broadcast]')?.textContent.trim() ?? '',
     competition: chip?.textContent.trim() ?? '',
+    backdrop: {
+      src: card?.querySelector('[data-score-backdrop]')?.getAttribute('src') ?? null,
+      hidden: card?.querySelector('[data-score-backdrop]')?.getAttribute('aria-hidden') === 'true',
+    },
     text: (card?.textContent ?? '').replace(/\s+/g, ' ').trim(),
   };
 }

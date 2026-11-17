@@ -10,7 +10,7 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
-import { ArrowRight, Compass, Hash, MessageCircle, Users, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Compass, Users, Sparkles, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
@@ -560,43 +560,8 @@ export default async function Home() {
 
       {/* Main Feed — first on mobile */}
       <div className="min-w-0 order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+        <h1 className="sr-only">Hyper — The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers</h1>
         <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
-          <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-fuchsia-600 px-4 py-4 text-white">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-100">Quick access</p>
-            <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-              <div className="min-w-[12rem] flex-1">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight">Catch up fast</h1>
-                <p className="text-xs text-blue-100">Scores, trends and your community.</p>
-              </div>
-              <Link href="/sports" className="shrink-0 rounded-2xl bg-white/20 px-3 py-2 text-xs font-bold backdrop-blur hover:bg-white/30">
-                Sports scores
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-1.5 px-3 py-3">
-            <Link href="/sports" className="rounded-2xl bg-amber-50 p-2 text-center text-amber-700 ring-1 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60">
-              <Trophy className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Sports</span>
-            </Link>
-            <a href="#trending-now" className="rounded-2xl bg-orange-50 p-2 text-center text-orange-700 ring-1 ring-orange-100 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-900/60">
-              <Hash className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Trending</span>
-            </a>
-            <Link href="/groups" className="rounded-2xl bg-violet-50 p-2 text-center text-violet-700 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900/60">
-              <Users className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Groups</span>
-            </Link>
-            <a href="#people-you-may-know" className="rounded-2xl bg-fuchsia-50 p-2 text-center text-fuchsia-700 ring-1 ring-fuchsia-100 dark:bg-fuchsia-950/40 dark:text-fuchsia-300 dark:ring-fuchsia-900/60">
-              <Sparkles className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">People</span>
-            </a>
-            <a href="#contacts" className="rounded-2xl bg-emerald-50 p-2 text-center text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60">
-              <MessageCircle className="mx-auto h-5 w-5" />
-              <span className="mt-1 block text-[9px] font-extrabold sm:text-[10px]">Contacts</span>
-            </a>
-          </div>
-
           <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
 
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
@@ -633,7 +598,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div id="trending-now" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+          <div id="trending-now" className="scroll-mt-16 border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Trending now</h2>
               <Link href="/search" className="flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400">
@@ -653,7 +618,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div id="people-you-may-know" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+          <div id="people-you-may-know" className="scroll-mt-16 border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">People you may know</h2>
               <Link href="/discover" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
@@ -673,7 +638,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div id="contacts" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
+          <div id="contacts" className="scroll-mt-16 border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">Contacts</h2>
               {/* A visitor who is not signed in has no inbox, and `/messages` is

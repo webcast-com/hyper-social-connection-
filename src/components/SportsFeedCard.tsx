@@ -5,22 +5,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BarChart2,
-  CalendarClock,
-  MapPin,
   MessageCircle,
   Radio,
   Send,
   Share2,
   Trash2,
-  Trophy,
   X,
 } from 'lucide-react';
 import { matchHref } from '@/lib/espn-match';
+import { matchLine, matchPostText, matchStatusLabel } from '@/lib/match-post';
 import { scoreCardLabel, scoreCardTarget, usesScoreCard } from '@/lib/score-card';
-import SportsRaceSummary from './SportsRaceSummary';
+import { winningSide } from '@/lib/featured-match';
+import SportsMatchFace, { MATCH_CARD, MATCH_FRAME, matchFaceTone } from './SportsMatchFace';
 import SportsScoreCard from './SportsScoreCard';
 import { matchPollOptions, type SportsEvent, type SportsPrediction } from '@/lib/sports';
-import { SPORT_LABELS } from '@/lib/sports-catalog';
+import { SPORT_EMOJI, SPORT_LABELS } from '@/lib/sports-catalog';
 import { createPost } from '@/app/actions';
 import { ShareContentSheet } from './ShareSheets';
 
@@ -30,48 +29,6 @@ function statusStyles(status: SportsEvent['status']) {
   if (status === 'live') return 'bg-red-500 text-white shadow-red-500/25';
   if (status === 'final') return 'bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900';
   return 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300';
-}
-
-function statusLabel(event: SportsEvent) {
-  if (event.source === 'demo') return 'Sample fixture';
-  if (event.status === 'live') return `LIVE ${event.detail || ''}`.trim();
-  if (event.status === 'final') return event.detail || 'Final';
-  return event.detail || 'Upcoming';
-}
-
-function matchLine(event: SportsEvent) {
-  if (event.race) return event.race.title;
-  const score = event.status === 'upcoming'
-    ? 'vs'
-    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
-  return `${event.away.short || event.away.name} ${score} ${event.home.short || event.home.name}`;
-}
-
-function matchPostText(event: SportsEvent, note?: string, prediction?: SportsPrediction | null) {
-  const parts = [
-    `🏆 ${matchLine(event)}`,
-    `${event.leagueName} · ${statusLabel(event)}`,
-    prediction ? `🔮 Prediction: ${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}` : '',
-    event.venue ? `📍 ${event.venue}` : '',
-    note?.trim() ? `\n${note.trim()}` : '',
-    '\n#Sports #MatchDay',
-  ].filter(Boolean);
-  return parts.join('\n');
-}
-
-function TeamBadge({ team, align = 'left' }: { team: SportsEvent['home']; align?: 'left' | 'right' }) {
-  return (
-    <div className={`flex min-w-0 flex-1 flex-col items-center gap-1.5 sm:flex-row sm:gap-2 ${align === 'right' ? 'sm:flex-row-reverse sm:text-right' : ''}`}>
-      {team.logo ? (
-        <img src={team.logo} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white object-contain p-1 ring-1 ring-gray-200 dark:bg-slate-900 dark:ring-slate-700" />
-      ) : (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-black text-white shadow-sm">
-          {(team.short || team.name).slice(0, 2).toUpperCase()}
-        </div>
-      )}
-      <span title={team.name} className="min-w-0 break-words text-center text-xs font-black text-gray-900 sm:text-sm dark:text-white">{team.short || team.name}</span>
-    </div>
-  );
 }
 
 function modeTitle(mode: ActionMode) {
@@ -97,18 +54,26 @@ export default function SportsFeedCard({
   const [isPending, startTransition] = useTransition();
 
   const isSignedIn = !!currentUser?.id;
-  const score = event.status === 'upcoming'
-    ? 'vs'
-    : `${event.away.score ?? '–'}–${event.home.score ?? '–'}`;
   // Basketball and American football are drawn as the NFL & basketball
-  // dashboard's score card, which carries its own competition, clock and
-  // broadcaster, so the league row, the kickoff row and the separate match link
-  // are not repeated beside it: the card itself is the one destination.
+  // dashboard's score card. Football and every other fixture are drawn as the
+  // sports board's own match card (`SportsMatchFace` in its frame), so a match
+  // looks the same in the feed as it does on /sports. Either card carries its
+  // own competition, status, clock and venue, so none of them is repeated
+  // beside it, and the card itself is the one destination.
   const scoreCard = usesScoreCard(event);
-  const bodyHref = scoreCard ? scoreCardTarget(event) : '/sports';
+  // The board's rule for which fixtures have a match page (`SportsEventCard`).
+  const matchPage = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
+    ? matchHref(event.details) : null;
+  const bodyHref = scoreCard ? scoreCardTarget(event) : matchPage ?? '/sports';
+  const showScore = event.status !== 'upcoming';
+  const winner = winningSide(event);
   const predictionLabel = prediction
     ? `${prediction.prediction}${prediction.winOdds ? ` @ ${prediction.winOdds}` : ''}`
     : null;
+  // The board card's own words for its link, plus the prediction the link also wraps.
+  const matchPageLabel = matchPage
+    ? `Open ${event.away.name}${showScore ? ` (${event.away.score ?? 'not reported'})` : ''} vs ${event.home.name}${showScore ? ` (${event.home.score ?? 'not reported'})` : ''} match details${predictionLabel ? `. Prediction: ${predictionLabel}` : ''}`
+    : undefined;
 
   const placeholder = useMemo(() => {
     if (mode === 'comment') return 'Add your take on this match...';
@@ -160,8 +125,10 @@ export default function SportsFeedCard({
       <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-blue-50 px-4 py-2 dark:border-amber-900/50 dark:from-amber-950/40 dark:via-slate-900 dark:to-blue-950/30">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-white shadow-sm">
-              <Trophy className="h-5 w-5" />
+            {/* The sport's own emoji, not one trophy for every game. The words beside
+                it already name the sport, so the emoji is decoration. */}
+            <div aria-hidden="true" data-sport-emoji={event.sport} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-300 text-[22px] leading-none shadow-sm ring-1 ring-black/5 dark:from-slate-700 dark:to-slate-900 dark:ring-white/10">
+              {SPORT_EMOJI[event.sport] ?? SPORT_EMOJI.other}
             </div>
             <div className="min-w-0">
               <Link href="/sports" className="block truncate text-sm font-bold text-gray-900 hover:underline dark:text-white">
@@ -175,57 +142,35 @@ export default function SportsFeedCard({
               </div>
             </div>
           </div>
-          <span className={`max-w-full break-words rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyles(event.source === 'demo' ? 'upcoming' : event.status)}`}>
-            {event.status === 'live' && event.source !== 'demo' && <Radio className="mr-1 inline h-3 w-3 animate-pulse" />}
-            {statusLabel(event)}
-          </span>
+          {/* The board's match card says its own status, so the header does not say it twice. */}
+          {scoreCard && (
+            <span className={`max-w-full break-words rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyles(event.source === 'demo' ? 'upcoming' : event.status)}`}>
+              {event.status === 'live' && event.source !== 'demo' && <Radio className="mr-1 inline h-3 w-3 animate-pulse" />}
+              {matchStatusLabel(event)}
+            </span>
+          )}
         </div>
       </div>
 
       <Link
         href={bodyHref}
         prefetch={bodyHref === '/sports' ? undefined : false}
-        aria-label={scoreCard ? scoreCardLabel(event) : undefined}
+        aria-label={scoreCard ? scoreCardLabel(event) : matchPageLabel}
         className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40"
       >
-        {scoreCard ? <SportsScoreCard event={event} /> : <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-            <span className="min-w-0 break-words">{event.leagueName}</span>
-            <span suppressHydrationWarning>{new Date(event.startAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+        {scoreCard ? <SportsScoreCard event={event} /> : (
+          <div data-match-card className={MATCH_CARD}>
+            <div className={MATCH_FRAME}>
+              <SportsMatchFace event={event} tone={matchFaceTone(event)} linked={!!matchPage}
+                loser={winner ? (winner === 'home' ? 'away' : 'home') : null} />
+            </div>
           </div>
-
-          <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-100 dark:bg-slate-900/60 dark:ring-slate-700/70">
-            {event.race ? <SportsRaceSummary race={event.race} /> : <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-              <TeamBadge team={event.away} />
-              <div className="rounded-2xl bg-white px-3 py-2 text-center text-lg font-black tabular-nums text-gray-900 shadow-sm ring-1 ring-gray-200 dark:bg-slate-800 dark:text-white dark:ring-slate-700">
-                {score}
-              </div>
-              <TeamBadge team={event.home} align="right" />
-            </div>}
-          </div>
-
-          {event.source === 'espn' && !event.race && event.details && <Link href={matchHref(event.details)} prefetch={false} className="my-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
-        </>}
+        )}
 
         {predictionLabel && (
           <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300">
             🔮 Prediction: {predictionLabel}
             {prediction?.competition && <span className="font-semibold opacity-75"> · {prediction.competition}</span>}
-          </div>
-        )}
-
-        {!scoreCard && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-            <span className="inline-flex items-center gap-1">
-              <CalendarClock className="h-3.5 w-3.5" />
-              <span suppressHydrationWarning>{new Date(event.startAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
-            </span>
-            {event.venue && (
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{event.venue}</span>
-              </span>
-            )}
           </div>
         )}
       </Link>
@@ -348,7 +293,7 @@ export default function SportsFeedCard({
           subject={{
             noun: 'match',
             title: matchLine(event),
-            subtitle: `${event.leagueName} · ${statusLabel(event)}`,
+            subtitle: `${event.leagueName} · ${matchStatusLabel(event)}`,
             image: event.home.logo || event.away.logo || null,
             link: event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : bodyHref,
             text: `${matchLine(event)} — ${event.leagueName} on Hyper`,

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import SiteFooter from '@/components/SiteFooter';
+import LaunchScreen, { LAUNCH_SCREEN_SCRIPT } from '@/components/LaunchScreen';
 import { db, hasDatabase } from '@/lib/prisma';
 import { getViewer } from '@/lib/viewer';
 import { getSiteUrl } from '@/lib/site-url';
@@ -34,6 +35,8 @@ function DocumentHead() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={GOOGLE_FONTS_STYLESHEET} />
       <meta name="fo-verify" content="14ce23b7-528a-4490-88f7-5f3043e433e6" />
+      {/* Before the first paint: an installed app opens on the launch screen. */}
+      <script dangerouslySetInnerHTML={{ __html: LAUNCH_SCREEN_SCRIPT }} />
     </head>
   );
 }
@@ -57,6 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className="dark" suppressHydrationWarning>
       <DocumentHead />
       <body className="font-sans app-page-bg bg-gray-100 dark:bg-gray-900 min-h-screen" suppressHydrationWarning>
+        <LaunchScreen />
         <Navbar user={user} unreadCount={unread.length} isDemo={!hasDatabase} />
         {/* Shared safe-area-aware spacing keeps content above the mobile tabs. */}
         <main className="app-main app-surface max-w-7xl mx-auto">{children}</main>

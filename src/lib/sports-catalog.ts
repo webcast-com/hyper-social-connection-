@@ -184,4 +184,14 @@ export const SPORT_LABELS: Record<SportKind, string> = {
   motorsport: 'Motorsport', tennis: 'Tennis', rugby: 'Rugby',
   baseball: 'Baseball', 'ice-hockey': 'Ice hockey', other: 'Other',
 };
+/**
+ * The emoji a sport is recognised by: its ball, puck or car. A match card wears
+ * it so a reader can tell the sport before reading a word. `other` has no ball
+ * of its own and keeps the trophy.
+ */
+export const SPORT_EMOJI: Record<SportKind, string> = {
+  football: '⚽', basketball: '🏀', 'american-football': '🏈',
+  motorsport: '🏎️', tennis: '🎾', rugby: '🏉',
+  baseball: '⚾', 'ice-hockey': '🏒', other: '🏆',
+};
 export const AVAILABLE_SPORTS = [...new Set(SPORTS_COMPETITIONS.map((league) => league.kind))];

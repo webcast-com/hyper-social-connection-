@@ -253,3 +253,24 @@ test('a mounted finished fixture reads Final, in the neutral tone', async () => 
   assert.deepEqual(mount.rows.map((row) => row.score), ['112', '108']);
   await mount.unmount();
 });
+
+test('the mounted card sits on the dashboard photograph of its own sport', async () => {
+  const basketball = await mountScoreCard(event());
+  assert.deepEqual(basketball.backdrop, { src: '/sports/hero-basketball.webp', hidden: true });
+  await basketball.unmount();
+
+  const football = await mountScoreCard(nfl());
+  assert.deepEqual(football.backdrop, { src: '/sports/hero-football.webp', hidden: true });
+  await football.unmount();
+});
+
+test('the photograph is decoration: it is never counted as a team logo and adds no words', async () => {
+  const mount = await mountScoreCard(nfl({
+    home: { name: 'Kansas City Chiefs', short: 'KC', score: null, logo: null },
+    away: { name: 'Buffalo Bills', short: 'BUF', score: null, logo: null },
+  }));
+  assert.deepEqual(mount.logos, [], 'no logo was reported, so none is listed');
+  assert.deepEqual(mount.crests, ['KC', 'BUF']);
+  assert.equal(mount.card.querySelector('[data-score-backdrop]').getAttribute('alt'), '');
+  await mount.unmount();
+});

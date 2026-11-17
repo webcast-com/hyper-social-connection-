@@ -12,7 +12,12 @@ export const metadata = getPageMetadata({
 
 export default function AboutPage() {
   return <InformationPage title="About Hyper" intro="A place to connect with people, share what matters, and discover communities and conversations.">
-    <section><h2>What is Hyper?</h2><p>Hyper is a social platform at hyper.co.ke. It brings profiles, posts, community groups, messaging and sports discussions together in one place.</p></section>
+    <section>
+      <h2>What is Hyper?</h2>
+      <p className="mb-3 text-base font-bold leading-7 text-gray-900 dark:text-white">The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers</p>
+      <p className="mb-3">Hyper brings fans, athletes, teams, influencers, and brands into one shared experience — to connect, contribute, and grow together.</p>
+      <p>Hyper is a social platform at hyper.co.ke. It brings profiles, posts, community groups, messaging and sports discussions together in one place.</p>
+    </section>
     <section><h2>Explore the platform</h2><ul>
       <li><Link href="/discover">Discover people</Link>, follow profiles and find conversations that interest you.</li>
       <li>Share posts, photos, videos and stories, and join discussions through comments and reactions.</li>
