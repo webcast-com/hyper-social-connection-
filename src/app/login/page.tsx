@@ -56,34 +56,45 @@ export default function Login() {
       <div className="w-full max-w-4xl">
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden grid md:grid-cols-2">
         {/* ── Brand panel ─────────────────────────────────────────────── */}
-        <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white p-8 sm:p-10 flex flex-col justify-between overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/10" aria-hidden />
+        <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white flex flex-col overflow-hidden">
+          {/* Decorative circle */}
           <div className="absolute -bottom-20 -left-10 w-56 h-56 rounded-full bg-white/10" aria-hidden />
 
-          <div className="relative">
-            <Link href="/" className="inline-block hover:scale-105 transition-transform">
-              <img src="/logo-wordmark-white.svg" alt="Hyper" width={651} height={242} className="h-11 sm:h-14 w-auto select-none" draggable={false} />
+          {/* The community-and-scores artwork from the share image: the fans and
+              a live score card, fading into the panel below. The picture's
+              people are on its right, so the logo has the quiet left side. */}
+          <div className="relative h-40 shrink-0 sm:h-60">
+            <div
+              className="absolute inset-0 bg-no-repeat bg-[length:150%_auto] bg-[position:100%_40%] [mask-image:linear-gradient(to_bottom,black_66%,transparent)]"
+              style={{ backgroundImage: 'url(/hyper-community.webp)' }}
+              aria-hidden
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-800/95 via-blue-700/35 to-transparent" aria-hidden />
+            <Link href="/" className="absolute left-8 top-8 inline-block hover:scale-105 transition-transform sm:left-10 sm:top-10">
+              <img src="/logo-wordmark-white.svg" alt="Hyper" width={651} height={242} className="h-11 sm:h-14 w-auto select-none drop-shadow-md" draggable={false} />
             </Link>
-            <p className="mt-3 text-blue-100 text-sm sm:text-base leading-relaxed">
-              Brings fans, athletes, teams, influencers, and brands into one shared experience — to connect, contribute, and grow together.
-            </p>
           </div>
 
-          <ul className="relative mt-8 space-y-4">
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 text-sm">
-                <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5" />
-                </span>
-                <span className="text-blue-50">{text}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="relative flex flex-1 flex-col justify-between px-8 pb-8 pt-1 sm:px-10 sm:pb-10">
+            <p className="text-blue-100 text-sm sm:text-base leading-relaxed">
+              Brings fans, athletes, teams, influencers, and brands into one shared experience — to connect, contribute, and grow together.
+            </p>
 
-          <p className="relative mt-8 text-xs text-blue-200/80">
-            Made for people who post, chat and vibe. 💙
-          </p>
+            <ul className="mt-6 space-y-4 sm:mt-8">
+              {FEATURES.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3 text-sm">
+                  <span className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <span className="text-blue-50">{text}</span>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-6 text-xs text-blue-200/80 sm:mt-8">
+              Made for people who post, chat and vibe. 💙
+            </p>
+          </div>
         </div>
 
         {/* ── Form panel ──────────────────────────────────────────────── */}
