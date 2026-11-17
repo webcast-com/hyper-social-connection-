@@ -6,13 +6,18 @@ import { HERO_BACKDROPS, heroBackdrop, heroFootnote, heroStatus } from '../../sr
 
 const root = join(__dirname, '..', '..');
 
-test('each sport gets the dashboard photograph that shows it', () => {
+test('each sport with a photograph of its own gets that photograph', () => {
   assert.equal(heroBackdrop({ sport: 'basketball' }), '/sports/hero-basketball.webp');
   assert.equal(heroBackdrop({ sport: 'american-football' }), '/sports/hero-football.webp');
+  assert.equal(heroBackdrop({ sport: 'football' }), '/sports/hero-soccer.webp');
 });
 
-test('association football and every other sport get the stands, never the quarterback', () => {
-  for (const sport of ['football', 'rugby', 'tennis', 'motorsport', 'baseball', 'ice-hockey', 'other'] as const) {
+test('association football is never drawn over the American football quarterback', () => {
+  assert.notEqual(heroBackdrop({ sport: 'football' }), heroBackdrop({ sport: 'american-football' }));
+});
+
+test('a sport without a photograph gets the stands, not a player from another sport', () => {
+  for (const sport of ['rugby', 'tennis', 'motorsport', 'baseball', 'ice-hockey', 'other'] as const) {
     assert.equal(heroBackdrop({ sport }), '/sports/hero-stadium.webp', sport);
   }
 });

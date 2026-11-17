@@ -12,10 +12,14 @@
 import type { SportsEvent } from './sports';
 import type { ClockTone } from './score-card';
 
-/** The dashboard's two hero photographs, plus a crowd-only crop of the second. */
+/**
+ * The dashboard's two hero photographs, a third made for association football in
+ * the same style, and a crowd-only crop of the dashboard's stadium for the rest.
+ */
 export const HERO_BACKDROPS = {
   basketball: '/sports/hero-basketball.webp',
   'american-football': '/sports/hero-football.webp',
+  football: '/sports/hero-soccer.webp',
   stadium: '/sports/hero-stadium.webp',
 } as const;
 
@@ -23,13 +27,16 @@ export const HERO_BACKDROPS = {
  * The photograph behind a fixture.
  *
  * The dashboard has one picture per sport it covers: a basketball player and an
- * American football quarterback. Every other sport — association football
- * first of all — gets the stands of that second picture without the player in
- * it, so a Premier League match is never drawn over a quarterback.
+ * American football quarterback. Association football — most of this board —
+ * has its own, so a Premier League match is drawn over a football pitch and
+ * never over a quarterback. Every other sport gets the stands of the dashboard's
+ * stadium without a player in them, because a picture of the wrong sport is
+ * worse than a picture of none.
  */
 export function heroBackdrop(event: Pick<SportsEvent, 'sport'>): string {
   if (event.sport === 'basketball') return HERO_BACKDROPS.basketball;
   if (event.sport === 'american-football') return HERO_BACKDROPS['american-football'];
+  if (event.sport === 'football') return HERO_BACKDROPS.football;
   return HERO_BACKDROPS.stadium;
 }
 
