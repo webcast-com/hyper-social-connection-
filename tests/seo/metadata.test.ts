@@ -545,6 +545,9 @@ test('About and Privacy render readable guest content and shared footer links wi
     const aboutHtml = renderToStaticMarkup(createElement(about.default));
     const privacyHtml = renderToStaticMarkup(createElement(privacy.default));
     assert.match(aboutHtml, /<h1[^>]*>About Hyper<\/h1>/);
+    // The page says what Hyper is in the site's own words.
+    assert.ok(aboutHtml.includes('The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers'));
+    assert.ok(aboutHtml.includes('Hyper brings fans, athletes, teams, influencers, and brands into one shared experience — to connect, contribute, and grow together.'));
     for (const term of ['football', 'NBA', 'NFL', 'rugby']) {
       assert.match(aboutHtml, new RegExp(term, 'i'));
       assert.match(about.metadata.description!, new RegExp(term, 'i'));
