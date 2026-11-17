@@ -6,6 +6,7 @@ import Link from 'next/link';
 import CreateGroupButton from '@/components/CreateGroupButton';
 import { Users, Check, Compass } from 'lucide-react';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
+import QuickAccess from '@/components/QuickAccess';
 import { getMyGroupInvites } from '@/app/invite-actions';
 
 export const metadata: Metadata = getPageMetadata({
@@ -107,6 +108,8 @@ export default async function GroupsPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 mt-6">
+      <QuickAccess groupsHref="#group-list" />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
           <Users className="text-blue-600 shrink-0" /> Groups
@@ -124,6 +127,9 @@ export default async function GroupsPage() {
       </div>
 
       {myInvites.length > 0 && <GroupInviteInbox invites={myInvites as any} />}
+
+      {/* Where the quick-access "Groups" shortcut lands; clear of the sticky header. */}
+      <div id="group-list" className="scroll-mt-24" />
 
       {allGroups.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-12 text-center">
