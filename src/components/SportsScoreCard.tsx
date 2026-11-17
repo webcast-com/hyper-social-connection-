@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BarChart2, Clock } from 'lucide-react';
+import { heroBackdrop } from '@/lib/hero-match';
 import {
   broadcastLabel, leagueAccent, scoreCardClock, scoreCell,
   type ClockTone,
@@ -63,6 +64,11 @@ const CLOCK_TONES: Record<ClockTone, string> = {
  * decided by `score-card.ts`, so what the card claims — a live clock, a score, a
  * broadcaster — is the provider's and never this site's invention.
  *
+ * Behind it is the dashboard's own photograph for the sport — the basketball
+ * player or the American football quarterback of its hero — under a veil dark
+ * enough for every row to stay readable. The picture is decoration: it is hidden
+ * from assistive technology and nothing in the card depends on it loading.
+ *
  * Deliberately no router and no link of its own: the feed card wraps it, so the
  * whole card is one destination and this stays mountable in tests.
  */
@@ -74,8 +80,18 @@ export default function SportsScoreCard({ event }: { event: SportsEvent }) {
     <article
       data-score-card
       data-clock-tone={clock.tone}
-      className="grid gap-2.5 rounded-2xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3.5 transition-colors hover:border-blue-200 dark:border-gray-700 dark:from-slate-800/70 dark:to-gray-800 dark:hover:border-blue-900"
+      className="relative isolate grid gap-2.5 overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3.5 transition-colors hover:border-blue-200 dark:border-gray-700 dark:from-slate-800/70 dark:to-gray-800 dark:hover:border-blue-900"
     >
+      <img
+        src={heroBackdrop(event)}
+        alt=""
+        aria-hidden="true"
+        data-score-backdrop
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_25%]"
+      />
+      <span aria-hidden="true" className="score-card-veil pointer-events-none absolute inset-0 -z-10" />
       <div className="flex items-center justify-center gap-4 py-1">
         <TeamLogo src={event.home.logo} code={event.home.short?.trim() || '—'} />
         <span aria-hidden="true" className="text-[13px] font-semibold tracking-[1.5px] text-gray-400 dark:text-gray-500">V/S</span>

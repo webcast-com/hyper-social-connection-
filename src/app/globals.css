@@ -641,3 +641,10 @@ html[data-launch] .launch-screen {
     transition: none;
   }
 }
+
+/* The veil over the photograph behind a feed score card (SportsScoreCard):
+   lighter where the crests are, darker under the rows of text. */
+.score-card-veil {
+  background:
+    linear-gradient(180deg, rgba(8, 13, 24, 0.5) 0%, rgba(8, 13, 24, 0.72) 38%, rgba(8, 13, 24, 0.9) 100%);
+}
