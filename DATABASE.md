@@ -176,6 +176,16 @@ only the lockdown has been run and checked (a table created afterwards was
 not granted to `anon` or `authenticated`); the migrations and the copy first
 run there through the workflows.
 
+### Is it wired?
+
+Actions → "database-status" → "Run workflow". It changes nothing and reports,
+on the run's summary page: what the live site says about its database
+(`/api/health`), whether the previous database and the Supabase database
+answer, how many accounts and posts each holds, whether the Supabase Data API
+is closed, and what is left to do. A missing or mistyped secret is named
+there. From a terminal: `npm run db:status` with `SUPABASE_DATABASE_URL` (and
+optionally `SOURCE_DATABASE_URL`) in the environment.
+
 ### Moving existing data
 
 `scripts/copy-database.ts` copies every row of every table from one database

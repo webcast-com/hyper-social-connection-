@@ -20,6 +20,7 @@
     "db:lockdown": "tsx scripts/supabase-lockdown.ts",
     "db:bootstrap": "tsx scripts/bootstrap-app-tables.ts",
     "db:copy": "tsx scripts/copy-database.ts",
+    "db:status": "tsx scripts/database-status.ts",
     "db:local": "bash scripts/dev-db.sh start",
     "db:local:stop": "bash scripts/dev-db.sh stop",
     "db:local:status": "bash scripts/dev-db.sh status",
