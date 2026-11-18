@@ -177,9 +177,12 @@ script, the data copy and the whole app were run against a local PostgreSQL
 set up to behave like Supabase (a certificate from a private authority, TLS-only access,
 `anon` / `authenticated` roles, and a transaction-mode pooler that moves every
 transaction to a different server connection). On the real Supabase project
-only the lockdown has been run and checked (a table created afterwards was
-not granted to `anon` or `authenticated`); the migrations and the copy first
-run there through the workflows.
+the lockdown and the schema snapshot have been applied through the SQL API and
+checked there: tables, columns, constraints, indexes, triggers, sequences and
+Prisma's marker are the same as on a database set up by `db:migrate` and
+`db:bootstrap`, no table is granted to `anon` or `authenticated`, and a trial
+insert of a user, a post and a like worked and was rolled back. The app itself
+and the data copy have not yet run against it.
 
 ### Is it wired?
 
