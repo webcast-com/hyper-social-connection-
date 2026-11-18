@@ -79,6 +79,13 @@ jobs:
         run: |
           npm run db:migrate
           npm run db:bootstrap
+      # Before any row arrives: a new Supabase project grants every new table
+      # to its public API roles.
+      - name: Close the Supabase Data API to the tables
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DATABASE_CA_CERT: ${{ secrets.SUPABASE_CA_CERT }}
+        run: npm run db:lockdown
       - name: Compare or copy (mode ${{ inputs.mode }})
         env:
           SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
@@ -94,11 +101,6 @@ jobs:
           if [ -f copy-report.txt ]; then
             { echo '```'; cat copy-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Close the Supabase Data API to the tables
-        env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-          DATABASE_CA_CERT: ${{ secrets.SUPABASE_CA_CERT }}
-        run: npm run db:lockdown
       - name: Check the database against the schema
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}

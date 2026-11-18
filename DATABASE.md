@@ -154,7 +154,8 @@ over the `.env` files in the repository.
 
 **Keep the tables off Supabase's Data API.** Supabase serves the `public`
 schema over HTTP to anyone holding the project's public key, for every table
-that key's role has been granted. This app's `users` table holds password
+that key's role has been granted, and a new project grants every new table
+to those roles unless told otherwise. This app's `users` table holds password
 hashes, so `npm run db:lockdown` (`prisma/supabase-lockdown.sql`) removes
 those grants, for existing tables and for ones created later. It does not
 turn on row level security, because Prisma would then report every table as
@@ -170,8 +171,10 @@ What has and has not been tested: the TLS rules, the migrations, the lockdown
 script, the data copy and the whole app were run against a local PostgreSQL
 set up to behave like Supabase (a certificate from a private authority, TLS-only access,
 `anon` / `authenticated` roles, and a transaction-mode pooler that moves every
-transaction to a different server connection). They have not been run against
-a real Supabase project.
+transaction to a different server connection). On the real Supabase project
+only the lockdown has been run and checked (a table created afterwards was
+not granted to `anon` or `authenticated`); the migrations and the copy first
+run there through the workflows.
 
 ### Moving existing data
 
