@@ -162,17 +162,80 @@ changed; Supabase's advisor may still list the tables under "RLS disabled",
 which has no effect once the grants are gone. You can also switch the Data API
 off altogether in the project's API settings, since nothing here uses it.
 
-**Existing data is not moved.** A new Supabase project starts empty: accounts,
-posts and messages in the previous database stay there until they are copied
-(`pg_dump --data-only` from the old database, `psql` into the new one, after
-step 3).
+**Existing data is not moved by the steps above.** A new Supabase project
+starts empty. To bring accounts, posts and messages along, see "Moving
+existing data" below, and do it between steps 3 and 4.
 
 What has and has not been tested: the TLS rules, the migrations, the lockdown
-script and the whole app were run against a local PostgreSQL set up to behave
-like Supabase (a certificate from a private authority, TLS-only access,
+script, the data copy and the whole app were run against a local PostgreSQL
+set up to behave like Supabase (a certificate from a private authority, TLS-only access,
 `anon` / `authenticated` roles, and a transaction-mode pooler that moves every
 transaction to a different server connection). They have not been run against
 a real Supabase project.
+
+### Moving existing data
+
+`scripts/copy-database.ts` copies every row of every table from one database
+into another: accounts (with their password hashes, so people sign in with
+the password they have), sessions (so they stay signed in), posts, comments,
+likes, messages, groups, polls, notifications, sports picks.
+
+Run it from GitHub: Actions → "database-copy" → "Run workflow" on `main`.
+
+| Mode | What it does |
+| --- | --- |
+| `check` | Creates the Supabase tables if they are missing, then lists each table with its row count on both sides and anything that would stop a copy. Copies nothing. |
+| `copy` | Copies everything. Refuses if the Supabase database already holds rows. |
+| `replace` | Deletes the rows in the Supabase database, then copies. |
+
+It needs the secret `SUPABASE_DATABASE_URL` (see step 3 above). The database
+it reads from is the secret `SOURCE_DATABASE_URL` when that is set: use the
+`DATABASE_URL` the live site has today in Vercel. Without that secret it reads
+the database named in this repository's `.env.local` / `.env`; the first lines
+of the run say which database that is, so check them against what you expect
+(the user count is the quickest test).
+
+The order that loses nothing:
+
+1. Run `check`. Read the table: the source column should show your real
+   numbers.
+2. Run `copy`.
+3. Open a Vercel preview or a local run pointed at Supabase if you want to
+   look before switching.
+4. At a quiet moment run `replace`, and straight after it change
+   `DATABASE_URL` in Vercel and redeploy (step 4 of "Using Supabase").
+   Anything posted between the last copy and the redeploy stays in the old
+   database, which is why the second copy is run immediately before.
+5. Keep the old database until you are satisfied; the copy never changes it.
+
+What the script guarantees, and how (each of these is tested):
+
+- The old database is only read, in one read-only snapshot.
+- The copy is one transaction: it arrives whole or not at all. A run that
+  fails halfway leaves the Supabase database exactly as it was.
+- Values are transferred as PostgreSQL's own text, so timestamps keep their
+  microseconds and numbers are not rounded.
+- Like and comment counters are copied as stored; the triggers that maintain
+  them are off while rows are inserted, then back on.
+- Id counters continue after the highest id the old database ever handed out,
+  so new posts and accounts do not collide with copied ones.
+- A column that holds data in the old database and has no counterpart in the
+  new one stops the run before anything is written.
+
+Uploaded photos and videos are not in the database (it stores their address);
+they stay in the storage bucket the `S3_*` variables point to and are not
+affected. Keep those variables as they are.
+
+From a terminal the same thing is:
+
+```bash
+export TARGET_DATABASE_URL='…supabase session pooler string…'
+export SOURCE_DATABASE_URL='…the current database…'
+DATABASE_URL="$TARGET_DATABASE_URL" npm run db:migrate
+DATABASE_URL="$TARGET_DATABASE_URL" npm run db:bootstrap   # the tables the app creates itself
+npm run db:copy -- check
+npm run db:copy -- copy
+```
 
 ### Using Prisma Postgres
 

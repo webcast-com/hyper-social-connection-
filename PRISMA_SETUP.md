@@ -18,6 +18,7 @@ connection pool.
 | `module.ts`, `service.ts` | What `prisma deploy` and `prisma dev` deploy (see "Deploying") |
 | `src/prisma/tls.ts` | TLS for a `DATABASE_URL` connection (`DATABASE_SSL`, `DATABASE_CA_CERT`), shared by the app and the `prisma db …` commands |
 | `.github/workflows/database-migrate.yml` | Applies the migrations to the Supabase database when the schema changes on `main` (see [DATABASE.md](DATABASE.md), "Using Supabase") |
+| `.github/workflows/database-copy.yml`, `scripts/copy-database.ts` | Copies the data from the previous database into Supabase; started by hand (see [DATABASE.md](DATABASE.md), "Moving existing data") |
 | `.github/workflows/prisma-deploy.yml` | Deploys to Prisma Cloud. Runs only when started by hand |
 | `src/lib/prisma.ts` | What app code imports: `db`, the `hasDatabase` offline flag, `ensureDbConnection()`, and the raw SQL helpers `rawQuery` / `rawExecute` / `rawTransaction` |
 | `migrations/app/` | Migrations planned from contract changes. Committed |
