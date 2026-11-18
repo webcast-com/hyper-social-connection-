@@ -1,0 +1,32 @@
+# Temporary: finds which Supabase pooler host serves the project. One sign-in
+# attempt per host with a deliberately wrong password; the answer differs
+# between "unknown project" and "wrong password". Removed after one run.
+name: tmp-pooler-probe
+on:
+  pull_request:
+    paths: [.github/workflows/tmp-pooler-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: |
+          cat > probe.cjs <<'JS'
+          const { Client } = require('pg');
+          (async () => {
+            const out = [];
+            for (const host of ['aws-0-us-east-1.pooler.supabase.com', 'aws-1-us-east-1.pooler.supabase.com']) {
+              const c = new Client({ host, port: 6543, user: 'postgres.yerxhhrgtkxnabolppmq', password: 'not-the-password', database: 'postgres', ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000 });
+              c.on('error', () => {});
+              try { await c.connect(); out.push(host + ' -> connected?!'); await c.end(); }
+              catch (e) { out.push(host + ' -> ' + (e.code || '') + ' ' + String(e.message).slice(0, 160)); }
+            }
+            console.log('::notice title=Pooler probe::' + out.join('%0A'));
+          })();
+          JS
+          node probe.cjs
