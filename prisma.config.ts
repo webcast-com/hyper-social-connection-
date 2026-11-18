@@ -4,6 +4,7 @@ import { nextjsBuild } from "@prisma/composer/nextjs/control";
 import { prismaCloud, prismaState } from "@prisma/composer-prisma-cloud/control";
 import { defineConfig as ormConfig, prisma7Schema } from "@prisma/orm-postgres/config";
 import { definePrismaConfig } from "prisma/config";
+import { cliConnectionString } from "./src/prisma/tls";
 
 // Prisma 8 configuration. App code never imports this file.
 export default definePrismaConfig({
@@ -27,11 +28,16 @@ export default definePrismaConfig({
   //
   // `db.connection` is what the `prisma db …` commands connect to. A Composer
   // deploy does not use it: it connects to the database it provisioned.
+  //
+  // `cliConnectionString` applies the same TLS settings the app uses
+  // (DATABASE_SSL, DATABASE_CA_CERT; see src/prisma/tls.ts). With Supabase,
+  // run these commands on the session pooler string (port 5432), the mode
+  // Supabase recommends for schema changes; see DATABASE.md.
   orm: ormConfig({
     contract: prisma7Schema("prisma/schema.prisma"),
     output: "src/prisma",
     db: {
-      connection: process.env["DATABASE_URL"]!,
+      connection: cliConnectionString(process.env["DATABASE_URL"])!,
     },
   }),
 });

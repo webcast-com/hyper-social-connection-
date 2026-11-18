@@ -6,6 +6,7 @@ This app runs on **any PostgreSQL database**, accessed through **Prisma ORM**
 
 Works out of the box with:
 
+- **Supabase** (what the live site uses — see "Using Supabase" below)
 - **Neon** (serverless Postgres, generous free tier)
 - **Prisma Postgres** (via its direct TCP connection string — see below)
 - **AWS RDS / Aurora**
@@ -45,6 +46,7 @@ Examples:
 
 | Provider | Where to find it |
 | --- | --- |
+| Supabase | Dashboard → your project → "Connect" → the **pooler** strings (see "Using Supabase") |
 | Neon | Console → your project → "Connect" |
 | Prisma Postgres | Console → your database → "Connect to your database" → use the **direct** string (`db.prisma.io`) |
 | AWS RDS | Cluster/instance endpoint + credentials you created |
@@ -62,8 +64,11 @@ cp .env.example .env.local
 ```env
 DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DATABASE
 
-# Only for local/self-hosted Postgres WITHOUT TLS:
+# Only for a remote Postgres WITHOUT TLS:
 # DATABASE_SSL=false
+
+# Verify the server's certificate against this authority (Supabase):
+# DATABASE_CA_CERT="-----BEGIN CERTIFICATE-----\n…\n-----END CERTIFICATE-----"
 
 # Authentication uses opaque, revocable sessions stored in Prisma's `sessions`
 # table. No JWT signing secret is required.
@@ -71,11 +76,103 @@ DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DATABASE
 
 Notes:
 
-- `DATABASE_SSL` defaults to TLS with relaxed certificate validation, which
-  all managed providers support. Set it to `false` only for a local database
-  that has TLS disabled.
+- **TLS** (`src/prisma/tls.ts`; the app and the `prisma db …` commands follow
+  the same rules, first match wins):
+  1. `DATABASE_SSL=false` — no TLS.
+  2. `DATABASE_CA_CERT` set — TLS, and the server's certificate must be signed
+     by that authority and match the host name. The value is the certificate
+     text (line breaks may be written as `\n`) or the path of the file.
+  3. The connection string carries `sslmode` (or another TLS parameter) —
+     `node-postgres` follows it. Note that it treats `sslmode=require` as
+     full verification against the public certificate authorities.
+  4. The host is local or private (`localhost`, `127.0.0.1`, `10.x`,
+     `192.168.x`, a bare name such as `db`) — no TLS.
+  5. Any other host — TLS, encrypted, but the certificate is **not** verified.
+     The server log says so on start-up.
 - Without `DATABASE_URL` the app still boots and serves anonymous demo/offline
   content, but sign-in, uploads, mutations, and data persistence require a database-backed session.
+
+### Using Supabase
+
+Supabase is the database; Prisma stays the query layer. Nothing in the app
+uses the Supabase client, Supabase Auth, Storage or Realtime, so no Supabase
+API key is needed, only a Postgres connection string.
+
+**1. Pick the right strings.** In the Supabase dashboard open your project,
+press **Connect**, and look under "Connection string". There are three; this
+app uses two of them:
+
+```env
+# Transaction pooler (port 6543) — for the running site (Vercel).
+DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres
+
+# Session pooler (port 5432) — for migrations (`npm run db:migrate`, the
+# database-migrate workflow). Same string, different port.
+# postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres
+```
+
+The third, "Direct connection" (`db.PROJECT_REF.supabase.co`), is reached over
+IPv6 only unless you buy the IPv4 add-on; Vercel and GitHub Actions cannot use
+it. Replace `[YOUR-PASSWORD]` with the database password, and percent-encode
+any `@ : / ? #` in it (`@` becomes `%40`).
+
+Paste the strings as Supabase gives them: do **not** add `?sslmode=require`.
+The app encrypts the connection on its own (rule 5 above), and with
+`sslmode=require` `node-postgres` would refuse Supabase's certificate unless
+`DATABASE_CA_CERT` is also set.
+
+**2. Verify the certificate (recommended).** Dashboard → Database → Settings →
+"SSL Configuration" → download the certificate, and put its text in
+`DATABASE_CA_CERT` wherever `DATABASE_URL` is set. Without it the connection
+is still encrypted, but the app does not check that the server it reached is
+Supabase's.
+
+**3. Create the tables before the site connects.** Either way below, do this
+first: if the app reaches an empty database before the migrations do, Prisma
+will refuse to migrate it afterwards (see "Create the tables").
+
+- From GitHub: add the repository secret `SUPABASE_DATABASE_URL` (the
+  **session pooler** string) and, optionally, `SUPABASE_CA_CERT`. Then
+  Actions → "database-migrate" → "Run workflow" on `main`. The same workflow
+  runs by itself whenever a schema change is merged.
+- From a terminal, with `DATABASE_URL` set to the session pooler string:
+
+  ```bash
+  npm run db:migrate     # create / update the tables
+  npm run db:lockdown    # close Supabase's Data API to them (see below)
+  npm run db:check       # confirm the database matches the schema
+  ```
+
+  The repository's `.env` names another database; a `DATABASE_URL` set in the
+  shell takes precedence over it.
+
+**4. Point the site at it.** In Vercel → Project → Settings → Environment
+Variables set `DATABASE_URL` (the **transaction pooler** string) and
+`DATABASE_CA_CERT`, then redeploy. `/api/health` should answer
+`"db": true, "mode": "postgres"`. A variable set in Vercel takes precedence
+over the `.env` files in the repository.
+
+**Keep the tables off Supabase's Data API.** Supabase serves the `public`
+schema over HTTP to anyone holding the project's public key, for every table
+that key's role has been granted. This app's `users` table holds password
+hashes, so `npm run db:lockdown` (`prisma/supabase-lockdown.sql`) removes
+those grants, for existing tables and for ones created later. It does not
+turn on row level security, because Prisma would then report every table as
+changed; Supabase's advisor may still list the tables under "RLS disabled",
+which has no effect once the grants are gone. You can also switch the Data API
+off altogether in the project's API settings, since nothing here uses it.
+
+**Existing data is not moved.** A new Supabase project starts empty: accounts,
+posts and messages in the previous database stay there until they are copied
+(`pg_dump --data-only` from the old database, `psql` into the new one, after
+step 3).
+
+What has and has not been tested: the TLS rules, the migrations, the lockdown
+script and the whole app were run against a local PostgreSQL set up to behave
+like Supabase (a certificate from a private authority, TLS-only access,
+`anon` / `authenticated` roles, and a transaction-mode pooler that moves every
+transaction to a different server connection). They have not been run against
+a real Supabase project.
 
 ### Using Prisma Postgres
 
@@ -107,8 +204,8 @@ Two things to get right:
    `database "<your-user>" does not exist`. Append `postgres` (or your database
    name) so the path reads `/postgres?sslmode=require`.
 
-Leave `DATABASE_SSL` unset — Prisma Postgres requires TLS, and the app's
-default (TLS with relaxed certificate validation) satisfies `sslmode=require`.
+Leave `DATABASE_SSL` unset — Prisma Postgres requires TLS, and the
+`sslmode=require` in its string turns it on, with the certificate verified.
 Setting `DATABASE_SSL=false` disables TLS and the connection will be rejected.
 
 If your network blocks outbound port 5432, Prisma's direct TCP endpoint will
@@ -190,9 +287,15 @@ Start the app (`npm run dev`) and open `/api/health`:
 ```
 
 `db: false` / `mode: "offline"` means the connection failed — check
-`DATABASE_URL`, `DATABASE_SSL`, and that your IP is allowed by the provider.
+`DATABASE_URL`, `DATABASE_SSL` / `DATABASE_CA_CERT`, and that your IP is
+allowed by the provider. The reason is in the server log, on the line that
+starts `[db] Postgres connection failed`.
 
 ## What replaced Supabase?
+
+Supabase's sign-in, storage and realtime services were replaced as below.
+Supabase as the **database** is a separate matter and is supported: see
+"Using Supabase".
 
 | Before (Supabase) | Now |
 | --- | --- |

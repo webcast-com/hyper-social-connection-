@@ -18,6 +18,7 @@ import postgres from "@prisma/orm-postgres/runtime";
 import { contractFromJson } from "@prisma/orm-postgres/static";
 import { Pool } from "pg";
 import { databaseConnection } from "./connection";
+import { poolConfig } from "./tls";
 import type { Contract } from "./contract.d";
 import contractJson from "./contract.json" with { type: "json" };
 
@@ -31,9 +32,15 @@ function createPool(): Pool {
 
   // With no database configured the pool is never used: `hasDatabase` in
   // src/lib/prisma.ts is false and every caller checks it first.
-  const created = new Pool({
-    connectionString: databaseConnection.source === "none" ? undefined : databaseConnection.url,
-  });
+  //
+  // A `DATABASE_URL` connection gets its TLS settings from ./tls (Supabase and
+  // other hosts whose connection string does not ask for TLS). The URL
+  // Composer provides is used as it is.
+  const created = new Pool(
+    databaseConnection.source === "env"
+      ? poolConfig(databaseConnection.url)
+      : { connectionString: databaseConnection.source === "none" ? undefined : databaseConnection.url },
+  );
   // An idle connection dropped by the server must not take the process down.
   created.on("error", (err) => {
     console.warn("[db] idle Postgres connection error:", err?.message || err);
