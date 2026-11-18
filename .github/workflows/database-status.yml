@@ -1,0 +1,53 @@
+# Answers "is the database wired?" without changing anything.
+#
+# Reports what the live site says about its database, whether the previous
+# database and the Supabase database answer, how many accounts and posts each
+# holds, and what is still left to do. Every query is read-only. Passwords are
+# never printed.
+#
+# Start it by hand: Actions → "database-status" → "Run workflow". The report is
+# on the run's summary page. See scripts/database-status.ts.
+#
+# Reads the same repository secrets as database-copy.yml. None is required:
+# a missing one is reported, not an error.
+name: database-status
+
+on:
+  workflow_dispatch:
+  # Also when this check itself changes, so that a change to it is tried out.
+  pull_request:
+    paths:
+      - .github/workflows/database-status.yml
+      - scripts/database-status.ts
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check the databases
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          SUPABASE_CA_CERT: ${{ secrets.SUPABASE_CA_CERT }}
+          SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
+        run: |
+          set -o pipefail
+          npm run --silent db:status | tee status-report.md
+      - name: Report
+        if: always()
+        run: |
+          if [ -f status-report.md ]; then
+            cat status-report.md >> "$GITHUB_STEP_SUMMARY"
+            # The same text as an annotation, which is shown on the run page
+            # without signing in and can be read through the API.
+            echo "::notice title=Database status::$(sed -e 's/%/%25/g' status-report.md | awk '{ printf "%s%%0A", $0 }')"
+          fi

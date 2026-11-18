@@ -71,6 +71,8 @@ function sourceUrl(): { url: string; from: string } {
 function where(url: string): string {
   try {
     const parsed = new URL(url);
+    // Anything else is not a connection URL, and its "path" could be the password.
+    if (!/^postgres(ql)?:$/.test(parsed.protocol)) return "(not a postgres:// URL)";
     return `${parsed.hostname}:${parsed.port || "5432"}${parsed.pathname}`;
   } catch {
     return "(connection string)";

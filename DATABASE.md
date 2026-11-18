@@ -145,6 +145,11 @@ will refuse to migrate it afterwards (see "Create the tables").
 
   The repository's `.env` names another database; a `DATABASE_URL` set in the
   shell takes precedence over it.
+- From the Supabase SQL editor, when neither of the above is at hand: run
+  `prisma/supabase-lockdown.sql`, then `prisma/snapshots/20261115T1557_init.sql`.
+  The snapshot holds the statements `db:migrate` and `db:bootstrap` send to an
+  empty database, Prisma's own bookkeeping included, so `npm run db:migrate`
+  afterwards reports "no operations". It is for an empty database only.
 
 **4. Point the site at it.** In Vercel → Project → Settings → Environment
 Variables set `DATABASE_URL` (the **transaction pooler** string) and
@@ -172,9 +177,22 @@ script, the data copy and the whole app were run against a local PostgreSQL
 set up to behave like Supabase (a certificate from a private authority, TLS-only access,
 `anon` / `authenticated` roles, and a transaction-mode pooler that moves every
 transaction to a different server connection). On the real Supabase project
-only the lockdown has been run and checked (a table created afterwards was
-not granted to `anon` or `authenticated`); the migrations and the copy first
-run there through the workflows.
+the lockdown and the schema snapshot have been applied through the SQL API and
+checked there: tables, columns, constraints, indexes, triggers, sequences and
+Prisma's marker are the same as on a database set up by `db:migrate` and
+`db:bootstrap`, no table is granted to `anon` or `authenticated`, and a trial
+insert of a user, a post and a like worked and was rolled back. The app itself
+and the data copy have not yet run against it.
+
+### Is it wired?
+
+Actions → "database-status" → "Run workflow". It changes nothing and reports,
+on the run's summary page: what the live site says about its database
+(`/api/health`), whether the previous database and the Supabase database
+answer, how many accounts and posts each holds, whether the Supabase Data API
+is closed, and what is left to do. A missing or mistyped secret is named
+there. From a terminal: `npm run db:status` with `SUPABASE_DATABASE_URL` (and
+optionally `SOURCE_DATABASE_URL`) in the environment.
 
 ### Moving existing data
 
