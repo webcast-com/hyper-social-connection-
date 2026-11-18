@@ -1,0 +1,86 @@
+# Brings the Supabase database up to date with the schema in this repository.
+#
+# Runs when a change to the database schema lands on `main`, and when started
+# by hand from the Actions tab ("database-migrate", "Run workflow"). Run it by
+# hand once after creating the Supabase project: that creates the tables.
+#
+# Steps: apply the committed migrations (migrations/app), close Supabase's
+# Data API to the tables (prisma/supabase-lockdown.sql), then check that the
+# database matches the schema. All three are safe to repeat; on a database
+# that is already up to date they change nothing.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#
+#   SUPABASE_DATABASE_URL  The project's "Session pooler" connection string
+#                          (host …pooler.supabase.com, port 5432), with the
+#                          database password filled in. Not the "Direct"
+#                          string: it is reached over IPv6, which GitHub's
+#                          runners do not have.
+#   SUPABASE_CA_CERT       Optional. The text of the certificate Supabase
+#                          offers under Database settings → SSL Configuration.
+#                          With it the server's certificate is verified;
+#                          without it the connection is encrypted but the
+#                          certificate is not checked.
+#
+# Without SUPABASE_DATABASE_URL the job finishes green and does nothing.
+name: database-migrate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "migrations/**"
+      - "prisma/**"
+      - "src/prisma/**"
+      - "prisma.config.ts"
+      - ".github/workflows/database-migrate.yml"
+  workflow_dispatch:
+
+# One run at a time, and never cancel one halfway through a migration.
+concurrency:
+  group: database-migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    # A run started by hand from another branch would apply that branch's
+    # migrations to the live database; only `main` is applied.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      DATABASE_CA_CERT: ${{ secrets.SUPABASE_CA_CERT }}
+    steps:
+      # The repository's .env files name another database. The steps below
+      # must never fall back to it, so they are skipped unless the secret is set.
+      - name: Check for the connection string
+        id: database
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::Skipped: the repository secret SUPABASE_DATABASE_URL is not set."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.database.outputs.configured == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.database.outputs.configured == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        if: steps.database.outputs.configured == 'true'
+        run: npm ci
+      - name: Apply migrations
+        if: steps.database.outputs.configured == 'true'
+        run: npm run db:migrate
+      - name: Close the Supabase Data API to the tables
+        if: steps.database.outputs.configured == 'true'
+        run: npm run db:lockdown
+      - name: Check the database against the schema
+        if: steps.database.outputs.configured == 'true'
+        run: npm run db:check

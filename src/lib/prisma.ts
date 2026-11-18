@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { types as pgTypes } from "pg";
 import { databaseConnection } from "../prisma/connection";
 import { db, pool } from "../prisma/db";
+import { describeTls, resolveDatabaseUrl } from "../prisma/tls";
 
 export { db };
 
@@ -19,7 +20,9 @@ if (FORCE_OFFLINE) {
 } else if (databaseConnection.source === "composer") {
   console.log("[db] Database provided by Prisma Composer — will attempt Postgres connection (may fall back)");
 } else if (databaseConnection.source === "env") {
-  console.log("[db] DATABASE_URL detected — will attempt Postgres connection (may fall back)");
+  console.log(
+    `[db] DATABASE_URL detected — will attempt Postgres connection (may fall back); ${describeTls(resolveDatabaseUrl(databaseConnection.url).tls)}`,
+  );
 } else {
   console.log("[db] No database configured — running in demo/offline mode");
 }
@@ -135,6 +138,15 @@ export async function closeDb(): Promise<void> {
  */
 let connectionTested = false;
 
+/** Node's codes for a server certificate that failed verification. */
+const CERTIFICATE_ERRORS = new Set([
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
 export async function ensureDbConnection(): Promise<boolean> {
   if (!hasDatabase || connectionTested) return hasDatabase;
   connectionTested = true;
@@ -148,6 +160,12 @@ export async function ensureDbConnection(): Promise<boolean> {
       "[db] Postgres connection failed — switching to demo/offline mode:",
       err?.message || err,
     );
+    if (CERTIFICATE_ERRORS.has(err?.code)) {
+      console.warn(
+        "[db] The server's TLS certificate was not accepted. For Supabase, set DATABASE_CA_CERT to the " +
+          "certificate from the project's database settings (see DATABASE.md).",
+      );
+    }
     hasDatabase = false;
     return false;
   }

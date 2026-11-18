@@ -16,7 +16,10 @@ connection pool.
 | `src/prisma/db.ts` | The Prisma 8 client (`db`) and the shared `pg` pool |
 | `src/prisma/connection.ts` | Where the database comes from: the one `prisma deploy` wired to the service, otherwise `DATABASE_URL` |
 | `module.ts`, `service.ts` | What `prisma deploy` and `prisma dev` deploy (see "Deploying") |
-| `.github/workflows/prisma-deploy.yml` | Deploys to Prisma Cloud on every push to `main` |
+| `src/prisma/tls.ts` | TLS for a `DATABASE_URL` connection (`DATABASE_SSL`, `DATABASE_CA_CERT`), shared by the app and the `prisma db …` commands |
+| `.github/workflows/database-migrate.yml` | Applies the migrations to the Supabase database when the schema changes on `main` (see [DATABASE.md](DATABASE.md), "Using Supabase") |
+| `.github/workflows/database-copy.yml`, `scripts/copy-database.ts` | Copies the data from the previous database into Supabase; started by hand (see [DATABASE.md](DATABASE.md), "Moving existing data") |
+| `.github/workflows/prisma-deploy.yml` | Deploys to Prisma Cloud. Runs only when started by hand |
 | `src/lib/prisma.ts` | What app code imports: `db`, the `hasDatabase` offline flag, `ensureDbConnection()`, and the raw SQL helpers `rawQuery` / `rawExecute` / `rawTransaction` |
 | `migrations/app/` | Migrations planned from contract changes. Committed |
 | `src/lib/migrate.ts` | Idempotent boot DDL: tables outside the Prisma schema (group calls, sports picks, highlights) and the triggers/functions Prisma can't express |
@@ -66,7 +69,11 @@ own tables and triggers, and `npm run db:check` still passes.
 
 ## Deploying
 
-### Prisma Cloud (deploy on push)
+The live site is served by Vercel with a Supabase database: see
+[DATABASE.md](DATABASE.md), "Using Supabase". Prisma stays the query layer in
+the code; Prisma Cloud below is an optional second place to run the app.
+
+### Prisma Cloud (started by hand)
 
 The app is declared for `prisma deploy` in three files:
 
@@ -76,11 +83,11 @@ The app is declared for `prisma deploy` in three files:
 | `service.ts` | The Next.js service: what it depends on (the database) and what it exposes (HTTP) |
 | `prisma.config.ts` → `composer` | Points the CLI at `module.ts` and sets the region a new project is created in |
 
-`.github/workflows/prisma-deploy.yml` runs on every push to `main`: `npm ci`,
-`npm run build`, then `prisma deploy` to the `production` environment. Other
-branches are not deployed. Removing the `branches` filter in the workflow gives
-every branch a preview environment with its own service and its own empty
-database.
+`.github/workflows/prisma-deploy.yml` runs when it is started from the Actions
+tab on `main`: `npm ci`, `npm run build`, then `prisma deploy` to the
+`production` environment. It no longer runs on every push; it failed there,
+and the site does not depend on it. `npm run prisma:deploy` does the same from
+a terminal.
 
 A deploy finds its project **by name** in the workspace and creates it when no
 project has that name. The name in `module.ts` is `hyper-social-connection-`.
