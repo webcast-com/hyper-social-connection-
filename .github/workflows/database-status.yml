@@ -45,4 +45,9 @@ jobs:
       - name: Report
         if: always()
         run: |
-          if [ -f status-report.md ]; then cat status-report.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f status-report.md ]; then
+            cat status-report.md >> "$GITHUB_STEP_SUMMARY"
+            # The same text as an annotation, which is shown on the run page
+            # without signing in and can be read through the API.
+            echo "::notice title=Database status::$(sed -e 's/%/%25/g' status-report.md | awk '{ printf "%s%%0A", $0 }')"
+          fi
