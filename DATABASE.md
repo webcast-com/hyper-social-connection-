@@ -145,6 +145,11 @@ will refuse to migrate it afterwards (see "Create the tables").
 
   The repository's `.env` names another database; a `DATABASE_URL` set in the
   shell takes precedence over it.
+- From the Supabase SQL editor, when neither of the above is at hand: run
+  `prisma/supabase-lockdown.sql`, then `prisma/snapshots/20261115T1557_init.sql`.
+  The snapshot holds the statements `db:migrate` and `db:bootstrap` send to an
+  empty database, Prisma's own bookkeeping included, so `npm run db:migrate`
+  afterwards reports "no operations". It is for an empty database only.
 
 **4. Point the site at it.** In Vercel → Project → Settings → Environment
 Variables set `DATABASE_URL` (the **transaction pooler** string) and
