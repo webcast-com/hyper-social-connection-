@@ -41,7 +41,7 @@ jobs:
           SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
         run: |
           set -o pipefail
-          npm run --silent db:status 2>&1 | tee status-report.md
+          npm run --silent db:status | tee status-report.md
       - name: Report
         if: always()
         run: |

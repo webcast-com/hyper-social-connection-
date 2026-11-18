@@ -139,6 +139,9 @@ async function probeIfUrl(url: string, env: Record<string, string | undefined>):
 }
 
 function explain(error: string): string {
+  if (/planLimitReached|account has restrictions/i.test(error)) {
+    return "Prisma has restricted the account that owns this database because it reached its plan's limit. Nothing can read or write its data until the restriction is lifted in the Prisma Console (upgrade the plan or contact Prisma support).";
+  }
   if (/28P01|password authentication failed/i.test(error)) return "The password in the string is wrong.";
   if (/tenant or user not found|XX000/i.test(error)) return "The pooler does not know this project: check the user (postgres.<project ref>) and the pooler host and region.";
   if (/ENOTFOUND|EAI_AGAIN/i.test(error)) return "The host name does not exist.";
@@ -233,7 +236,11 @@ async function main() {
   } else if (previousResult?.answered && (previousResult.users ?? 0) > (supabaseResult.users ?? 0)) {
     steps.push(`Run the database-copy workflow: the previous database holds ${previousResult.users} accounts, Supabase ${supabaseResult.users ?? 0}.`);
   }
-  if (previous && previousResult && !previousResult.answered) {
+  if (previous && previousResult && !previousResult.answered && /planLimitReached|account has restrictions/i.test(previousResult.error ?? "")) {
+    steps.push(
+      "To bring the existing accounts and posts over, first get the restriction on the Prisma account lifted (Prisma Console). After that, run the database-copy workflow: check, then copy.",
+    );
+  } else if (previous && previousResult && !previousResult.answered) {
     steps.push(
       "The previous database does not answer, so there is nothing to copy from it as things stand. If the site's accounts and posts live in a different database, put its connection string in the SOURCE_DATABASE_URL secret.",
     );
