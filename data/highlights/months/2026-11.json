@@ -1,8 +1,10 @@
 {"days":{
+"2026-11-08":{"n":1,"cube":{"league|laliga|":1}},
+"2026-11-10":{"n":1,"cube":{"league|ucl|":1}},
 "2026-11-14":{"n":94,"cube":{"league|ligue1|":1,"league|ucl|":1,"match|concacaf-nations|final":2,"match|nba|final":27,"match|ncaam|final":43,"match|ncaaw|final":5,"match|nhl|final":14,"match|uefa-nations|final":1}},
 "2026-11-15":{"n":140,"cube":{"match|nba|final":65,"match|ncaam|final":32,"match|ncaaw|final":1,"match|nhl|final":34,"match|nwsl|final":5,"match|uefa-nations|final":3}},
 "2026-11-16":{"n":73,"cube":{"match|nba|final":15,"match|ncaam|final":13,"match|ncaaw|final":5,"match|nhl|final":38,"match|uefa-nations|final":2}},
 "2026-11-17":{"n":80,"cube":{"match|nba|final":22,"match|ncaam|final":34,"match|ncaaw|final":12,"match|nfl|final":1,"match|nhl|final":9,"match|uefa-nations|final":2}},
 "2026-11-18":{"n":112,"cube":{"league|epl|":2,"match|concacaf-nations|final":2,"match|nba|final":33,"match|ncaam|final":38,"match|ncaaw|final":8,"match|nhl|final":13,"match|womens-ucl|final":16}},
-"2026-11-19":{"n":113,"cube":{"league|epl|":1,"league|nba|":3,"league|nfl|":4,"match|nba|final":37,"match|ncaam|final":52,"match|ncaaw|final":4,"match|nhl|final":8,"match|womens-ucl|live":4}}
+"2026-11-19":{"n":116,"cube":{"league|epl|":1,"league|nba|":3,"league|nfl|":7,"match|nba|final":37,"match|ncaam|final":52,"match|ncaaw|final":4,"match|nhl|final":8,"match|womens-ucl|live":4}}
 }}
