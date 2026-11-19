@@ -100,7 +100,9 @@ jobs:
 
       - name: Collect clips from ESPN
         env:
-          PASSES: ${{ github.event_name == 'pull_request' && '2' || inputs.passes || '8' }}
+          # A check reads far enough to reach yesterday's games: today's are
+          # mostly not played yet, and a check that finds no clip proves little.
+          PASSES: ${{ github.event_name == 'pull_request' && '12' || inputs.passes || '8' }}
           DAYS: ${{ inputs.days || '7' }}
           LEAGUE: ${{ inputs.league || '' }}
           DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
