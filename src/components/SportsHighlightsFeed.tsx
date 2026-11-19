@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Play } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
+import CardRow from './CardRow';
 import LinkMediaPlayer from './LinkMediaPlayer';
 import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
 import { clipHref, clipMedia as clipMediaFor } from '@/lib/highlight-clip';
@@ -59,7 +60,9 @@ const clipMedia = clipMediaFor;
  * One clip as a post card. Exported for the highlights page, which lays the same
  * cards out full-width with filters; the homepage feed below is unchanged.
  */
-export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
+export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = false }: {
+  /** One of a row of narrow cards on a desktop; see `SportsPostCard`. */
+  dense?: boolean;
   clip: SportsHighlightClip;
   /** Null on a sample board: placeholder clips get no post to engage with. */
   anchor: SportsAnchorRef | null;
@@ -141,6 +144,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
       anchor={anchor}
       engagement={engagement}
       signedIn={signedIn}
+      dense={dense}
       permalink={{ href: clipHref(clip), label: 'Highlight page' }}
       shareNoun="highlight"
       shareImage={clip.thumbnail}
@@ -155,9 +159,11 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
   );
 }
 
-export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}, signedIn = false }: {
+export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}, signedIn = false, layout = 'stack' }: {
   board: SportsHighlightsBoard;
   limit?: number;
+  /** `row` lays the cards side by side from `lg` up; a phone stacks them either way. */
+  layout?: 'stack' | 'row';
   /** Saved likes, threads and bookmarks per clip, loaded once by the page. */
   engagement?: SportsAnchorEngagementMap;
   /** Guests read every card; only a member can engage with one. */
@@ -186,7 +192,7 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
         </Link>
       </div>
 
-      <div className="space-y-4">
+      <CardRow layout={layout} label="match highlights">
         {clips.map((clip) => {
           // A sample board is placeholder data, so it gets no anchor post.
           const anchor = sample ? null : anchorRef('highlight', highlightAnchorId(clip));
@@ -196,9 +202,10 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
             anchor={anchor}
             engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
             signedIn={signedIn}
+            dense={layout === 'row'}
           />;
         })}
-      </div>
+      </CardRow>
 
       {board.clips.length > limit && (
         <button

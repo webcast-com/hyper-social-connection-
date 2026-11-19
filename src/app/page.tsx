@@ -10,7 +10,7 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
-import { ArrowRight, Compass, Users, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Clapperboard, Compass, Users, Sparkles, Target, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
@@ -118,6 +118,28 @@ const DEMO_STORIES = [
   { id: 4, userId: 4, imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80' },
   { id: 5, userId: 5, imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80' },
 ];
+
+/**
+ * One row of the desktop navigation rail: an icon well and a label. The well
+ * takes either an icon or a short code ("NBA"), so the two competitions with
+ * their own dashboards are told apart without a second icon set.
+ */
+function RailLink({ href, label, well, children }: {
+  href: string;
+  label: string;
+  /** Colours of the icon well. */
+  well: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="group flex min-h-11 items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-gray-200/70 dark:hover:bg-gray-800">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[10px] font-black tracking-tight transition-transform group-hover:scale-105 ${well}`}>
+        {children}
+      </span>
+      <span className="min-w-0 truncate text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</span>
+    </Link>
+  );
+}
 
 export default async function Home() {
   const viewer = await getViewer();
@@ -492,74 +514,91 @@ export default async function Home() {
   const trendingTopics = computeTrendingTopics(allPosts);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-4 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+    // Desktop columns. From `lg` the feed sits beside the discovery rail; from
+    // `xl` the navigation rail joins them. Both rails are fixed widths, so the
+    // feed column takes what is left rather than a quarter-based share, and both
+    // stay on screen while the feed scrolls.
+    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(getWebsiteStructuredData()).replace(/</g, '\\u003c') }}
       />
-      {/* Left Sidebar — desktop shortcuts */}
-      <aside className="hidden lg:flex order-2 lg:order-none min-w-0 flex-col space-y-2 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
-        <Link href={`/profile/${currentUser.id}`} className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
-          {currentUser.avatar ? (
-            <img src={currentUser.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/30" />
+      {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
+          needs the width, and the top bar already carries the main destinations. */}
+      <aside className="hidden min-w-0 xl:block">
+        <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto scrollbar-hide pb-2">
+          {viewer ? (
+            <Link href={`/profile/${viewer.id}`} className="group flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-gray-200/70 dark:hover:bg-gray-800">
+              {viewer.avatar ? (
+                <img src={viewer.avatar} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-blue-500/30" />
+              ) : (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-base font-bold text-white shadow-sm">
+                  {viewer.name?.charAt(0) || 'U'}
+                </div>
+              )}
+              <div className="min-w-0">
+                <span className="block truncate text-sm font-bold text-gray-900 dark:text-white">{viewer.name}</span>
+                <span className="block truncate text-xs text-gray-500">View profile</span>
+              </div>
+            </Link>
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-base shadow-sm">
-              {currentUser.name?.charAt(0) || 'U'}
+            // A visitor has no profile to open. What they can do from here is join.
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Join the conversation</p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                Follow your teams, react to matches and post with other fans.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Link href="/signup" className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-blue-600 px-3 text-xs font-bold text-white transition-colors hover:bg-blue-700">Sign up</Link>
+                <Link href="/login" className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-gray-200 px-3 text-xs font-bold text-gray-800 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/60">Log in</Link>
+              </div>
             </div>
           )}
-          <div className="min-w-0">
-            <span className="font-bold text-sm text-gray-900 dark:text-white block truncate">{currentUser.name}</span>
-            <span className="text-xs text-gray-500 block truncate">View profile</span>
-          </div>
-        </Link>
 
-        <Link href="/discover" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
-          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Compass className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Discover People</span>
-        </Link>
+          <nav aria-label="Sports" className="space-y-0.5">
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Sports</p>
+            <RailLink href="/sports" label="Sports scores" well="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
+              <Trophy className="h-[18px] w-[18px]" />
+            </RailLink>
+            <RailLink href="/sports/highlights" label="Match highlights" well="bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400">
+              <Clapperboard className="h-[18px] w-[18px]" />
+            </RailLink>
+            <RailLink href="/sports/predictions" label="Predictions" well="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
+              <Target className="h-[18px] w-[18px]" />
+            </RailLink>
+            <RailLink href="/nfl-basketball/basketball" label="NBA basketball" well="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">NBA</RailLink>
+            <RailLink href="/nfl-basketball/nfl" label="NFL football" well="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">NFL</RailLink>
+          </nav>
 
-        <Link href="/groups" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
-          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Communities & Groups</span>
-        </Link>
+          <nav aria-label="Community" className="space-y-0.5 border-t border-gray-200 pt-3 dark:border-gray-800">
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Community</p>
+            <RailLink href="/discover" label="Discover People" well="bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+              <Compass className="h-[18px] w-[18px]" />
+            </RailLink>
+            <RailLink href="/groups" label="Communities & Groups" well="bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">
+              <Users className="h-[18px] w-[18px]" />
+            </RailLink>
+          </nav>
 
-        <Link href="/sports" className="hidden lg:flex items-center space-x-3 p-3 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-2xl cursor-pointer transition-colors group">
-          <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">Sports scores</span>
-        </Link>
-
-        <div className="lg:pt-3 lg:border-t border-gray-200 dark:border-gray-800">
-          <p className="text-xs text-gray-400 font-semibold px-2 uppercase tracking-wide mb-2">Shortcuts</p>
-          {viewerGroups.slice(0, 4).map((g, i) => {
-            const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500', 'bg-amber-500'];
-            return (
-              <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center space-x-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors">
-                <div className={`w-8 h-8 ${colors[i % colors.length]} rounded-lg flex items-center justify-center text-xs text-white font-bold`}>
+          <nav aria-label="Your groups" className="space-y-0.5 border-t border-gray-200 pt-3 dark:border-gray-800">
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{viewerGroups.length > 0 ? 'Your groups' : 'Groups'}</p>
+            {viewerGroups.slice(0, 4).map((g, i) => {
+              const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500', 'bg-amber-500'];
+              return (
+                <RailLink key={g.id} href={`/groups/${g.id}`} label={g.name} well={`${colors[i % colors.length]} text-sm text-white`}>
                   {g.name?.charAt(0) || 'G'}
-                </div>
-                <span className="font-semibold text-xs text-gray-700 dark:text-gray-300 truncate">{g.name}</span>
-              </Link>
-            );
-          })}
-          <Link href="/groups" className="flex items-center space-x-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-xl cursor-pointer transition-colors">
-            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xs">
-              <Users className="w-4 h-4 text-gray-500 dark:text-gray-300" />
-            </div>
-            <span className="font-semibold text-xs text-gray-700 dark:text-gray-300 truncate">
-              {viewerGroups.length === 0 ? 'Find groups to join' : 'See all groups'}
-            </span>
-          </Link>
+                </RailLink>
+              );
+            })}
+            <RailLink href="/groups" label={viewerGroups.length === 0 ? 'Find groups to join' : 'See all groups'} well="bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+              <Users className="h-4 w-4" />
+            </RailLink>
+          </nav>
         </div>
       </aside>
 
       {/* Main Feed — first on mobile */}
-      <div className="min-w-0 order-1 lg:order-none lg:col-span-2 max-w-2xl mx-auto w-full space-y-4">
+      <div className="min-w-0 max-w-2xl mx-auto w-full space-y-4">
         <h1 className="sr-only">Hyper — The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers</h1>
         <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
           <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
@@ -669,9 +708,11 @@ export default async function Home() {
           </div>
         </section>
 
-        <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
+        {/* On a desktop each board is one row of cards, so the feed below starts
+            within a couple of screens instead of after every card in both. */}
+        <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
 
-        <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} />
+        <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
 
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>
@@ -721,12 +762,15 @@ export default async function Home() {
         />
       </div>
 
-      {/* Right Sidebar — desktop discovery rail */}
-      <aside className="hidden lg:flex order-3 lg:order-none min-w-0 flex-col space-y-4 pt-2 w-full max-w-2xl mx-auto lg:max-w-none lg:mx-0">
+      {/* Right rail — desktop discovery. It stays on screen while the feed
+          scrolls; when it is taller than the window it scrolls on its own, with
+          the scores first so they are what stays in view. */}
+      <aside className="hidden min-w-0 lg:block">
+        <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto scrollbar-hide pb-2">
+        <SportsMatchCentre board={sportsBoard} shownEventIds={feedEventIds} />
+
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
-
-        <SportsMatchCentre board={sportsBoard} shownEventIds={feedEventIds} />
 
         {/* Suggested People */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">
@@ -786,6 +830,7 @@ export default async function Home() {
               </Link>
             ))}
           </div>
+        </div>
         </div>
       </aside>
     </div>

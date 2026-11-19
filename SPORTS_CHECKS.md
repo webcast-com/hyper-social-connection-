@@ -36,6 +36,24 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 - Sample fixtures are labeled consistently across summaries and event cards. Unrelated predictions are not attached by array index.
 - Shared header/navigation and safe-area-aware page padding remain available to signed-in and signed-out visitors.
 
+### The desktop homepage: two rails and two card rows
+
+From `lg` (1024px) the homepage is a centre column with a right rail (scores,
+trending, people, contacts); from `xl` (1280px) a left rail of navigation joins it.
+Both rails are sticky under the navbar and scroll on their own when they are taller
+than the window, so they stay in reach for the whole feed. Below `lg` nothing here
+applies — the single-column page is unchanged.
+
+"Players & top scorers" and "Match highlights" pass `layout="row"` on the homepage.
+`src/components/CardRow.tsx` then lays their cards out as one sideways,
+scroll-snapping row from `lg`, with previous / next buttons that appear only when
+there is more in that direction, and keeps the ordinary stacked column below `lg`.
+Stacked, the two boards stood about 3,000px tall and the first member post sat
+below them; as rows the feed's tabs start roughly 1,500px higher. Cards in a row
+are narrow, so `SportsPostCard` takes `dense` (three-line body, full text in
+`title`) and its action row drops to icons by container width, not viewport width —
+the same card is full-width on a phone and 280px wide in a desktop row.
+
 ### The board's featured match
 
 When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture (`tests/sports/layout.spec.ts`):

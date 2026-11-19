@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Maximize2 } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
+import CardRow from './CardRow';
 import ImageLightbox from './ImageLightbox';
 import { portraitFor } from '@/lib/player-portraits';
 import { anchorKey, anchorRef, leaderAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
@@ -64,7 +65,10 @@ function LeaderPostCard({
   anchor,
   engagement,
   signedIn,
+  dense = false,
 }: {
+  /** One of a row of narrow cards on a desktop; see `SportsPostCard`. */
+  dense?: boolean;
   player: SportsLeaderRow;
   sport: SportsLeaderSport;
   league: string;
@@ -156,6 +160,7 @@ function LeaderPostCard({
       anchor={anchor}
       engagement={engagement}
       signedIn={signedIn}
+      dense={dense}
       onExpand={() => setShowLightbox(true)}
       shareNoun="player"
       shareImage={photo && !brokenPhoto ? photo : null}
@@ -173,8 +178,10 @@ const SPORT_TABS: { id: SportsLeaderSport; label: string }[] = [
   { id: 'football', label: 'NFL' },
 ];
 
-export default function SportsLeadersBoard({ boards, engagement = {}, signedIn = false }: {
+export default function SportsLeadersBoard({ boards, engagement = {}, signedIn = false, layout = 'stack' }: {
   boards: Record<SportsLeaderSport, SportsLeaderBoard>;
+  /** `row` lays the cards side by side from `lg` up; a phone stacks them either way. */
+  layout?: 'stack' | 'row';
   /** Saved likes, threads and bookmarks per card, loaded once by the page. */
   engagement?: SportsAnchorEngagementMap;
   /** Guests read every card; only a member can engage with one. */
@@ -229,14 +236,15 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
         </div>
       </div>
 
-      <div className="space-y-4">
-        {/* One sport answered and this one did not: say so, and leave the switch
-            in place so the other board is still one tap away. */}
-        {!board.rows.length && (
-          <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
-            ESPN did not return {tab.label} leaders just now. No sample players are shown in their place.
-          </p>
-        )}
+      {/* One sport answered and this one did not: say so, and leave the switch
+          in place so the other board is still one tap away. */}
+      {!board.rows.length && (
+        <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
+          ESPN did not return {tab.label} leaders just now. No sample players are shown in their place.
+        </p>
+      )}
+      {/* Keyed by sport, so the other sport's row starts from its first card. */}
+      <CardRow key={sport} layout={layout} label="players">
         {board.rows.map((player, index) => {
           const anchor = live ? anchorRef('leader', leaderAnchorId(sport, player)) : null;
           return <LeaderPostCard
@@ -247,9 +255,10 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
             anchor={anchor}
             engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
             signedIn={signedIn}
+            dense={layout === 'row'}
           />;
         })}
-      </div>
+      </CardRow>
 
       {/* The rest of the sports experience lives on /sports; the homepage keeps a
           direct route to the football board and the predictions that used to be
