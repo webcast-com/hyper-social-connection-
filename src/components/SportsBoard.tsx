@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Clapperboard, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
+import { Clapperboard, Radio, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import EspnResponseDetails from '@/components/EspnResponseDetails';
 import { DEFAULT_SPORTS_FILTERS, sportsFilterHref, type SportsFilters } from '@/lib/sports-filters';
@@ -173,7 +173,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
       </div>}
 
       {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:items-center">
         <button type="button" onClick={() => void refreshScores(true)} disabled={refreshing}
           className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none sm:px-4 rounded-full border border-gray-200 bg-white px-2 py-2 text-[11px] font-bold text-gray-700 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
           <RefreshCw aria-hidden="true" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -195,6 +195,13 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         >
           <Clapperboard aria-hidden="true" className="h-4 w-4" />
           Match highlights
+        </Link>
+        <Link
+          href="/sports/live"
+          className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 sm:flex-none sm:px-4 rounded-full border border-orange-200 bg-white px-2 py-2 text-[11px] font-bold text-orange-600 hover:bg-orange-50 dark:border-orange-900 dark:bg-gray-800 dark:text-orange-400 dark:hover:bg-orange-950/40"
+        >
+          <Radio aria-hidden="true" className="h-4 w-4" />
+          Live streams
         </Link>
       </div>
 
