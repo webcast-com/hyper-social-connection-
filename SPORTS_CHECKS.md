@@ -852,6 +852,23 @@ free endpoints: `matches` (fixtures that have a stream, by league), `detail`
   the stored highlights list. Neither comes from SportSRC, which has no news or
   video data.
 
+### The homepage's floating live-stream card
+
+`src/components/LiveStreamToast.tsx`, mounted on the homepage only. A small card
+in the bottom-right corner (above the tab bar on a phone) names one match that
+can be watched now — in play, or starting within 30 minutes — stays 8 seconds,
+goes away, and returns 22 seconds later with a **different** match
+(`src/lib/stream-toast.ts`: every match is shown before any is repeated, and a
+new round never opens with the match just shown). The card links to
+`/sports/live?match=<id>`, which opens the player on that match.
+
+It first appears 3 seconds after the page loads and reads `/api/sports/streams`
+itself, so the homepage render pays nothing for it. It shows nothing when there
+is nothing to watch or no key is set, waits while the pointer or keyboard focus
+is on it, is `inert` while hidden, is not a live region, pauses in a hidden tab,
+and its close button ends it for the rest of the visit (`sessionStorage`).
+Tests: `stream-toast.test.ts`.
+
 Outside the code, a stream plays only when a key is set **and** the site's
 domain is on SportSRC's embed whitelist (the player checks the page's referrer).
 

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ArrowRight, Clapperboard, Compass, Radio, Users, Sparkles, Target, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
+import LiveStreamToast from '@/components/LiveStreamToast';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
@@ -848,6 +849,11 @@ export default async function Home() {
         <SportsLeadersRail board={leaderBoards.football} className="xl:hidden" />
         </div>
       </aside>
+
+      {/* A small floating card naming one match that can be watched now. It
+          reads its own data after the page has loaded, so it costs this render
+          nothing, and shows nothing when there is nothing to watch. */}
+      <LiveStreamToast />
     </div>
   );
 }

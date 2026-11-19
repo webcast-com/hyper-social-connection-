@@ -44,7 +44,7 @@ const CLIPS = [{ id: 'c1', title: 'Liverpool vs AC Milan: Semifinals Highlights'
 
 type Fetched = { url: string };
 
-async function mount(board: StreamBoard, options: { detail?: (id: string) => { status: number; body: unknown } } = {}) {
+async function mount(board: StreamBoard, options: { detail?: (id: string) => { status: number; body: unknown }; initialMatchId?: string } = {}) {
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
   const Dashboard = (await import('../../src/components/SportsStreamDashboard')).default;
@@ -64,7 +64,7 @@ async function mount(board: StreamBoard, options: { detail?: (id: string) => { s
   const container = dom.window.document.getElementById('root')!;
   container.innerHTML = '';
   const root = createRoot(container);
-  await act(async () => { root.render(React.createElement(Dashboard as never, { initial: board, news: NEWS, highlights: CLIPS, viewer: null } as never)); });
+  await act(async () => { root.render(React.createElement(Dashboard as never, { initial: board, news: NEWS, highlights: CLIPS, viewer: null, initialMatchId: options.initialMatchId ?? null } as never)); });
   const $ = (selector: string) => container.querySelector(selector) as any;
   const $$ = (selector: string) => [...container.querySelectorAll(selector)] as any[];
   const click = async (target: any) => {
@@ -154,6 +154,32 @@ test('choosing another match stops the stream that was playing', async () => {
     assert.match(view.$(`[data-stream-match="${BARCA_ID}"]`).className, /is-selected/);
   } finally {
     await view.unmount();
+  }
+});
+
+test('a link that names a match opens the player on it, under the tab that lists it', async () => {
+  const live = await mount(liveBoard(), { initialMatchId: BARCA_ID });
+  try {
+    assert.match(live.$('.sx-player__chips').textContent, /BAR\s*1 - 0\s*RMA/);
+    assert.match(live.$(`[data-stream-match="${BARCA_ID}"]`).className, /is-selected/);
+    assert.equal(live.tab('Live').getAttribute('aria-pressed'), 'true');
+    assert.equal(live.$('iframe'), null, 'still nothing framed until play is pressed');
+  } finally {
+    await live.unmount();
+  }
+  const soon = await mount(liveBoard(), { initialMatchId: SOON_ID });
+  try {
+    assert.match(soon.$('.sx-player__chips').textContent, /NEW\s*vs\s*EVE/);
+    assert.equal(soon.tab('All').getAttribute('aria-pressed'), 'true');
+  } finally {
+    await soon.unmount();
+  }
+  // A match that is no longer listed falls back to the usual opening match.
+  const gone = await mount(liveBoard(), { initialMatchId: 'no-such-match-Zjox' });
+  try {
+    assert.match(gone.$('.sx-player__chips').textContent, /ARS\s*2 - 1\s*CHE/);
+  } finally {
+    await gone.unmount();
   }
 });
 

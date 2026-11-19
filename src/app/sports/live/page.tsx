@@ -7,6 +7,7 @@ import { getStreamBoardForRender } from '@/lib/sportsrc-feed';
 import { getSportsVideoNewsForRender } from '@/lib/espn-video-news-feed';
 import { getHighlightsBoardForRender } from '@/lib/highlights-board';
 import { clipHref, clockDuration } from '@/lib/highlight-clip';
+import { streamMatchId } from '@/lib/sportsrc';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Football Streams',
@@ -26,7 +27,11 @@ const HIGHLIGHT_ITEMS = 4;
  * home feed already shows, and the stored match highlights. Each has its own
  * time budget and resolves to "nothing" rather than failing the page.
  */
-export default async function SportsLivePage() {
+export default async function SportsLivePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // `?match=<id>`: the homepage's floating card links to one match. Anything
+  // that is not a SportSRC id is ignored and the page opens as usual.
+  const asked = (await searchParams).match;
+  const initialMatchId = streamMatchId(Array.isArray(asked) ? asked[0] : asked);
   const [viewer, board, newsBoard, highlightsBoard] = await Promise.all([
     getViewer().catch(() => null),
     getStreamBoardForRender(),
@@ -56,6 +61,7 @@ export default async function SportsLivePage() {
   return (
     <SportsStreamDashboard
       initial={board}
+      initialMatchId={initialMatchId}
       news={news}
       highlights={highlights}
       viewer={viewer ? { id: viewer.id, name: viewer.name ?? null, avatar: viewer.avatar ?? null } : null}

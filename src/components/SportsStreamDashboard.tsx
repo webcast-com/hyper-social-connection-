@@ -143,8 +143,10 @@ function Thumb({ src, className }: { src: string | null; className: string }) {
 type DetailEntry = { state: StreamState | 'loading'; result: StreamDetailResult | null };
 
 export default function SportsStreamDashboard({
-  initial, news, highlights, viewer,
+  initial, news, highlights, viewer, initialMatchId = null,
 }: {
+  /** The match to open on (`?match=`), when a link named one. */
+  initialMatchId?: string | null;
   initial: StreamBoard;
   news: StreamNewsItem[];
   highlights: StreamHighlightItem[];
@@ -157,7 +159,12 @@ export default function SportsStreamDashboard({
   /** '' is SportSRC's own current list; a day is sent only once the reader picks one. */
   const [date, setDate] = useState(initial.date);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<StreamTab>(() => (initial.matches.some((match) => match.status === 'live') ? 'live' : 'all'));
+  const [tab, setTab] = useState<StreamTab>(() => {
+    // A link to one match opens the tab that match is listed under.
+    const asked = initialMatchId ? initial.matches.find((match) => match.id === initialMatchId) : null;
+    if (asked && asked.status !== 'live') return 'all';
+    return initial.matches.some((match) => match.status === 'live') ? 'live' : 'all';
+  });
   const [nav, setNav] = useState<'dashboard' | 'live'>('dashboard');
   const [league, setLeague] = useState<string | null>(null);
   const [club, setClub] = useState<string | null>(null);
@@ -166,7 +173,7 @@ export default function SportsStreamDashboard({
   const [allLeagues, setAllLeagues] = useState(false);
   const [clubsOpen, setClubsOpen] = useState(false);
   const [allNews, setAllNews] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialMatchId);
   const [pinned, setPinned] = useState<StreamMatch | null>(null);
   const [playing, setPlaying] = useState(false);
   const [sourceIndex, setSourceIndex] = useState(0);
