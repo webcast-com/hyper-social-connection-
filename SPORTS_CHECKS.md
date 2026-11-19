@@ -808,6 +808,74 @@ This sandbox's outbound allowlist excludes `site.api.espn.com`. Prior direct che
 Latest ESPN-only verification: **72 data/API/transport/odds + 46 sports/homepage browser tests passed (118 total)**. TypeScript and diff whitespace checks passed. Screenshots/traces live under ignored `test-results/`, not in Git.
 
 
+## Live streams (`/sports/live`): SportSRC
+
+The live-stream screen is a three-column dashboard (navigation and leagues, the
+player and the match list, news and highlights) with its own near-black and
+orange styling, scoped to that route in `src/app/sports/live/stream.css`. From
+1024 px it replaces the site header with its own top bar; from 1280 px it is the
+three columns; below 1024 px the site header and bottom tabs stay and the
+columns stack.
+
+Matches and streams come from SportSRC (`https://api.sportsrc.org/v3/`), three
+free endpoints: `matches` (fixtures that have a stream, by league), `detail`
+(the stream sources for one fixture) and `sports`.
+
+- **The key stays on the server.** `src/lib/sportsrc-feed.ts` is the only file
+  that reads `SPORTSRC_API_KEY`; it sends it as the `X-API-KEY` header. The
+  browser talks to `/api/sports/streams` and `/api/sports/streams/detail`.
+  `/api/health` reports `streams.configured` (present or not, nothing more).
+- **Requests are rationed.** The free plan is 1,000 requests a day for the whole
+  site. One `matches` request serves all five tabs (no status filter); answers
+  are kept in memory (current list 2 min, a picked day 10 min, a match's sources
+  5 min, the sports list 1 h); concurrent readers share one request; under 100
+  remaining everything is kept four times as long; at zero nothing is asked
+  until 00:00 UTC; a failed refresh serves the last list, marked stale. The
+  browser re-reads once a minute and only while the tab is visible.
+  `SPORTSRC_MATCHES_TTL_SECONDS` shortens the two minutes on a paid plan.
+- **Nothing is invented.** A status is one of SportSRC's exact strings; a clock
+  is its minute, else the period it named ("2H"), never worked out from the
+  kickoff; a fixture that has not started has no score; SportSRC has no viewer
+  count, so there is none; the sport tabs are the sports SportSRC lists.
+- **The player is a third party's, in a frame.** It is requested only when play
+  is pressed and removed on stop. Only `https` addresses are framed. The frame
+  has no `sandbox` attribute and the default referrer policy, because the player
+  refuses a sandboxed frame and one with no referrer. Controls that would need
+  to reach inside the frame (volume, seeking) are not drawn; play, stop, the
+  source switcher and full screen are real.
+- **Play is offered when it can work**: a stream exists and the match is in play
+  or starts within 30 minutes (SportSRC's own rule). Otherwise no request is
+  spent.
+- Bookmarks, saved stories and favourite clubs are kept in the browser
+  (`src/lib/stream-saved.ts`); they need no account.
+- Latest News is the league video news the home feed uses; Latest Highlights is
+  the stored highlights list. Neither comes from SportSRC, which has no news or
+  video data.
+
+### The homepage's floating live-stream card
+
+`src/components/LiveStreamToast.tsx`, mounted on the homepage only. A small card
+in the bottom-right corner (above the tab bar on a phone) names one match that
+can be watched now — in play, or starting within 30 minutes — stays 8 seconds,
+goes away, and returns 22 seconds later with a **different** match
+(`src/lib/stream-toast.ts`: every match is shown before any is repeated, and a
+new round never opens with the match just shown). The card links to
+`/sports/live?match=<id>`, which opens the player on that match.
+
+It first appears 3 seconds after the page loads and reads `/api/sports/streams`
+itself, so the homepage render pays nothing for it. It shows nothing when there
+is nothing to watch or no key is set, waits while the pointer or keyboard focus
+is on it, is `inert` while hidden, is not a live region, pauses in a hidden tab,
+and its close button ends it for the rest of the visit (`sessionStorage`).
+Tests: `stream-toast.test.ts`.
+
+Outside the code, a stream plays only when a key is set **and** the site's
+domain is on SportSRC's embed whitelist (the player checks the page's referrer).
+
+Tests: `sportsrc.test.ts` (parsing and rules), `sportsrc-feed.test.ts` (key,
+caching, allowance, failures), `stream-dashboard.test.ts` (the screen mounted in
+jsdom, including the frame's attributes).
+
 ## Predictions page and removed integration
 
 `/sports/predictions` and the sports-page link remain available to guests and members, with the shared header/navigation. The page now fetches its own ESPN upcoming-match odds feed, not the scores board. See [ESPN_ODDS_CHECKS.md](ESPN_ODDS_CHECKS.md) for API and filtering details. Odds are not advertised as generated picks, and no sample prices are injected.

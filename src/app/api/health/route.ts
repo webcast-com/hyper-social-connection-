@@ -2,6 +2,7 @@ import { hasDatabase, describeDatabase, ensureDbConnection, rawQuery } from "@/l
 import { checkStorage, getStorageDriver, type StorageCheck } from "@/lib/storage";
 import { highlightsStore } from "@/lib/highlights-index";
 import { highlightsBackend } from "@/lib/highlights-source";
+import { sportsrcConfigured } from "@/lib/sportsrc-feed";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export const dynamic = "force-dynamic";
  *             folder in the repository; `database`: Postgres) and, for the
  *             folder, whether it was just read, how many clips it holds and
  *             when it was last added to
+ *   streams   whether a SportSRC key is set for /sports/live. Says only that
+ *             one is present, never what it is, and does not test it
  *
  * Always 200: the app is designed to work in demo mode, so this reports the
  * state instead of failing.
@@ -42,6 +45,7 @@ export async function GET() {
     highlights: listed
       ? { store: "github", ok: listed.ok, clips: listed.clips, lastCollectedAt: listed.lastSweepAt }
       : { store: "database" },
+    streams: { provider: "sportsrc", configured: sportsrcConfigured() },
   };
 
   if (!hasDatabase) {

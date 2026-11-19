@@ -10,9 +10,10 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
-import { ArrowRight, Clapperboard, Compass, Users, Sparkles, Target, Trophy } from 'lucide-react';
+import { ArrowRight, Clapperboard, Compass, Radio, Users, Sparkles, Target, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
+import LiveStreamToast from '@/components/LiveStreamToast';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
@@ -561,6 +562,9 @@ export default async function Home() {
             <RailLink href="/sports" label="Sports scores" well="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">
               <Trophy className="h-[18px] w-[18px]" />
             </RailLink>
+            <RailLink href="/sports/live" label="Live streams" well="bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400">
+              <Radio className="h-[18px] w-[18px]" />
+            </RailLink>
             <RailLink href="/sports/highlights" label="Match highlights" well="bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400">
               <Clapperboard className="h-[18px] w-[18px]" />
             </RailLink>
@@ -845,6 +849,11 @@ export default async function Home() {
         <SportsLeadersRail board={leaderBoards.football} className="xl:hidden" />
         </div>
       </aside>
+
+      {/* A small floating card naming one match that can be watched now. It
+          reads its own data after the page has loaded, so it costs this render
+          nothing, and shows nothing when there is nothing to watch. */}
+      <LiveStreamToast />
     </div>
   );
 }
