@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ArrowRight, Clapperboard, Compass, Users, Sparkles, Target, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
+import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
 import { orderCentreEvents } from '@/lib/match-centre';
@@ -594,6 +595,11 @@ export default async function Home() {
               <Users className="h-4 w-4" />
             </RailLink>
           </nav>
+
+          {/* NFL players & top scorers, under the groups. Basketball is at the
+              foot of the right rail, so both sports are on screen without the
+              switch the board in the feed column needs. */}
+          <SportsLeadersRail board={leaderBoards.football} />
         </div>
       </aside>
 
@@ -831,6 +837,12 @@ export default async function Home() {
             ))}
           </div>
         </div>
+
+        {/* Basketball players & top scorers, under Contacts. */}
+        <SportsLeadersRail board={leaderBoards.basketball} />
+        {/* Between `lg` and `xl` there is no left rail, so the NFL list it
+            carries is shown here instead of not at all. */}
+        <SportsLeadersRail board={leaderBoards.football} className="xl:hidden" />
         </div>
       </aside>
     </div>

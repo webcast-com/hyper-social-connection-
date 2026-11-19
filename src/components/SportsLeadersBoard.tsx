@@ -26,7 +26,7 @@ import { teamHref as teamPageHref } from '@/lib/espn-team';
  */
 
 /** Same short labels the dashboard's player card uses. */
-const metricShort = (metric = '') => {
+export const metricShort = (metric = '') => {
   const value = metric.toLowerCase();
   if (value.includes('point')) return 'PTS';
   if (value.includes('rebound')) return 'REB';
@@ -47,7 +47,19 @@ const slugify = (value: string) => value
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
-const hubFor = (sport: SportsLeaderSport) => (sport === 'football' ? '/nfl-basketball/nfl' : '/nfl-basketball/basketball');
+export const hubFor = (sport: SportsLeaderSport) => (sport === 'football' ? '/nfl-basketball/nfl' : '/nfl-basketball/basketball');
+
+/**
+ * Where a player's name links. A player page is addressed by ESPN's own id.
+ * Where the leaders payload reported one, the link goes there; where it did
+ * not, the dashboard's slug route stays as it was, because a name-derived id
+ * would open somebody else's profile.
+ */
+export const leaderPlayerHref = (player: SportsLeaderRow, sport: SportsLeaderSport, league: string) => (
+  player.athleteId
+    ? athleteHref({ league, athleteId: player.athleteId })
+    : `${hubFor(sport)}/player/${player.key}`
+);
 
 /**
  * The dashboard builds its crests from the ESPN CDN the same way, so a row ESPN
@@ -84,13 +96,9 @@ function LeaderPostCard({
   const [showLightbox, setShowLightbox] = useState(false);
 
   const hub = hubFor(sport);
-  // A player or team page is addressed by ESPN's own id. Where the leaders
-  // payload reported one, the card links there; where it did not, the dashboard's
-  // slug route stays as it was, because a name-derived id would open somebody
-  // else's profile.
-  const playerHref = player.athleteId
-    ? athleteHref({ league, athleteId: player.athleteId })
-    : `${hub}/player/${player.key}`;
+  // The team page follows the same rule as the player page (`leaderPlayerHref`):
+  // ESPN's own id where the payload reported one, the dashboard's slug otherwise.
+  const playerHref = leaderPlayerHref(player, sport, league);
   const teamHref = player.teamId
     ? teamPageHref({ league, teamId: player.teamId })
     : `${hub}/team/${slugify(player.team || player.teamAbbr || player.name)}`;

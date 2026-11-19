@@ -54,6 +54,19 @@ are narrow, so `SportsPostCard` takes `dense` (three-line body, full text in
 `title`) and its action row drops to icons by container width, not viewport width —
 the same card is full-width on a phone and 280px wide in a desktop row.
 
+### Players & top scorers in the rails
+
+`src/components/SportsLeadersRail.tsx` is one sport's leaders as a compact list:
+photo, name, team and statistic, and the value ESPN reported, each line linking
+to the player. The homepage places **NFL at the foot of the left rail**, under
+the groups ("Find groups to join" for someone in no group), and **basketball at
+the foot of the right rail**, under Contacts. Between `lg` and `xl` there is no
+left rail, so the NFL list follows basketball in the right rail instead of not
+appearing. Both read the boards the page already fetched for
+`SportsLeadersBoard`, which stays in the feed column; no extra ESPN request is
+made. A sport ESPN did not answer for renders no list and no sample players.
+Tests: `leaders-rail.test.ts`.
+
 ### Endless scrolling, no "load more" button
 
 The homepage feed and the Match Highlights page both used to stop and wait for a
