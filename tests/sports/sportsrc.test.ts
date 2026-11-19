@@ -2,9 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   featuredStreamMatch, filterStreamMatches, httpsUrl, isWatchable, orderStreamMatches, parseStreamDetail, parseStreamMatches,
-  parseStreamSports, streamClock, streamDate, streamDateLabel, streamMatchIcs, streamMatchId, streamScore, streamSportId, streamStatus,
+  parseStreamSources, parseStreamSports, payloadShape, streamClock, streamDate, streamDateLabel, streamInstant, streamMatchIcs, streamMatchId,
+  streamScore, streamSportId, streamStatus,
 } from '../../src/lib/sportsrc';
-import { ARSENAL_ID, BARCA_ID, DONE_ID, LATER_ID, NOW, OFF_ID, SOON_ID, detailPayload, matchesPayload, sportsPayload } from './sportsrc-fixture';
+import {
+  ARSENAL_ID, BARCA_ID, DONE_ID, LATER_ID, NOW, OFF_ID, SOON_ID, detailPayload, matchesPayload, servedDetailPayload, servedMatchesPayload,
+  sportsPayload, streamPayload,
+} from './sportsrc-fixture';
 
 /**
  * SportSRC's responses as the live-stream screen reads them: what is listed,
@@ -147,4 +151,71 @@ test('a calendar entry carries the fixture, its kickoff in UTC, and the way back
 test('the date pill says Today for today and the weekday otherwise', () => {
   assert.equal(streamDateLabel('2026-10-04', '2026-10-04'), 'Today, Oct 4');
   assert.equal(streamDateLabel('2026-10-05', '2026-10-04'), 'Mon, Oct 5');
+});
+
+/* ── The answers as the service sends them, where they differ from its documentation ── */
+
+test('a kick-off sent in milliseconds is the same moment as one sent in seconds', () => {
+  const seconds = Math.floor(NOW / 1000);
+  assert.equal(streamInstant(seconds)!.toISOString(), '2026-11-19T18:00:00.000Z');
+  assert.equal(streamInstant(NOW)!.toISOString(), '2026-11-19T18:00:00.000Z');
+  assert.equal(streamInstant(String(NOW))!.toISOString(), '2026-11-19T18:00:00.000Z');
+  for (const bad of [0, -5, NaN, '', 'soon', null, undefined, {}]) assert.equal(streamInstant(bad), null);
+
+  const served = parseStreamMatches(servedMatchesPayload()).matches;
+  const documented = board().matches;
+  for (const id of [ARSENAL_ID, SOON_ID, DONE_ID]) {
+    assert.equal(served.find((match) => match.id === id)!.startAt, documented.find((match) => match.id === id)!.startAt, id);
+  }
+  // Read as seconds, these kick-offs land tens of thousands of years away, and
+  // a match twenty minutes off never becomes one that can be opened.
+  assert.ok(served.every((match) => match.startAt!.startsWith('2026-11-19T')));
+  assert.equal(isWatchable(served.find((match) => match.id === SOON_ID)!, now), true);
+});
+
+test('a score nested under `current`, or given only as "2 - 1", is still the score', () => {
+  const served = parseStreamMatches(servedMatchesPayload()).matches;
+  const of = (id: string) => served.find((match) => match.id === id)!;
+  assert.deepEqual(of(ARSENAL_ID).score, { home: 2, away: 1 });
+  assert.equal(streamScore(of(ARSENAL_ID)), '2 - 1');
+  assert.deepEqual(of(DONE_ID).score, { home: 3, away: 0 });
+  // No score object at all before kick-off: still "vs", not "0 - 0".
+  assert.deepEqual(of(SOON_ID).score, { home: null, away: null });
+  assert.equal(streamScore(of(SOON_ID)), 'vs');
+});
+
+test('a match’s sources are read whether its fields sit under `data` or under `data.match_info`', () => {
+  const detail = parseStreamDetail(servedDetailPayload())!;
+  assert.equal(detail.id, ARSENAL_ID);
+  assert.equal(detail.title, 'Arsenal vs Chelsea');
+  assert.equal(detail.status, 'live');
+  assert.deepEqual(detail.sources.map((source) => [source.label, source.hd, source.language]), [['LOLA', true, 'English'], ['HDTV', false, null]]);
+  assert.equal(detail.venue?.stadium, 'Emirates Stadium');
+  assert.equal(detail.season, '2026/2027');
+  assert.equal(detail.round, 'Round 9');
+
+  // An answer that does not repeat the id is about the match that was asked for.
+  const bare = { success: true, data: { sources: servedDetailPayload().data.sources } };
+  assert.equal(parseStreamDetail(bare), null);
+  assert.equal(parseStreamDetail(bare, ARSENAL_ID)!.sources.length, 2);
+  assert.equal(parseStreamDetail(bare, '<script>'), null);
+  // Still nothing from an answer with no `data` at all.
+  assert.equal(parseStreamDetail({ success: true }, ARSENAL_ID), null);
+  assert.equal(parseStreamDetail({ success: true, data: [] }, ARSENAL_ID), null);
+});
+
+test('the sources-only answer is read the same way: https only, once each', () => {
+  assert.deepEqual(parseStreamSources(streamPayload()).map((source) => [source.label, source.hd, source.embedUrl]), [
+    ['ECHO', true, `https://embed.example.com/?id=${ARSENAL_ID}&source=echo`],
+  ]);
+  assert.equal(parseStreamSources({ success: true, data: { sources: detailPayload().data.sources } }).length, 2);
+  for (const nothing of [null, 'x', {}, { data: null }, { data: 'x' }, { data: [null, 5, 'x'] }]) assert.deepEqual(parseStreamSources(nothing), []);
+});
+
+test('an answer that could not be read can be described by its field names alone', () => {
+  const shape = payloadShape({ success: true, data: { match_info: { id: ARSENAL_ID, score: null }, sources: [{ embedUrl: 'https://secret.example/x', hd: true }, {}] } });
+  assert.equal(shape, '{success:boolean,data:{match_info:{id:string,score:null},sources:[{embedUrl:string,hd:boolean}]×2}}');
+  assert.ok(!shape.includes('secret.example') && !shape.includes(ARSENAL_ID), 'no values, only names and types');
+  assert.equal(payloadShape([]), '[]');
+  assert.ok(payloadShape({ a: { b: { c: { d: { e: 1 } } } } }).includes('{…}'), 'depth is bounded');
 });

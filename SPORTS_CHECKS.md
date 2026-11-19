@@ -869,6 +869,34 @@ is on it, is `inert` while hidden, is not a live region, pauses in a hidden tab,
 and its close button ends it for the rest of the visit (`sessionStorage`).
 Tests: `stream-toast.test.ts`.
 
+### What the service sends, and finding out why nothing plays
+
+SportSRC's answers differ from its documentation, and the first release read
+only the documented shape. Seen on the live site on 2026-11-19:
+
+- `timestamp` is in **milliseconds**, not Unix seconds. Read as seconds, every
+  kick-off landed in the year 58854: no upcoming match ever came inside the
+  30-minute window, and the list's order by kick-off meant nothing.
+  `streamInstant` reads both.
+- the score is not under `score.home` / `score.away`; every row said "vs". It is
+  now also read from `score.current` and from `score.display` ("2 - 1").
+- `detail` answered `unavailable` for every match, so no match had a source and
+  **nothing played**. `parseStreamDetail` now reads the match's fields under
+  `data` (documented) or under `data.match_info` (the earlier version's
+  nesting), takes the sources from `data.sources`, and no longer discards an
+  answer for not repeating the id.
+
+When `detail` has no source for a match in play, or cannot be used at all, the
+free `stream` request (sources only) is tried once. A match that has not
+started costs one request, as before.
+
+`/api/sports/streams/detail?id=<match id>` now says why there is nothing to
+play: `reason` is `http-<status>`, `refused`, `timeout`, `network`, `not-json`,
+`shape` or `no-sources`, and `note` carries SportSRC's own message when it
+refused (the key is cut out of it). Adding `&debug=1` also returns `shape`: the
+field names and types of the answer that could not be used, no values. It reads
+the cached result, so it costs no SportSRC request.
+
 Outside the code, a stream plays only when a key is set **and** the site's
 domain is on SportSRC's embed whitelist (the player checks the page's referrer).
 

@@ -25,7 +25,9 @@ import {
   emptyStreamBoard,
   parseStreamDetail,
   parseStreamMatches,
+  parseStreamSources,
   parseStreamSports,
+  payloadShape,
   streamDate,
   streamMatchId,
   streamSportId,
@@ -59,7 +61,8 @@ export type SportsrcOptions = {
 };
 
 type Entry<T> = { at: number; ttl: number; value: T };
-type Outcome = { state: StreamState; payload: unknown };
+/** `reason` and `note` say why a request has nothing: see `StreamDetailResult`. */
+type Outcome = { state: StreamState; payload: unknown; reason?: string; note?: string };
 
 const cache = new Map<string, Entry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
@@ -105,14 +108,27 @@ function remember<T>(key: string, value: T, ttl: number, now: number): T {
   return value;
 }
 
-/** One GET. Never throws: a failure is a state. */
+/** What SportSRC said when it refused, safe to pass on: short, one line, and never the key. */
+function upstreamNote(payload: unknown, key: string): string | undefined {
+  if (typeof payload !== 'object' || payload === null) return undefined;
+  const said = (payload as { message?: unknown; error?: unknown }).message ?? (payload as { error?: unknown }).error;
+  if (typeof said !== 'string' || !said.trim()) return undefined;
+  const line = said.replace(/\s+/g, ' ').trim();
+  return (key ? line.split(key).join('[key]') : line).slice(0, 200);
+}
+
+/** One GET. Never throws: a failure is a state, with the reason beside it. */
 async function request(params: Record<string, string>, key: string, options: SportsrcOptions): Promise<Outcome> {
   const now = (options.now ?? Date.now)();
-  if (key && quotaLeft(now) === 0) return { state: 'rate-limited', payload: null };
+  if (key && quotaLeft(now) === 0) return { state: 'rate-limited', payload: null, reason: 'quota' };
   const url = new URL(SPORTSRC_BASE_URL);
   for (const [name, value] of Object.entries(params)) if (value) url.searchParams.set(name, value);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, TIMEOUT_MS);
   try {
     const response = await (options.fetchImpl ?? fetch)(url, {
       headers: { Accept: 'application/json', ...(key ? { 'X-API-KEY': key } : {}) },
@@ -123,19 +139,27 @@ async function request(params: Record<string, string>, key: string, options: Spo
     if (key && response.headers.has('x-ratelimit-remaining') && Number.isFinite(remaining)) {
       quota = { remaining: Math.max(0, remaining), day: utcDay(now) };
     }
-    if (response.status === 401 || response.status === 403) return { state: 'unauthorized', payload: null };
+    // The body is read even on a refusal: it is where SportSRC says why.
+    let payload: unknown = null;
+    let readable = true;
+    try {
+      payload = await response.json();
+    } catch {
+      readable = false;
+    }
+    const note = upstreamNote(payload, key);
+    const reason = `http-${response.status}`;
+    if (response.status === 401 || response.status === 403) return { state: 'unauthorized', payload: null, reason, note };
     if (response.status === 429) {
       quota = { remaining: 0, day: utcDay(now) };
-      return { state: 'rate-limited', payload: null };
+      return { state: 'rate-limited', payload: null, reason, note };
     }
-    if (!response.ok) return { state: 'unavailable', payload: null };
-    const payload: unknown = await response.json();
-    if (typeof payload !== 'object' || payload === null || (payload as { success?: unknown }).success === false) {
-      return { state: 'unavailable', payload: null };
-    }
+    if (!response.ok) return { state: 'unavailable', payload: null, reason, note };
+    if (!readable || typeof payload !== 'object' || payload === null) return { state: 'unavailable', payload: null, reason: 'not-json' };
+    if ((payload as { success?: unknown }).success === false) return { state: 'unavailable', payload: null, reason: 'refused', note };
     return { state: 'ok', payload };
   } catch {
-    return { state: 'unavailable', payload: null };
+    return { state: 'unavailable', payload: null, reason: timedOut ? 'timeout' : 'network' };
   } finally {
     clearTimeout(timer);
   }
@@ -221,17 +245,47 @@ export async function getStreamBoard(
   }, (value) => ({ ...value, stale: true }));
 }
 
-/** One match's stream sources and facts. `id` must be an id SportSRC issued. */
+/**
+ * One match's stream sources and facts. `id` must be an id SportSRC issued.
+ *
+ * `detail` is the request. When it cannot be used, or has no source for a match
+ * that is being played, the `stream` request (sources only) is tried once, so one
+ * endpoint misbehaving does not leave a live match with nothing to play.
+ *
+ * A result with nothing to play says why (`reason`, `note`, `shape`): without
+ * that, "it does not play" cannot be told apart from "SportSRC refused",
+ * "SportSRC changed its answer" and "there is no stream yet".
+ */
 export async function getStreamDetail(id: string | null | undefined, options: SportsrcOptions = {}): Promise<StreamDetailResult> {
   const matchId = streamMatchId(id);
-  if (!matchId) return { state: 'unavailable', detail: null };
+  if (!matchId) return { state: 'unavailable', detail: null, reason: 'bad-id' };
   const key = options.apiKey ?? sportsrcKey();
   if (!key) return { state: 'missing-key', detail: null };
   return cached<StreamDetailResult>(`detail:${matchId}`, DETAIL_TTL_MS, options, async () => {
     const outcome = await request({ type: 'detail', id: matchId }, key, options);
-    if (outcome.state !== 'ok') return { ok: false, value: { state: outcome.state, detail: null } };
-    const detail: StreamDetail | null = parseStreamDetail(outcome.payload);
-    return detail ? { ok: true, value: { state: 'ok', detail } } : { ok: false, value: { state: 'unavailable', detail: null } };
+    // A refused key or a spent allowance will not go better on a second request.
+    if (outcome.state === 'unauthorized' || outcome.state === 'rate-limited') {
+      return { ok: false, value: { state: outcome.state, detail: null, reason: outcome.reason, note: outcome.note } };
+    }
+    const detail: StreamDetail | null = outcome.state === 'ok' ? parseStreamDetail(outcome.payload, matchId) : null;
+    const why = outcome.state !== 'ok'
+      ? { reason: outcome.reason, note: outcome.note }
+      : { reason: detail ? 'no-sources' : 'shape', shape: payloadShape(outcome.payload) };
+    if (detail && detail.sources.length > 0) return { ok: true, value: { state: 'ok', detail } };
+    // No source for a match that has not started is the ordinary case: they are
+    // published close to kick-off. Only a match in play, or an answer that could
+    // not be used at all, is worth a second request.
+    if (detail && detail.status !== 'live') return { ok: true, value: { state: 'ok', detail, ...why } };
+    const second = await request({ type: 'stream', id: matchId }, key, options);
+    const sources = second.state === 'ok' ? parseStreamSources(second.payload) : [];
+    if (sources.length > 0) {
+      const found: StreamDetail = detail
+        ? { ...detail, sources }
+        : { id: matchId, title: '', sources, venue: null, referee: null, managers: { home: null, away: null }, season: null, round: null };
+      return { ok: true, value: { state: 'ok', detail: found } };
+    }
+    if (detail) return { ok: true, value: { state: 'ok', detail, ...why } };
+    return { ok: false, value: { state: second.state === 'ok' ? 'unavailable' : second.state, detail: null, ...why } };
   }, (value) => value);
 }
 
