@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Play } from 'lucide-react';
 import SportsPostCard from './SportsPostCard';
+import CardRow from './CardRow';
 import LinkMediaPlayer from './LinkMediaPlayer';
 import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagement, type SportsAnchorEngagementMap, type SportsAnchorRef } from '@/lib/sports-anchor';
 import { clipHref, clipMedia as clipMediaFor } from '@/lib/highlight-clip';
@@ -59,7 +60,9 @@ const clipMedia = clipMediaFor;
  * One clip as a post card. Exported for the highlights page, which lays the same
  * cards out full-width with filters; the homepage feed below is unchanged.
  */
-export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
+export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = false }: {
+  /** One of a row of narrow cards on a desktop; see `SportsPostCard`. */
+  dense?: boolean;
   clip: SportsHighlightClip;
   /** Null on a sample board: placeholder clips get no post to engage with. */
   anchor: SportsAnchorRef | null;
@@ -141,6 +144,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
       anchor={anchor}
       engagement={engagement}
       signedIn={signedIn}
+      dense={dense}
       permalink={{ href: clipHref(clip), label: 'Highlight page' }}
       shareNoun="highlight"
       shareImage={clip.thumbnail}
@@ -155,16 +159,22 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn }: {
   );
 }
 
-export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}, signedIn = false }: {
+export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}, signedIn = false, layout = 'stack' }: {
   board: SportsHighlightsBoard;
   limit?: number;
+  /** `row` lays the cards side by side from `lg` up; a phone stacks them either way. */
+  layout?: 'stack' | 'row';
   /** Saved likes, threads and bookmarks per clip, loaded once by the page. */
   engagement?: SportsAnchorEngagementMap;
   /** Guests read every card; only a member can engage with one. */
   signedIn?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const clips = board.clips.slice(0, expanded ? board.clips.length : limit);
+  // A desktop row scrolls sideways, so it holds every clip and needs no control.
+  // Stacked, the list is `limit` cards until the reader asks for the rest: this
+  // board sits above the feed, and a dozen stacked cards would bury it.
+  const row = layout === 'row';
+  const clips = row || expanded ? board.clips : board.clips.slice(0, limit);
   if (!board.clips.length) return null;
   const sample = board.status !== 'live' && board.status !== 'partial';
 
@@ -186,7 +196,7 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
         </Link>
       </div>
 
-      <div className="space-y-4">
+      <CardRow layout={layout} label="match highlights" phoneLimit={row && !expanded ? limit : undefined}>
         {clips.map((clip) => {
           // A sample board is placeholder data, so it gets no anchor post.
           const anchor = sample ? null : anchorRef('highlight', highlightAnchorId(clip));
@@ -196,16 +206,17 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
             anchor={anchor}
             engagement={anchor ? engagement[anchorKey(anchor)] ?? null : null}
             signedIn={signedIn}
+            dense={layout === 'row'}
           />;
         })}
-      </div>
+      </CardRow>
 
       {board.clips.length > limit && (
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
-          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-gray-600 hover:bg-blue-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className={`mt-3 inline-flex min-h-11 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-gray-600 hover:bg-blue-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60 ${row ? 'lg:hidden' : ''}`}
         >
           {expanded ? 'Show fewer highlights' : `Show all ${board.clips.length} highlights`}
         </button>

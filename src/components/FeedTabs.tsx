@@ -11,6 +11,7 @@ import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import { summariseLiveCards } from '@/lib/match-centre';
 import { FEED_RENDER_BATCH } from '@/lib/feed-interleave';
+import InfiniteSentinel from '@/components/InfiniteSentinel';
 
 type Tab = 'for-you' | 'following' | 'live' | 'highlights';
 
@@ -19,7 +20,8 @@ type Tab = 'for-you' | 'following' | 'live' | 'highlights';
  *
  * For You is everything: the member posts, every fixture the board reports, the
  * recent highlight clips, and the league video and prediction cards, each kind
- * placed by its own pass in `feed-interleave.ts` and revealed in batches. Nothing
+ * placed by its own pass in `feed-interleave.ts` and revealed in batches as the
+ * reader scrolls, with no button to press. Nothing
  * here decides how many of any kind there are.
  *
  * `highlightPosts` is the Highlights tab, which took the place of Saved (saved
@@ -62,7 +64,8 @@ export default function FeedTabs({
   // How many of this tab's cards are in the DOM. Every card the page built is in
   // `postsToRender`; this only decides how many are materialised at once, because
   // a match card is a client component with its own state and a busy day can
-  // report a thousand fixtures. Switching tab starts from the first batch again,
+  // report a thousand fixtures. The next batch is added as the reader scrolls
+  // near the end of this one. Switching tab starts from the first batch again,
   // so one tab's scrolling does not silently decide another's.
   const [revealed, setRevealed] = useState(FEED_RENDER_BATCH);
   const select = (tab: Tab) => { setActiveTab(tab); setRevealed(FEED_RENDER_BATCH); };
@@ -265,15 +268,15 @@ export default function FeedTabs({
                 />
               )
             ))}
+            {/* Endless scrolling: the next batch is revealed as the reader nears
+                the end of this one. Every card is already here; this only decides
+                how many are in the DOM. */}
             {remaining > 0 && (
-              <button
-                type="button"
-                onClick={() => setRevealed((count) => count + FEED_RENDER_BATCH)}
-                className="min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-bold text-blue-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700/60"
-              >
-                Show {Math.min(FEED_RENDER_BATCH, remaining)} more
-                <span className="font-semibold text-gray-500 dark:text-gray-400"> · {remaining} remaining in this tab</span>
-              </button>
+              <InfiniteSentinel
+                watch={`${activeTab}:${revealed}`}
+                onReach={() => setRevealed((count) => count + FEED_RENDER_BATCH)}
+                fallbackLabel={`Show ${Math.min(FEED_RENDER_BATCH, remaining)} more`}
+              />
             )}
             {/* The read that fills this tab has a ceiling. When it was the ceiling
                 that stopped it, the tab says so and links to the page that pages

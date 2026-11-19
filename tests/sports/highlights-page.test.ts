@@ -5,6 +5,10 @@ import type { SportsHighlightsBoard } from '../../src/lib/espn-highlights-feed';
 import type { IndexedHighlights } from '../../src/lib/highlights-index';
 import type { SportsHighlightClip } from '../../src/lib/espn-highlights';
 import type { SportsVideoNewsClip } from '../../src/lib/espn-video-news';
+import { installIntersectionObserver, keepEndInRange, scrollToEnd, watchedEnds } from './fake-intersection';
+
+// jsdom has no IntersectionObserver; the stored list's endless scrolling needs one.
+installIntersectionObserver();
 
 /**
  * The highlights page.
@@ -18,7 +22,8 @@ import type { SportsVideoNewsClip } from '../../src/lib/espn-video-news';
  *
  * The second half of this file is the stored index: clips a background sweeper
  * kept in Postgres, rendered in their own section, filtered and paged through the
- * endpoint rather than in memory, and reported with counts that say what they
+ * endpoint rather than in memory (the next page is read as the reader scrolls to
+ * the end of the last, with no button), and reported with counts that say what they
  * count. Without a database none of that exists, and the page must look exactly
  * as it did before the index did — which is what the first half still asserts.
  */
@@ -155,6 +160,8 @@ async function mountPage(initial: SportsHighlightsBoard, options: {
     /** A section heading, when the page renders the indexed layout. */
     section: (label: string) => [...container.querySelectorAll('section')].find((node: any) => node.getAttribute('aria-label') === label) ?? null,
     button: (label: string) => [...container.querySelectorAll('button')].find((node: any) => node.textContent.trim() === label) ?? null,
+    /** The reader scrolls to the end of the list. Returns how many end markers were told. */
+    scrollToEnd: async () => { let told = 0; await act(async () => { told = scrollToEnd(); }); return told; },
     /** Answer the page's own refresh call. */
     stubApi: (next: (url: string) => Response | Promise<Response>) => { respond = next; },
     text: () => container.textContent ?? '',
@@ -424,14 +431,132 @@ test('a filter or a further page is read from the endpoint when clips are stored
     assert.match(page.text(), /A week-old stored clip/);
     assert.ok(!page.text().includes('A stored clip'), 'the previous page is replaced, not kept');
 
-    const more = page.button('Load 2 more stored clips')!;
-    assert.ok(more, 'the button says how many clips are next');
-    await page.click(more);
+    // Endless scrolling: no button offers the next page, reaching the end asks for it.
+    assert.ok(!page.button('Load 2 more stored clips'));
+    assert.ok(![...page.container.querySelectorAll('button')].some((node: any) => /\bmore (stored )?clips\b/i.test(node.textContent)),
+      'nothing asks the reader to press for more clips');
+    assert.equal(watchedEnds(page.container), 1, 'the end of the list is watched');
+    assert.equal(page.urls.length, 1, 'and nothing is read until the reader gets there');
+
+    await page.scrollToEnd();
     await page.settle();
     assert.deepEqual(page.urls[1], '/api/sports/highlights?index=1&limit=2&days=7&offset=2', 'the next slice, from where the last one stopped');
     assert.match(page.text(), /A week-old stored clip/);
     assert.match(page.text(), /An older stored clip/, 'a further page is appended to what is already shown');
     assert.match(page.text(), /3 more match this filter/);
+    assert.equal(watchedEnds(page.container), 1, 'the new end is watched in turn');
+  } finally {
+    await page.unmount();
+  }
+});
+
+/** A page of stored clips for the endless-scroll tests: `count` clips numbered from `from`. */
+const storedPage = (from: number, count: number, remaining: number): { board: SportsHighlightsBoard; index: IndexedHighlights } => ({
+  board: board([clip()]),
+  index: noClipsIndex({
+    match: Array.from({ length: count }, (_, offset) => clip({
+      id: String(900 + from + offset), eventId: `espn-ucl-4019${from + offset}`, eventName: 'Milan vs Madrid',
+      title: `Stored clip number ${from + offset}`, league: 'ucl', leagueName: 'UEFA Champions League',
+    })),
+    remaining,
+    byLeague: [{ league: 'ucl', leagueName: 'UEFA Champions League', total: from + count + remaining }],
+    byStatus: [{ status: 'final', total: from + count + remaining }],
+    summary: summary({ clips: from + count + remaining, matchClips: from + count + remaining, competitions: 1 }),
+  }),
+});
+
+test('scrolling keeps reading pages until none are left, one request at a time', async () => {
+  const page = await mountPage(board([clip()]), { initialIndex: storedPage(0, 2, 4).index, initialLimit: 2 });
+  try {
+    const waiting: ((response: Response) => void)[] = [];
+    page.stubApi(() => new Promise<Response>((answer) => { waiting.push(answer); }));
+
+    await page.scrollToEnd();
+    assert.equal(page.urls.length, 1);
+    assert.match(page.text(), /Loading more clips…/);
+    assert.equal(watchedEnds(page.container), 0, 'the end is not watched while a page is on its way');
+    await page.scrollToEnd();
+    assert.equal(page.urls.length, 1, 'so scrolling on does not ask twice');
+
+    waiting.shift()!(Response.json(storedPage(2, 2, 2)));
+    await page.settle();
+    assert.match(page.text(), /Stored clip number 3/);
+    assert.match(page.text(), /2 more match this filter/);
+
+    await page.scrollToEnd();
+    assert.equal(page.urls[1], '/api/sports/highlights?index=1&limit=2&offset=4');
+    waiting.shift()!(Response.json(storedPage(4, 2, 0)));
+    await page.settle();
+    assert.match(page.text(), /Stored clip number 5/);
+    assert.equal(page.container.querySelector('[data-infinite-sentinel]'), null, 'the end marker goes when nothing is left');
+    assert.ok(!page.text().includes('Loading more clips'));
+    assert.ok(!page.text().includes('more match this filter'));
+    assert.equal(await page.scrollToEnd(), 0);
+    assert.equal(page.urls.length, 2, 'and nothing more is asked');
+  } finally {
+    await page.unmount();
+  }
+});
+
+test('an end still in range after a page arrives reads the next one without another scroll', async () => {
+  const page = await mountPage(board([clip()]), { initialIndex: storedPage(0, 2, 4).index, initialLimit: 2 });
+  try {
+    const pages = [storedPage(2, 2, 2), storedPage(4, 2, 0)];
+    page.stubApi(() => Response.json(pages.shift()!));
+    // A window taller than a page of clips: once the end is in range it stays
+    // there, so no further "came into view" event will fire on its own.
+    keepEndInRange(true);
+    await page.scrollToEnd();
+    for (let turn = 0; turn < 6; turn += 1) await page.settle();
+    assert.deepEqual(page.urls, [
+      '/api/sports/highlights?index=1&limit=2&offset=2',
+      '/api/sports/highlights?index=1&limit=2&offset=4',
+    ], 'a tall window is filled, and then it stops');
+    assert.match(page.text(), /Stored clip number 5/);
+  } finally {
+    keepEndInRange(false);
+    await page.unmount();
+  }
+});
+
+test('a page that fails to load says so at the end of the list and is not retried by scrolling', async () => {
+  const page = await mountPage(board([clip()]), { initialIndex: storedPage(0, 2, 4).index, initialLimit: 2 });
+  try {
+    page.stubApi(() => new Response('down', { status: 503 }));
+    await page.scrollToEnd();
+    await page.settle();
+    assert.equal(page.urls.length, 1);
+    const alert = [...page.container.querySelectorAll('[role="alert"]')].find((node: any) => node.textContent.includes('Could not load more clips'));
+    assert.ok(alert, 'the failure is reported where the reader is');
+    assert.match(page.text(), /Stored clip number 1/, 'what was on screen is kept');
+    assert.equal(watchedEnds(page.container), 0, 'scrolling no longer asks');
+    assert.equal(await page.scrollToEnd(), 0);
+    for (let turn = 0; turn < 3; turn += 1) await page.settle();
+    assert.equal(page.urls.length, 1, 'a failing read is not repeated in a loop');
+
+    page.stubApi(() => Response.json(storedPage(2, 2, 2)));
+    await page.click(page.button('Try again')!);
+    await page.settle();
+    assert.equal(page.urls[1], '/api/sports/highlights?index=1&limit=2&offset=2', 'the same page is asked again');
+    assert.match(page.text(), /Stored clip number 3/);
+    assert.ok(!page.text().includes('Could not load more clips'));
+    assert.equal(watchedEnds(page.container), 1, 'and scrolling works again');
+  } finally {
+    await page.unmount();
+  }
+});
+
+test('a clip the next page repeats is shown once', async () => {
+  const page = await mountPage(board([clip()]), { initialIndex: storedPage(0, 2, 4).index, initialLimit: 2 });
+  try {
+    // A clip was stored between the two reads, so every row moved down one and
+    // the second page starts with the last clip of the first.
+    page.stubApi(() => Response.json(storedPage(1, 2, 3)));
+    await page.scrollToEnd();
+    await page.settle();
+    const titles = page.cards().map((card: any) => card.textContent).filter((text: string) => text.includes('Stored clip number 1'));
+    assert.equal(titles.length, 1);
+    assert.match(page.text(), /Stored clip number 2/);
   } finally {
     await page.unmount();
   }

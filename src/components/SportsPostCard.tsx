@@ -52,6 +52,10 @@ import type { SportsAnchorEngagement, SportsAnchorRef } from '@/lib/sports-ancho
 export type SportsPostDetail = { label: string; value: string };
 
 const rowButton = 'flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 font-semibold transition-colors';
+// The labels need room beside their icons. On a phone the card is as wide as the
+// window, so the window decides (as on a post). From `lg` a card can also sit in
+// a row of narrower cards on a wide window, so there the row's own width decides.
+const rowLabel = 'hidden min-[360px]:inline lg:hidden lg:@min-[296px]:inline';
 
 export default function SportsPostCard({
   href,
@@ -74,7 +78,14 @@ export default function SportsPostCard({
   anchor = null,
   engagement = null,
   signedIn = false,
+  dense = false,
 }: {
+  /**
+   * The card is one of a row of narrow cards on a desktop (`CardRow`). From `lg`
+   * its text line is set smaller and held to three lines, so every card in the
+   * row puts its media at the same height. Below `lg` it changes nothing.
+   */
+  dense?: boolean;
   /** Where the card goes when it is clicked. */
   href: string;
   /** Where the author image goes - the team or competition page. */
@@ -241,8 +252,12 @@ export default function SportsPostCard({
       </div>
 
       {/* Post text content - the item's line. */}
-      <div className="px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-        {body}
+      <div className={`px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed${dense ? ' lg:text-sm lg:leading-snug' : ''}`}>
+        {dense ? (
+          // The clamp sits inside the padding, or the padding would show the top
+          // of a fourth line. The whole line stays one hover away.
+          <div title={body} className="lg:line-clamp-3 lg:min-h-[3.61rem]">{body}</div>
+        ) : body}
       </div>
 
       {/* Attached media - the post image/video block, supplied by the caller. */}
@@ -297,7 +312,7 @@ export default function SportsPostCard({
       </div>
 
       {/* Action buttons row - Like, Comment, Share and save, as on a post. */}
-      <div className="relative px-2 py-1 flex items-center justify-between text-sm">
+      <div className="@container relative px-2 py-1 flex items-center justify-between text-sm">
         {canEngage ? (
           <form action={likeSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="flex-1 min-w-0">
             <button
@@ -307,7 +322,7 @@ export default function SportsPostCard({
               className={`${rowButton} w-full ${liked ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}
             >
               <ThumbsUp className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
-              <span className="hidden min-[360px]:inline">{liked ? 'Liked' : 'Like'}</span>
+              <span className={rowLabel}>{liked ? 'Liked' : 'Like'}</span>
             </button>
           </form>
         ) : (
@@ -319,7 +334,7 @@ export default function SportsPostCard({
             className={`${rowButton} text-gray-400 dark:text-gray-500 disabled:cursor-not-allowed`}
           >
             <ThumbsUp className="w-4 h-4" />
-            <span className="hidden min-[360px]:inline">Like</span>
+            <span className={rowLabel}>Like</span>
           </button>
         )}
 
@@ -331,7 +346,7 @@ export default function SportsPostCard({
           className={`${rowButton} text-gray-600 dark:text-gray-300`}
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="hidden min-[360px]:inline">Comment</span>
+          <span className={rowLabel}>Comment</span>
         </button>
 
         <button
@@ -342,7 +357,7 @@ export default function SportsPostCard({
           className={`${rowButton} text-gray-600 dark:text-gray-300`}
         >
           <Share2 className="w-4 h-4" />
-          <span className="hidden min-[360px]:inline">Share</span>
+          <span className={rowLabel}>Share</span>
         </button>
 
         {canEngage ? (

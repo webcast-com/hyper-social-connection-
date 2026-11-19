@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Clapperboard, Database, RefreshCw } from 'lucide-react';
 import { HighlightPostCard } from './SportsHighlightsFeed';
 import SportsVideoNewsCard from './SportsVideoNewsCard';
+import InfiniteSentinel from './InfiniteSentinel';
 import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagementMap } from '@/lib/sports-anchor';
 import type { SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import type { SportsHighlightClip, SportsHighlightStatus } from '@/lib/espn-highlights';
@@ -198,6 +199,9 @@ export default function SportsHighlightsPage({
   const [offset, setOffset] = useState(initialOffset);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // The last attempt to read a further page failed. Scrolling stops asking until
+  // the reader says to try again, so a failing request is not repeated in a loop.
+  const [moreFailed, setMoreFailed] = useState(false);
   const [sweeping, setSweeping] = useState(false);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
@@ -222,7 +226,7 @@ export default function SportsHighlightsPage({
 
   /**
    * One read of the endpoint. `replace` starts a new filtered page; `append` adds
-   * the next slice of the same one. A failure keeps everything already on screen.
+   * the next slice of the same one, which is what scrolling to the end asks for. A failure keeps everything already on screen.
    */
   const load = async (
     next: { league: string; status: string; days: number; offset: number; refresh?: boolean },
@@ -233,6 +237,7 @@ export default function SportsHighlightsPage({
     request.current = controller;
     if (mode === 'append') setLoadingMore(true); else setLoading(true);
     setError('');
+    setMoreFailed(false);
     try {
       const response = await fetch(urlFor(next), {
         headers: { Accept: 'application/json' },
@@ -246,9 +251,17 @@ export default function SportsHighlightsPage({
       const read = payload.index;
       setBoard(payload.board);
       setIndex(read);
-      setStored((previous) => (mode === 'append'
-        ? { match: [...previous.match, ...read.match], league: [...previous.league, ...read.league] }
-        : { match: read.match, league: read.league }));
+      // A clip stored while the reader was scrolling moves every later row down
+      // one, so the next page can repeat the last clip of this one. One card each.
+      setStored((previous) => {
+        if (mode !== 'append') return { match: read.match, league: read.league };
+        const matchIds = new Set(previous.match.map((clip) => `${clip.eventId}-${clip.id}`));
+        const leagueIds = new Set(previous.league.map((clip) => clip.id));
+        return {
+          match: [...previous.match, ...read.match.filter((clip) => !matchIds.has(`${clip.eventId}-${clip.id}`))],
+          league: [...previous.league, ...read.league.filter((clip) => !leagueIds.has(clip.id))],
+        };
+      });
       // The chips follow what is on screen, not what was clicked: a read that
       // failed leaves both the clips and the filter that produced them alone.
       setLeague(next.league);
@@ -256,7 +269,11 @@ export default function SportsHighlightsPage({
       setDays(next.days);
       setOffset(next.offset);
     } catch {
-      if (!controller.signal.aborted) setError('Could not refresh highlights. Keeping the clips already shown. Please try again.');
+      if (controller.signal.aborted) return;
+      // A further page that failed is reported where the reader is, at the end
+      // of the list, not in the alert at the top of a long page.
+      if (mode === 'append') setMoreFailed(true);
+      else setError('Could not refresh highlights. Keeping the clips already shown. Please try again.');
     } finally {
       if (request.current === controller) request.current = null;
       if (!controller.signal.aborted) { setLoading(false); setLoadingMore(false); }
@@ -530,17 +547,31 @@ export default function SportsHighlightsPage({
       </div>
     </section>}
 
-    {hasIndex && (index?.remaining ?? 0) > 0 && <div className="mt-5 flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        onClick={() => void loadMore()}
-        disabled={loadingMore || loading}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gray-200 px-4 text-sm font-bold text-rose-600 disabled:opacity-60 dark:border-gray-700 dark:text-rose-400"
-      >
-        <RefreshCw aria-hidden="true" className={`h-4 w-4 ${loadingMore ? 'animate-spin' : ''}`} />
-        {loadingMore ? 'Loading…' : `Load ${Math.min(limit, index?.remaining ?? 0)} more stored clips`}
-      </button>
-      <span className="text-xs text-gray-500 dark:text-gray-400">{(index?.remaining ?? 0).toLocaleString(undefined)} more match this filter</span>
+    {/* Endless scrolling: the next page of stored clips is read as the reader
+        nears the end of the ones on screen. */}
+    {hasIndex && (index?.remaining ?? 0) > 0 && <div className="mt-5 min-w-0">
+      {moreFailed
+        ? <div role="alert" className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border border-red-200 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:text-red-300">
+          <span className="min-w-0">Could not load more clips. The clips already shown are kept.</span>
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-gray-200 px-4 text-sm font-bold text-rose-600 dark:border-gray-700 dark:text-rose-400"
+          >
+            <RefreshCw aria-hidden="true" className="h-4 w-4" /> Try again
+          </button>
+        </div>
+        : <InfiniteSentinel
+          watch={stored.match.length + stored.league.length}
+          enabled={!loading && !loadingMore && !sweeping}
+          onReach={() => void loadMore()}
+          fallbackLabel="Show more clips"
+        >
+          <p role="status" className="flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
+            <RefreshCw aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> Loading more clips…
+          </p>
+        </InfiniteSentinel>}
+      <p className="mt-1 text-center text-xs text-gray-500 dark:text-gray-400">{(index?.remaining ?? 0).toLocaleString(undefined)} more match this filter</p>
     </div>}
 
     {!shown && (board.clips.length || hasIndex

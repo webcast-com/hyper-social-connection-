@@ -36,6 +36,67 @@ F1 uses race titles and reported athlete positions rather than invented Home/Awa
 - Sample fixtures are labeled consistently across summaries and event cards. Unrelated predictions are not attached by array index.
 - Shared header/navigation and safe-area-aware page padding remain available to signed-in and signed-out visitors.
 
+### The desktop homepage: two rails and two card rows
+
+From `lg` (1024px) the homepage is a centre column with a right rail (scores,
+trending, people, contacts); from `xl` (1280px) a left rail of navigation joins it.
+Both rails are sticky under the navbar and scroll on their own when they are taller
+than the window, so they stay in reach for the whole feed. Below `lg` nothing here
+applies — the single-column page is unchanged.
+
+"Players & top scorers" and "Match highlights" pass `layout="row"` on the homepage.
+`src/components/CardRow.tsx` then lays their cards out as one sideways,
+scroll-snapping row from `lg`, with previous / next buttons that appear only when
+there is more in that direction, and keeps the ordinary stacked column below `lg`.
+Stacked, the two boards stood about 3,000px tall and the first member post sat
+below them; as rows the feed's tabs start roughly 1,500px higher. Cards in a row
+are narrow, so `SportsPostCard` takes `dense` (three-line body, full text in
+`title`) and its action row drops to icons by container width, not viewport width —
+the same card is full-width on a phone and 280px wide in a desktop row.
+
+### Players & top scorers in the rails
+
+`src/components/SportsLeadersRail.tsx` is one sport's leaders as a compact list:
+photo, name, team and statistic, and the value ESPN reported, each line linking
+to the player. The homepage places **NFL at the foot of the left rail**, under
+the groups ("Find groups to join" for someone in no group), and **basketball at
+the foot of the right rail**, under Contacts. Between `lg` and `xl` there is no
+left rail, so the NFL list follows basketball in the right rail instead of not
+appearing. Both read the boards the page already fetched for
+`SportsLeadersBoard`, which stays in the feed column; no extra ESPN request is
+made. A sport ESPN did not answer for renders no list and no sample players.
+Tests: `leaders-rail.test.ts`.
+
+### Endless scrolling, no "load more" button
+
+The homepage feed and the Match Highlights page both used to stop and wait for a
+press ("Show 24 more", "Load 24 more stored clips"). Both now continue on their
+own: `src/components/InfiniteSentinel.tsx` is an invisible marker after the last
+card, and when it comes within 800px of the window it asks for more — the feed
+reveals its next 24 cards, the highlights page reads its next page from
+`/api/sports/highlights`.
+
+- **It cannot stall.** An observer reports a change, not a state, so if the marker
+  is still in range after cards arrive (a tall window, a short page) nothing would
+  fire again. The observer is rebuilt every time the list grows, and a new one
+  always reports where the marker is now.
+- **It cannot loop.** On the highlights page the marker is not watched while a
+  request is in flight, and a failed read stops the scrolling from asking again:
+  the end of the list says "Could not load more clips" with a **Try again** button.
+  That button is the only one, and only after a failure.
+- **A repeated clip is shown once.** A clip stored between two page reads moves
+  every later row down one, so the next page can start with the last clip of the
+  previous one; appended pages are de-duplicated by clip.
+- **No IntersectionObserver, no dead end.** A browser without it gets a plain
+  button in the marker's place.
+- **The homepage "Match highlights" board** holds every clip (at most 12) in its
+  desktop row, with no control. Stacked on a phone it still shows four behind
+  "Show all": it sits above the feed, and twelve stacked cards would bury it.
+
+Tests: `feed-tabs.test.ts`, `highlights-page.test.ts` and
+`highlights-post-cards.test.ts` (with `fake-intersection.ts` standing in for the
+observer jsdom lacks), and `infinite-sentinel.test.ts` for the button fallback.
+
 ### The board's featured match
 
 When the view holds more than one fixture and ESPN reports one of them as live, `/sports` draws that match large above the competitions (`SportsFeaturedMatch`, chosen by `pickFeaturedEvent` in `src/lib/featured-match.ts`). The rules, all covered by `tests/sports/featured-match.test.ts` and the browser fixture (`tests/sports/layout.spec.ts`):
@@ -98,12 +159,12 @@ Live tab used to show are both gone.
 What is bounded is the **DOM, not the list**. A match card is a client component
 with its own state, poll and share affordances, and a busy day across the whole
 catalog can report a thousand fixtures, so a tab materialises
-`FEED_RENDER_BATCH = 24` cards at a time and offers the rest with a control that
-states exactly how many are left ("Show 24 more · 276 remaining in this tab").
-Every card the page built is reachable, the control disappears when nothing is
+`FEED_RENDER_BATCH = 24` cards at a time and adds the next batch as the reader
+scrolls towards the end of the one on screen — endless scrolling, with no button
+(`InfiniteSentinel`, see [below](#endless-scrolling-no-load-more-button)).
+Every card the page built is reachable, the end marker disappears when nothing is
 left, and switching tab starts from the first batch again so one tab's scrolling
-does not decide another's. This is why the number on that button is a rendering
-fact and never a claim about how much sport is happening.
+does not decide another's.
 
 Ordering, and what each surface does with it:
 
@@ -200,8 +261,8 @@ stays a bounded list of at most 12 (it is a summary with a link to `/sports/high
 and the feed is the whole window.
 
 What is bounded is the **DOM, not the list**, by the same rule the match cards
-follow: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest are
-offered by the control that says how many remain. Clips are interleaved by their
+follow: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest arrive
+as the reader scrolls. Clips are interleaved by their
 own pass at `HIGHLIGHTS_FEED_SLOTS = [4, 9]` — the last pass, so neither the desk's
 score cards (`[1, 3, 5, 7]`) nor the league video (`[2, 6]`) moves when highlights
 join — and every clip past the first two simply follows the member posts, newest
