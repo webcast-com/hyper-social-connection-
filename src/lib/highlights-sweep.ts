@@ -95,7 +95,12 @@ export const MEDIA_WARM_PER_PASS = 6;
 export type SweepPass = {
   ok: boolean;
   /** Why a pass did no work. Absent when it did. */
-  reason?: 'no-database' | 'rate-limited' | 'unknown-competition' | 'failed';
+  /**
+   * `scheduled`: the index is kept in the repository's data folder and filled
+   * by a scheduled job, so this process has nowhere to put a clip and asked
+   * ESPN for nothing. The summary is still the real one.
+   */
+  reason?: 'no-database' | 'rate-limited' | 'unknown-competition' | 'failed' | 'scheduled';
   /** Scoreboard cells walked. */
   cells: number;
   /** Game collections asked. */
@@ -233,6 +238,14 @@ export function runHighlightsSweep(options: SweepPassOptions = {}): Promise<Swee
 
   // Without storage there is nothing to fill, so no request is made at all.
   if (!store.available()) return finish({ reason: 'no-database' });
+  // A store this process cannot write to is filled elsewhere. Asking ESPN from
+  // here would spend requests on answers that could not be kept.
+  if (store.readOnly?.()) {
+    return store.summary().then(
+      (summary) => finish({ reason: 'scheduled', summary }),
+      () => finish({ reason: 'scheduled' }),
+    );
+  }
 
   const slug = typeof options.league === 'string' && options.league.trim() ? options.league.trim() : null;
   if (slug && !ESPN_LEAGUES.some((meta) => meta.slug === slug)) return finish({ reason: 'unknown-competition' });

@@ -1,0 +1,145 @@
+# Collects highlight clips from ESPN and keeps the list in this repository.
+#
+# The site shows every clip it has ever read from ESPN, not only the ones ESPN
+# lists today. That list used to be three tables in Postgres, filled as pages
+# were loaded. It is now a folder of JSON files, `data/highlights/`, on the
+# branch `highlights-data`, filled by this job; the site reads the files
+# straight from that branch and needs no database for them. Only the list is
+# kept. The videos stay on ESPN.
+#
+# Every 20 minutes the job runs the same bounded sweeper the site used
+# (src/lib/highlights-sweep.ts) and commits whatever changed. A run that finds
+# nothing new still records which scoreboards it read. A run in which ESPN
+# answered nothing writes nothing and fails, so it shows up red.
+#
+# The data is on its own branch so that a commit every 20 minutes does not
+# redeploy the site, and so the history of `main` stays readable. The branch
+# is created by the first run. Its history is folded into one commit once it
+# passes 500, which keeps the repository small; nothing in the folder is lost
+# by that.
+#
+# Schedules only run from the default branch, so this starts once it is merged.
+# To start a run by hand: Actions → "highlights-sweep" → "Run workflow". A
+# first run with `passes` set to 40 fills the last seven days in one go.
+# GitHub pauses schedules in a repository with no activity for 60 days; the
+# Actions tab offers a button to turn this one back on.
+#
+# On a pull request that touches the sweeper, the job runs once without
+# writing, to show that ESPN still answers it.
+name: highlights-sweep
+
+on:
+  schedule:
+    - cron: "7,27,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      passes:
+        description: "Passes to run at most (each reads up to 24 scoreboards and 24 games)"
+        default: "8"
+      days:
+        description: "How many days back to read scoreboards (1 to 30)"
+        default: "7"
+      league:
+        description: "Only this competition, by its slug (for example epl). Empty for all."
+        default: ""
+      dry_run:
+        description: "Ask ESPN and report, but write nothing"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/highlights-sweep.yml
+      - scripts/highlights-sweep.ts
+      - scripts/highlights-data/**
+      - src/lib/highlights-*.ts
+      - src/lib/espn-highlights*.ts
+      - src/lib/espn-video-news*.ts
+
+permissions:
+  contents: write
+
+# One writer at a time. A check on a pull request never writes, so it does not
+# have to wait for one.
+concurrency:
+  group: highlights-sweep-${{ github.event_name == 'pull_request' && github.ref || 'data' }}
+  cancel-in-progress: false
+
+env:
+  DATA_BRANCH: highlights-data
+  DATA_DIR: ../highlights-data
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Open the data branch
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$DATA_BRANCH" >/dev/null; then
+            # Enough history to tell when it is time to fold it.
+            git fetch --depth=600 origin "+refs/heads/$DATA_BRANCH:refs/remotes/origin/$DATA_BRANCH"
+            git worktree add -B "$DATA_BRANCH" "$DATA_DIR" "origin/$DATA_BRANCH"
+          else
+            echo "The data branch does not exist yet; this run creates it."
+            git worktree add --detach "$DATA_DIR"
+            git -C "$DATA_DIR" checkout --quiet --orphan "$DATA_BRANCH"
+            git -C "$DATA_DIR" rm -rf --quiet .
+          fi
+          # The note and the "do not build this branch" file travel with the code.
+          cp scripts/highlights-data/README.md scripts/highlights-data/vercel.json "$DATA_DIR/"
+          mkdir -p "$DATA_DIR/data/highlights"
+
+      - name: Collect clips from ESPN
+        env:
+          # A check reads far enough to reach yesterday's games: today's are
+          # mostly not played yet, and a check that finds no clip proves little.
+          PASSES: ${{ github.event_name == 'pull_request' && '12' || inputs.passes || '8' }}
+          DAYS: ${{ inputs.days || '7' }}
+          LEAGUE: ${{ inputs.league || '' }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+        run: |
+          set -euo pipefail
+          args=(--dir "$DATA_DIR/data/highlights" --passes "$PASSES" --days "$DAYS" --report sweep-report.md)
+          if [ -n "$LEAGUE" ]; then args+=(--league "$LEAGUE"); fi
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          npm run --silent highlights:sweep -- "${args[@]}"
+
+      - name: Commit what changed
+        if: github.event_name != 'pull_request' && inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          cd "$DATA_DIR"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+          clips=$(node -e 'const fs=require("fs");try{console.log(JSON.parse(fs.readFileSync("data/highlights/index.json","utf8")).clips)}catch{console.log(0)}')
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -m "highlights: $clips clips stored ($(date -u +%Y-%m-%dT%H:%MZ))"
+          if [ "$(git rev-list --count HEAD)" -ge 500 ]; then
+            # Fold the history into one commit holding the same files.
+            folded=$(git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit-tree "HEAD^{tree}" -m "highlights: $clips clips stored (history folded $(date -u +%Y-%m-%d))")
+            git push --force origin "$folded:refs/heads/$DATA_BRANCH"
+          else
+            git push origin "HEAD:refs/heads/$DATA_BRANCH"
+          fi
+
+      - name: Report
+        if: always()
+        run: |
+          if [ -f sweep-report.md ]; then
+            cat sweep-report.md >> "$GITHUB_STEP_SUMMARY"
+            # The same text as an annotation, which can be read through the API.
+            echo "::notice title=Highlights sweep::$(sed -e 's/%/%25/g' sweep-report.md | awk '{ printf "%s%%0A", $0 }')"
+          fi

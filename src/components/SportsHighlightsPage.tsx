@@ -205,6 +205,9 @@ export default function SportsHighlightsPage({
 
   /** Stored clips exist to be queried; without a database there is nothing to ask. */
   const hasIndex = !!index?.ok;
+  // The index is kept in the repository's data folder and filled by a scheduled
+  // job. This page can read it but cannot add to it, so it offers no sweep.
+  const scheduled = index?.store === 'repository';
   const summary = index?.summary;
 
   const urlFor = (next: { league: string; status: string; days: number; offset: number; refresh?: boolean }) => {
@@ -287,6 +290,8 @@ export default function SportsHighlightsPage({
           ? 'A sweep ran moments ago, so this one did nothing. Coverage advances a bounded slice at a time, on a rate limit, so ESPN is never hammered.'
           : pass.reason === 'no-database'
             ? 'No database is configured, so there is nowhere to store clips. The live board above is all this page can show.'
+            : pass.reason === 'scheduled'
+              ? 'Clips here are collected by a scheduled job, not by this button, so nothing was asked. New clips appear on their own, usually within half an hour.'
             : pass.reason === 'unknown-competition'
               ? 'That competition is not one this site covers, so nothing was asked.'
               : 'The sweep failed. Nothing stored changed.');
@@ -375,7 +380,7 @@ export default function SportsHighlightsPage({
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores
       </Link>
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        {!scheduled && <button
           type="button"
           onClick={() => void sweep()}
           disabled={sweeping || loading}
@@ -383,7 +388,7 @@ export default function SportsHighlightsPage({
         >
           <Database aria-hidden="true" className={`h-4 w-4 ${sweeping ? 'animate-pulse' : ''}`} />
           {sweeping ? 'Sweeping…' : 'Sweep more competitions'}
-        </button>
+        </button>}
         <button
           type="button"
           onClick={() => void refresh()}
@@ -412,13 +417,15 @@ export default function SportsHighlightsPage({
         </span>
         <span aria-hidden="true">·</span>
         <span>{summary.matchClips} match, {summary.leagueClips} league video</span>
-        {summary.lastSweepAt && <><span aria-hidden="true">·</span><span>last swept {ago(summary.lastSweepAt)}</span></>}
+        {summary.lastSweepAt && <><span aria-hidden="true">·</span><span>{scheduled ? 'last collected' : 'last swept'} {ago(summary.lastSweepAt)}</span></>}
         {summary.oldestAt && <><span aria-hidden="true">·</span><span>oldest {shortDate(summary.oldestAt)}</span></>}
       </p>}
       {index && !index.ok && <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
         {index.reason === 'no-database'
           ? 'No database is configured on this deployment, so there is nowhere to keep clips between requests. Showing the live board only.'
-          : 'The stored clip index could not be read, so this page is showing the live board only. Stored clips are kept, not lost.'}
+          : scheduled
+            ? 'The stored clip list could not be read from the repository just now, so this page is showing the live board only. Stored clips are kept, not lost.'
+            : 'The stored clip index could not be read, so this page is showing the live board only. Stored clips are kept, not lost.'}
       </p>}
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         ESPN publishes per-game clips for some competitions and not others — the Premier League and the NFL answer a game’s
@@ -575,13 +582,24 @@ export default function SportsHighlightsPage({
           ? `${index.ok ? 'read' : `unavailable (${index.reason ?? 'unknown'})`} · ${plural(summary?.clips ?? 0, 'clip')} (${summary?.matchClips ?? 0} match, ${summary?.leagueClips ?? 0} league video) across ${plural(summary?.competitions ?? 0, 'competition')} · ${plural(summary?.sweptCells ?? 0, 'scoreboard')} walked · showing ${shown}`
           : 'not read for this page'}
       </p>
-      <p className="mt-1 break-words">
-        Clips are kept permanently: nothing deletes a stored clip. Coverage grows one bounded pass at a time — at most 24
-        scoreboards and 24 game collections per pass, inside a four-second deadline — because ESPN has no bulk highlights
-        endpoint and no date range, so every clip costs one request per game.
-      </p>
-      <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code>; the stored half of that read costs no ESPN
-        request. Sweep calls <code className="break-all">/api/sports/highlights/sweep?force=1</code>, which is rate-limited per process.</p>
+      {scheduled ? <>
+        <p className="mt-1 break-words">
+          Clips are kept permanently: nothing deletes a stored clip. The list is a folder of JSON files in this site’s
+          GitHub repository. A scheduled job reads ESPN a few times an hour and adds what it finds — a bounded slice of
+          scoreboards and game collections each time, because ESPN has no bulk highlights endpoint and no date range, so
+          every clip costs one request per game. The videos themselves stay on ESPN.
+        </p>
+        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code>; the stored half of that read costs no ESPN
+          request.</p>
+      </> : <>
+        <p className="mt-1 break-words">
+          Clips are kept permanently: nothing deletes a stored clip. Coverage grows one bounded pass at a time — at most 24
+          scoreboards and 24 game collections per pass, inside a four-second deadline — because ESPN has no bulk highlights
+          endpoint and no date range, so every clip costs one request per game.
+        </p>
+        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code>; the stored half of that read costs no ESPN
+          request. Sweep calls <code className="break-all">/api/sports/highlights/sweep?force=1</code>, which is rate-limited per process.</p>
+      </>}
     </details>
   </div>;
 }

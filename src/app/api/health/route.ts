@@ -1,20 +1,58 @@
-import { hasDatabase, ensureDbConnection, rawQuery } from "@/lib/prisma";
-import { getStorageDriver } from "@/lib/storage";
+import { hasDatabase, describeDatabase, ensureDbConnection, rawQuery } from "@/lib/prisma";
+import { checkStorage, getStorageDriver, type StorageCheck } from "@/lib/storage";
+import { highlightsStore } from "@/lib/highlights-index";
+import { highlightsBackend } from "@/lib/highlights-source";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Is the site wired?
+ *
+ *   db        true when a query against Postgres just succeeded
+ *   database  who hosts it (`supabase`, `prisma`, …) and which variable named
+ *             it; never the address. `prismaPaused` is true when a variable
+ *             points at Prisma Postgres and was skipped (src/prisma/database-url.ts).
+ *   storage   where uploads go: `supabase`, `s3` or `local`
+ *   storageOk whether that store answered just now (only Supabase is asked)
+ *   highlights where the list of highlight clips is kept (`github`: the data
+ *             folder in the repository; `database`: Postgres) and, for the
+ *             folder, whether it was just read, how many clips it holds and
+ *             when it was last added to
+ *
+ * Always 200: the app is designed to work in demo mode, so this reports the
+ * state instead of failing.
+ */
 export async function GET() {
   const storage = getStorageDriver();
+  const database = describeDatabase();
+  const store: StorageCheck = await checkStorage().catch((error) => ({
+    driver: storage,
+    ok: false,
+    detail: (error as Error)?.message || "storage check failed",
+  }));
+  // Asked only of the folder: there it is one small cached file, and it never
+  // throws. In Postgres it would be a count over the whole table on every check.
+  const listed = highlightsBackend() === "github" ? await highlightsStore.summary() : null;
+  const base = {
+    ok: true,
+    storage,
+    storageOk: store.ok,
+    ...(store.detail ? { storageDetail: store.detail } : {}),
+    database,
+    highlights: listed
+      ? { store: "github", ok: listed.ok, clips: listed.clips, lastCollectedAt: listed.lastSweepAt }
+      : { store: "database" },
+  };
 
-  // Always return 200 — the app is designed to work in demo mode.
-  // We just report the DB status accurately.
   if (!hasDatabase) {
     return Response.json({
-      ok: true,
+      ...base,
       db: false,
-      storage,
       mode: "offline",
-      warning: "DATABASE_URL not available or connection failed — running in offline/demo mode"
+      warning:
+        database.prismaPaused && !database.provider
+          ? "The only database configured is Prisma Postgres, which is paused — running in offline/demo mode until Supabase is connected"
+          : "DATABASE_URL not available or connection failed — running in offline/demo mode",
     });
   }
 
@@ -25,24 +63,21 @@ export async function GET() {
     if (connected) {
       // Extra lightweight query to confirm
       await rawQuery("SELECT 1");
-      return Response.json({ ok: true, db: true, storage, mode: "postgres" });
-    } else {
-      return Response.json({
-        ok: true,
-        db: false,
-        storage,
-        mode: "offline",
-        warning: "Postgres connection probe failed — now in demo mode"
-      });
+      return Response.json({ ...base, db: true, mode: "postgres" });
     }
-  } catch (err: any) {
-    console.warn('[health] DB check failed (downgraded):', err?.message || err);
     return Response.json({
-      ok: true,
+      ...base,
       db: false,
-      storage,
       mode: "offline",
-      error: err?.message || "connection failed"
+      warning: "Postgres connection probe failed — now in demo mode",
+    });
+  } catch (err: any) {
+    console.warn("[health] DB check failed (downgraded):", err?.message || err);
+    return Response.json({
+      ...base,
+      db: false,
+      mode: "offline",
+      error: err?.message || "connection failed",
     });
   }
 }

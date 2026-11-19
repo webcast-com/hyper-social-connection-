@@ -3,11 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
 import {
   MEDIA_MIME_BY_EXT,
-  maxBytesForKind,
   mediaKindFromExt,
   type MediaExtension,
 } from '@/lib/media-limits';
-import { getSignedUploadUrl, publicMediaUrl } from '@/lib/storage';
+import { getSignedUploadUrl, maxUploadBytes, publicMediaUrl } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,7 +64,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const maxBytes = maxBytesForKind(declaredKind);
+  const maxBytes = maxUploadBytes(declaredKind);
   if (size > maxBytes) {
     return NextResponse.json(
       { error: `File too large. Max ${Math.round(maxBytes / (1024 * 1024))} MB for ${declaredKind}s.` },

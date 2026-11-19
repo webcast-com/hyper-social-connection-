@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { types as pgTypes } from "pg";
 import { databaseConnection } from "../prisma/connection";
 import { db, pool } from "../prisma/db";
+import { databaseProvider } from "../prisma/database-url";
 import { describeTls, resolveDatabaseUrl } from "../prisma/tls";
 
 export { db };
@@ -21,10 +22,27 @@ if (FORCE_OFFLINE) {
   console.log("[db] Database provided by Prisma Composer — will attempt Postgres connection (may fall back)");
 } else if (databaseConnection.source === "env") {
   console.log(
-    `[db] DATABASE_URL detected — will attempt Postgres connection (may fall back); ${describeTls(resolveDatabaseUrl(databaseConnection.url).tls)}`,
+    `[db] ${databaseConnection.variable} detected (${databaseProvider(databaseConnection.url)}) — will attempt Postgres connection (may fall back); ${describeTls(resolveDatabaseUrl(databaseConnection.url).tls)}`,
   );
 } else {
   console.log("[db] No database configured — running in demo/offline mode");
+}
+if (databaseConnection.source !== "composer" && databaseConnection.skipped.length > 0) {
+  console.log(
+    `[db] ${databaseConnection.skipped.join(", ")} points at Prisma Postgres, which is paused, and was not used (PRISMA_POSTGRES=on brings it back)`,
+  );
+}
+
+/** What the health report may say about the database. Never the address. */
+export function describeDatabase(): {
+  variable: string | null;
+  provider: "supabase" | "prisma" | "local" | "other" | "composer" | null;
+  prismaPaused: boolean;
+} {
+  if (databaseConnection.source === "composer") return { variable: null, provider: "composer", prismaPaused: false };
+  const prismaPaused = databaseConnection.skipped.length > 0;
+  if (databaseConnection.source === "none") return { variable: null, provider: null, prismaPaused };
+  return { variable: databaseConnection.variable, provider: databaseProvider(databaseConnection.url), prismaPaused };
 }
 
 /**

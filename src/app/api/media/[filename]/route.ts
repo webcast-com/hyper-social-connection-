@@ -33,8 +33,8 @@ function streamFile(filePath: string, start?: number, end?: number) {
  * Stable public URL for uploaded media.
  *
  * Local files (legacy or no-bucket mode) are streamed from disk with Range
- * support so video seeking works. Bucket objects 302 to a short-lived
- * presigned GET — the browser then talks to the object store directly.
+ * support so video seeking works. Bucket objects (Supabase Storage or S3) 302
+ * to a short-lived signed GET — the browser then talks to the store directly.
  *
  * `/uploads/:filename` is rewritten here (see next.config.ts). Existing
  * rows that store `/uploads/…` keep working after a switch to a Prisma
@@ -68,7 +68,7 @@ async function serve(req: NextRequest, filename: string, method: 'GET' | 'HEAD')
     return new NextResponse(streamFile(local.path), { status: 200, headers });
   }
 
-  if (getStorageDriver() === 's3') {
+  if (getStorageDriver() !== 'local') {
     const signed = await getSignedDownloadUrl(filename);
     if (!signed) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     // Do not cache the redirect: the Location expires with the signature.
