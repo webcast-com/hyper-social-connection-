@@ -110,3 +110,40 @@ test('the log line never contains the connection string', () => {
     assert.ok(!line.includes('secret') && !line.includes('supabase'), line);
   }
 });
+
+// What the Supabase ↔ Vercel integration writes into POSTGRES_URL and
+// POSTGRES_URL_NON_POOLING.
+const INTEGRATION_POOLED =
+  'postgres://postgres.abcdefgh:secret@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x';
+const INTEGRATION_PRISMA =
+  'postgres://postgres.abcdefgh:secret@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true';
+
+test('a Supabase string that says sslmode=require is encrypted, not refused', () => {
+  // node-postgres reads sslmode=require as "verify the certificate" and then
+  // rejects Supabase's own authority, so the parameter must not reach it.
+  for (const url of [INTEGRATION_POOLED, INTEGRATION_PRISMA, `${DIRECT}?sslmode=require`, `${DIRECT}?ssl=true`]) {
+    const config = poolConfig(url, {});
+    assert.deepEqual(config.ssl, { rejectUnauthorized: false }, url);
+    assert.ok(!/sslmode|ssl=|supa=|pgbouncer/.test(config.connectionString), config.connectionString);
+    assert.ok(config.connectionString.includes(':secret@'), 'the credentials are kept');
+  }
+  assert.equal(
+    poolConfig(INTEGRATION_POOLED, {}).connectionString,
+    'postgres://postgres.abcdefgh:secret@aws-0-us-east-1.pooler.supabase.com:6543/postgres',
+  );
+  const cli = cliConnectionString(INTEGRATION_POOLED, {})!;
+  assert.equal(new URL(cli).searchParams.get('sslmode'), 'no-verify');
+  assert.equal(new URL(cli).searchParams.has('supa'), false);
+});
+
+test('a Supabase string that sets up certificate checking itself is left alone', () => {
+  for (const url of [`${DIRECT}?sslmode=verify-full&sslrootcert=/etc/ca.crt`, `${DIRECT}?sslmode=disable`, `${DIRECT}?sslmode=verify-ca`]) {
+    assert.deepEqual(poolConfig(url, {}), { connectionString: url }, url);
+  }
+});
+
+test('other parameters on a Supabase string survive the clean-up', () => {
+  const config = poolConfig(`${INTEGRATION_POOLED}&application_name=hyper&connect_timeout=5`, {});
+  assert.ok(config.connectionString.includes('application_name=hyper'));
+  assert.ok(config.connectionString.includes('connect_timeout=5'));
+});

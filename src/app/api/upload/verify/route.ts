@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getViewer } from '@/lib/viewer';
-import { isSafeMediaFilename, maxBytesForKind } from '@/lib/media-limits';
+import { isSafeMediaFilename } from '@/lib/media-limits';
 import { sniffMedia } from '@/lib/magic-bytes';
-import { deleteMediaObject, getStorageDriver, inspectMediaObject, publicMediaUrl } from '@/lib/storage';
+import { deleteMediaObject, getStorageDriver, inspectMediaObject, maxUploadBytes, publicMediaUrl } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,10 +59,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (stored.size > maxBytesForKind(sniffed.kind)) {
+  if (stored.size > maxUploadBytes(sniffed.kind)) {
     await deleteMediaObject(filename).catch(() => undefined);
     return NextResponse.json(
-      { error: `File too large. Max ${Math.round(maxBytesForKind(sniffed.kind) / (1024 * 1024))} MB.` },
+      { error: `File too large. Max ${Math.round(maxUploadBytes(sniffed.kind) / (1024 * 1024))} MB.` },
       { status: 413 },
     );
   }

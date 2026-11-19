@@ -6,7 +6,7 @@ export type UploadedMedia = {
   type: string;
   size: number;
   name: string;
-  storage?: 's3' | 'local';
+  storage?: 'supabase' | 's3' | 'local';
 };
 
 export type UploadProgressInfo = {
@@ -63,6 +63,12 @@ function postFile(
   });
 }
 
+/**
+ * The server looked at the file's name, type and size and said no. Sending the
+ * same file another way would get the same answer, so there is no fallback.
+ */
+export class UploadRejectedError extends Error {}
+
 type PresignResponse =
   | { mode: 'presigned'; uploadUrl: string; headers: Record<string, string>; filename: string; url: string }
   | { mode: 'direct' };
@@ -112,6 +118,10 @@ async function uploadDirectlyToStorage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: file.name, type: file.type, size: file.size }),
   });
+  if (presignResponse.status === 413 || presignResponse.status === 415) {
+    const refusal = (await presignResponse.json().catch(() => null)) as { error?: string } | null;
+    throw new UploadRejectedError(refusal?.error || 'This file cannot be uploaded.');
+  }
   if (!presignResponse.ok) return null;
 
   const presign = (await presignResponse.json().catch(() => null)) as PresignResponse | null;
@@ -170,6 +180,7 @@ export async function uploadMediaFile(
     const uploaded = await uploadDirectlyToStorage(file, opts);
     if (uploaded) return uploaded;
   } catch (error) {
+    if (error instanceof UploadRejectedError) throw error;
     console.warn(
       '[upload] direct-to-storage upload failed, falling back to /api/upload:',
       (error as Error)?.message,

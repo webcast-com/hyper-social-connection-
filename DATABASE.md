@@ -94,6 +94,21 @@ Notes:
 
 ### Using Supabase
 
+> **Prisma Postgres is paused.** A connection string that points at
+> `db.prisma.io` is skipped: the repository's `.env` still carries that
+> address, and the database behind it refuses connections
+> (`planLimitReached`). The Prisma ORM code is unchanged; only the hosted
+> database is left out. `PRISMA_POSTGRES=on` uses it again
+> (`src/prisma/database-url.ts`).
+
+The app reads the first of these that is set and is not a paused Prisma
+address: `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_PRISMA_URL`,
+`POSTGRES_URL_NON_POOLING`. The last three are what the Supabase ↔ Vercel
+integration creates, so **connecting the Supabase project to the Vercel
+project is enough** — no string has to be copied, and the database password
+never has to be typed anywhere. Those strings end in `?sslmode=require`; the
+app handles that (`src/prisma/tls.ts`, rule 3).
+
 Supabase is the database; Prisma stays the query layer. Nothing in the app
 uses the Supabase client, Supabase Auth, Storage or Realtime, so no Supabase
 API key is needed, only a Postgres connection string.
@@ -185,6 +200,25 @@ insert of a user, a post and a like worked and was rolled back. The app itself
 and the data copy have not yet run against it.
 
 ### Is it wired?
+
+Open `https://<site>/api/health`. Wired means all of:
+
+```json
+{ "db": true, "mode": "postgres",
+  "database": { "provider": "supabase", "variable": "POSTGRES_URL", "prismaPaused": false },
+  "storage": "supabase", "storageOk": true }
+```
+
+| It says | It means |
+| --- | --- |
+| `"db": false` and `"prismaPaused": true` | The only address set is the paused Prisma one. Connect Supabase (above). |
+| `"db": false`, a `warning` about the probe | An address is set but the database refused it: wrong password or host. |
+| `"provider": "supabase"`, `"db": true` | Accounts, posts, comments, likes, shares and profiles are saved in Supabase. |
+| `"storage": "supabase"`, `"storageOk": true` | Uploaded photos and videos go to Supabase Storage, and it answers. |
+| `"storageOk": false` | `storageDetail` says why (key not accepted, no such bucket, not reachable). |
+| `"storage": "s3"` or `"local"` with a `storageDetail` | Supabase Storage is half configured; the detail names what is missing. |
+
+For more than the site can say about itself:
 
 Actions → "database-status" → "Run workflow". It changes nothing and reports,
 on the run's summary page: what the live site says about its database
@@ -304,40 +338,97 @@ through a small adapter (`src/lib/storage.ts`).
 
 | Mode | When | Where the bytes live | URL stored in Postgres |
 | --- | --- | --- | --- |
-| **Prisma Object Store / S3 / R2 / MinIO** | `S3_BUCKET` + access key + secret are set | Bucket key `media/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
-| **Local disk** (default) | those env vars are unset | `public/uploads/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+| **Supabase Storage** (first choice) | `SUPABASE_URL` + a secret key are set | Bucket `media`, key `media/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+| **S3 / R2 / MinIO / Prisma Object Store** | `S3_BUCKET` + access key + secret are set | Bucket key `media/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+| **Local disk** (default) | none of those are set | `public/uploads/<uuid>.<ext>` | `/uploads/<uuid>.<ext>` |
+
+`STORAGE_DRIVER=supabase|s3|local` picks one by name.
 
 The public URL never changes. `/uploads/:filename` is rewritten to
 `/api/media/:filename`, which either streams the local file (with HTTP Range
-so video seeking works) or 302s to a short-lived presigned GET. Existing
-posts, avatars, stories and chat attachments keep working if you add a
-bucket later.
+so video seeking works) or 302s to a signed link that lasts an hour. Existing
+posts, avatars, stories and chat attachments keep their URLs when the store
+changes.
 
-### Using a Prisma Object Store bucket
+`GET /api/health` reports `"storage"` (`supabase`, `s3` or `local`) and, for
+Supabase, `"storageOk"`: whether the bucket answered with the configured key.
+`GET /api/upload` reports the driver and the size caps.
 
-1. In the [Prisma Console](https://console.prisma.io) open the project →
-   **Object Store** → create a bucket (e.g. `uploads`).
-2. Mint a **read_write** key. The secret is shown once.
-3. Put the four fields from the key response into `.env.local`:
+### Using Supabase Storage
+
+What is in place on the project `yerxhhrgtkxnabolppmq`: a **private** bucket
+named `media`, 50 MB a file, images and videos only (the nine types in
+`src/lib/media-limits.ts`). It has no policies, so the anon and publishable
+keys cannot read or write it; only the secret key can.
+
+The site needs two variables, server-side only:
+
+```env
+SUPABASE_URL=https://yerxhhrgtkxnabolppmq.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=…      # or SUPABASE_SECRET_KEY=sb_secret_…
+```
+
+The Supabase ↔ Vercel integration sets both. By hand: Supabase dashboard →
+Project Settings → API Keys → copy the **secret** key into Vercel →
+Settings → Environment Variables, then redeploy. The app refuses a public
+key here and says so in `/api/health` (`storageDetail`).
+
+How an upload travels:
+
+1. The browser asks `/api/upload/presign` (signed-in users only). The server
+   checks name, type and size and asks Supabase for a one-file upload link.
+2. The browser PUTs the file to that link. No key leaves the server; the
+   link works once, and the bucket refuses types it does not list.
+3. `/api/upload/verify` reads the first bytes back and deletes the object if
+   it is not the image or video its name claims.
+
+Small files may also be posted to `/api/upload`, which stores them with the
+secret key. Viewing goes through `/uploads/<file>`: the server signs a
+one-hour link and redirects to it; Supabase answers Range requests, so video
+seeking works.
+
+Limits to know:
+
+- **50 MB a file and 1 GB in total on the free plan.** The app's own video
+  limit is 250 MB; with Supabase as the store it is lowered to
+  `SUPABASE_STORAGE_MAX_BYTES` (default 50 MB) so that a larger file is
+  refused before it is sent rather than after. On a paid plan raise the
+  project's upload limit, the bucket's `file_size_limit`, and this variable.
+- Files uploaded to an S3 bucket before the switch are still found: when
+  Supabase does not have a file and S3 variables are set, the S3 bucket is
+  asked. New files only go to Supabase. Nothing is copied between the two.
+- Highlight clips from ESPN are not files in this bucket. The site stores
+  which clips exist (tables `sports_highlight_*` in Postgres) and the video
+  itself plays from ESPN's servers.
+
+Recreate the bucket on another project (SQL editor):
+
+```sql
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('media', 'media', false, 52428800,
+        array['image/jpeg','image/png','image/gif','image/webp','image/avif',
+              'video/mp4','video/quicktime','video/webm','video/ogg'])
+on conflict (id) do nothing;
+```
+
+`npm run test:storage` runs the storage code against a stand-in that answers
+the way the real service was seen to answer (`tests/storage/`).
+
+### Using an S3-compatible bucket
 
 ```env
 S3_BUCKET=uploads
-S3_ENDPOINT=https://…          # `endpoint` from the key response
+S3_ENDPOINT=https://…
 S3_ACCESS_KEY_ID=…
 S3_SECRET_ACCESS_KEY=…
 S3_REGION=auto
 S3_FORCE_PATH_STYLE=true
 ```
 
-`PRISMA_BUCKET_*` aliases are accepted if you prefer those names.
-
-`GET /api/health` reports `"storage": "s3"` or `"storage": "local"`.
-`GET /api/upload` reports the same plus the size caps.
-
-Uploads still go through the Next.js server (auth + magic-byte sniff) and
-are then `PutObject`'d to the bucket. That avoids needing CORS on the
-bucket for a browser PUT. Point `DATABASE_URL` at Prisma Postgres and the
-bucket at Prisma Object Store and the whole stack stays in one project.
+`PRISMA_BUCKET_*` aliases are accepted. The bucket needs CORS that allows a
+browser `PUT` from the site's origin for direct uploads; without it the
+upload falls back to `/api/upload`, which is bounded by the host's request
+size limit (4.5 MB on Vercel).
 
 ## 3. Create the tables
 

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getViewer } from '@/lib/viewer';
 import { mimeAgreesWithSniff, sniffMedia } from '@/lib/magic-bytes';
-import { maxBytesForKind } from '@/lib/media-limits';
-import { getStorageDriver, putMediaObject } from '@/lib/storage';
+import { getStorageDriver, maxUploadBytes, putMediaObject } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const kind = sniffed.kind;
-    const maxBytes = maxBytesForKind(kind);
+    const maxBytes = maxUploadBytes(kind);
     if (file.size > maxBytes) {
       const mb = Math.round(maxBytes / (1024 * 1024));
       return NextResponse.json({ error: `File too large. Max ${mb} MB for ${kind}s.` }, { status: 413 });
@@ -78,9 +77,11 @@ export async function POST(req: NextRequest) {
     console.error('Upload error:', error);
     const driver = getStorageDriver();
     const hint =
-      driver === 's3'
-        ? 'Could not write to the object store. Check S3 / Prisma bucket credentials.'
-        : 'Upload failed';
+      driver === 'supabase'
+        ? 'Could not write to Supabase Storage. Check SUPABASE_URL, the secret key and the bucket.'
+        : driver === 's3'
+          ? 'Could not write to the object store. Check S3 / Prisma bucket credentials.'
+          : 'Upload failed';
     return NextResponse.json({ error: hint }, { status: 500 });
   }
 }
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     storage: getStorageDriver(),
-    maxImageBytes: maxBytesForKind('image'),
-    maxVideoBytes: maxBytesForKind('video'),
+    maxImageBytes: maxUploadBytes('image'),
+    maxVideoBytes: maxUploadBytes('video'),
   });
 }

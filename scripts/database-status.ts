@@ -167,14 +167,32 @@ function describeProbe(result: Probe): string[] {
 async function siteHealth(): Promise<{ line: string; db: boolean | null }> {
   try {
     const response = await fetch(`${SITE_URL}/api/health`, { signal: AbortSignal.timeout(20_000), cache: "no-store" });
-    const body = (await response.json()) as { db?: boolean; mode?: string; warning?: string; error?: string };
+    const body = (await response.json()) as {
+      db?: boolean;
+      mode?: string;
+      warning?: string;
+      error?: string;
+      storage?: string;
+      storageOk?: boolean;
+      storageDetail?: string;
+      database?: { provider?: string | null; variable?: string | null; prismaPaused?: boolean };
+    };
     const detail = body.warning || body.error;
+    // Sites built before the health report named the host say nothing here.
+    const host = body.database?.provider
+      ? `It is hosted by **${body.database.provider}** (from \`${body.database.variable ?? "the deploy"}\`).`
+      : "The site does not say which one: that is whatever DATABASE_URL holds in Vercel.";
+    const files =
+      body.storage === undefined
+        ? ""
+        : `\n- Uploaded photos and videos go to: **${body.storage}**${body.storageOk === false ? ` — **not answering** (${body.storageDetail ?? "no detail"})` : body.storageOk === true ? " (answering)" : ""}`;
+    const paused = body.database?.prismaPaused ? "\n- A variable still points at Prisma Postgres; it is paused and is not used." : "";
     return {
       db: body.db === true,
       line:
         body.db === true
-          ? `- ${SITE_URL}/api/health: **connected to a database** (mode \`${body.mode}\`). The site does not say which one: that is whatever DATABASE_URL holds in Vercel.`
-          : `- ${SITE_URL}/api/health: **not connected to any database** (mode \`${body.mode}\`${detail ? `; "${detail}"` : ""}). The site is showing demo content and nothing people post is saved.`,
+          ? `- ${SITE_URL}/api/health: **connected to a database** (mode \`${body.mode}\`). ${host}${files}${paused}`
+          : `- ${SITE_URL}/api/health: **not connected to any database** (mode \`${body.mode}\`${detail ? `; "${detail}"` : ""}). The site is showing demo content and nothing people post is saved.${files}${paused}`,
     };
   } catch (error) {
     return { db: null, line: `- ${SITE_URL}/api/health: could not be read (${(error as Error).message})` };

@@ -9,7 +9,10 @@
  *     `service.load().db` returns it. There is no usable `DATABASE_URL` there:
  *     on a Composer project that variable holds the placeholder "-".
  *  2. **Everywhere else** (`next dev`, `next start`, Vercel, Netlify, the
- *     scripts): the `DATABASE_URL` environment variable, as before.
+ *     scripts): `DATABASE_URL`, or failing that the variables the Supabase ↔
+ *     Vercel integration sets (`POSTGRES_URL`, …). A value that points at
+ *     Prisma's hosted database is skipped while it is paused. The order and
+ *     the pause are in ./database-url.ts.
  *
  * Composer is tried first, so a Composer deploy never falls through to the
  * placeholder. During `next build` neither is present and the app builds in
@@ -17,17 +20,16 @@
  */
 import type { Pool } from "pg";
 import service from "../../service";
+import { chooseDatabaseUrl, type DatabaseUrlVariable } from "./database-url";
 
 export type DatabaseConnection =
   | { source: "composer"; url: string; pool?: Pool }
-  | { source: "env"; url: string }
-  | { source: "none" };
+  | { source: "env"; url: string; variable: DatabaseUrlVariable; skipped: DatabaseUrlVariable[] }
+  /** `skipped` names variables that were set but point at the paused Prisma database. */
+  | { source: "none"; skipped: DatabaseUrlVariable[] };
 
 /** Composer hands its values to the process under names with this prefix. */
 const COMPOSER_PREFIX = "COMPOSER_";
-
-/** Placeholder Prisma Composer writes into `DATABASE_URL` on its projects. */
-const DATABASE_URL_PLACEHOLDER = "-";
 
 function underComposer(): boolean {
   return Object.keys(process.env).some((key) => key.startsWith(COMPOSER_PREFIX));
@@ -55,9 +57,9 @@ function resolveConnection(): DatabaseConnection {
     }
   }
 
-  const url = process.env["DATABASE_URL"]?.trim();
-  if (url && url !== DATABASE_URL_PLACEHOLDER) return { source: "env", url };
-  return { source: "none" };
+  const choice = chooseDatabaseUrl();
+  if (choice.url) return { source: "env", url: choice.url, variable: choice.variable, skipped: choice.skipped };
+  return { source: "none", skipped: choice.skipped };
 }
 
 export const databaseConnection: DatabaseConnection = resolveConnection();

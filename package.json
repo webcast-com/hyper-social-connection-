@@ -37,6 +37,7 @@
     "test:seo": "tsx --test tests/seo/*.test.ts",
     "test:theme": "tsx --test tests/theme/*.test.ts",
     "test:database": "tsx --test tests/database/*.test.ts",
+    "test:storage": "tsx --test tests/storage/*.test.ts",
     "test:scorehub": "tsx --test tests/scorehub/*.test.ts",
     "predev": "node scripts/build-nfl-basketball.mjs",
     "prebuild": "node scripts/build-nfl-basketball.mjs",

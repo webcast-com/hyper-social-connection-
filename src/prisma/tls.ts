@@ -14,10 +14,16 @@
  *  2. `DATABASE_CA_CERT` set   → TLS, and the server certificate must be
  *                                signed by that authority and match the host.
  *                                This is the setting to use with Supabase.
- *  3. The URL says how         → left to `node-postgres` (`sslmode`, `ssl`,
+ *  3. A Supabase host         → TLS, encrypted but without checking the
+ *                                certificate, whatever `sslmode` the string
+ *                                carries. The strings the Supabase ↔ Vercel
+ *                                integration writes end in `?sslmode=require`,
+ *                                which `node-postgres` reads as "verify" and
+ *                                then refuses Supabase's certificate.
+ *  4. The URL says how         → left to `node-postgres` (`sslmode`, `ssl`,
  *                                `sslrootcert`, …), unchanged.
- *  4. Local or private host    → no TLS.
- *  5. Anything else            → TLS, encrypted but without checking the
+ *  5. Local or private host    → no TLS.
+ *  6. Anything else            → TLS, encrypted but without checking the
  *                                certificate.
  *
  * The app (`src/prisma/db.ts`) and the `prisma db …` commands
@@ -47,6 +53,13 @@ type Env = Record<string, string | undefined>;
 
 /** Connection-string parameters that set up TLS in `node-postgres`. */
 const TLS_PARAMS = ["ssl", "sslmode", "sslcert", "sslkey", "sslrootcert", "sslnegotiation", "uselibpqcompat"];
+
+/**
+ * Parameters the Supabase ↔ Vercel integration appends that mean nothing to
+ * `node-postgres` (`supa=base-pooler.x`, `pgbouncer=true`). Removed so that
+ * they are not handed on as connection options.
+ */
+const SUPABASE_NOISE_PARAMS = ["supa", "pgbouncer"];
 
 const DISABLED = new Set(["false", "0", "off", "no", "disable", "disabled"]);
 
@@ -90,6 +103,31 @@ function withoutTlsParams(parsed: URL): string {
   return copy.href;
 }
 
+function isSupabaseHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host.endsWith(".supabase.com") || host.endsWith(".supabase.co");
+}
+
+/**
+ * True when the string itself sets up certificate checking (or switches TLS
+ * off): someone wrote that on purpose, so it is left to `node-postgres`.
+ */
+function asksForMoreThanEncryption(parsed: URL): boolean {
+  const params = parsed.searchParams;
+  if (params.has("sslrootcert") || params.has("sslcert") || params.has("sslkey")) return true;
+  const mode = params.get("sslmode")?.toLowerCase();
+  if (mode && !["require", "prefer", "allow", "no-verify"].includes(mode)) return true;
+  const ssl = params.get("ssl")?.toLowerCase();
+  return ssl !== undefined && ssl !== "true" && ssl !== "1";
+}
+
+/** A Supabase string with its TLS and integration-only parameters removed. */
+function cleanSupabaseUrl(parsed: URL): string {
+  const copy = new URL(withoutTlsParams(parsed));
+  for (const name of SUPABASE_NOISE_PARAMS) copy.searchParams.delete(name);
+  return copy.href;
+}
+
 export function resolveDatabaseUrl(url: string, env: Env = process.env): ResolvedDatabaseUrl {
   const parsed = parse(url);
   // Not a URL this module can read (a libpq "key=value" string, say): leave
@@ -104,7 +142,14 @@ export function resolveDatabaseUrl(url: string, env: Env = process.env): Resolve
   const ca = readCaCertificate(env["DATABASE_CA_CERT"]);
   if (ca) return { url: withoutTlsParams(parsed), tls: { mode: "verify", ca } };
 
-  if (TLS_PARAMS.some((name) => parsed.searchParams.has(name))) return { url, tls: { mode: "url" } };
+  const hasTlsParams = TLS_PARAMS.some((name) => parsed.searchParams.has(name));
+  const hasNoise = SUPABASE_NOISE_PARAMS.some((name) => parsed.searchParams.has(name));
+  if (isSupabaseHost(parsed.hostname) && !asksForMoreThanEncryption(parsed)) {
+    // A string with nothing to remove is passed on exactly as it was typed.
+    return { url: hasTlsParams || hasNoise ? cleanSupabaseUrl(parsed) : url, tls: { mode: "encrypt" } };
+  }
+
+  if (hasTlsParams) return { url, tls: { mode: "url" } };
 
   // `?host=/var/run/postgresql` is a Unix socket whatever the URL host says.
   const host = parsed.searchParams.get("host")?.startsWith("/") ? "" : parsed.hostname;
