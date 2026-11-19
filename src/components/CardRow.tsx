@@ -1,6 +1,6 @@
 'use client';
 
-import { Children, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
@@ -17,10 +17,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
  * something in that direction. Trackpads, touch and the keyboard (focus moves
  * through the cards and the row follows) work without them.
  */
-export default function CardRow({ layout = 'stack', label, children }: {
+export default function CardRow({ layout = 'stack', label, phoneLimit, children }: {
   layout?: 'stack' | 'row';
   /** What the row holds, for the button names: "match highlights". */
   label: string;
+  /**
+   * In a row, how many cards the stacked (phone) form shows. The desktop row
+   * scrolls, so it carries every card; a stack of every card would bury what is
+   * under it, so the ones past this number are not displayed below `lg`.
+   */
+  phoneLimit?: number;
   children: ReactNode;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -39,7 +45,7 @@ export default function CardRow({ layout = 'stack', label, children }: {
     const el = scroller.current;
     if (!el) return;
     measure();
-    // Cards arrive and leave (a sport switch, "show all"), and images load late:
+    // Cards arrive and leave (a sport switch), and images load late:
     // the row's width is whatever its contents make it at the time.
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     observer?.observe(el);
@@ -65,14 +71,17 @@ export default function CardRow({ layout = 'stack', label, children }: {
       <div
         ref={scroller}
         onScroll={measure}
-        className="space-y-4 lg:flex lg:gap-3 lg:space-y-0 lg:overflow-x-auto lg:snap-x lg:snap-proximity lg:scrollbar-hide"
+        className="flex flex-col gap-4 lg:flex-row lg:gap-3 lg:overflow-x-auto lg:snap-x lg:snap-proximity lg:scrollbar-hide"
       >
-        {Children.map(children, (child) => (child === null || child === undefined || child === false ? null : (
+        {Children.toArray(children).map((child, position) => (
           // Two whole cards and the edge of a third, so the row reads as a row.
-          <div className="min-w-0 lg:flex lg:w-[calc((100%-0.75rem)/2.14)] lg:shrink-0 lg:snap-start lg:[&>*]:w-full">
+          <div
+            key={isValidElement(child) && child.key != null ? child.key : position}
+            className={`min-w-0 lg:flex lg:w-[calc((100%-0.75rem)/2.14)] lg:shrink-0 lg:snap-start lg:[&>*]:w-full ${phoneLimit !== undefined && position >= phoneLimit ? 'hidden' : ''}`}
+          >
             {child}
           </div>
-        )))}
+        ))}
       </div>
       {edges.before && (
         <button type="button" onClick={() => step(-1)} aria-label={`Previous ${label}`} className={`${button} left-1`}>

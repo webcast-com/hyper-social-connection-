@@ -560,9 +560,9 @@
   - **The list is unbounded; the DOM is not.** A match card is a client component
     with its own state, poll and share affordances, and a busy day across the whole
     catalog can report a thousand fixtures, so a tab materialises
-    `FEED_RENDER_BATCH = 24` cards and offers the rest with a control that states
-    what is left ("Show 24 more · 276 remaining in this tab"). Every card the page
-    built is reachable, the control disappears when nothing is left, and switching
+    `FEED_RENDER_BATCH = 24` cards and adds the next batch as the reader scrolls
+    (originally a "Show 24 more" control; endless scrolling since the desktop
+    homepage rework). Every card the page built is reachable, and switching
     tab starts from the first batch again. Nothing was removed from the feed to make
     the page fast — only from the initial render.
   - For You asks `featuredSportsEvents(events, events.length)`, keeping the rule it
@@ -642,8 +642,8 @@
   [SPORTS_CHECKS.md](SPORTS_CHECKS.md#highlights-in-the-for-you-feed).
 
   - **The list is unbounded; the DOM is not**, by the rule Phase 24 set for match
-    cards: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest are
-    offered by the control that states how many remain. Clips get their own
+    cards: `FEED_RENDER_BATCH = 24` cards materialise at a time and the rest
+    arrive as the reader scrolls. Clips get their own
     interleave pass at `HIGHLIGHTS_FEED_SLOTS = [4, 9]` — last, so the desk's score
     cards and the league video keep the slots they already had, and nothing is
     removed from the feed to make room for a highlight.

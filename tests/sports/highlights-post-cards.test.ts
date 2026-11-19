@@ -46,7 +46,7 @@ async function highlightKeyFor(clips: unknown[], index = 0): Promise<string> {
   return anchorKey({ kind: 'highlight', id: highlightAnchorId(clips[index] as never) });
 }
 
-async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard['status'], options: { engagement?: unknown; signedIn?: boolean } = {}) {
+async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard['status'], options: { engagement?: unknown; signedIn?: boolean; layout?: 'stack' | 'row' } = {}) {
   const React = await import('react');
   const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
   // An empty leaders board keeps the shared document clean for this section.
@@ -60,6 +60,7 @@ async function mountHighlights(clips: unknown[], status?: SportsHighlightsBoard[
     board: board(clips, status),
     engagement: options.engagement ?? {},
     signedIn: options.signedIn ?? false,
+    ...(options.layout ? { layout: options.layout } : {}),
   } as never)); });
   return {
     ...mounted,
@@ -282,5 +283,39 @@ test('the sample board says the highlights are unreachable and offers more clips
     }
   } finally {
     mount.unmount();
+  }
+});
+
+test('the desktop row holds every clip, and only the stacked form keeps four behind a control', async () => {
+  const six = [
+    clip(),
+    clip({ id: '2', title: 'Second clip', eventName: 'Liverpool vs Everton' }),
+    clip({ id: '3', title: 'Third clip', eventName: 'Real Madrid vs Barcelona' }),
+    clip({ id: '4', title: 'Fourth clip', eventName: 'Bayern vs Dortmund' }),
+    clip({ id: '5', title: 'Fifth clip', eventName: 'Juventus vs Milan' }),
+    clip({ id: '6', title: 'Sixth clip', eventName: 'Ajax vs PSV' }),
+  ];
+  const mount = await mountHighlights(six, 'live', { layout: 'row' });
+  try {
+    const { document, click } = mount;
+    const section = [...document.querySelectorAll('section')].find((node: any) => node.getAttribute('aria-label') === 'Match highlights')!;
+    const cards = [...section.querySelectorAll('article')] as any[];
+    // The row scrolls sideways, so nothing is withheld from it.
+    assert.equal(cards.length, 6, 'every clip is in the row');
+    // jsdom applies no stylesheet, so what is checked is the class that decides
+    // it: `hidden` with `lg:flex` is "not on a phone, shown in the desktop row".
+    const slot = (card: any) => card.parentElement as any;
+    const held = cards.filter((card) => slot(card).classList.contains('hidden'));
+    assert.deepEqual(held.map((card) => cards.indexOf(card)), [4, 5], 'the stacked form still shows four');
+    for (const card of held) assert.ok(slot(card).classList.contains('lg:flex'), 'and the desktop row shows them all');
+
+    const toggle = [...section.querySelectorAll('button')].find((node: any) => node.textContent.includes('Show all 6 highlights')) as any;
+    assert.ok(toggle, 'the stacked form keeps its control');
+    assert.ok(toggle.classList.contains('lg:hidden'), 'which the desktop row does not show');
+
+    await click(toggle);
+    assert.equal(cards.filter((card) => slot(card).classList.contains('hidden')).length, 0, 'pressing it on a phone shows the rest');
+  } finally {
+    await mount.unmount();
   }
 });

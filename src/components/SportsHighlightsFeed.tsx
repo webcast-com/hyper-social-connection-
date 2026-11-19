@@ -170,7 +170,11 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
   signedIn?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const clips = board.clips.slice(0, expanded ? board.clips.length : limit);
+  // A desktop row scrolls sideways, so it holds every clip and needs no control.
+  // Stacked, the list is `limit` cards until the reader asks for the rest: this
+  // board sits above the feed, and a dozen stacked cards would bury it.
+  const row = layout === 'row';
+  const clips = row || expanded ? board.clips : board.clips.slice(0, limit);
   if (!board.clips.length) return null;
   const sample = board.status !== 'live' && board.status !== 'partial';
 
@@ -192,7 +196,7 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
         </Link>
       </div>
 
-      <CardRow layout={layout} label="match highlights">
+      <CardRow layout={layout} label="match highlights" phoneLimit={row && !expanded ? limit : undefined}>
         {clips.map((clip) => {
           // A sample board is placeholder data, so it gets no anchor post.
           const anchor = sample ? null : anchorRef('highlight', highlightAnchorId(clip));
@@ -212,7 +216,7 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
           type="button"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
-          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-gray-600 hover:bg-blue-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          className={`mt-3 inline-flex min-h-11 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-gray-600 hover:bg-blue-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60 ${row ? 'lg:hidden' : ''}`}
         >
           {expanded ? 'Show fewer highlights' : `Show all ${board.clips.length} highlights`}
         </button>

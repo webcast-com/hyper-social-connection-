@@ -44,7 +44,8 @@ export const HIGHLIGHTS_FEED_SLOTS: readonly number[] = [4, 9];
  * How many cards a tab puts in the DOM at once.
  *
  * This is not a cap on what the feed carries: every fixture the board reports is
- * in the list, and the reader reaches the rest with the tab's own "show more".
+ * in the list, and the rest arrive as the reader scrolls towards the end of the
+ * batch on screen (`InfiniteSentinel`).
  * It is a cap on how many are *materialised*, because a match card is a client
  * component with its own state, poll and share affordances, and a busy day across
  * the whole competition catalog can report a thousand of them. Shipping a thousand

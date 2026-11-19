@@ -190,7 +190,7 @@ Every parameter is clamped server-side before SQL (`resolveIndexQuery`): `league
 must be a catalog slug, `status` one of `live|upcoming|final`, `kind` one of
 `match|league`, `days ≤ 365` (and `0` means *no* age filter, not "one day"),
 `limit ≤ 60`, `offset ≤ 100000`. An unknown value is **dropped**, never queried.
-The response also carries `remaining` for a Load more button and unfiltered
+The response also carries `remaining`, which tells the page whether to read another page as the reader scrolls, and unfiltered
 `byLeague`/`byStatus` totals, so a chip can count what is stored rather than what
 happens to be on the page.
 

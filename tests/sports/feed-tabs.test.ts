@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { mountBoard } from './leaders-post-cards';
 import { FEED_RENDER_BATCH } from '../../src/lib/feed-interleave';
 import type { SportsVideoNewsClip } from '../../src/lib/espn-video-news';
+import { installIntersectionObserver, keepEndInRange, scrollToEnd, watchedEnds } from './fake-intersection';
+
+installIntersectionObserver();
 
 /**
  * The feed's fourth tab.
@@ -143,63 +146,88 @@ test('For You is unchanged by what the Live tab was given', async () => {
   await view.unmount();
 });
 
-/* ── The batched reveal ─────────────────────────────────────────────────── */
+/* ── The batched reveal: endless scrolling, no button ───────────────────── */
 
 /** Many cards, cheaply: the tab's own list is what is under test, not the card. */
 const manyPosts = (count: number) => Array.from({ length: count }, (_, index) =>
   videoPost(`bulk-${index}`, { id: `espn-video-epl-${index}`, clipId: String(index), title: `Clip number ${index}` }));
 
-const showMore = (container: any) =>
-  [...container.querySelectorAll('button')].find((button: any) => button.textContent.includes('remaining in this tab'));
+/** The end-of-list marker a tab renders while it still has cards to reveal. */
+const endMarker = (container: any) => container.querySelector('[data-infinite-sentinel]');
+/** Any button that offers more cards. Endless scrolling has none. */
+const moreButton = (container: any) =>
+  [...container.querySelectorAll('button')].find((button: any) => /\bmore\b/i.test(button.textContent));
+const reactAct = async () => (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
+/** The reader scrolls to the end of what is on screen. */
+const scroll = async () => { const act = await reactAct(); await act(async () => { scrollToEnd(); }); };
 
-test('a tab with more cards than one batch renders one batch and says how many are left', async () => {
+test('a tab with more cards than one batch renders one batch and no button to press', async () => {
   const total = FEED_RENDER_BATCH * 3 + 5;
   const view = await mountTabs({ livePosts: manyPosts(total) });
   await view.press('Live');
 
   const rendered = view.container.querySelectorAll('article').length;
   assert.equal(rendered, FEED_RENDER_BATCH, 'only one batch is in the DOM');
-  const button = showMore(view.container)!;
-  assert.ok(button, 'a control offers the rest');
-  assert.match(button.textContent!, new RegExp(`Show ${FEED_RENDER_BATCH} more`));
-  assert.match(button.textContent!, new RegExp(`${total - FEED_RENDER_BATCH} remaining in this tab`),
-    'the count is honest about what is still to come');
+  assert.ok(endMarker(view.container), 'the end of the batch is marked');
+  assert.equal(watchedEnds(view.container), 1, 'and watched, so scrolling to it reveals more');
+  assert.equal(moreButton(view.container), undefined, 'nothing asks the reader to press for more');
+  assert.doesNotMatch(view.container.textContent!, /remaining in this tab/);
   await view.unmount();
 });
 
-test('pressing it reveals another batch, and the whole list is reachable', async () => {
+test('scrolling to the end reveals another batch, and the whole list is reachable', async () => {
   const total = FEED_RENDER_BATCH * 2 + 3;
   const view = await mountTabs({ livePosts: manyPosts(total) });
   await view.press('Live');
-  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
 
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH);
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH * 2);
+  assert.equal(watchedEnds(view.container), 1, 'the new end is watched in turn');
 
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.equal(view.container.querySelectorAll('article').length, total, 'every card the page built is reachable');
-  assert.equal(showMore(view.container), undefined, 'and the control goes away when nothing is left');
+  assert.equal(endMarker(view.container), null, 'and the marker goes away when nothing is left');
+  assert.equal(watchedEnds(view.container), 0);
   await view.unmount();
 });
 
-test('the last batch offers what is actually left, not a full one', async () => {
+test('the last batch reveals what is actually left', async () => {
   const view = await mountTabs({ livePosts: manyPosts(FEED_RENDER_BATCH + 4) });
   await view.press('Live');
-  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
 
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH + 4);
-  assert.equal(showMore(view.container), undefined);
+  assert.equal(endMarker(view.container), null);
   await view.unmount();
 });
 
-test('a tab that fits in one batch shows no control at all', async () => {
+test('an end that is still in range after a batch arrives keeps revealing, without another scroll', async () => {
+  // A window taller than a batch: the end never leaves range, so no "it came
+  // into view" event will ever fire again. The list must not stall there.
+  const total = FEED_RENDER_BATCH * 3 + 5;
+  keepEndInRange(true);
+  try {
+    const view = await mountTabs({ livePosts: manyPosts(total) });
+    await view.press('Live');
+    const act = await reactAct();
+    for (let turn = 0; turn < 6; turn += 1) await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
+
+    assert.equal(view.container.querySelectorAll('article').length, total);
+    assert.equal(endMarker(view.container), null);
+    await view.unmount();
+  } finally {
+    keepEndInRange(false);
+  }
+});
+
+test('a tab that fits in one batch has no end marker at all', async () => {
   const view = await mountTabs({ livePosts: manyPosts(3) });
   await view.press('Live');
 
   assert.equal(view.container.querySelectorAll('article').length, 3);
-  assert.equal(showMore(view.container), undefined, 'nothing is withheld, so nothing offers more');
+  assert.equal(endMarker(view.container), null, 'nothing is withheld, so nothing waits to be scrolled to');
+  assert.equal(watchedEnds(view.container), 0);
   await view.unmount();
 });
 
@@ -207,9 +235,7 @@ test('switching tab starts from the first batch again', async () => {
   // Two full batches and a tail, so the second press still has a batch to give.
   const total = FEED_RENDER_BATCH * 2 + 6;
   const view = await mountTabs({ forYouPosts: manyPosts(total), livePosts: manyPosts(total) });
-  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
-
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH * 2, 'For You was expanded');
 
   await view.press('Live');
@@ -295,14 +321,12 @@ test('the Highlights tab reveals its clips in batches like every other tab', asy
     highlightPosts: Array.from({ length: total }, (_, index) => highlightPost(`bulk-${index}`)),
   });
   await view.press('Highlights');
-  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
-
   assert.equal(view.container.querySelectorAll('article').length, FEED_RENDER_BATCH);
   assert.match(view.container.textContent!, new RegExp(`${total} match highlights, newest first`),
     'the count is every clip the tab holds, not the batch on screen');
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.equal(view.container.querySelectorAll('article').length, total, 'every clip the page supplied is reachable');
-  assert.equal(showMore(view.container), undefined);
+  assert.equal(endMarker(view.container), null);
   await view.unmount();
 });
 
@@ -315,10 +339,8 @@ test('clips the read did not carry are pointed at, once everything it did carry 
     highlightsRemaining: 37,
   });
   await view.press('Highlights');
-  const act = (await import('react')).act as unknown as (fn: () => Promise<void> | void) => Promise<void>;
-
   assert.equal(older(view.container), undefined, 'not while this tab still has clips of its own to reveal');
-  await act(async () => { showMore(view.container)!.click(); });
+  await scroll();
   assert.match(older(view.container)!.textContent!, /37 older clips on Match Highlights/);
 
   await view.press('For You');
