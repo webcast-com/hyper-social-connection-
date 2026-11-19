@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { getStreamBoard, getStreamDetail, resetSportsrcCache, sportsrcConfigured } from '../../src/lib/sportsrc-feed';
-import { ARSENAL_ID, NOW, detailPayload, matchesPayload, sportsPayload } from './sportsrc-fixture';
+import { ARSENAL_ID, NOW, SOON_ID, detailPayload, matchesPayload, servedDetailPayload, sportsPayload, streamPayload } from './sportsrc-fixture';
 
 /**
  * The SportSRC requests: where the key goes, how few requests are made against
@@ -11,16 +11,17 @@ import { ARSENAL_ID, NOW, detailPayload, matchesPayload, sportsPayload } from '.
 type Call = { url: URL; key: string | null };
 type Reply = { status?: number; body?: unknown; remaining?: number };
 
-function provider(replies: Partial<Record<'matches' | 'detail' | 'sports', Reply | (() => Reply)>> = {}) {
+function provider(replies: Partial<Record<'matches' | 'detail' | 'sports' | 'stream', Reply | (() => Reply)>> = {}) {
   const calls: Call[] = [];
   let clock = NOW;
   const fetchImpl = (async (input: URL | string, init?: RequestInit) => {
     const url = new URL(String(input));
     calls.push({ url, key: new Headers(init?.headers).get('x-api-key') });
-    const type = url.searchParams.get('type') as 'matches' | 'detail' | 'sports';
+    const type = url.searchParams.get('type') as 'matches' | 'detail' | 'sports' | 'stream';
     const given = replies[type];
     const reply = (typeof given === 'function' ? given() : given) ?? {};
-    const body = reply.body ?? (type === 'matches' ? matchesPayload() : type === 'detail' ? detailPayload(url.searchParams.get('id') ?? undefined) : sportsPayload());
+    const id = url.searchParams.get('id') ?? undefined;
+    const body = reply.body ?? (type === 'matches' ? matchesPayload() : type === 'detail' ? detailPayload(id) : type === 'stream' ? streamPayload(id) : sportsPayload());
     return new Response(JSON.stringify(body), {
       status: reply.status ?? 200,
       headers: { 'content-type': 'application/json', ...(reply.remaining === undefined ? {} : { 'X-RateLimit-Remaining': String(reply.remaining) }) },
@@ -203,4 +204,97 @@ test('the health report can say whether a key is set without saying what it is',
   } finally {
     if (before === undefined) delete process.env.SPORTSRC_API_KEY; else process.env.SPORTSRC_API_KEY = before;
   }
+});
+
+/* ── Why a match has nothing to play ───────────────────────────────────── */
+
+test('a match answered in the service’s own nesting plays, with one request', async () => {
+  const sportsrc = provider({ detail: { body: servedDetailPayload() } });
+  const result = await getStreamDetail(ARSENAL_ID, sportsrc.options);
+  assert.equal(result.state, 'ok');
+  assert.deepEqual(result.detail!.sources.map((source) => source.label), ['LOLA', 'HDTV']);
+  assert.equal(result.reason, undefined);
+  assert.equal(sportsrc.calls.length, 1);
+});
+
+test('a live match whose detail has no source is asked for its sources once more', async () => {
+  const empty = servedDetailPayload();
+  empty.data.sources = [];
+  const sportsrc = provider({ detail: { body: empty } });
+  const result = await getStreamDetail(ARSENAL_ID, sportsrc.options);
+  assert.equal(result.state, 'ok');
+  assert.deepEqual(result.detail!.sources.map((source) => source.label), ['ECHO']);
+  // The facts from the first answer are kept.
+  assert.equal(result.detail!.venue?.stadium, 'Emirates Stadium');
+  assert.deepEqual(sportsrc.calls.map((call) => call.url.searchParams.get('type')), ['detail', 'stream']);
+  assert.equal(sportsrc.of('stream')[0].url.searchParams.get('id'), ARSENAL_ID);
+  assert.equal(sportsrc.of('stream')[0].key, 'secret-key');
+  // And the pair is remembered like any other answer.
+  await getStreamDetail(ARSENAL_ID, sportsrc.options);
+  assert.equal(sportsrc.calls.length, 2);
+});
+
+test('a match that has not started costs one request: no source yet is the ordinary case', async () => {
+  const early = servedDetailPayload(SOON_ID, 'notstarted');
+  early.data.sources = [];
+  const sportsrc = provider({ detail: { body: early } });
+  const result = await getStreamDetail(SOON_ID, sportsrc.options);
+  assert.equal(result.state, 'ok');
+  assert.deepEqual(result.detail!.sources, []);
+  assert.equal(result.reason, 'no-sources');
+  assert.equal(sportsrc.calls.length, 1);
+});
+
+test('an answer that cannot be read says so, describes itself, and the sources are tried', async () => {
+  const odd = { success: true, result: { streams: [{ link: 'https://embed.example.com/x' }] } };
+  const none = provider({ detail: { body: odd }, stream: { body: { success: true, data: [] } } });
+  const failed = await getStreamDetail(ARSENAL_ID, none.options);
+  assert.equal(failed.state, 'unavailable');
+  assert.equal(failed.reason, 'shape');
+  assert.equal(failed.shape, '{success:boolean,result:{streams:[{link:string}]×1}}');
+  assert.ok(!JSON.stringify(failed).includes('embed.example.com'), 'field names only');
+
+  resetSportsrcCache();
+  const saved = provider({ detail: { body: odd } });
+  const played = await getStreamDetail(ARSENAL_ID, saved.options);
+  assert.equal(played.state, 'ok');
+  assert.equal(played.detail!.id, ARSENAL_ID);
+  assert.deepEqual(played.detail!.sources.map((source) => source.label), ['ECHO']);
+});
+
+test('a refusal carries SportSRC’s own reason, and never the key', async () => {
+  const refused = provider({ detail: { body: { success: false, message: 'Match not available for key secret-key\n on this plan.' } }, stream: { status: 500, body: { success: false } } });
+  const result = await getStreamDetail(ARSENAL_ID, refused.options);
+  assert.equal(result.state, 'unavailable');
+  assert.equal(result.reason, 'refused');
+  assert.equal(result.note, 'Match not available for key [key] on this plan.');
+  assert.ok(!JSON.stringify(result).includes('secret-key'));
+
+  resetSportsrcCache();
+  const down = provider({ detail: { status: 503, body: { success: false, message: 'Maintenance' } }, stream: { status: 503 } });
+  const second = await getStreamDetail(ARSENAL_ID, down.options);
+  assert.equal(second.reason, 'http-503');
+  assert.equal(second.note, 'Maintenance');
+
+  // A refused key is not asked a second question.
+  resetSportsrcCache();
+  const locked = provider({ detail: { status: 401, body: { success: false, message: 'Invalid API Key.' } } });
+  const third = await getStreamDetail(ARSENAL_ID, locked.options);
+  assert.equal(third.state, 'unauthorized');
+  assert.equal(third.reason, 'http-401');
+  assert.equal(third.note, 'Invalid API Key.');
+  assert.equal(locked.calls.length, 1);
+
+  resetSportsrcCache();
+  const html = provider();
+  html.options.fetchImpl = (async () => new Response('<html>Bad gateway</html>', { status: 200 })) as unknown as typeof fetch;
+  assert.equal((await getStreamDetail(ARSENAL_ID, html.options)).reason, 'not-json');
+
+  resetSportsrcCache();
+  const offline = provider();
+  offline.options.fetchImpl = (async () => { throw new Error('getaddrinfo ENOTFOUND'); }) as unknown as typeof fetch;
+  const fourth = await getStreamDetail(ARSENAL_ID, offline.options);
+  assert.equal(fourth.reason, 'network');
+  assert.ok(!JSON.stringify(fourth).includes('ENOTFOUND'));
+  assert.equal((await getStreamDetail('<script>', offline.options)).reason, 'bad-id');
 });

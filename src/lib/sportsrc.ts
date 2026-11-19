@@ -91,6 +91,8 @@ export type StreamDetail = {
   managers: { home: string | null; away: string | null };
   season: string | null;
   round: string | null;
+  /** The match state as the detail answer has it, when it says. */
+  status?: StreamStatus;
 };
 
 /**
@@ -117,7 +119,20 @@ export type StreamBoard = {
   stale?: boolean;
 };
 
-export type StreamDetailResult = { state: StreamState; detail: StreamDetail | null };
+export type StreamDetailResult = {
+  state: StreamState;
+  detail: StreamDetail | null;
+  /**
+   * Why there is nothing to play, for whoever is finding out: `http-503`,
+   * `refused`, `timeout`, `network`, `not-json`, `shape` (an answer this code
+   * could not read) or `no-sources`. Absent on a good answer with sources.
+   */
+  reason?: string;
+  /** What SportSRC itself said when it refused, shortened. Never the key. */
+  note?: string;
+  /** The field names of the answer that could not be used. No values. */
+  shape?: string;
+};
 
 export const DEFAULT_STREAM_SPORT = 'football';
 
@@ -130,6 +145,39 @@ const count = (value: unknown): number | null => {
   const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
   return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : null;
 };
+
+/**
+ * A kick-off time. The documentation shows Unix seconds; the service sends
+ * milliseconds. Both are read: no real fixture's seconds reach 100 billion (the
+ * year 5138), and no real fixture's milliseconds fall below it (1973).
+ */
+export function streamInstant(value: unknown): Date | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && /^\d{9,14}$/.test(value.trim()) ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const date = new Date(n >= 1e11 ? n : n * 1000);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The two halves of "2 - 1". */
+function displayScore(value: unknown): [number | null, number | null] {
+  const found = /^\s*(\d{1,3})\s*[-:\u2013]\s*(\d{1,3})\s*$/.exec(text(value));
+  return found ? [Number(found[1]), Number(found[2])] : [null, null];
+}
+
+/**
+ * The field names of an answer, with types in place of values: enough to see
+ * what SportSRC sent when this code could not read it, and nothing that is
+ * anyone's data. Arrays show their first entry.
+ */
+export function payloadShape(value: unknown, depth = 4): string {
+  if (Array.isArray(value)) return value.length ? `[${payloadShape(value[0], depth - 1)}]×${value.length}` : '[]';
+  if (isRecord(value)) {
+    if (depth <= 0) return '{…}';
+    const keys = Object.keys(value).slice(0, 40);
+    return `{${keys.map((key) => `${key.slice(0, 40)}:${payloadShape(value[key], depth - 1)}`).join(',')}}`.slice(0, 1500);
+  }
+  return value === null ? 'null' : typeof value;
+}
 
 /** An `https` address and nothing else: these are drawn as images or framed. */
 export function httpsUrl(value: unknown): string | null {
@@ -218,16 +266,20 @@ function parseMatch(value: unknown, league: { name: string; country: string | nu
   const [left, right] = text(value.title).split(/\s+vs\.?\s+/i);
   const home = parseTeam(teams.home, left?.trim() || 'Home');
   const away = parseTeam(teams.away, right?.trim() || 'Away');
+  // The score arrives as `score.home`, as `score.current.home` (what the service
+  // sends today), on the side itself (the paid list), or only as "2 - 1".
   const score = isRecord(value.score) ? value.score : {};
+  const current = isRecord(score.current) ? score.current : {};
+  const [shownHome, shownAway] = displayScore(score.display);
   const flat = (side: unknown) => (isRecord(side) ? count(side.score) : null);
-  const stamp = typeof value.timestamp === 'number' && value.timestamp > 0 ? new Date(value.timestamp * 1000) : null;
+  const stamp = streamInstant(value.timestamp);
   const status = streamStatus(value.status);
   // A fixture that has not kicked off has no score, whatever placeholder was sent.
   const reported = status !== 'upcoming';
   return {
     id,
     title: text(value.title) || `${home.name} vs ${away.name}`,
-    startAt: stamp && !Number.isNaN(stamp.getTime()) ? stamp.toISOString() : null,
+    startAt: stamp ? stamp.toISOString() : null,
     status,
     rawStatus: text(value.status).toLowerCase(),
     statusDetail: text(value.status_detail) || text(value.status_display),
@@ -240,8 +292,8 @@ function parseMatch(value: unknown, league: { name: string; country: string | nu
     home,
     away,
     score: {
-      home: reported ? count(score.home) ?? flat(teams.home) : null,
-      away: reported ? count(score.away) ?? flat(teams.away) : null,
+      home: reported ? count(score.home) ?? count(current.home) ?? flat(teams.home) ?? shownHome : null,
+      away: reported ? count(score.away) ?? count(current.away) ?? flat(teams.away) ?? shownAway : null,
     },
     // `matches` lists only fixtures with a stream, so an absent flag means yes.
     hasStream: value.has_stream !== false,
@@ -290,34 +342,63 @@ export function parseStreamSports(payload: unknown): StreamSport[] {
   return sports;
 }
 
-/** The `detail` response: the sources to frame, and the facts for the info row. */
-export function parseStreamDetail(payload: unknown): StreamDetail | null {
-  const data = isRecord(payload) && isRecord(payload.data) ? payload.data : null;
-  if (!data) return null;
-  const id = streamMatchId(data.id);
-  if (!id) return null;
+/** Player addresses from a list of sources, whatever the entries call them. */
+function parseSources(list: unknown): StreamSource[] {
   const sources: StreamSource[] = [];
-  for (const item of Array.isArray(data.sources) ? data.sources : []) {
+  for (const item of Array.isArray(list) ? list : []) {
     if (!isRecord(item)) continue;
-    const embedUrl = httpsUrl(item.embedUrl);
+    const embedUrl = httpsUrl(item.embedUrl) ?? httpsUrl(item.embed_url) ?? httpsUrl(item.embed) ?? httpsUrl(item.iframe) ?? httpsUrl(item.url);
     if (!embedUrl || sources.some((source) => source.embedUrl === embedUrl)) continue;
-    const name = text(item.source);
-    const number = count(item.streamNo);
+    const name = text(item.source) || text(item.source_name) || text(item.name);
+    const number = count(item.streamNo) ?? count(item.stream_no);
+    const language = text(item.language);
     sources.push({
       id: text(item.id) || `stream-${sources.length + 1}`,
       label: (name || `Stream ${number ?? sources.length + 1}`).toUpperCase().slice(0, 16),
       embedUrl,
-      hd: item.hd === true,
-      language: text(item.language) && text(item.language).toLowerCase() !== 'unknown' ? text(item.language) : null,
+      hd: item.hd === true || text(item.quality).toLowerCase() === 'hd',
+      language: language && language.toLowerCase() !== 'unknown' ? language : null,
     });
   }
-  const venue = isRecord(data.venue) ? data.venue : null;
-  const league = isRecord(data.league) ? data.league : {};
-  const managers = isRecord(data.managers) ? data.managers : {};
-  const named = (value: unknown) => (isRecord(value) ? textOrNull(value.name) : null);
+  return sources;
+}
+
+/**
+ * The `stream` answer: a match's sources and nothing else. It is asked only when
+ * `detail` has none for a match that is being played.
+ */
+export function parseStreamSources(payload: unknown): StreamSource[] {
+  if (!isRecord(payload)) return [];
+  const data = payload.data;
+  if (Array.isArray(data)) return parseSources(data);
+  if (isRecord(data)) return parseSources(data.sources ?? data.streams);
+  return parseSources(payload.sources);
+}
+
+/**
+ * The `detail` answer: a match's sources and facts.
+ *
+ * The documentation puts the match's fields straight under `data`; the service
+ * nests them under `data.match_info` beside `data.sources`. Both are read. The
+ * id is the one that was asked for when the answer does not repeat it: an answer
+ * to "this match" is about this match.
+ */
+export function parseStreamDetail(payload: unknown, askedId?: string | null): StreamDetail | null {
+  const data = isRecord(payload) && isRecord(payload.data) ? payload.data : null;
+  if (!data) return null;
+  const info = [data.match_info, data.match, data.info].find(isRecord) ?? data;
+  const id = streamMatchId(info.id) ?? streamMatchId(data.id) ?? streamMatchId(askedId);
+  if (!id) return null;
+  const sources = parseSources(data.sources ?? data.streams ?? info.sources ?? info.streams);
+  const pick = (name: string) => (isRecord(info[name]) ? info[name] : isRecord(data[name]) ? data[name] : null) as Json | null;
+  const venue = pick('venue');
+  const league = pick('league') ?? {};
+  const managers = pick('managers') ?? pick('coaches') ?? {};
+  const named = (value: unknown) => (isRecord(value) ? textOrNull(value.name) : textOrNull(value));
+  const rawStatus = text(info.status) || text(data.status);
   return {
     id,
-    title: text(data.title),
+    title: text(info.title) || text(data.title),
     sources,
     venue: venue && (text(venue.stadium) || text(venue.city))
       ? {
@@ -328,10 +409,11 @@ export function parseStreamDetail(payload: unknown): StreamDetail | null {
           surface: textOrNull(venue.surface),
         }
       : null,
-    referee: named(data.referee),
+    referee: named(info.referee ?? data.referee),
     managers: { home: named(managers.home), away: named(managers.away) },
     season: textOrNull(league.season),
-    round: textOrNull(league.round),
+    round: textOrNull(league.round) ?? textOrNull(info.round),
+    ...(rawStatus ? { status: streamStatus(rawStatus) } : {}),
   };
 }
 
