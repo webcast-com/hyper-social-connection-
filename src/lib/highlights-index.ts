@@ -33,9 +33,16 @@
  * query failure, resolves to an "index unavailable" answer with a reason rather
  * than throwing, and callers fall back to the live feed exactly as they did
  * before this table existed.
+ *
+ * The same index can also live as JSON files in a folder of a Git branch
+ * (`highlights-source.ts` says which). Then every read below is answered from
+ * those files by `highlights-github.ts`, with the same shapes, the same bounds
+ * and the same order, and nothing here touches Postgres. The site does not
+ * write to the folder: a scheduled job does (`scripts/highlights-sweep.ts`).
  */
 import { hasDatabase, rawExecute, rawQuery } from '@/lib/prisma';
 import { ensureMigrated } from '@/lib/migrate';
+import { highlightsBackend } from './highlights-source';
 import { ESPN_LEAGUES } from './sports-catalog';
 import { highlightAnchorId } from './sports-anchor';
 import type { SportsHighlightClip, SportsHighlightStatus } from './espn-highlights';
@@ -98,6 +105,12 @@ export type IndexedHighlights = {
   byLeague: IndexCompetitionCount[];
   byStatus: IndexStatusCount[];
   summary: HighlightsIndexSummary;
+  /**
+   * `repository` when this was read from the data folder in the Git
+   * repository, which a scheduled job fills and the site cannot write to.
+   * Absent for the database. The page words its sweep controls from it.
+   */
+  store?: 'repository';
 };
 
 /* ── Bounds ─────────────────────────────────────────────────────────────── */
@@ -261,6 +274,8 @@ const url = (value: unknown) => {
   }
 };
 const seconds = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 86_400 ? Math.trunc(value) : null);
+/** The column rules, for the file-backed store, which must apply the same ones. */
+export { text as storedText, url as storedUrl, seconds as storedSeconds };
 const instant = (value: unknown): Date | null => {
   const ms = typeof value === 'string' ? Date.parse(value) : NaN;
   return Number.isNaN(ms) ? null : new Date(ms);
@@ -414,6 +429,11 @@ const COLUMNS = `"external_key", "kind", "clip_id", "title", "description", "dur
 
 const FIELDS = 25;
 
+/** True when the index lives in the GitHub folder rather than in Postgres. */
+const inFiles = () => highlightsBackend() === 'github';
+/** Loaded on first use: that module imports this one. */
+const files = () => import('./highlights-github');
+
 /**
  * The INSERT for a batch, with bound placeholders only — no value is ever
  * interpolated into the SQL text.
@@ -558,6 +578,7 @@ export function rowToLeagueClip(row: ClipRow): SportsVideoNewsClip | null {
  * behind it, so the index is the second place to look. Inert without a database.
  */
 export async function findStoredHighlightClip(anchorKey: string): Promise<SportsHighlightClip | null> {
+  if (inFiles()) return (await files()).findStoredHighlightClip(anchorKey);
   const key = text(anchorKey, 200);
   if (!hasDatabase || !key) return null;
   try {
@@ -585,6 +606,7 @@ export async function findStoredHighlightClip(anchorKey: string): Promise<Sports
  * what comes back. Inert without a database.
  */
 export async function findStoredNewsMedia(clipId: string): Promise<SportsVideoNewsMedia | null> {
+  if (inFiles()) return (await files()).findStoredNewsMedia(clipId);
   const id = text(clipId, 64);
   if (!hasDatabase || !id) return null;
   try {
@@ -626,6 +648,8 @@ export async function findStoredNewsMedia(clipId: string): Promise<SportsVideoNe
  * depend on which of the two write paths happened to run last.
  */
 export async function storeNewsMedia(clipId: string, media: SportsVideoNewsMedia | null): Promise<number> {
+  // The site does not write to the folder; the scheduled job resolves renditions.
+  if (inFiles()) return 0;
   const id = text(clipId, 64);
   const mp4 = url(media?.mp4 ?? null);
   const hls = url(media?.hls ?? null);
@@ -656,6 +680,7 @@ export async function storeNewsMedia(clipId: string, media: SportsVideoNewsMedia
  * request per stored clip. Inert without a database.
  */
 export async function newsClipsNeedingMedia(limit: number = MAX_MEDIA_WARM): Promise<NewsClipRef[]> {
+  if (inFiles()) return [];
   if (!hasDatabase) return [];
   const max = Math.max(1, Math.min(MAX_MEDIA_WARM, Math.trunc(limit) || MAX_MEDIA_WARM));
   try {
@@ -687,6 +712,12 @@ const failed = (reason: 'query-failed', error: unknown) => {
 export type HighlightsStore = {
   /** False when no database is configured, or the connection has been lost. */
   available(): boolean;
+  /**
+   * True when this process may read the index but something else writes it —
+   * the GitHub folder, filled by a scheduled job. A sweep asks nothing upstream
+   * for a store like that: there would be nowhere to put the answer.
+   */
+  readOnly?(): boolean;
   summary(): Promise<HighlightsIndexSummary>;
   read(query: HighlightsIndexQuery): Promise<IndexedHighlights>;
   /** Rows written (inserted or refreshed). Never throws. */
@@ -829,6 +860,7 @@ export type FeedClipsRead = {
  * whatever board it already had, which is the rule this index has always kept.
  */
 export async function readFeedClips(days: number, limit: number = FEED_INDEX_LIMIT): Promise<FeedClipsRead> {
+  if (inFiles()) return (await files()).readFeedClips(days, limit);
   const empty: FeedClipsRead = { ok: false, reason: 'no-database', clips: [], remaining: 0, sourceUrl: null };
   if (!hasDatabase) return empty;
   const asked = Number.isFinite(days) ? Math.trunc(days) : 0;
@@ -911,6 +943,7 @@ export const EVENT_CLIPS_LIMIT = 24;
  * storage is a 404 rather than an error.
  */
 export async function readStoredClip(clipId: string): Promise<StoredClipRead> {
+  if (inFiles()) return (await files()).readStoredClip(clipId);
   const empty: StoredClipRead = { ok: false, reason: 'no-database', clip: null };
   const wanted = String(clipId ?? '').trim();
   if (!hasDatabase || !wanted) return empty;
@@ -949,6 +982,7 @@ export async function readStoredClip(clipId: string): Promise<StoredClipRead> {
  * gets either. A clip page passes the stored id and matches itself.
  */
 export async function readEventClips(eventId: string, limit: number = EVENT_CLIPS_LIMIT): Promise<EventClipsRead> {
+  if (inFiles()) return (await files()).readEventClips(eventId, limit);
   const empty: EventClipsRead = { ok: false, reason: 'no-database', clips: [] };
   const wanted = String(eventId ?? '').trim();
   if (!hasDatabase || !wanted) return empty;
@@ -994,6 +1028,7 @@ export const MAX_EVENT_REFS = 2_000;
  * query, and only the three columns a URL and a `lastmod` need.
  */
 export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promise<EventRefsRead> {
+  if (inFiles()) return (await files()).readRecentEventRefs(limit);
   const empty: EventRefsRead = { ok: false, reason: 'no-database', refs: [] };
   if (!hasDatabase) return empty;
   const asked = Number.isFinite(limit) ? Math.trunc(limit) : MAX_EVENT_REFS;
@@ -1030,6 +1065,7 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
  * `lastmod` — so it reads two columns and no rows it cannot publish.
  */
 export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise<ClipRefsRead> {
+  if (inFiles()) return (await files()).readRecentClipRefs(limit);
   const empty: ClipRefsRead = { ok: false, reason: 'no-database', refs: [] };
   if (!hasDatabase) return empty;
   const asked = Number.isFinite(limit) ? Math.trunc(limit) : MAX_CLIP_REFS;
@@ -1162,9 +1198,12 @@ async function queryRecordCells(entries: { key: string; games: number; clips: nu
  * down must cost a page its stored clips, never its render.
  */
 export const highlightsStore: HighlightsStore = {
-  available: () => hasDatabase,
+  available: () => inFiles() || hasDatabase,
+
+  readOnly: () => inFiles(),
 
   async summary() {
+    if (inFiles()) return (await files()).summary();
     if (!hasDatabase) return INDEX_UNAVAILABLE;
     try {
       return await querySummary();
@@ -1174,6 +1213,7 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async read(query) {
+    if (inFiles()) return (await files()).read(query);
     if (!hasDatabase) return INDEX_EMPTY;
     try {
       return await queryRead(query);
@@ -1184,7 +1224,7 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async store(clips) {
-    if (!hasDatabase || !clips.length) return 0;
+    if (inFiles() || !hasDatabase || !clips.length) return 0;
     try {
       return await queryStore(clips);
     } catch (error) {
@@ -1194,6 +1234,8 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async probeable(keys, reprobeEmptyAfterMs) {
+    // Nothing is worth asking from here: the answer could not be kept.
+    if (inFiles()) return new Set();
     if (!hasDatabase) return new Set(keys);
     try {
       return await queryProbeable(keys, reprobeEmptyAfterMs);
@@ -1206,7 +1248,7 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async recordProbes(entries) {
-    if (!hasDatabase) return;
+    if (inFiles() || !hasDatabase) return;
     try {
       await queryRecordProbes(entries);
     } catch (error) {
@@ -1215,6 +1257,7 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async freshCells(keys, cellTtlMs) {
+    if (inFiles()) return new Set(keys);
     if (!hasDatabase) return new Set();
     try {
       return await queryFreshCells(keys, cellTtlMs);
@@ -1225,7 +1268,7 @@ export const highlightsStore: HighlightsStore = {
   },
 
   async recordCells(entries) {
-    if (!hasDatabase) return;
+    if (inFiles() || !hasDatabase) return;
     try {
       await queryRecordCells(entries);
     } catch (error) {

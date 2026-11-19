@@ -48,13 +48,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let postRows: { id: number; createdAt: Date }[] = [];
   let clipRefs: ClipRef[] = [];
   let eventRefs: EventRef[] = [];
+  // Stored highlight clips: each one is a page of its own now, so each one is
+  // a URL. This is the freshest unique content the site has. Read outside the
+  // database block, because the clip list can live in the repository's data
+  // folder and be there when no database is. Neither read ever throws, and with
+  // nowhere to read from each answers with an empty list at once.
+  clipRefs = (await readRecentClipRefs(SITEMAP_CLIPS)).refs;
+  // And the fixtures they belong to, which are pages for the same reason.
+  eventRefs = (await readRecentEventRefs(SITEMAP_MATCHES)).refs;
   if (hasDatabase) {
     try {
-      // Stored highlight clips: each one is a page of its own now, so each one is
-      // a URL. This is the freshest unique content the site has.
-      clipRefs = (await readRecentClipRefs(SITEMAP_CLIPS)).refs;
-      // And the fixtures they belong to, which are pages for the same reason.
-      eventRefs = (await readRecentEventRefs(SITEMAP_MATCHES)).refs;
       profileRows = await db.orm.public.User
         .where({ profileVisibility: "public" })
         // `email` is read only to decide whether the account is a person worth
@@ -80,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .limit(200)
         .all();
     } catch (err) {
-      profileRows = []; groupRows = []; postRows = []; clipRefs = []; eventRefs = [];
+      profileRows = []; groupRows = []; postRows = [];
       // DB unreachable — fall back to the static routes only.
       console.warn("[sitemap] DB query failed:", (err as Error)?.message);
     }

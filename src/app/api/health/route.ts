@@ -1,5 +1,7 @@
 import { hasDatabase, describeDatabase, ensureDbConnection, rawQuery } from "@/lib/prisma";
 import { checkStorage, getStorageDriver, type StorageCheck } from "@/lib/storage";
+import { highlightsStore } from "@/lib/highlights-index";
+import { highlightsBackend } from "@/lib/highlights-source";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,10 @@ export const dynamic = "force-dynamic";
  *             points at Prisma Postgres and was skipped (src/prisma/database-url.ts).
  *   storage   where uploads go: `supabase`, `s3` or `local`
  *   storageOk whether that store answered just now (only Supabase is asked)
+ *   highlights where the list of highlight clips is kept (`github`: the data
+ *             folder in the repository; `database`: Postgres) and, for the
+ *             folder, whether it was just read, how many clips it holds and
+ *             when it was last added to
  *
  * Always 200: the app is designed to work in demo mode, so this reports the
  * state instead of failing.
@@ -24,12 +30,18 @@ export async function GET() {
     ok: false,
     detail: (error as Error)?.message || "storage check failed",
   }));
+  // Asked only of the folder: there it is one small cached file, and it never
+  // throws. In Postgres it would be a count over the whole table on every check.
+  const listed = highlightsBackend() === "github" ? await highlightsStore.summary() : null;
   const base = {
     ok: true,
     storage,
     storageOk: store.ok,
     ...(store.detail ? { storageDetail: store.detail } : {}),
     database,
+    highlights: listed
+      ? { store: "github", ok: listed.ok, clips: listed.clips, lastCollectedAt: listed.lastSweepAt }
+      : { store: "database" },
   };
 
   if (!hasDatabase) {
