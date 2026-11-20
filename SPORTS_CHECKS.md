@@ -913,6 +913,10 @@ drawn by `src/components/SponsorBanners.tsx`:
 - **Homepage**: under the scores panel on phones and tablets, and between the
   leaders and the highlights on a desktop. Two instances, one per layout; the
   one that is `display: none` at the current width never loads anything.
+- **Homepage sidebars** (desktop only, where the sidebars exist): one banner
+  each, so the two show different creatives (`sponsorBannerFor`). Left rail,
+  from 1280 px: under the sports links. Right rail, from 1024 px: under the
+  scores. Capped at 16rem tall. These are in addition to the block above.
 - **`/sports/live`**: between the player and the list of matches, capped at
   13rem tall so the list stays in reach.
 

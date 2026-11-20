@@ -15,6 +15,7 @@ import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import LiveStreamToast from '@/components/LiveStreamToast';
 import SponsorBanners from '@/components/SponsorBanners';
+import { sponsorBannerFor } from '@/lib/sponsor-banners';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
@@ -576,6 +577,10 @@ export default async function Home() {
             <RailLink href="/nfl-basketball/nfl" label="NFL football" well="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">NFL</RailLink>
           </nav>
 
+          {/* A paid placement: one banner, under the sports links so those stay
+              at the top of the rail. The right rail shows the other banner. */}
+          <SponsorBanners placement="home-left-rail" banners={sponsorBannerFor(0)} maxHeight="16rem" />
+
           <nav aria-label="Community" className="space-y-0.5 border-t border-gray-200 pt-3 dark:border-gray-800">
             <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Community</p>
             <RailLink href="/discover" label="Discover People" well="bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
@@ -788,6 +793,9 @@ export default async function Home() {
       <aside className="hidden min-w-0 lg:block">
         <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto scrollbar-hide pb-2">
         <SportsMatchCentre board={sportsBoard} shownEventIds={feedEventIds} />
+
+        {/* A paid placement: the other banner, under the scores. */}
+        <SponsorBanners placement="home-right-rail" banners={sponsorBannerFor(1)} maxHeight="16rem" />
 
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />

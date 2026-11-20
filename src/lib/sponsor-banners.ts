@@ -63,6 +63,17 @@ export function usableSponsorBanners(banners: readonly SponsorBanner[] = SPONSOR
   return usable;
 }
 
+/**
+ * One banner for a narrow slot (a sidebar), as a list of one. Slots are numbered
+ * so that neighbouring ones show different banners; with fewer banners than
+ * slots they come round again, and with none the slot is empty.
+ */
+export function sponsorBannerFor(slot: number, banners: readonly SponsorBanner[] = SPONSOR_BANNERS): SponsorBanner[] {
+  const usable = usableSponsorBanners(banners);
+  if (usable.length === 0 || !Number.isInteger(slot) || slot < 0) return [];
+  return [usable[slot % usable.length]];
+}
+
 /** A creative at least this many times wider than tall is a strip (728×90, 1200×200). */
 export const WIDE_BANNER_RATIO = 2;
 

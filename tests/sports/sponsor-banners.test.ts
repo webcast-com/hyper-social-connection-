@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { SPONSOR_BANNERS, SPONSOR_REL, sponsorLayout, usableSponsorBanners } from '../../src/lib/sponsor-banners';
+import { SPONSOR_BANNERS, SPONSOR_REL, sponsorBannerFor, sponsorLayout, usableSponsorBanners } from '../../src/lib/sponsor-banners';
 
 /**
  * The sponsored banners: where a click goes and how the link is marked, that a
@@ -61,6 +61,24 @@ test('strips are stacked at full width; squares and portraits sit side by side',
   assert.equal(sponsorLayout([1]), 'stack');
   assert.equal(sponsorLayout([1, NaN]), 'stack');
   assert.equal(sponsorLayout([]), 'stack');
+});
+
+test('each sidebar gets one banner, and the two sidebars get different ones', () => {
+  const [left] = sponsorBannerFor(0);
+  const [right] = sponsorBannerFor(1);
+  assert.equal(sponsorBannerFor(0).length, 1);
+  assert.equal(sponsorBannerFor(1).length, 1);
+  assert.equal(left.id, SPONSOR_BANNERS[0].id);
+  assert.equal(right.id, SPONSOR_BANNERS[1].id);
+  assert.notEqual(left.video, right.video);
+  // With one banner both slots show it; with none, or a slot that is not one, nothing.
+  const only = [{ id: 'solo', href: 'https://ads.example/go', video: 'https://ads.example/a.mp4' }];
+  assert.deepEqual(sponsorBannerFor(1, only).map((banner) => banner.id), ['solo']);
+  assert.deepEqual(sponsorBannerFor(0, []), []);
+  assert.deepEqual(sponsorBannerFor(-1), []);
+  assert.deepEqual(sponsorBannerFor(0.5), []);
+  // An unusable entry is never handed to a slot.
+  assert.deepEqual(sponsorBannerFor(0, [{ id: 'bad', href: 'javascript:alert(1)', video: 'https://ads.example/a.mp4' }, ...only]).map((banner) => banner.id), ['solo']);
 });
 
 /* ── The block itself, mounted ──────────────────────────────────────────── */

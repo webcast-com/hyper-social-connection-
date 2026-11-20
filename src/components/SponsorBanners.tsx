@@ -156,7 +156,7 @@ export default function SponsorBanners({ banners = SPONSOR_BANNERS, className = 
     >
       {stage === 'near' && (
         <>
-          <p className="mb-1.5 flex items-center justify-between gap-3 px-0.5 text-[11px] font-medium leading-none text-gray-500 dark:text-gray-400">
+          <p className="mb-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-0.5 text-[11px] font-medium leading-none text-gray-500 dark:text-gray-400">
             <span className="uppercase tracking-[0.14em]">Sponsored</span>
             <span>18+ · Gamble responsibly</span>
           </p>
