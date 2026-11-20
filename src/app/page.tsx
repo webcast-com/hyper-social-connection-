@@ -14,6 +14,7 @@ import { ArrowRight, Clapperboard, Compass, Radio, Users, Sparkles, Target, Trop
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import LiveStreamToast from '@/components/LiveStreamToast';
+import SponsorBanners from '@/components/SponsorBanners';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
@@ -613,6 +614,10 @@ export default async function Home() {
         <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
           <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
 
+          {/* Paid placements, on phones and tablets: under the scores, where
+              they are reached without scrolling past every board. */}
+          <SponsorBanners placement="home-compact" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800" />
+
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
           </div>
@@ -721,6 +726,11 @@ export default async function Home() {
         {/* On a desktop each board is one row of cards, so the feed below starts
             within a couple of screens instead of after every card in both. */}
         <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
+
+        {/* Paid placements, on a desktop (phones and tablets have theirs in the
+            panel above). Nothing is requested until this point of the page is
+            about to scroll into view. */}
+        <SponsorBanners placement="home" className="hidden lg:block" />
 
         <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
 

@@ -904,6 +904,40 @@ Tests: `sportsrc.test.ts` (parsing and rules), `sportsrc-feed.test.ts` (key,
 caching, allowance, failures), `stream-dashboard.test.ts` (the screen mounted in
 jsdom, including the frame's attributes).
 
+## Sponsored banners
+
+Two paid betting banners, listed in `src/lib/sponsor-banners.ts` (the link and
+the creative are the advertiser's own; empty the list to take them down) and
+drawn by `src/components/SponsorBanners.tsx`:
+
+- **Homepage**: under the scores panel on phones and tablets, and between the
+  leaders and the highlights on a desktop. Two instances, one per layout; the
+  one that is `display: none` at the current width never loads anything.
+- **`/sports/live`**: between the player and the list of matches, capped at
+  13rem tall so the list stays in reach.
+
+The advertiser's snippet put the `.mp4` creatives in `<img>` tags, which most
+browsers will not play, so each is a muted, looping, inline `<video>` inside the
+link. What the block does and does not do:
+
+- nothing is rendered on the server and nothing is requested from the
+  advertiser's host until the slot is within 600px of the viewport; a visitor
+  with data saving on gets no banner;
+- the slot has no height until a creative has loaded, and a creative that fails
+  (an ad blocker, the host being down) is removed: there is never an empty box;
+- a video plays only while on screen and the tab is in front, and not at all
+  with reduced motion (its first frame is shown, still a link);
+- the creatives' sizes are not known in advance: each tile takes its video's
+  proportions, strips (2:1 or wider) are stacked and anything else sits side by
+  side (`sponsorLayout`);
+- links open in a new tab with `rel="sponsored nofollow noopener"`; the block is
+  captioned "Sponsored" and "18+ · Gamble responsibly".
+
+Not verified: the real creatives could not be loaded from the build sandbox, so
+the layout was checked in a browser with stand-in videos of three shapes
+(728×90, 600×500, 360×640) at 390, 768 and 1440 px. Tests:
+`sponsor-banners.test.ts`.
+
 ## Predictions page and removed integration
 
 `/sports/predictions` and the sports-page link remain available to guests and members, with the shared header/navigation. The page now fetches its own ESPN upcoming-match odds feed, not the scores board. See [ESPN_ODDS_CHECKS.md](ESPN_ODDS_CHECKS.md) for API and filtering details. Odds are not advertised as generated picks, and no sample prices are injected.

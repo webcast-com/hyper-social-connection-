@@ -28,6 +28,7 @@ import {
   LoaderCircle, Maximize, Newspaper, Play, Radio, RefreshCw, Search, Settings, Square, Star, Trophy, Volleyball, X,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import SponsorBanners from '@/components/SponsorBanners';
 import {
   STREAM_TABS, featuredStreamMatch, filterStreamMatches, isWatchable, localDayKey, orderStreamMatches, streamClock,
   streamDateLabel, streamMatchIcs, streamScore,
@@ -582,6 +583,9 @@ export default function SportsStreamDashboard({
               <button type="button" className="sx-bar-btn" onClick={fullscreen} disabled={!playing || !source} aria-label="Full screen" title="Full screen"><Maximize aria-hidden="true" /></button>
             </div>
           </section>
+
+          {/* Kept short here: the list of matches below is what the page is for. */}
+          <SponsorBanners placement="live" className="sx-sponsor" maxHeight="13rem" />
 
           <section ref={listRef} className="sx-card" aria-label="Matches" aria-busy={loading}>
             <div className="sx-card__head">

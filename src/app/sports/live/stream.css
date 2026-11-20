@@ -186,6 +186,9 @@ body:has(.sx-shell) .app-main {
 .sx-sources__btn.is-active em { color: #fff; }
 
 /* ---- match list ------------------------------------------------------- */
+/* The sponsored banners, between the player and the list. */
+.sx-sponsor { margin-top: 16px; }
+
 .sx-card { margin-top: 16px; background: var(--sx-card); border: 1px solid var(--sx-line); border-radius: 14px; overflow: hidden; scroll-margin-top: 72px; }
 .sx-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 8px; padding: 6px 10px 0 6px; border-bottom: 1px solid var(--sx-line); }
 .sx-tabs { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; flex: 1 1 100%; border-bottom: 1px solid var(--sx-line); margin-bottom: 6px; }
