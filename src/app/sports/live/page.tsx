@@ -8,6 +8,8 @@ import { getSportsVideoNewsForRender } from '@/lib/espn-video-news-feed';
 import { getHighlightsBoardForRender } from '@/lib/highlights-board';
 import { clipHref, clockDuration } from '@/lib/highlight-clip';
 import { streamMatchId } from '@/lib/sportsrc';
+import { streamBroadcastsStructuredData } from '@/lib/stream-seo';
+import { getSiteUrl } from '@/lib/site-url';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Football Streams',
@@ -58,13 +60,25 @@ export default async function SportsLivePage({ searchParams }: { searchParams: P
     href: clipHref(clip),
   }));
 
+  // The streamed fixtures as schema.org broadcasts, from the same board the
+  // page renders. Nothing is emitted when there is nothing live or to come.
+  const structured = streamBroadcastsStructuredData(board, getSiteUrl());
+
   return (
-    <SportsStreamDashboard
-      initial={board}
-      initialMatchId={initialMatchId}
-      news={news}
-      highlights={highlights}
-      viewer={viewer ? { id: viewer.id, name: viewer.name ?? null, avatar: viewer.avatar ?? null } : null}
-    />
+    <>
+      {structured && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structured).replace(/</g, '\\u003c') }}
+        />
+      )}
+      <SportsStreamDashboard
+        initial={board}
+        initialMatchId={initialMatchId}
+        news={news}
+        highlights={highlights}
+        viewer={viewer ? { id: viewer.id, name: viewer.name ?? null, avatar: viewer.avatar ?? null } : null}
+      />
+    </>
   );
 }

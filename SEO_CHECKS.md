@@ -61,9 +61,18 @@ Live DNS/TLS/redirects, Search Console ownership and Google indexing/rankings we
   shipped, so until then a crawler could only find it by following links. It
   carries no `lastmod`: the fixtures are read live and nothing about them is
   stored here.
-- No structured data. A `BroadcastEvent` would assert that this site is the
-  broadcaster of each match; the streams are a third party's embeds, so that
-  claim is not made.
+- **Structured data** (`src/lib/stream-seo.ts`, tests `stream-broadcasts.test.ts`):
+  an `ItemList` of up to 30 `BroadcastEvent`s, each `isLiveBroadcast` with a
+  `broadcastOfEvent` `SportsEvent` (the two sides with their crests, the sport,
+  the kick-off). Only fixtures in play or still to come are listed, live first;
+  `url` is `/sports/live?match=<id>`. Emitted from the same board the page
+  renders, and not at all when nothing is live or to come.
+  - Nobody is named as the broadcaster (no `publisher` or `provider`): the
+    player is a third party's embed.
+  - There is no `VideoObject`, so this does not qualify for Google's LIVE badge.
+    That needs a thumbnail and a video address of the stream itself, which this
+    site does not have; inventing them would be the kind of markup Google
+    penalises.
 - Whether a search engine has indexed it is not something the site can report:
   check the URL in Google Search Console (URL inspection), and request indexing
   there to speed it up.
