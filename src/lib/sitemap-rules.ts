@@ -80,6 +80,10 @@ export function staticSitemapRoutes(
     // them, so there is no date to report — only a promise that it changes hourly.
     { url: at('/sports/predictions'), changeFrequency: 'hourly', priority: 0.6 },
     { url: at('/sports/highlights'), ...dated(freshness.newestClip), changeFrequency: 'hourly', priority: 0.8 },
+    // The live-stream screen server-renders the fixtures being streamed. They
+    // are read live from the provider and nothing about them is stored here, so
+    // as with the odds there is no date to report.
+    { url: at('/sports/live'), changeFrequency: 'hourly', priority: 0.8 },
     // The Basketball & NFL dashboard's pages are submitted too, by
     // `dashboardSitemapEntries` below.
     { url: at('/about'), changeFrequency: 'monthly', priority: 0.6 },

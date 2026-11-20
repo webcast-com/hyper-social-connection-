@@ -43,6 +43,31 @@ Live DNS/TLS/redirects, Search Console ownership and Google indexing/rankings we
 - Verified public HTTP 200, index/follow, canonical and footer links for About, Privacy, login, signup and search against the production build in offline mode. Also checked sitemap membership and public/private robots boundaries. New browser checks cover both information pages at 320/768/1440px, dark mode and guest access. Current totals: **15 SEO + 89 sports unit/API + 62 browser tests passed**; TypeScript, changed-file lint, whitespace checks and production build passed.
 
 
+## Live streams (`/sports/live`)
+
+- Indexable: title "Live Football Streams | Hyper", a description, a canonical
+  of `/sports/live`, `index, follow`, Open Graph and Twitter cards
+  (`getPageMetadata` in `src/app/sports/live/page.tsx`).
+- The fixtures are server-rendered, so a crawler that runs no script still
+  reads the matches being streamed. The player itself is a third-party frame
+  that is only requested when play is pressed; nothing in it is this page's
+  content.
+- `/sports/live?match=<id>` (the homepage card's link) is the same page opened
+  on one match. Its canonical is `/sports/live`, so it is not a second URL to
+  index.
+- Linked from the homepage rail, the `/sports` board and the homepage's
+  floating card.
+- **Submitted in the sitemap since 2026-11-20.** It was left out when the page
+  shipped, so until then a crawler could only find it by following links. It
+  carries no `lastmod`: the fixtures are read live and nothing about them is
+  stored here.
+- No structured data. A `BroadcastEvent` would assert that this site is the
+  broadcaster of each match; the streams are a third party's embeds, so that
+  claim is not made.
+- Whether a search engine has indexed it is not something the site can report:
+  check the URL in Google Search Console (URL inspection), and request indexing
+  there to speed it up.
+
 ## Basketball & NFL dashboard pages (`/nfl-basketball/**`)
 
 The dashboard is a client-rendered app: one built document for every address.

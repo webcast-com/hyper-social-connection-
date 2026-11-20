@@ -21,6 +21,7 @@ test('the static routes are the pages that carry content, in the order they were
     'https://hyper.co.ke/sports',
     'https://hyper.co.ke/sports/predictions',
     'https://hyper.co.ke/sports/highlights',
+    'https://hyper.co.ke/sports/live',
     'https://hyper.co.ke/about',
     'https://hyper.co.ke/privacy',
   ]);
@@ -55,13 +56,15 @@ test('a page is dated by the newest thing it renders, and never by a date this s
   // Odds are read live and this site stores no timestamp for them; the about and
   // privacy copy changes when a person edits it, which is not in the data either.
   assert.equal(modified('/sports/predictions'), undefined, 'no stored instant to report');
+  // The streamed fixtures are read live too: submitted, but with no date claimed.
+  assert.equal(modified('/sports/live'), undefined);
   assert.equal(modified('/about'), undefined);
   assert.equal(modified('/privacy'), undefined);
 });
 
 test('with nothing stored, no static route carries a modification date', () => {
   assert.deepEqual(staticSitemapRoutes(BASE, NO_FRESHNESS).map((row) => row.lastModified), [
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
   ]);
   // The default is the same as saying there is nothing: a route that asks for no
   // freshness must not invent any.
