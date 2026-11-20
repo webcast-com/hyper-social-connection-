@@ -964,6 +964,61 @@ real one is a skyscraper, raise `maxHeight` or move it to a sidebar.
 
 Not verified: the real image, for the same reason as the videos.
 
+## The player page as a card
+
+`/sports/athletes/<competition>/<id>` is laid out as a player card, after a
+design supplied for it: a dark violet panel, the portrait in a neon ring, the
+name, the position line and three figures, with the overview and season
+statistics beside the card on a wide screen (from 1024 px) and under it on a
+narrow one.
+
+**Only the look changed.** `SportsAthleteDetails.tsx` asks what it asked before,
+in the same order (ESPN's two player addresses from the browser, then
+`/api/sports/athletes/<competition>/<id>`), and the diff does not touch
+`refresh`, the effect that calls it or the board validation. Not edited at all:
+`espn-athlete.ts`, `espn-athlete-feed.ts`, `espn-browser.ts`, `espn-team.ts`,
+`/api/sports/athletes/**`, `/api/sports/teams/**` and `SportsTeamDetails.tsx`.
+
+- **The three figures** are chosen by `src/lib/athlete-headline.ts`, which only
+  picks from what the page already holds. Each is one ESPN reported, under
+  ESPN's label and with ESPN's value. The ones a fan looks for first lead where
+  the sport has an obvious three (football: goals, assists, appearances;
+  basketball: points, rebounds, assists per game; ice hockey: goals, assists,
+  points); any place left goes to the next statistics in ESPN's order, then to
+  age, height and weight. Fewer than three reported means fewer tiles, and none
+  reported means no tiles. A tile is never padded with a zero or a dash.
+- **The portrait** follows the same ladder as before: the photo ESPN reported
+  (or the ESPN headshot for NBA and NFL), else initials. With no player to name
+  (loading, or ESPN did not answer) the ring holds a plain figure rather than a
+  "P", which read as somebody's initial.
+- **The card's opening line** is the club: "@ Real Madrid", with the crest ESPN
+  reported and the link to the team page it always had. The design shows a
+  member handle there; a player has none, and none is made up.
+- **The controls** are the design's round buttons: refresh, and a close button
+  that is the old "Back to sports scores" link (same destination, same name for
+  a screen reader). Both are 44 px.
+- **The styling** that Tailwind cannot say (the lit backgrounds, the ring, its
+  glow) is in `player.css` beside the route. Every rule is under `.pl-card`,
+  except the page background, which is under `body:has(.pl-card)` and so applies
+  only while a card is on the page. The glow turns slowly; it stands still under
+  `prefers-reduced-motion`.
+- The section buttons no longer stick to the top while scrolling: with two short
+  sections they covered more than they saved.
+
+Checked in a browser at 320, 390, 768 and 1440 px, with stand-in answers for the
+player endpoint (ESPN is not reachable from the build sandbox): a footballer
+with a photo and two statistics groups, a basketball player with two statistics,
+a player with a very long name and club and no photo, and an unanswered request.
+No sideways scroll at any width, no control under 44 px, no console errors.
+**Not checked: a real ESPN answer**, so which labels ESPN actually sends for a
+footballer is taken from the parser's tests, not seen live. If the three tiles
+are not the ones wanted for some competition, the label lists at the top of
+`athlete-headline.ts` are the place to add its wording.
+
+Tests: `tests/sports/athlete-headline.test.ts` (the choice of figures, and that
+the stylesheet reaches nothing outside the card) and the player tests in
+`tests/sports/team-pages.test.ts`.
+
 ## Predictions page and removed integration
 
 `/sports/predictions` and the sports-page link remain available to guests and members, with the shared header/navigation. The page now fetches its own ESPN upcoming-match odds feed, not the scores board. See [ESPN_ODDS_CHECKS.md](ESPN_ODDS_CHECKS.md) for API and filtering details. Odds are not advertised as generated picks, and no sample prices are injected.

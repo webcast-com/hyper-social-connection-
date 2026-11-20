@@ -5,6 +5,8 @@ import { getPageMetadata } from '@/lib/seo';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { athleteHref, resolveAthlete, AthleteInputError, type AthleteBoard } from '@/lib/espn-athlete';
 import { cdnPortraits } from '@/lib/espn-team';
+// The card's lit background and neon ring. Scoped to `.pl-card`.
+import './player.css';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
