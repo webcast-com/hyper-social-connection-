@@ -1,29 +1,29 @@
 {
  "version": 1,
- "updatedAt": "2026-11-20T03:44:51.255Z",
- "nextSeq": 676,
- "clips": 675,
+ "updatedAt": "2026-11-20T12:13:57.618Z",
+ "nextSeq": 792,
+ "clips": 791,
  "oldestAt": "2026-11-08T23:01:30.000Z",
- "newestAt": "2026-11-20T03:00:00.000Z",
- "lastSweepAt": "2026-11-20T03:44:51.255Z",
+ "newestAt": "2026-11-20T05:46:27.000Z",
+ "lastSweepAt": "2026-11-20T12:13:57.546Z",
  "sweptCells": 968,
  "cube": {
   "league|epl|": 3,
   "league|laliga|": 2,
   "league|ligue1|": 1,
-  "league|mls|": 1,
-  "league|nba|": 3,
-  "league|nfl|": 7,
+  "league|mls|": 2,
+  "league|nba|": 7,
+  "league|nfl|": 9,
   "league|ucl|": 2,
   "match|concacaf-nations|final": 4,
   "match|mls|final": 5,
-  "match|nba|final": 199,
-  "match|ncaam|final": 212,
+  "match|nba|final": 227,
+  "match|ncaam|final": 262,
   "match|ncaam|live": 15,
-  "match|ncaaw|final": 35,
+  "match|ncaaw|final": 52,
   "match|ncaaw|live": 17,
   "match|nfl|final": 1,
-  "match|nhl|final": 116,
+  "match|nhl|final": 130,
   "match|nhl|live": 5,
   "match|nwsl|final": 5,
   "match|uefa-nations|final": 8,
@@ -31,6 +31,6 @@
   "match|womens-ucl|live": 4
  },
  "months": {
-  "2026-11": 675
+  "2026-11": 791
  }
 }
