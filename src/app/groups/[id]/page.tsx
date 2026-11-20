@@ -16,6 +16,9 @@ import { getMyGroupInvites } from '@/app/invite-actions';
 import { sharedProfileCardData } from '@/lib/profile';
 import { routeIdFromParam } from '@/lib/route-id';
 import { StartCallButton } from '@/components/Call/StartCallButton';
+import { getSiteUrl } from '@/lib/site-url';
+import { GROUPS_CRUMB, HOME_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 
 export async function generateMetadata({
   params,
@@ -260,8 +263,16 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
 
   const visibleMembers = members.filter((m: any) => m.user);
 
+  // The trail to this group, for a public group that was actually looked up: the
+  // rule that makes the page indexable. A private group's name is not offered to
+  // a search engine, and the offline placeholder is not a group.
+  const structured = hasDatabase && !lookupFailed && group?.privacy === 'public'
+    ? breadcrumbStructuredData([HOME_CRUMB, GROUPS_CRUMB, { name: group.name, path: `/groups/${group.id}` }], getSiteUrl())
+    : null;
+
   return (
     <div className="max-w-5xl mx-auto p-3 sm:p-4 md:mt-6 pb-24 md:pb-8">
+      <JsonLd data={structured} />
       <Link href="/groups" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline mb-3 text-sm font-semibold">
         <ArrowLeft className="w-4 h-4" /> Back to Groups
       </Link>

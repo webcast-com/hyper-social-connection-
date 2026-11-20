@@ -8,6 +8,10 @@ import { highlightAnchorRefs, highlightClipsAnchorRefs, loadAnchorEngagement } f
 import { ESPN_LEAGUES } from '@/lib/sports-catalog';
 import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
 import SportsHighlightsPage from '@/components/SportsHighlightsPage';
+import { getSiteUrl } from '@/lib/site-url';
+import { CLIP_PAGE_ROOT } from '@/lib/highlight-clip';
+import { HOME_CRUMB, SPORTS_CRUMB, breadcrumbStructuredData, clipListStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Match Highlights',
@@ -83,16 +87,32 @@ export default async function SportsHighlightsRoute({ searchParams }: { searchPa
     viewer?.id ?? null,
   );
 
-  return <SportsHighlightsPage
-    initial={board}
-    initialIndex={index}
-    engagement={engagement}
-    signedIn={!!viewer}
-    currentUser={viewer ?? null}
-    initialLeague={initialLeague}
-    initialStatus={initialStatus}
-    initialDays={days}
-    initialOffset={offset}
-    initialLimit={limit || undefined}
-  />;
+  // The trail to this page and, on the address it is indexed under, the clip
+  // pages it lists. A filtered or paged view has the same canonical but a
+  // different list, so the list is described only for the plain page; the stored
+  // clips are the ones with a page of their own.
+  const origin = getSiteUrl();
+  const plain = !initialLeague && !initialStatus && !days && !limit && !offset;
+  const structured = [
+    breadcrumbStructuredData([HOME_CRUMB, SPORTS_CRUMB, { name: 'Match highlights', path: CLIP_PAGE_ROOT }], origin),
+    plain ? clipListStructuredData(index.match, origin) : null,
+  ];
+
+  return (
+    <>
+      <JsonLd data={structured} />
+      <SportsHighlightsPage
+        initial={board}
+        initialIndex={index}
+        engagement={engagement}
+        signedIn={!!viewer}
+        currentUser={viewer ?? null}
+        initialLeague={initialLeague}
+        initialStatus={initialStatus}
+        initialDays={days}
+        initialOffset={offset}
+        initialLimit={limit || undefined}
+      />
+    </>
+  );
 }

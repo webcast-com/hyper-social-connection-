@@ -43,6 +43,78 @@ Live DNS/TLS/redirects, Search Console ownership and Google indexing/rankings we
 - Verified public HTTP 200, index/follow, canonical and footer links for About, Privacy, login, signup and search against the production build in offline mode. Also checked sitemap membership and public/private robots boundaries. New browser checks cover both information pages at 320/768/1440px, dark mode and guest access. Current totals: **15 SEO + 89 sports unit/API + 62 browser tests passed**; TypeScript, changed-file lint, whitespace checks and production build passed.
 
 
+## Live streams (`/sports/live`)
+
+- Indexable: title "Live Football Streams | Hyper", a description, a canonical
+  of `/sports/live`, `index, follow`, Open Graph and Twitter cards
+  (`getPageMetadata` in `src/app/sports/live/page.tsx`).
+- The fixtures are server-rendered, so a crawler that runs no script still
+  reads the matches being streamed. The player itself is a third-party frame
+  that is only requested when play is pressed; nothing in it is this page's
+  content.
+- `/sports/live?match=<id>` (the homepage card's link) is the same page opened
+  on one match. Its canonical is `/sports/live`, so it is not a second URL to
+  index.
+- Linked from the homepage rail, the `/sports` board and the homepage's
+  floating card.
+- **Submitted in the sitemap since 2026-11-20.** It was left out when the page
+  shipped, so until then a crawler could only find it by following links. It
+  carries no `lastmod`: the fixtures are read live and nothing about them is
+  stored here.
+- **Structured data** (`src/lib/stream-seo.ts`, tests `stream-broadcasts.test.ts`):
+  an `ItemList` of up to 30 `BroadcastEvent`s, each `isLiveBroadcast` with a
+  `broadcastOfEvent` `SportsEvent` (the two sides with their crests, the sport,
+  the kick-off). Only fixtures in play or still to come are listed, live first;
+  `url` is `/sports/live?match=<id>`. Emitted from the same board the page
+  renders, and not at all when nothing is live or to come.
+  - Nobody is named as the broadcaster (no `publisher` or `provider`): the
+    player is a third party's embed.
+  - There is no `VideoObject`, so this does not qualify for Google's LIVE badge.
+    That needs a thumbnail and a video address of the stream itself, which this
+    site does not have; inventing them would be the kind of markup Google
+    penalises.
+- Whether a search engine has indexed it is not something the site can report:
+  check the URL in Google Search Console (URL inspection), and request indexing
+  there to speed it up.
+
+## Structured data on the social and listing pages (2026-11-20)
+
+Builders in `src/lib/structured-data.ts`, written into the page by
+`src/components/JsonLd.tsx` (server-rendered; `<` escaped). Tests:
+`tests/seo/structured-data.test.ts`.
+
+| Page | What is emitted | When |
+|---|---|---|
+| `/` | `WebSite` and `Organization` (name, address, `/icon-512.png` logo) | always |
+| `/post/<id>` | `SocialMediaPosting` and `BreadcrumbList` | the post is public (`isPublicPost`): the rule that sets `index` |
+| `/profile/<id>` | `ProfilePage` about a `Person` | a public profile of a person, read from the database: the rule that sets `index` |
+| `/groups/<id>` | `BreadcrumbList` | a public group that was looked up |
+| `/sports`, `/sports/predictions` | `BreadcrumbList` | always |
+| `/sports/highlights` | `BreadcrumbList`, and an `ItemList` of up to 50 clip pages | the list only on the plain page, not on a filtered or paged view |
+
+- Every value is one the page prints to a signed-out visitor. A post carries
+  its words, picture, author, dates and the like and comment counts; comments
+  are counted, never quoted. A profile carries the name, handle, bio, picture,
+  join date and the two follow counts; location, work, education and the
+  member's website are not repeated.
+- A value that is missing is left out. A post with no words and no picture (a
+  bare repost) gets a breadcrumb and no posting. An address that is not `https`
+  is dropped.
+- The organisation has no address, phone number or social accounts: none is
+  published, so none is stated.
+- `/login`, `/signup` and `/search` are now `noindex, follow` (they were
+  indexable, and already out of the sitemap). Robots still allows them, so the
+  tag can be read. This supersedes the "Public entry routes ... now allow
+  indexing" note above. A search for "Hyper login" will now land on the
+  homepage rather than the form.
+- Checked in a browser-less fetch of the running app with scratch rows (since
+  removed): a public post, a group post, a bare repost, a friends-only post, a
+  post by a private profile, a post in a private group, a scheduled post, a
+  public member, a private member, a demo account, a public and a private
+  group, and two stored clips. Non-public rows emitted no structured data.
+- Validate after deploy with Google's Rich Results Test on one post and one
+  profile address.
+
 ## Basketball & NFL dashboard pages (`/nfl-basketball/**`)
 
 The dashboard is a client-rendered app: one built document for every address.

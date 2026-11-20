@@ -7,6 +7,9 @@ import { indexPicksByEvent, pickEventKey, type MatchPick } from '@/lib/sports-pi
 import { findViewerPicks, getPicksLeaderboard } from '@/lib/sports-picks-store';
 import SportsPredictionsBoard from '@/components/SportsPredictionsBoard';
 import SportsPicksRail from '@/components/SportsPicksRail';
+import { getSiteUrl } from '@/lib/site-url';
+import { HOME_CRUMB, SPORTS_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Sports Predictions and Odds',
@@ -45,11 +48,14 @@ export default async function SportsPredictionsPage() {
   }
 
   return (
-    <SportsPredictionsBoard
-      initial={initial}
-      currentUserId={viewer?.id}
-      picksByMatchId={picksByMatchId}
-      leaderboard={<SportsPicksRail leaderboard={leaderboard} picks={viewerPicks} signedIn={!!viewer} />}
-    />
+    <>
+      <JsonLd data={breadcrumbStructuredData([HOME_CRUMB, SPORTS_CRUMB, { name: 'Predictions', path: '/sports/predictions' }], getSiteUrl())} />
+      <SportsPredictionsBoard
+        initial={initial}
+        currentUserId={viewer?.id}
+        picksByMatchId={picksByMatchId}
+        leaderboard={<SportsPicksRail leaderboard={leaderboard} picks={viewerPicks} signedIn={!!viewer} />}
+      />
+    </>
   );
 }

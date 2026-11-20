@@ -1,4 +1,7 @@
 import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/site-url';
+import { organizationStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
@@ -14,6 +17,8 @@ import { ArrowRight, Clapperboard, Compass, Radio, Users, Sparkles, Target, Trop
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import LiveStreamToast from '@/components/LiveStreamToast';
+import SponsorBanners from '@/components/SponsorBanners';
+import { sponsorBannerFor } from '@/lib/sponsor-banners';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
@@ -521,10 +526,8 @@ export default async function Home() {
     // feed column takes what is left rather than a quarter-based share, and both
     // stay on screen while the feed scrolls.
     <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(getWebsiteStructuredData()).replace(/</g, '\\u003c') }}
-      />
+      {/* The site's name, and who publishes it (name, address and logo). */}
+      <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
           needs the width, and the top bar already carries the main destinations. */}
       <aside className="hidden min-w-0 xl:block">
@@ -575,6 +578,10 @@ export default async function Home() {
             <RailLink href="/nfl-basketball/nfl" label="NFL football" well="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">NFL</RailLink>
           </nav>
 
+          {/* A paid placement: one banner, under the sports links so those stay
+              at the top of the rail. The right rail shows the other banner. */}
+          <SponsorBanners placement="home-left-rail" banners={sponsorBannerFor(0)} maxHeight="16rem" />
+
           <nav aria-label="Community" className="space-y-0.5 border-t border-gray-200 pt-3 dark:border-gray-800">
             <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Community</p>
             <RailLink href="/discover" label="Discover People" well="bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
@@ -612,6 +619,10 @@ export default async function Home() {
         <h1 className="sr-only">Hyper — The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers</h1>
         <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
           <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
+
+          {/* Paid placements, on phones and tablets: under the scores, where
+              they are reached without scrolling past every board. */}
+          <SponsorBanners placement="home-compact" className="border-t border-gray-100 px-3 py-3 dark:border-slate-800" />
 
           <div className="border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} />
@@ -722,6 +733,11 @@ export default async function Home() {
             within a couple of screens instead of after every card in both. */}
         <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
 
+        {/* Paid placements, on a desktop (phones and tablets have theirs in the
+            panel above). Nothing is requested until this point of the page is
+            about to scroll into view. */}
+        <SponsorBanners placement="home" className="hidden lg:block" />
+
         <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
 
         <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
@@ -778,6 +794,9 @@ export default async function Home() {
       <aside className="hidden min-w-0 lg:block">
         <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto scrollbar-hide pb-2">
         <SportsMatchCentre board={sportsBoard} shownEventIds={feedEventIds} />
+
+        {/* A paid placement: the other banner, under the scores. */}
+        <SponsorBanners placement="home-right-rail" banners={sponsorBannerFor(1)} maxHeight="16rem" />
 
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
