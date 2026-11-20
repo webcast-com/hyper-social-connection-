@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { getPageMetadata } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/site-url';
+import { GROUPS_CRUMB, HOME_CRUMB, breadcrumbStructuredData, isPublicPost, socialPostStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
@@ -20,27 +24,29 @@ import Post from '@/components/Post';
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Small shared loader so page + metadata don't diverge. */
-async function loadPost(postId: number) {
+/**
+ * Small shared loader so page + metadata don't diverge. Read once per request:
+ * the metadata and the page's structured data both judge the same row.
+ */
+const loadPost = cache(async (postId: number) => {
   if (!hasDatabase) return null;
   try {
     return await db.orm.public.Post
       .where({ id: postId })
       .include('user', (rel) => rel.select('profileVisibility'))
-      .include('group', (rel) => rel.select('privacy'))
+      .include('group', (rel) => rel.select('privacy', 'name'))
       .first();
   } catch (err) {
     console.warn('[post] DB query failed:', (err as Error)?.message);
     return null;
   }
-}
+});
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const postId = routeIdFromParam(id);
   const post = postId ? await loadPost(postId) : null;
-  const isPublic = !!post && post.privacy === 'public' && post.user?.profileVisibility === 'public'
-    && (!post.group || post.group.privacy === 'public') && (!post.scheduledAt || post.scheduledAt <= new Date());
+  const isPublic = !!post && isPublicPost(post);
   const content = isPublic ? post.content.replace(/\s+/g, ' ').trim() : '';
   const snippet = content.slice(0, 60);
   return getPageMetadata({
@@ -165,8 +171,34 @@ export default async function PostPage({ params }: Params) {
   // Called outside every try, because it throws to unwind.
   if (hasDatabase && !dbError && !post) notFound();
 
+  // Structured data, for a post anybody may read and for no other: the same rule
+  // that decides `index` above, on the same row. Everything in it is printed on
+  // the page — the words, the picture, the author, the date and the two counts.
+  const judged = post && postId ? await loadPost(postId) : null;
+  const origin = getSiteUrl();
+  const structured = post && judged && isPublicPost(judged)
+    ? [
+        socialPostStructuredData({
+          id: post.id,
+          content: post.content,
+          imageUrl: post.imageUrl,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+          author: post.user ? { id: post.user.id, name: post.user.name, avatar: post.user.avatar } : null,
+          likes: post.likes.length,
+          comments: post.comments.length,
+        }, origin),
+        breadcrumbStructuredData([
+          HOME_CRUMB,
+          ...(judged.group && post.groupId ? [GROUPS_CRUMB, { name: judged.group.name, path: `/groups/${post.groupId}` }] : []),
+          { name: post.user?.name ? `Post by ${post.user.name}` : 'Post', path: `/post/${post.id}` },
+        ], origin),
+      ]
+    : [];
+
   return (
     <div className="max-w-2xl mx-auto w-full p-4 space-y-4">
+      <JsonLd data={structured} />
       <Link
         href="/"
         className="inline-flex items-center space-x-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"

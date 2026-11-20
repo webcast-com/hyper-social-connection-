@@ -232,8 +232,8 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     for (const id of [8, 1, 2]) {
       assert.ok(!rows.some((row) => row.url === `https://hyper.co.ke/profile/${id}`), `profile ${id} is not submitted`);
     }
-    // Forms and the query surface stay reachable and indexable, but the site no
-    // longer asks for a visit it cannot justify.
+    // Forms and the query surface stay reachable, but are neither submitted nor
+    // indexed: the site does not ask for a visit it cannot justify.
     for (const path of ['/login', '/signup', '/search']) {
       assert.ok(!rows.some((row) => row.url.endsWith(path)), `${path} is not submitted`);
     }
@@ -516,20 +516,24 @@ test('browser-first match metadata keeps its canonical and remains noindex until
   });
 });
 
-test('every public entry page allows indexing, has a self-canonical and is not blocked by robots', async () => {
+test('the information pages allow indexing; the forms and the search box do not, and none is blocked by robots', async () => {
   await withEnv(publicEnv, async () => {
     const pages = [
-      ['/about', await import('../../src/app/about/page')],
-      ['/privacy', await import('../../src/app/privacy/page')],
-      ['/login', await import('../../src/app/login/layout')],
-      ['/signup', await import('../../src/app/signup/layout')],
-      ['/search', await import('../../src/app/search/layout')],
+      ['/about', await import('../../src/app/about/page'), true],
+      ['/privacy', await import('../../src/app/privacy/page'), true],
+      // A form or an empty query box has nothing to rank. `noindex` rather than a
+      // robots block: a crawler has to be able to read the page to see the tag,
+      // and `follow` keeps the links on it counting.
+      ['/login', await import('../../src/app/login/layout'), false],
+      ['/signup', await import('../../src/app/signup/layout'), false],
+      ['/search', await import('../../src/app/search/layout'), false],
     ] as const;
     const rules = robots().rules;
     assert.ok(!Array.isArray(rules));
-    for (const [path, page] of pages) {
+    for (const [path, page, indexed] of pages) {
       const metadata = page.metadata;
-      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, indexed, `${path} index`);
+      assert.equal(typeof metadata.robots === 'object' && metadata.robots?.follow, true, `${path} follow`);
       assert.equal(metadata.alternates?.canonical, `https://hyper.co.ke${path}`);
       assert.ok(!JSON.stringify(rules).includes(`"${path}"`));
     }

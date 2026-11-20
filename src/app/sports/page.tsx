@@ -4,6 +4,9 @@ import SportsBoardView from '@/components/SportsBoard';
 import { sportsFiltersFromRecord, sportsFilterSearch } from '@/lib/sports-filters';
 import { emptyBrowserBoard } from '@/lib/espn-browser';
 import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
+import { getSiteUrl } from '@/lib/site-url';
+import { HOME_CRUMB, SPORTS_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Sports Scores and Fixtures',
@@ -18,5 +21,10 @@ export default async function SportsPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const filters = sportsFiltersFromRecord(params);
   const board = emptyBrowserBoard();
-  return <SportsBoardView key={sportsFilterSearch(filters)} initial={board} initialFilters={filters} />;
+  return (
+    <>
+      <JsonLd data={breadcrumbStructuredData([HOME_CRUMB, SPORTS_CRUMB], getSiteUrl())} />
+      <SportsBoardView key={sportsFilterSearch(filters)} initial={board} initialFilters={filters} />
+    </>
+  );
 }

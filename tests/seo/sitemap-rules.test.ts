@@ -32,8 +32,9 @@ test('forms and the query surface are reachable but no longer submitted', () => 
   for (const path of ['/login', '/signup', '/search']) {
     assert.ok(!submitted.includes(`${BASE}${path}`), `${path} is not asked for`);
   }
-  // Nothing here blocks those pages: they are simply no longer worth a crawl on a
-  // domain whose budget is better spent on 667 stored clips and 595 fixtures.
+  // Robots does not block those pages (they carry `noindex` instead, which has to
+  // be readable): they are simply not worth a crawl on a domain whose budget is
+  // better spent on 667 stored clips and 595 fixtures.
   assert.ok(!submitted.some((url) => url.includes('?')), 'no query string is submitted at all');
 });
 

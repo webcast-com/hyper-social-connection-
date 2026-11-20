@@ -15,6 +15,9 @@ import ShareProfileButton from '@/components/ShareProfileButton';
 import { getProfileShareCount } from '@/app/share-actions';
 import { isAppAccount } from '@/lib/app-accounts';
 import { loadSavedPosts } from '@/lib/saved-posts';
+import { getSiteUrl } from '@/lib/site-url';
+import { profilePageStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 
 export async function generateMetadata({
   params,
@@ -119,6 +122,9 @@ export default async function Profile({
   let followersRes: any[] = [];
   let followingRes: any[] = [];
   let profileNotFound = false;
+  // Whether everything below was read from the database, rather than being the
+  // sample person an offline or failing install falls back to.
+  let stored = false;
 
   if (hasDatabase) {
     try {
@@ -168,8 +174,10 @@ export default async function Profile({
           .all();
         followingRes = followingRows.map((f) => ({ user: f.following }));
         if (allUsers.length === 0) allUsers = [currentUser, profileUser];
+        stored = true;
       }
     } catch (err) {
+      stored = false;
       console.warn('[profile] DB query failed, falling back to demo user:', (err as Error)?.message);
       profileUser = DEMO_USERS_MAP[profileId] || DEMO_USERS_MAP[1];
       allUsers = Object.values(DEMO_USERS_MAP);
@@ -257,8 +265,25 @@ export default async function Profile({
     privacy: profileUser.messagePrivacy,
   });
 
+  // Structured data, under the rule that makes this page indexable and under no
+  // other: a public profile, of a person, read from the database. It repeats what
+  // the header prints to a signed-out visitor and nothing else.
+  const structured = stored && profileUser.profileVisibility === 'public' && !isAppAccount(profileUser)
+    ? profilePageStructuredData({
+        id: profileUser.id,
+        name: profileUser.name,
+        username: profileUser.username,
+        bio: profileUser.bio,
+        avatar: profileUser.avatar,
+        createdAt: profileUser.createdAt,
+        followers: followersRes.length,
+        following: followingRes.length,
+      }, getSiteUrl())
+    : null;
+
   return (
     <div className="bg-gray-100 dark:bg-gray-900 min-h-screen pb-12">
+      <JsonLd data={structured} />
       {/* Cover + Avatar */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto">

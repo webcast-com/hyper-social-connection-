@@ -77,6 +77,44 @@ Live DNS/TLS/redirects, Search Console ownership and Google indexing/rankings we
   check the URL in Google Search Console (URL inspection), and request indexing
   there to speed it up.
 
+## Structured data on the social and listing pages (2026-11-20)
+
+Builders in `src/lib/structured-data.ts`, written into the page by
+`src/components/JsonLd.tsx` (server-rendered; `<` escaped). Tests:
+`tests/seo/structured-data.test.ts`.
+
+| Page | What is emitted | When |
+|---|---|---|
+| `/` | `WebSite` and `Organization` (name, address, `/icon-512.png` logo) | always |
+| `/post/<id>` | `SocialMediaPosting` and `BreadcrumbList` | the post is public (`isPublicPost`): the rule that sets `index` |
+| `/profile/<id>` | `ProfilePage` about a `Person` | a public profile of a person, read from the database: the rule that sets `index` |
+| `/groups/<id>` | `BreadcrumbList` | a public group that was looked up |
+| `/sports`, `/sports/predictions` | `BreadcrumbList` | always |
+| `/sports/highlights` | `BreadcrumbList`, and an `ItemList` of up to 50 clip pages | the list only on the plain page, not on a filtered or paged view |
+
+- Every value is one the page prints to a signed-out visitor. A post carries
+  its words, picture, author, dates and the like and comment counts; comments
+  are counted, never quoted. A profile carries the name, handle, bio, picture,
+  join date and the two follow counts; location, work, education and the
+  member's website are not repeated.
+- A value that is missing is left out. A post with no words and no picture (a
+  bare repost) gets a breadcrumb and no posting. An address that is not `https`
+  is dropped.
+- The organisation has no address, phone number or social accounts: none is
+  published, so none is stated.
+- `/login`, `/signup` and `/search` are now `noindex, follow` (they were
+  indexable, and already out of the sitemap). Robots still allows them, so the
+  tag can be read. This supersedes the "Public entry routes ... now allow
+  indexing" note above. A search for "Hyper login" will now land on the
+  homepage rather than the form.
+- Checked in a browser-less fetch of the running app with scratch rows (since
+  removed): a public post, a group post, a bare repost, a friends-only post, a
+  post by a private profile, a post in a private group, a scheduled post, a
+  public member, a private member, a demo account, a public and a private
+  group, and two stored clips. Non-public rows emitted no structured data.
+- Validate after deploy with Google's Rich Results Test on one post and one
+  profile address.
+
 ## Basketball & NFL dashboard pages (`/nfl-basketball/**`)
 
 The dashboard is a client-rendered app: one built document for every address.

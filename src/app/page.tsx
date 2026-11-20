@@ -1,4 +1,7 @@
 import { getHomeMetadata, getWebsiteStructuredData } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/site-url';
+import { organizationStructuredData } from '@/lib/structured-data';
+import JsonLd from '@/components/JsonLd';
 import { SPORTS_KEYWORDS } from '@/lib/sports-keywords';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
@@ -523,10 +526,8 @@ export default async function Home() {
     // feed column takes what is left rather than a quarter-based share, and both
     // stay on screen while the feed scrolls.
     <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(getWebsiteStructuredData()).replace(/</g, '\\u003c') }}
-      />
+      {/* The site's name, and who publishes it (name, address and logo). */}
+      <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
           needs the width, and the top bar already carries the main destinations. */}
       <aside className="hidden min-w-0 xl:block">
