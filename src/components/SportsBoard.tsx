@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Clapperboard, Radio, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
@@ -14,6 +14,8 @@ import SportsEventCard from '@/components/SportsEventCard';
 import SportsFeaturedMatch from '@/components/SportsFeaturedMatch';
 import SportsBackToTop from '@/components/SportsBackToTop';
 import SportsMatchday from '@/components/SportsMatchday';
+import SponsorBanners from '@/components/SponsorBanners';
+import { SPONSOR_INLINE_BANNERS } from '@/lib/sponsor-banners';
 import { pickFeaturedEvent } from '@/lib/featured-match';
 import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
@@ -322,8 +324,9 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         <>
         {featured && <SportsFeaturedMatch event={featured} returnTo={returnTo} />}
         <div className="space-y-4">
-          {groups.map((group) => (
-            <section key={group.league} className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-2 sm:p-3 dark:border-gray-700 dark:bg-gray-900/40">
+          {groups.map((group, index) => (
+            <Fragment key={group.league}>
+            <section className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-2 sm:p-3 dark:border-gray-700 dark:bg-gray-900/40">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
                 {group.leagueName}
                 <span className="ml-2 font-normal normal-case tracking-normal">{competitionCountry(group.league) ?? SPORTS_REGIONS.find((item) => item.id === competitionRegion(group.league))?.name} · {group.events.length}</span>
@@ -335,6 +338,10 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
                 ))}
               </div>
             </section>
+            {/* One sponsored banner, after the first competition: below the scores
+                a visitor came for, and never above them. */}
+            {index === 0 && <SponsorBanners placement="sports" banners={SPONSOR_INLINE_BANNERS} maxHeight="13rem" />}
+            </Fragment>
           ))}
         </div>
         </>

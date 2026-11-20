@@ -6,6 +6,8 @@ import { ArrowLeft, Clapperboard, Database, RefreshCw } from 'lucide-react';
 import { HighlightPostCard } from './SportsHighlightsFeed';
 import SportsVideoNewsCard from './SportsVideoNewsCard';
 import InfiniteSentinel from './InfiniteSentinel';
+import SponsorBanners from './SponsorBanners';
+import { SPONSOR_INLINE_BANNERS } from '@/lib/sponsor-banners';
 import { anchorKey, anchorRef, highlightAnchorId, type SportsAnchorEngagementMap } from '@/lib/sports-anchor';
 import type { SportsHighlightsBoard } from '@/lib/espn-highlights-feed';
 import type { SportsHighlightClip, SportsHighlightStatus } from '@/lib/espn-highlights';
@@ -505,6 +507,9 @@ export default function SportsHighlightsPage({
         filter measures from the match or the publication ESPN reported.
       </p>}
     </div>}
+
+    {/* One sponsored banner, between the filters and the clips. */}
+    <SponsorBanners placement="highlights" banners={SPONSOR_INLINE_BANNERS} className="mb-4" maxHeight="13rem" />
 
     {boardClips.length > 0 && <section aria-label="Live highlights board" className="space-y-4">
       {hasIndex && <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-gray-500 dark:text-gray-400">

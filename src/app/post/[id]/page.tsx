@@ -4,6 +4,8 @@ import { getPageMetadata } from '@/lib/seo';
 import { getSiteUrl } from '@/lib/site-url';
 import { GROUPS_CRUMB, HOME_CRUMB, breadcrumbStructuredData, isPublicPost, socialPostStructuredData } from '@/lib/structured-data';
 import JsonLd from '@/components/JsonLd';
+import SponsorBanners from '@/components/SponsorBanners';
+import { SPONSOR_INLINE_BANNERS } from '@/lib/sponsor-banners';
 import Link from 'next/link';
 import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
@@ -208,12 +210,16 @@ export default async function PostPage({ params }: Params) {
       </Link>
 
       {post ? (
-        <Post
-          post={post}
-          currentUser={currentUser || { id: 0 }}
-          isBookmarked={bookmarked}
-          viewerFollowIds={viewerFollowIds}
-        />
+        <>
+          <Post
+            post={post}
+            currentUser={currentUser || { id: 0 }}
+            isBookmarked={bookmarked}
+            viewerFollowIds={viewerFollowIds}
+          />
+          {/* One sponsored banner, under the post and its comments. */}
+          <SponsorBanners placement="post" banners={SPONSOR_INLINE_BANNERS} maxHeight="16rem" />
+        </>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-10 text-center">
           <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">

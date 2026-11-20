@@ -942,6 +942,28 @@ the layout was checked in a browser with stand-in videos of three shapes
 (728×90, 600×500, 360×640) at 390, 768 and 1440 px. Tests:
 `sponsor-banners.test.ts`.
 
+### The still banner (second set)
+
+A third creative, a `.jpg`, is its own list (`SPONSOR_INLINE_BANNERS`), so the
+placements above show exactly what they showed before. An entry now names a
+`video` or an `image`; a still is drawn with an `<img>` in the same marked link
+and follows every rule above (nothing until the slot is near the viewport, no
+room until it has loaded, removed if it fails, none with data saving). Where:
+
+- **`/sports`** (and its competition pages): after the first competition's
+  fixtures, never above the scores. Capped at 13rem tall.
+- **`/sports/highlights`**: between the filters and the clips. Capped at 13rem.
+- **`/post/<id>`**: under the post and its comments. Capped at 16rem.
+
+Checked in a browser with stand-in images (300×250, 728×90, 160×600) at 390,
+768 and 1440 px: one request for the still per page, none on the homepage, no
+sideways overflow, and no gap left when the request is blocked. A 300×250 is
+drawn 250×208 in the lists and 307×256 on a post; a 728×90 fills the column. A
+tall creative (160×600) comes out narrow (55×208) under the 13rem cap: if the
+real one is a skyscraper, raise `maxHeight` or move it to a sidebar.
+
+Not verified: the real image, for the same reason as the videos.
+
 ## Predictions page and removed integration
 
 `/sports/predictions` and the sports-page link remain available to guests and members, with the shared header/navigation. The page now fetches its own ESPN upcoming-match odds feed, not the scores board. See [ESPN_ODDS_CHECKS.md](ESPN_ODDS_CHECKS.md) for API and filtering details. Odds are not advertised as generated picks, and no sample prices are injected.
