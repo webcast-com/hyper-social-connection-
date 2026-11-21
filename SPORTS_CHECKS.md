@@ -904,17 +904,17 @@ Tests: `sportsrc.test.ts` (parsing and rules), `sportsrc-feed.test.ts` (key,
 caching, allowance, failures), `stream-dashboard.test.ts` (the screen mounted in
 jsdom, including the frame's attributes).
 
-### Highlights that play in the rail
+### Highlights that play in the large player
 
-"Latest Highlights" on `/sports/live` (`src/components/StreamHighlightClips.tsx`) plays each clip in its own row instead of linking to the clip's page.
+"Latest Highlights" on `/sports/live` plays a pressed clip in the page's large player (the stage where a match stream plays), not in the rail and not on the clip's own page.
 
-- The row is the size it was: an 84×54 picture and the title. The picture is the player. Pressing the row plays, pressing again pauses; a 3 px bar under the picture shows progress.
-- Each playable row has a 32 px full-screen button; the browser's own controls are shown only in full screen.
-- One clip at a time. A clip stops when the match player above is started.
-- Nothing is fetched before a press (`preload="none"`, no `autoplay`). The file is the clip's stored ESPN `mp4`, https only.
-- A clip with no file, or whose file will not play for this reader (ESPN restricts renditions by region), is the link to `/sports/highlights/<id>` that every row used to be.
-- "See All" still opens `/sports/highlights`.
-- Tests: `tests/sports/stream-highlight-clips.test.ts` (6). Browser check with stand-in clips at 390, 768 and 1440 px: list 258 px tall before, during and after play; player 84×54; full screen fills the window; the page address never changes.
+- The rail rows (`src/components/StreamHighlightClips.tsx`) are the size they always were: an 84×54 picture and the title. A row with a playable file is a button with the link's own class and parts; the row of the clip in the player is marked in the accent colour.
+- The player (`SportsStreamDashboard.tsx`): a `<video>` with the browser's controls fills the stage, letterboxed. It is put on the page and started inside the reader's press (`flushSync`, then `play()`), so it may play with sound; there is no `autoplay` attribute. The bar names the clip, says "Highlight" instead of "Live"/"Off air", and has "Close the highlight" and "Full screen".
+- A match and a clip are never in the player together: a clip removes a playing stream's frame, and choosing or playing a match closes the clip.
+- On a phone and a tablet (up to 1023 px) the player is scrolled into view, because the rail is below it.
+- Nothing is fetched before a press. The file is the clip's stored ESPN `mp4`, https only.
+- A clip with no file stays the link to `/sports/highlights/<id>`. A clip whose file will not play (ESPN restricts renditions by region) shows "This highlight could not be played here." in the player with a link to its page, and its row becomes the link again.
+- Tests: `tests/sports/stream-highlight-clips.test.ts` (7). Browser check with stand-in clips at 390, 768 and 1440 px, with Chromium's autoplay policy set to require a press: the clip plays unmuted in the stage, the rail list stays 258 px tall, the address never changes, full screen fills the window.
 
 ## Sponsored banners
 
