@@ -1,18 +1,18 @@
 {
  "version": 1,
- "updatedAt": "2026-11-20T20:35:29.254Z",
- "nextSeq": 901,
- "clips": 900,
+ "updatedAt": "2026-11-21T01:45:58.112Z",
+ "nextSeq": 905,
+ "clips": 904,
  "oldestAt": "2026-11-08T23:01:30.000Z",
- "newestAt": "2026-11-20T20:00:00.000Z",
- "lastSweepAt": "2026-11-20T20:35:29.199Z",
- "sweptCells": 968,
+ "newestAt": "2026-11-20T22:49:50.000Z",
+ "lastSweepAt": "2026-11-21T01:45:58.112Z",
+ "sweptCells": 1089,
  "cube": {
-  "league|epl|": 4,
-  "league|laliga|": 3,
+  "league|epl|": 5,
+  "league|laliga|": 4,
   "league|ligue1|": 1,
   "league|mls|": 2,
-  "league|nba|": 7,
+  "league|nba|": 9,
   "league|nfl|": 15,
   "league|ucl|": 2,
   "match|concacaf-nations|final": 4,
@@ -31,6 +31,6 @@
   "match|womens-ucl|live": 4
  },
  "months": {
-  "2026-11": 900
+  "2026-11": 904
  }
 }
