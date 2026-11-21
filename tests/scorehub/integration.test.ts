@@ -62,7 +62,16 @@ test('ScoreHub uses same-origin feeds, displays real scores and standings, and f
     assert.equal(doc.querySelector('.standings tbody td:nth-child(2)').textContent, '<img src=x>');
     assert.equal(doc.querySelector('.standings tbody img'), null);
     assert.match(doc.querySelector('.stat-bars').textContent, /Shots[\s\S]*7[\s\S]*8/);
-    assert.match(doc.querySelector('.news-section h2').textContent, /sample/i);
+    // News and top scorers are asked of same-origin routes; with no answer the
+    // panels say so and the design's sample players and headlines are gone.
+    assert.ok(urls.includes('/api/sports/news'));
+    assert.ok(urls.includes('/api/sports/scorers/epl'));
+    assert.doesNotMatch(doc.querySelector('.news-section h2').textContent, /sample/i);
+    assert.equal(doc.querySelectorAll('.news-card').length, 0);
+    assert.equal(doc.querySelectorAll('.scorer').length, 0);
+    assert.match(doc.querySelector('.news-section').textContent, /ESPN news unavailable/);
+    assert.match(doc.querySelector('.scorers').textContent, /Top scorers unavailable/);
+    assert.doesNotMatch(doc.body.textContent, /Haaland|Mbappé|Salah returns/);
     doc.querySelector('[href="#football"]').click(); assert.equal(doc.querySelectorAll('.match-card').length, 0);
     doc.querySelector('[href="#basketball"]').click(); assert.equal(doc.querySelectorAll('.match-card').length, 1);
     doc.querySelector('.star').click(); doc.querySelector('[data-filter="favorites"]').click(); assert.equal(doc.querySelectorAll('.match-card').length, 1);
@@ -188,5 +197,113 @@ test('late response for a previous selection cannot overwrite selected match', a
     resolveFirst(response(summary(matchStats))); await flush();
     assert.match(doc.querySelector('.stats-score').textContent, /Other away/);
     assert.equal(doc.querySelectorAll('.possession > b')[0].textContent, '62%');
+  } finally { dom.window.close(); }
+});
+
+const scorer = (index: number, extra: Record<string, unknown> = {}) => ({ athleteId: String(100 + index), name: `Player ${index}`, team: `Club ${index}`, teamLogo: null, headshot: null, goals: String(20 - index), matches: '12', ...extra });
+const article = (index: number, extra: Record<string, unknown> = {}) => ({ id: `espn-news-epl-${index}`, headline: `Headline ${index}`, description: `Summary ${index}`, published: '2026-11-08T12:00:00Z', image: `https://a.espncdn.com/photo/${index}.jpg`, url: `https://www.espn.com/soccer/story/_/id/${index}`, league: 'epl', leagueName: 'Premier League', ...extra });
+const quiet = (url: string) => {
+  if (url === '/api/sports') return response({ mode: 'live', events: [] });
+  if (url.startsWith('/api/sports/standings/')) return response({ status: 'empty', groups: [] });
+  return null;
+};
+
+test('top scorers come from the same-origin ESPN route, in ESPN order, with the design\'s rows', async () => {
+  const urls: string[] = [];
+  const dom = await browser((url) => {
+    urls.push(url);
+    if (url === '/api/sports/scorers/epl') return response({ status: 'ready', league: 'epl', scorers: [
+      scorer(1, { name: '<b>Erling</b>', headshot: 'https://a.espncdn.com/i/headshots/1.png' }),
+      scorer(2, { athleteId: '../admin', headshot: 'javascript:alert(1)', team: null }),
+      scorer(3), scorer(4), scorer(5), scorer(6), scorer(7),
+      { name: 'No goals figure' }, scorer(8, { goals: 'many' }),
+    ] });
+    if (url === '/api/sports/scorers/laliga') return response({ status: 'empty', league: 'laliga', scorers: [] });
+    if (url.startsWith('/api/sports/news')) return response({ status: 'empty', articles: [] });
+    return quiet(url) ?? (() => { throw Error(url); })();
+  });
+  try {
+    const doc = dom.window.document, panel = doc.querySelector('.scorers');
+    const rows = () => [...panel.querySelectorAll('.scorer')];
+    assert.equal(panel.querySelector('h2').textContent, 'Top Scorers · Premier League');
+    assert.equal(rows().length, 5);
+    // Provider text is text, never markup.
+    assert.equal(rows()[0].querySelector('span > b').textContent, '<b>Erling</b>');
+    assert.equal(rows()[0].querySelector('span > b b'), null);
+    assert.equal(rows()[0].querySelector('strong').textContent, '19');
+    assert.equal(rows()[0].querySelector('strong').getAttribute('aria-label'), '19 goals in 12 matches');
+    assert.equal(rows()[0].querySelector('.avatar img').getAttribute('src'), 'https://a.espncdn.com/i/headshots/1.png');
+    assert.equal(rows()[0].querySelector('a').getAttribute('href'), '/sports/athletes/epl/101');
+    // An id that is not ESPN's shape is never linked; an unsafe photo is never loaded; a missing club is a dash.
+    assert.equal(rows()[1].querySelector('a'), null);
+    assert.equal(rows()[1].querySelector('img'), null);
+    assert.equal(rows()[1].querySelector('.avatar').textContent, 'P');
+    assert.equal(rows()[1].querySelector('small').textContent, '—');
+    // "View All" opens the rest; rows without a real goals figure never appear.
+    const more = panel.querySelector('.panel-title a');
+    assert.equal(more.hidden, false);
+    more.click();
+    assert.equal(rows().length, 7);
+    assert.equal(more.textContent, 'Show fewer');
+    assert.doesNotMatch(panel.textContent, /No goals figure|many/);
+    more.click();
+    assert.equal(rows().length, 5);
+    // Choosing a league asks for that league's table.
+    doc.querySelectorAll('.league-row')[2].click(); await flush();
+    assert.ok(urls.includes('/api/sports/scorers/laliga'));
+    assert.equal(panel.querySelector('h2').textContent, 'Top Scorers · La Liga');
+    assert.equal(rows().length, 0);
+    assert.match(panel.textContent, /No top scorers reported/);
+    assert.equal(more.hidden, true);
+  } finally { dom.window.close(); }
+});
+
+test('news cards come from the same-origin ESPN route and only open pages on espn.com', async () => {
+  const urls: string[] = [];
+  const dom = await browser((url) => {
+    urls.push(url);
+    if (url === '/api/sports/news') return response({ status: 'ready', articles: [
+      article(1, { headline: '<img src=x onerror=alert(1)>' }),
+      article(2, { image: 'http://insecure.test/a.jpg', description: null }),
+      article(3, { url: 'https://espn.com.evil.test/story' }),
+      article(4, { url: 'javascript:alert(1)' }),
+      article(5, { published: null }), article(6), article(7), article(8),
+    ] });
+    if (url === '/api/sports/news?leagues=ucl') return response({ status: 'unavailable', articles: [] });
+    if (url.startsWith('/api/sports/scorers/')) return response({ status: 'empty', scorers: [] });
+    return quiet(url) ?? (() => { throw Error(url); })();
+  });
+  try {
+    const doc = dom.window.document, section = doc.querySelector('.news-section');
+    const cards = () => [...section.querySelectorAll('.news-card')];
+    assert.equal(section.querySelector('h2').textContent, 'Latest News · ESPN');
+    assert.equal(cards().length, 4);
+    assert.equal(cards()[0].querySelector('h3').textContent, '<img src=x onerror=alert(1)>');
+    assert.equal(cards()[0].querySelector('h3 img'), null);
+    const link = cards()[0].querySelector('h3 a');
+    assert.equal(link.getAttribute('href'), 'https://www.espn.com/soccer/story/_/id/1');
+    assert.equal(link.getAttribute('target'), '_blank');
+    assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
+    assert.equal(cards()[0].querySelector('img').getAttribute('src'), 'https://a.espncdn.com/photo/1.jpg');
+    assert.match(cards()[0].querySelector('.news-copy small').textContent, /^PREMIER LEAGUE /);
+    assert.equal(cards()[0].querySelector('p').textContent, 'Summary 1');
+    // No picture and no summary: neither is made up.
+    assert.equal(cards()[1].querySelector('img'), null);
+    assert.equal(cards()[1].querySelector('p'), null);
+    // Articles that do not open on espn.com are dropped, so the third card is article 5.
+    assert.equal(cards()[2].querySelector('h3').textContent, 'Headline 5');
+    assert.equal(cards()[2].querySelector('.news-copy small span').textContent, '');
+    assert.doesNotMatch(section.innerHTML, /evil\.test|javascript:|unsplash/);
+    const more = section.querySelector('.panel-title a');
+    more.click();
+    assert.equal(cards().length, 6);
+    assert.equal(more.textContent, 'Show fewer');
+    // A league whose news did not arrive shows a message, not the previous league's cards.
+    doc.querySelectorAll('.league-row')[1].click(); await flush();
+    assert.ok(urls.includes('/api/sports/news?leagues=ucl'));
+    assert.equal(section.querySelector('h2').textContent, 'Latest News · Champions League');
+    assert.equal(cards().length, 0);
+    assert.match(section.textContent, /ESPN news unavailable/);
+    assert.equal(more.hidden, true);
   } finally { dom.window.close(); }
 });

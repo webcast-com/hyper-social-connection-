@@ -1009,6 +1009,15 @@ same face at the smaller container step). Two tests in that spec fail on `main`
 as well and are unrelated (they expect basketball to be absent from the board),
 and `home-layout.spec.ts` does not build there (`node:crypto`).
 
+## The hero's featured card, league news and top scorers
+
+- `/sports` hero: `SportsHeroFeatured` draws the featured match as the ScoreHub layout's card. `featuredLineup` (in `src/lib/featured-match.ts`) gives it the match `pickFeaturedEvent` chose, then the other matches in play in board order, five at most; never a sample fixture, a race or a match that is not live. Arrows (44 px) step through them; with one match there are no arrows. One link per card, to the match page, when ESPN gave an id. League pages still use `SportsFeaturedMatch`.
+- `/api/sports/news` (`src/lib/espn-news.ts`, `espn-news-feed.ts`): article cards from ESPN's league news. An article needs a headline and an `https` page on espn.com; description, picture and date are null when unreported.
+- `/api/sports/scorers/<league>` (`src/lib/espn-scorers.ts`, `espn-scorers-feed.ts`): the goals table from ESPN's football statistics, in ESPN's order. A row needs a name and a goals figure. Football competitions only.
+- Both routes: `unavailable` with an empty list and `no-store` when ESPN does not answer; no sample data. Used by `public/scorehub/script.js`; details in `SCOREHUB_INTEGRATION.md`.
+- Tests: `tests/sports/news-scorers.test.ts` (10), `tests/sports/featured-match.test.ts` (three added), `tests/scorehub/integration.test.ts` (two added, one changed), and the browser test "match cards share one face and the hero's featured match wears the ScoreHub card" in `tests/sports/layout.spec.ts`.
+- The statistics address and its response shape are **not verified against ESPN** from the build sandbox; see the note in `SCOREHUB_INTEGRATION.md`.
+
 ## The player page as a card
 
 `/sports/athletes/<competition>/<id>` is laid out as a player card, after a

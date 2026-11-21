@@ -282,41 +282,39 @@ const cardLook = (root: import('@playwright/test').Locator) => root.evaluate((el
 });
 
 for (const width of [320, 768, 1280]) {
-  test(`a match card is drawn exactly like the featured match at ${width}px`, async ({ page }) => {
+  test(`match cards share one face and the hero's featured match wears the ScoreHub card at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     // On the whole board the Premier League match is both featured and listed.
     const featured = page.getByRole('region', { name: 'Featured match', exact: true });
     // The featured fixture's own card, in its competition below.
     const card = page.getByRole('article').filter({ hasText: 'Premier League Away' }).first();
     await expect(featured).toHaveCount(1);
-    const want = await cardLook(featured);
-    const got = await cardLook(card);
-    // Both wear one face, and a face's sizes follow the card's own width (they
-    // step up at the `@xl` container width, 36rem). On a phone the featured
-    // match, in the hero, and the card below are the same width and so look
-    // exactly alike. From 768px the hero puts the featured match in a column
-    // beside the headline: it is then the narrower of the two and is drawn at
-    // the smaller step, the way a card in a two-column grid is.
-    const step = (look: { width: number }) => look.width >= 576;
-    expect(got.pill).toEqual(want.pill);
-    if (step(got) === step(want)) {
-      expect(got.frame).toEqual(want.frame);
-      expect(got.score).toEqual(want.score);
-      expect(got.crest).toEqual(want.crest);
-      expect(got.name).toEqual(want.name);
-    } else {
-      expect(step(want)).toBe(false);
-      // Everything that does not step is still identical: the frame's border,
-      // radius, tint and shadow, and the weight, face and colour of the text.
-      const unstepped = (frame: string[]) => [...frame.slice(0, 4), frame[6]];
-      expect(unstepped(got.frame)).toEqual(unstepped(want.frame));
-      expect(got.score.slice(1)).toEqual(want.score.slice(1));
-      expect(got.name.slice(1)).toEqual(want.name.slice(1));
-      expect(parseFloat(want.score[0])).toBeLessThanOrEqual(parseFloat(got.score[0]));
-      expect(want.crest[0]).toBeLessThanOrEqual(got.crest[0]);
-    }
+    // The hero's card is the ScoreHub layout's: a dark panel whatever the theme,
+    // a shield either side of the scoreline, "LIVE" in red, one link, no pill.
+    // (That the board's own featured card and a list card share one face is
+    // checked in `featured-match.test.ts`; that card is on league pages now.)
+    const hero = await featured.evaluate((element) => {
+      const frame = element.firstElementChild!;
+      const style = getComputedStyle(frame);
+      const crests = [...element.querySelectorAll('[data-featured-crest]')];
+      return {
+        tag: frame.tagName, background: style.backgroundImage, color: style.color, radius: style.borderRadius,
+        crests: crests.map((crest) => getComputedStyle(crest).clipPath.startsWith('polygon(')),
+        pills: element.querySelectorAll('span.rounded-full.uppercase').length,
+        width: Math.round(frame.getBoundingClientRect().width),
+      };
+    });
+    expect(hero.tag).toBe('A');
+    expect(hero.background).toContain('linear-gradient');
+    expect(hero.color).toBe('rgb(244, 247, 251)');
+    expect(hero.radius).toBe('9px');
+    expect(hero.crests).toEqual([true, true]);
+    expect(hero.pills).toBe(0);
+    expect(hero.width).toBeLessThanOrEqual(470);
+    await expect(featured.getByText('LIVE', { exact: true })).toBeVisible();
+    // The list card's look is the reference for the same card in the grid below.
+    const want = await cardLook(card);
     await expect(card.locator('span.rounded-full.uppercase')).toHaveText('Live');
-    await expect(featured.locator('span.rounded-full.uppercase')).toHaveText('Featured');
     // The whole card is the link's target, the way the featured match is.
     const link = card.getByRole('link');
     await expect(link).toHaveCount(1);
@@ -340,8 +338,7 @@ for (const width of [320, 768, 1280]) {
     await featured.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `test-results/sports/cards-list-${width}.png` });
 
-    // Two a row: every card is still the same face, at the size the featured
-    // match has when it is that narrow, and nothing spills out of a card.
+    // Two a row: every card is still the same face, and nothing spills out of a card.
     await page.getByRole('group', { name: 'Score layout', exact: true }).getByRole('button', { name: 'cards', exact: true }).click();
     for (const each of await page.getByRole('article').all()) {
       const fit = await each.evaluate((element) => ({ width: element.clientWidth, scroll: element.scrollWidth }));
@@ -360,13 +357,16 @@ for (const width of [320, 768, 1280]) {
     // leave it resting on a card: a hovered frame has a different border.
     await page.mouse.move(0, 0);
     await page.waitForTimeout(500);
-    const darkWant = await cardLook(featured);
     const darkGot = await cardLook(card);
-    expect(darkGot.frame.slice(0, 4)).toEqual(darkWant.frame.slice(0, 4));
+    // Every card in the grid matches the first one in the dark theme as well.
+    const darkOther = await cardLook(page.getByRole('article').filter({ has: page.locator('span.rounded-full.uppercase', { hasText: 'Live' }) }).last());
+    expect(darkGot.frame.slice(0, 4)).toEqual(darkOther.frame.slice(0, 4));
     expect(darkGot.frame[3]).not.toEqual(want.frame[3]);
-    expect(darkGot.name[2]).toEqual(darkWant.name[2]);
-    expect(darkGot.score[3]).toEqual(darkWant.score[3]);
-    expect(darkGot.pill.slice(0, 5)).toEqual(darkWant.pill.slice(0, 5));
+    expect(darkGot.name[2]).toEqual(darkOther.name[2]);
+    expect(darkGot.score[3]).toEqual(darkOther.score[3]);
+    expect(darkGot.pill.slice(0, 5)).toEqual(darkOther.pill.slice(0, 5));
+    // The hero's card does not change with the theme.
+    expect(await featured.evaluate((element) => getComputedStyle(element.firstElementChild!).backgroundImage)).toBe(hero.background);
     await page.screenshot({ path: `test-results/sports/cards-grid-dark-${width}.png` });
   });
 }

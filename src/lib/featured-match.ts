@@ -73,6 +73,28 @@ export function pickFeaturedEvent(events: readonly SportsEvent[]): SportsEvent |
   return best;
 }
 
+/** How many matches the hero's featured card steps through. */
+export const FEATURED_LINEUP_SIZE = 5;
+
+/**
+ * The matches the hero's featured card can show: the one `pickFeaturedEvent`
+ * chose, then the other matches in play in the board's own order. Never a
+ * sample fixture, a race, or a match that is not live; empty when nothing is.
+ */
+export function featuredLineup(events: readonly SportsEvent[], limit = FEATURED_LINEUP_SIZE): SportsEvent[] {
+  const lead = pickFeaturedEvent(events);
+  if (!lead) return [];
+  const seen = new Set<string>([lead.id]);
+  const lineup = [lead];
+  for (const event of events) {
+    if (lineup.length >= limit) break;
+    if (!isFeaturable(event) || seen.has(event.id)) continue;
+    seen.add(event.id);
+    lineup.push(event);
+  }
+  return lineup;
+}
+
 /**
  * The side that won a finished match, or null: still in play, level, or a score
  * the provider did not report.

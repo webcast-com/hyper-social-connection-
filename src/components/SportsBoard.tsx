@@ -12,13 +12,14 @@ import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
 import SportsEventCard from '@/components/SportsEventCard';
 import SportsFeaturedMatch from '@/components/SportsFeaturedMatch';
+import SportsHeroFeatured from '@/components/SportsHeroFeatured';
 import SportsScoreHero from '@/components/SportsScoreHero';
 import { sportsHeroFigures } from '@/lib/sports-hero';
 import SportsBackToTop from '@/components/SportsBackToTop';
 import SportsMatchday from '@/components/SportsMatchday';
 import SponsorBanners from '@/components/SponsorBanners';
 import { SPONSOR_INLINE_BANNERS } from '@/lib/sponsor-banners';
-import { pickFeaturedEvent } from '@/lib/featured-match';
+import { featuredLineup, pickFeaturedEvent } from '@/lib/featured-match';
 import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
   filterSportsEvents,
@@ -120,6 +121,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   // The live match that leads the view. With one fixture on screen there is
   // nothing to feature it over, so the card would only repeat it.
   const featured = useMemo(() => (filtered.length > 1 ? pickFeaturedEvent(filtered) : null), [filtered]);
+  // The hero's card steps through the matches in play, that one first.
+  const lineup = useMemo(() => (filtered.length > 1 ? featuredLineup(filtered) : []), [filtered]);
   // The board's clock for kickoff countdowns. Unset until mounted, so the first
   // render matches the server's, then refreshed once a minute.
   const [now, setNow] = useState<number>();
@@ -179,7 +182,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         predictions={board.predictions?.length ?? 0}
         status={status} onStatus={showStatus}
         sportFilter={sportFilter}
-        featured={featured ? <SportsFeaturedMatch event={featured} returnTo={returnTo} /> : undefined}
+        featured={lineup.length ? <SportsHeroFeatured events={lineup} returnTo={returnTo} /> : undefined}
       />}
       {leaguePage && <><div className="relative mb-3">
         <div>

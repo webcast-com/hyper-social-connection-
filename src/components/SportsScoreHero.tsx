@@ -21,8 +21,9 @@ import type { SportsBoard } from '@/lib/sports';
  *   - the strip of sports is the board's own sport filter, handed in by the
  *     board, so there is one filter and not two;
  *   - the figures come from `sportsHeroFigures`: counted, or a dash;
- *   - the featured match is the board's own (`SportsFeaturedMatch`), shown here
- *     instead of above the competitions. With nothing in play there is no card;
+ *   - the featured match is drawn as the layout's own card
+ *     (`SportsHeroFeatured`), from the board's fixtures, here instead of above
+ *     the competitions. With nothing in play there is no card;
  *   - the theme toggle, bell and log-in button are left out: the site is
  *     dark-only and its own header carries the account controls.
  *
