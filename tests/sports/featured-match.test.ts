@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mountBoard } from './leaders-post-cards';
 import {
   MATCHDAY_PAGE_SIZE, footballMinute, isFeaturable, kickoffCountdown, matchdayPage, matchdayStatus, matchProgressPercent,
-  pickFeaturedEvent, scoreKey, winningSide,
+  FEATURED_LINEUP_SIZE, featuredLineup, pickFeaturedEvent, scoreKey, winningSide,
 } from '../../src/lib/featured-match';
 import type { SportsEvent } from '../../src/lib/sports';
 
@@ -143,10 +143,10 @@ test('the matchday status pill carries the provider’s clock and never calls a 
 });
 
 /** Mounts a component in the suite's jsdom window. */
-async function mount(component: 'featured' | 'card', props: Record<string, unknown>) {
+async function mount(component: 'featured' | 'card' | 'hero', props: Record<string, unknown>) {
   const React = await import('react');
   const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
-  const Component = (await import(component === 'featured' ? '../../src/components/SportsFeaturedMatch' : '../../src/components/SportsEventCard')).default;
+  const Component = (await import(component === 'featured' ? '../../src/components/SportsFeaturedMatch' : component === 'hero' ? '../../src/components/SportsHeroFeatured' : '../../src/components/SportsEventCard')).default;
   const { createRoot } = await import('react-dom/client');
   const mounted = await mountBoard({ basketball: { sport: 'basketball', league: 'nba', rows: [], status: 'live', source: { ok: true, url: '', httpStatus: 200 } }, football: { sport: 'football', league: 'epl', rows: [], status: 'live', source: { ok: true, url: '', httpStatus: 200 } } });
   const container = mounted.document.createElement('div');
@@ -369,4 +369,74 @@ test('a race keeps its positions under the same card heading, with no scoreline 
   } finally {
     await mounted.unmount();
   }
+});
+
+test('the hero lineup leads with the featured match, then the other matches in play, bounded', () => {
+  const live = (id: string, over: Partial<SportsEvent> = {}) => event({ id, ...over });
+  const events = [
+    live('quiet', { home: side('A', 0), away: side('B', 0) }),
+    live('sample', { source: 'demo' }),
+    live('later', { status: 'upcoming' }),
+    live('busy', { home: side('C', 3), away: side('D', 2) }),
+    live('race', { sport: 'motorsport' }),
+    live('hoops', { sport: 'basketball', league: 'nba' }),
+  ];
+  assert.deepEqual(featuredLineup(events).map((entry) => entry.id), ['busy', 'quiet', 'hoops']);
+  assert.deepEqual(featuredLineup([]), []);
+  assert.deepEqual(featuredLineup([live('later', { status: 'upcoming' }), live('sample', { source: 'demo' })]), []);
+  const many = Array.from({ length: 12 }, (_, index) => live(`m${index}`));
+  assert.equal(featuredLineup(many).length, FEATURED_LINEUP_SIZE);
+  assert.equal(new Set(featuredLineup([...many, ...many]).map((entry) => entry.id)).size, FEATURED_LINEUP_SIZE);
+});
+
+test('the hero\'s featured card: ScoreHub\'s card with one link, away first, a dash for an unreported score', async () => {
+  const React = await import('react');
+  const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
+  const second = event({ id: 'epl-2', details: undefined, venue: null, detail: null, home: { name: 'Everton', score: null }, away: { name: 'Fulham', score: 1 } });
+  const mounted = await mount('hero', { events: [event(), second], returnTo: '/sports?league=epl' });
+  try {
+    const section = () => mounted.container.querySelector('section[aria-label="Featured match"]');
+    assert.equal(section().dataset.featuredMatch, 'epl-1');
+    assert.equal(mounted.container.querySelector('article'), null);
+    const links = section().querySelectorAll('a');
+    assert.equal(links.length, 1);
+    assert.equal(links[0].getAttribute('href'), '/sports/matches/epl/401234567?returnTo=%2Fsports%3Fleague%3Depl');
+    assert.equal(links[0].getAttribute('aria-label'), "Featured live match: Chelsea 1, Arsenal 2, Premier League, 54'. Open match details");
+    assert.equal(section().querySelector('[data-featured-score]').textContent, '1–2');
+    assert.equal(section().querySelector('[data-featured-clock]').textContent, "54'");
+    assert.equal(section().querySelectorAll('[data-featured-crest]').length, 2);
+    assert.match(section().textContent, /Premier League[\s\S]*LIVE[\s\S]*Chelsea[\s\S]*Arsenal[\s\S]*Emirates Stadium[\s\S]*Score reported by ESPN/);
+    // No goal scorers are written: the board's feed does not carry them.
+    assert.doesNotMatch(section().textContent, /Ødegaard|Saka|Jackson|Watch Live/);
+    assert.equal(section().querySelector('[role="status"]').textContent, 'Match 1 of 2');
+
+    // The arrows step through the matches in play and wrap around.
+    const next = section().querySelector('button[aria-label="Next live match"]');
+    await act(async () => { next.click(); });
+    assert.equal(section().dataset.featuredMatch, 'epl-2');
+    assert.equal(section().querySelector('[role="status"]').textContent, 'Match 2 of 2');
+    // No ESPN id: plain text, no link and no "details" bar; no clock and no venue reported: none shown.
+    assert.equal(section().querySelector('a'), null);
+    assert.equal(section().querySelector('[role="group"]').getAttribute('aria-label'), 'Featured live match: Fulham 1, Everton not reported, Premier League');
+    assert.equal(section().querySelector('[data-featured-score]').textContent, '1––');
+    assert.equal(section().querySelector('[data-featured-clock]'), null);
+    assert.doesNotMatch(section().textContent, /Live match details|Emirates/);
+    // A side with no crest shows its initial in the shield.
+    assert.deepEqual([...section().querySelectorAll('[data-featured-crest]')].map((crest: any) => crest.textContent), ['F', 'E']);
+    await act(async () => { section().querySelector('button[aria-label="Next live match"]').click(); });
+    assert.equal(section().dataset.featuredMatch, 'epl-1');
+  } finally {
+    await mounted.unmount();
+  }
+});
+
+test('the hero\'s featured card has no arrows for a single match and draws nothing for none', async () => {
+  const one = await mount('hero', { events: [event()] });
+  try {
+    assert.equal(one.container.querySelectorAll('button').length, 0);
+    assert.equal(one.container.querySelector('[role="status"]'), null);
+    assert.equal(one.container.querySelector('a').getAttribute('href'), '/sports/matches/epl/401234567');
+  } finally { await one.unmount(); }
+  const none = await mount('hero', { events: [] });
+  try { assert.equal(none.container.innerHTML, ''); } finally { await none.unmount(); }
 });

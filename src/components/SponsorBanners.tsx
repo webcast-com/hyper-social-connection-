@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SPONSOR_BANNERS, SPONSOR_REL, sponsorLayout, usableSponsorBanners, type SponsorBanner } from '@/lib/sponsor-banners';
 
 /**
- * The sponsored banners (see `src/lib/sponsor-banners.ts` for the list).
+ * The sponsored banners (see `src/lib/sponsor-banners.ts` for the lists).
  *
  * They are advertising, so they are the last thing the page spends anything on
  * and the first thing to get out of the way:
@@ -17,12 +17,12 @@ import { SPONSOR_BANNERS, SPONSOR_REL, sponsorLayout, usableSponsorBanners, type
  *     there is never an empty box. With none left the block is gone;
  *   - a video plays muted, looped and inline, only while it is on screen and the
  *     tab is in front. With reduced motion it does not play: its first frame is
- *     shown, and it is still a link;
+ *     shown, and it is still a link. A still image is simply shown;
  *   - the block says what it is: "Sponsored", and for betting, 18+.
  *
  * The creatives' sizes are not known in advance, so each tile takes the
- * proportions of its own video, and the pair sits side by side or stacked
- * depending on those proportions (`sponsorLayout`).
+ * proportions of its own video or image, and a pair sits side by side or
+ * stacked depending on those proportions (`sponsorLayout`).
  */
 type Props = {
   banners?: readonly SponsorBanner[];
@@ -100,6 +100,16 @@ export default function SponsorBanners({ banners = SPONSOR_BANNERS, className = 
     }
   }, [still]);
 
+  /** A creative reported its size: the tile can be drawn. A size of zero is a failure. */
+  const measured = useCallback((id: string, width: number, height: number) => {
+    if (width > 0 && height > 0) {
+      setSizes((held) => (held[id]?.width === width && held[id]?.height === height ? held : { ...held, [id]: { width, height } }));
+    } else {
+      setFailed((held) => (held.includes(id) ? held : [...held, id]));
+    }
+  }, []);
+  const broke = useCallback((id: string) => setFailed((held) => (held.includes(id) ? held : [...held, id])), []);
+
   const shown = list.filter((banner) => !failed.includes(banner.id));
   const ready = stage === 'near' && shown.some((banner) => sizes[banner.id]);
   const shownKey = shown.map((banner) => banner.id).join(',');
@@ -176,30 +186,47 @@ export default function SponsorBanners({ banners = SPONSOR_BANNERS, className = 
                     className="mx-auto block overflow-hidden rounded-xl border border-white/10 bg-black outline-none ring-offset-2 ring-offset-transparent transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-blue-400"
                     style={size ? { aspectRatio: `${size.width} / ${size.height}`, maxHeight } : undefined}
                   >
-                    <video
-                      ref={(node) => {
-                        if (node) videos.current.set(banner.id, node);
-                        else videos.current.delete(banner.id);
-                      }}
-                      data-sponsor-video={banner.id}
-                      // `#t` asks for a frame to be drawn before anything plays.
-                      src={`${banner.video}#t=0.001`}
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                      disablePictureInPicture
-                      disableRemotePlayback
-                      aria-hidden="true"
-                      tabIndex={-1}
-                      className="pointer-events-none block h-full w-full object-contain"
-                      onLoadedMetadata={(event) => {
-                        const { videoWidth: width, videoHeight: height } = event.currentTarget;
-                        if (width > 0 && height > 0) setSizes((held) => ({ ...held, [banner.id]: { width, height } }));
-                        else setFailed((held) => (held.includes(banner.id) ? held : [...held, banner.id]));
-                      }}
-                      onError={() => setFailed((held) => (held.includes(banner.id) ? held : [...held, banner.id]))}
-                    />
+                    {banner.video ? (
+                      <video
+                        ref={(node) => {
+                          if (node) videos.current.set(banner.id, node);
+                          else videos.current.delete(banner.id);
+                        }}
+                        data-sponsor-video={banner.id}
+                        // `#t` asks for a frame to be drawn before anything plays.
+                        src={`${banner.video}#t=0.001`}
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                        disablePictureInPicture
+                        disableRemotePlayback
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        className="pointer-events-none block h-full w-full object-contain"
+                        onLoadedMetadata={(event) => measured(banner.id, event.currentTarget.videoWidth, event.currentTarget.videoHeight)}
+                        onError={() => broke(banner.id)}
+                      />
+                    ) : (
+                      // A still. The link is already labelled, so the picture is
+                      // decoration to a screen reader. It is asked for as soon as
+                      // it is rendered: the block renders it only once the slot is
+                      // near the viewport, which is the lazy loading.
+                      // eslint-disable-next-line @next/next/no-img-element -- the advertiser's own file, on its own host
+                      <img
+                        // An image the browser already holds may finish before the
+                        // handler below is attached; ask it directly as well.
+                        ref={(node) => { if (node?.complete && node.naturalWidth > 0) measured(banner.id, node.naturalWidth, node.naturalHeight); }}
+                        data-sponsor-image={banner.id}
+                        src={banner.image}
+                        alt=""
+                        decoding="async"
+                        draggable={false}
+                        className="pointer-events-none block h-full w-full object-contain"
+                        onLoad={(event) => measured(banner.id, event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)}
+                        onError={() => broke(banner.id)}
+                      />
+                    )}
                   </a>
                 </li>
               );

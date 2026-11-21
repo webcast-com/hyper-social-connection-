@@ -228,10 +228,101 @@ async function renderStatistics(e) {
   panel.setAttribute('aria-label', match ? 'Match statistics reported by ESPN; dashes mean unavailable' : 'Match statistics unavailable');
 }
 
+// Top scorers and news: both panels keep ScoreHub's own markup (rows and cards
+// are cloned from the page) and are filled from same-origin routes that read
+// ESPN. Nothing is invented: a failed request shows a plain message, never the
+// design's sample players or headlines.
+const scorerTemplate = $('.scorer').cloneNode(true);
+const newsTemplate = $('.news-card').cloneNode(true);
+const leagueNames = { epl: 'Premier League', ucl: 'Champions League', laliga: 'La Liga', seriea: 'Serie A', bundesliga: 'Bundesliga', ligue1: 'Ligue 1', mls: 'MLS' };
+const SCORERS_SHOWN = 5, NEWS_SHOWN = 4;
+let scorersRequest = 0, newsRequest = 0, scorersLeague = 'epl', scorerRows = [], scorersOpen = false, newsItems = [], newsOpen = false, newsNote = '';
+function safeImage(value) {
+  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : null; } catch { return null; }
+}
+// Only ESPN's own pages are opened from a headline.
+function espnPage(value) {
+  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && (url.hostname === 'espn.com' || url.hostname.endsWith('.espn.com')) ? url.href : null; } catch { return null; }
+}
+function panelNote(text) { const note = document.createElement('p'); note.className = 'muted'; note.setAttribute('role', 'status'); note.textContent = text; return note; }
+function renderScorers(note) {
+  const panel = $('.scorers'), more = $('.panel-title a', panel);
+  $$('.scorer, p', panel).forEach(node => node.remove());
+  $('h2', panel).textContent = `Top Scorers · ${leagueNames[scorersLeague] || 'ESPN'}`;
+  for (const row of scorerRows.slice(0, scorersOpen ? scorerRows.length : SCORERS_SHOWN)) {
+    const node = scorerTemplate.cloneNode(true), avatar = $('.avatar', node), name = $('span > b', node);
+    const initial = row.name.slice(0, 1).toUpperCase(); avatar.textContent = initial;
+    const photo = safeImage(row.headshot) || safeImage(row.teamLogo);
+    if (photo) {
+      const img = document.createElement('img'); img.alt = ''; img.width = 27; img.height = 27; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+      img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = row.headshot && safeImage(row.headshot) ? 'cover' : 'contain';
+      img.addEventListener('error', () => { avatar.textContent = initial; }, { once: true });
+      img.src = photo; avatar.replaceChildren(img);
+    }
+    if (/^[1-9]\d{0,19}$/.test(row.athleteId || '')) {
+      const link = document.createElement('a'); link.href = `/sports/athletes/${encodeURIComponent(scorersLeague)}/${encodeURIComponent(row.athleteId)}`; link.textContent = row.name; name.replaceChildren(link);
+    } else name.textContent = row.name;
+    $('span > small', node).textContent = row.team || '—';
+    const goals = $('strong', node); goals.textContent = row.goals;
+    goals.title = `${row.goals} goals${row.matches ? ` in ${row.matches} matches` : ''}`; goals.setAttribute('aria-label', goals.title);
+    panel.append(node);
+  }
+  if (note) panel.append(panelNote(note));
+  const extra = scorerRows.length > SCORERS_SHOWN;
+  more.hidden = !extra; more.textContent = scorersOpen ? 'Show fewer' : 'View All'; more.setAttribute('aria-expanded', String(scorersOpen));
+}
+async function loadScorers(league) {
+  const request = ++scorersRequest; scorersLeague = league; scorerRows = []; scorersOpen = false; renderScorers('Loading ESPN top scorers…');
+  try {
+    const board = await getJson(`/api/sports/scorers/${encodeURIComponent(league)}`); if (request !== scorersRequest) return;
+    const rows = board.status === 'ready' && Array.isArray(board.scorers) ? board.scorers.filter(row => row && typeof row.name === 'string' && row.name && typeof row.goals === 'string' && /^\d{1,4}$/.test(row.goals)) : [];
+    scorerRows = rows.slice(0, 10);
+    renderScorers(scorerRows.length ? '' : board.status === 'unavailable' ? 'Top scorers unavailable.' : 'No top scorers reported.');
+  } catch { if (request === scorersRequest) renderScorers('Top scorers unavailable.'); }
+}
+function ago(value) {
+  const time = Date.parse(value); if (!Number.isFinite(time)) return '';
+  const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+  if (minutes < 1) return 'just now'; if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60); if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24); if (days < 7) return `${days}d ago`;
+  return new Date(time).toLocaleDateString('en-GB', { timeZone: 'Africa/Nairobi', day: 'numeric', month: 'short' });
+}
+function renderNews() {
+  const section = $('.news-section'), grid = $('.news-grid', section), more = $('.panel-title a', section);
+  $$('p.muted', section).forEach(node => node.remove()); grid.replaceChildren();
+  for (const item of newsItems.slice(0, newsOpen ? newsItems.length : NEWS_SHOWN)) {
+    const card = newsTemplate.cloneNode(true), img = $('img', card), label = $('.news-copy small', card), title = $('h3', card), copy = $('p', card);
+    card.classList.remove('expanded');
+    const picture = safeImage(item.image);
+    if (picture) { img.alt = ''; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer'; img.addEventListener('error', () => img.remove(), { once: true }); img.src = picture; } else img.remove();
+    const when = document.createElement('span'); when.textContent = ago(item.published);
+    label.replaceChildren(document.createTextNode(`${String(item.leagueName || 'ESPN').toUpperCase()} `), when);
+    const link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = item.headline; title.replaceChildren(link);
+    if (item.description) copy.textContent = item.description; else copy.remove();
+    grid.append(card);
+  }
+  if (newsNote) section.append(panelNote(newsNote));
+  const extra = newsItems.length > NEWS_SHOWN;
+  more.hidden = !extra; more.textContent = newsOpen ? 'Show fewer' : 'View All News →'; more.setAttribute('aria-expanded', String(newsOpen));
+}
+async function loadNews(league) {
+  const request = ++newsRequest, heading = $('.news-section h2');
+  heading.textContent = league && leagueNames[league] ? `Latest News · ${leagueNames[league]}` : 'Latest News · ESPN';
+  if (!newsItems.length) { newsNote = 'Loading ESPN news…'; renderNews(); }
+  try {
+    const board = await getJson(`/api/sports/news${league ? `?leagues=${encodeURIComponent(league)}` : ''}`); if (request !== newsRequest) return;
+    const items = board.status === 'ready' && Array.isArray(board.articles) ? board.articles.filter(item => item && typeof item.headline === 'string' && item.headline && espnPage(item.url)) : [];
+    newsItems = items.slice(0, 12).map(item => ({ ...item, url: espnPage(item.url) })); newsOpen = newsOpen && newsItems.length > NEWS_SHOWN;
+    newsNote = newsItems.length ? '' : board.status === 'unavailable' ? 'ESPN news unavailable.' : 'No news reported.'; renderNews();
+  } catch { if (request === newsRequest) { newsItems = []; newsNote = 'ESPN news unavailable.'; renderNews(); } }
+}
+
 // Remove the original illustrative score values immediately while loading.
 $('#matchList').replaceChildren(); $('.ticker').replaceChildren(); $('.standings tbody').replaceChildren();
 $('.live-pill b').textContent = '—'; $$('.quick-stats > div > b').forEach(el => el.textContent = '—');
-$('.scorers h2').textContent = 'Top Scorers (sample)'; $('.news-section h2').textContent = 'Latest News (sample)';
+// The design's sample players and headlines go too; ESPN's replace them below.
+renderScorers('Loading ESPN top scorers…'); newsNote = 'Loading ESPN news…'; renderNews();
 $$('.league-row small').forEach(el => el.textContent = 'ESPN competition');
 setScoreState('Loading ESPN scores…'); renderFeature();
 $('#menuToggle').addEventListener('click',()=>$('#mainNav').classList.toggle('open'));
@@ -250,8 +341,13 @@ $('#searchInput').addEventListener('keydown',e=>{if(e.key==='Enter'){ search=e.t
 $$('.league-tabs button').forEach((btn,index)=>btn.addEventListener('click',()=>{$$('.league-tabs button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadStandings(standingMap[index]);}));
 $$('.sport-nav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); $$('.sport-nav a').forEach(b=>b.classList.remove('selected'));a.classList.add('selected'); selectedSport=sportMap[a.getAttribute('href').slice(1)] || 'all'; selectedLeague=''; updateView();}));
 $$('.sport-nav a').forEach(a => a.classList.toggle('selected', a.getAttribute('href') === '#sports'));
-$$('.league-row').forEach((a,index)=>a.addEventListener('click',e=>{e.preventDefault();selectedSport='all';selectedLeague=leagueMap[index];$$('.sport-nav a').forEach(b=>b.classList.toggle('selected', b.getAttribute('href') === '#sports'));updateView();$('#fixtures').scrollIntoView?.();}));
+$$('.league-row').forEach((a,index)=>a.addEventListener('click',e=>{e.preventDefault();selectedSport='all';selectedLeague=leagueMap[index];loadScorers(selectedLeague);newsItems=[];newsOpen=false;loadNews(selectedLeague);$$('.sport-nav a').forEach(b=>b.classList.toggle('selected', b.getAttribute('href') === '#sports'));updateView();$('#fixtures').scrollIntoView?.();}));
 $$('.hero-arrow').forEach((btn,index)=>btn.addEventListener('click',()=>{const n=selectedEvents().length; if(n){selectedDetailId=null;featureIndex=(featureIndex+(index ? 1 : n-1))%n;renderFeature();}}));
-$$('.news-card').forEach(card=>card.addEventListener('click',()=>{card.classList.toggle('expanded');if(card.classList.contains('expanded'))toast(card.querySelector('h3').textContent);}));
-loadStandings('epl'); loadScores();
+// A click anywhere on a card opens its article, as the headline link does.
+$('.news-grid').addEventListener('click',e=>{const card=e.target.closest('.news-card'); if(!card||e.target.closest('a'))return; card.querySelector('h3 a')?.click();});
+$('.news-section .panel-title a').addEventListener('click',e=>{e.preventDefault(); newsOpen=!newsOpen; renderNews();});
+$('.scorers .panel-title a').addEventListener('click',e=>{e.preventDefault(); scorersOpen=!scorersOpen; renderScorers('');});
+loadStandings('epl'); loadScores(); loadScorers('epl'); loadNews('');
 setInterval(() => { if (document.visibilityState !== 'hidden') loadScores(); }, 45_000);
+// News moves slowly; ask again every ten minutes while the page is in view.
+setInterval(() => { if (document.visibilityState !== 'hidden') loadNews(selectedLeague); }, 600_000);

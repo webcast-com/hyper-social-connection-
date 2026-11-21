@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SponsorBanners from '@/components/SponsorBanners';
+import StreamHighlightClips, { type StreamHighlightItem } from '@/components/StreamHighlightClips';
 import {
   STREAM_TABS, featuredStreamMatch, filterStreamMatches, isWatchable, localDayKey, orderStreamMatches, streamClock,
   streamDateLabel, streamMatchIcs, streamScore,
@@ -39,7 +40,7 @@ import {
 } from '@/lib/stream-saved';
 
 export type StreamNewsItem = SavedNews & { sport: string };
-export type StreamHighlightItem = { id: string; title: string; thumbnail: string | null; duration: string | null; href: string };
+export type { StreamHighlightItem } from '@/components/StreamHighlightClips';
 export type StreamViewer = { id: number | string; name: string | null; avatar: string | null } | null;
 
 /** How often the list is re-read while the page is on screen. */
@@ -735,20 +736,8 @@ export default function SportsStreamDashboard({
             {highlights.length === 0 ? (
               <p className="sx-rail__empty">No highlights to show right now.</p>
             ) : (
-              <ul className="sx-clips">
-                {highlights.slice(0, RAIL_ROWS).map((item) => (
-                  <li key={item.id}>
-                    <Link href={item.href} prefetch={false} className="sx-clips__link">
-                      <span className="sx-clips__thumb">
-                        <Thumb src={item.thumbnail} className="sx-clips__img" />
-                        <span aria-hidden="true" className="sx-clips__play"><Play /></span>
-                        {item.duration && <span className="sx-clips__time">{item.duration}</span>}
-                      </span>
-                      <span className="sx-clips__title">{item.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              // Each clip plays in its own row; it stops when the match player starts.
+              <StreamHighlightClips items={highlights.slice(0, RAIL_ROWS)} paused={playing} />
             )}
           </section>
         </aside>

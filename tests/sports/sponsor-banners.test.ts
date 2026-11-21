@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { SPONSOR_BANNERS, SPONSOR_REL, sponsorBannerFor, sponsorLayout, usableSponsorBanners } from '../../src/lib/sponsor-banners';
+import { SPONSOR_BANNERS, SPONSOR_INLINE_BANNERS, SPONSOR_REL, sponsorBannerFor, sponsorLayout, usableSponsorBanners, type SponsorBanner } from '../../src/lib/sponsor-banners';
 
 /**
  * The sponsored banners: where a click goes and how the link is marked, that a
@@ -36,6 +36,37 @@ test('the two banners link to the advertiser, over https, with the creatives it 
   assert.equal(usableSponsorBanners().length, 2);
   // A paid link says so, and the opened page gets no handle on this one.
   assert.deepEqual(SPONSOR_REL.split(' ').sort(), ['nofollow', 'noopener', 'sponsored']);
+});
+
+test('the still banner is its own set: the first set, and where it is shown, is unchanged', () => {
+  assert.deepEqual(SPONSOR_INLINE_BANNERS, [{
+    id: 'betting-c',
+    href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
+    image: 'https://1w-aff.run/promo-files-uploads/548b5809b2bf4b0ad3070d8f9ea4f3d4e8dc70e6f8d394d4ea.jpg',
+  }]);
+  assert.deepEqual(usableSponsorBanners(SPONSOR_INLINE_BANNERS), [...SPONSOR_INLINE_BANNERS]);
+  // The homepage and the live screen take the first set, by default or by slot.
+  assert.deepEqual(usableSponsorBanners().map((banner) => banner.id), ['betting-a', 'betting-b']);
+  assert.deepEqual([...sponsorBannerFor(0), ...sponsorBannerFor(1)].map((banner) => banner.id), ['betting-a', 'betting-b']);
+  const first = new Set(SPONSOR_BANNERS.map((banner) => banner.id));
+  assert.ok(SPONSOR_INLINE_BANNERS.every((banner) => !first.has(banner.id)), 'no id is in both sets');
+});
+
+test('a creative is a video or an image: an entry with both, or neither, is not shown', () => {
+  const go = 'https://ads.example/go';
+  assert.deepEqual(usableSponsorBanners([
+    { id: 'still', href: go, image: 'https://ads.example/a.jpg' },
+    { id: 'clip', href: go, video: 'https://ads.example/a.mp4' },
+    { id: 'both', href: go, video: 'https://ads.example/a.mp4', image: 'https://ads.example/a.jpg' },
+    { id: 'neither', href: go },
+    { id: 'plain-http', href: go, image: 'http://ads.example/a.jpg' },
+    { id: 'inline-data', href: go, image: 'data:image/png;base64,AAAA' },
+    { id: 'script', href: go, image: 'javascript:alert(1)' },
+    { id: 'with-login', href: go, image: 'https://user:pw@ads.example/a.jpg' },
+  ]), [
+    { id: 'still', href: go, image: 'https://ads.example/a.jpg' },
+    { id: 'clip', href: go, video: 'https://ads.example/a.mp4' },
+  ]);
 });
 
 test('an entry that is not https on both addresses, or repeats an id, is not shown', () => {
@@ -89,7 +120,7 @@ const TWO = [
   { id: 'two', href: 'https://ads.example/go?p=1&q=2', video: 'https://cdn.example/two.mp4' },
 ];
 
-async function mount(banners = TWO, settleMs = 0) {
+async function mount(banners: SponsorBanner[] = TWO, settleMs = 0) {
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
   const Banners = (await import('../../src/components/SponsorBanners')).default;
@@ -102,7 +133,7 @@ async function mount(banners = TWO, settleMs = 0) {
   // The block mounts in two steps (allowed to show, then near the viewport).
   // Wait for its videos; where none are expected, wait a fixed moment instead.
   if (settleMs) await act(async () => { await wait(settleMs); });
-  else for (let waited = 0; waited < 1_000 && !container.querySelector('video'); waited += 10) await act(async () => { await wait(10); });
+  else for (let waited = 0; waited < 1_000 && !container.querySelector('video, img'); waited += 10) await act(async () => { await wait(10); });
   const block = () => container.querySelector('[data-sponsor-banners]') as any;
   const video = (id: string) => container.querySelector(`[data-sponsor-video="${id}"]`) as any;
   /** What a browser does once it has read a video's header, or failed to. */
@@ -113,7 +144,16 @@ async function mount(banners = TWO, settleMs = 0) {
     await act(async () => { node.dispatchEvent(new dom.window.Event('loadedmetadata')); await wait(5); });
   };
   const broke = async (id: string) => { await act(async () => { video(id).dispatchEvent(new dom.window.Event('error')); await wait(5); }); };
-  return { container, block, video, loaded, broke, act, unmount: async () => { await act(() => root.unmount()); } };
+  const image = (id: string) => container.querySelector(`[data-sponsor-image="${id}"]`) as any;
+  /** What a browser does once it has decoded a picture, or failed to fetch it. */
+  const pictured = async (id: string, width: number, height: number) => {
+    const node = image(id);
+    Object.defineProperty(node, 'naturalWidth', { value: width, configurable: true });
+    Object.defineProperty(node, 'naturalHeight', { value: height, configurable: true });
+    await act(async () => { node.dispatchEvent(new dom.window.Event('load')); await wait(5); });
+  };
+  const unpictured = async (id: string) => { await act(async () => { image(id).dispatchEvent(new dom.window.Event('error')); await wait(5); }); };
+  return { container, block, video, loaded, broke, image, pictured, unpictured, act, unmount: async () => { await act(() => root.unmount()); } };
 }
 
 test('the slot takes no room and cannot be reached until a creative has loaded', async () => {
@@ -209,6 +249,71 @@ test('a creative that fails is removed, and with none left the block is gone', a
   }
 });
 
+const STILL = [{ id: 'pic', href: 'https://ads.example/go?p=1&q=2', image: 'https://cdn.example/pic.jpg' }];
+
+test('a still banner is an image in the same marked link, and takes no room until it has loaded', async () => {
+  const view = await mount(STILL);
+  try {
+    assert.equal(view.block().getAttribute('data-ready'), 'false');
+    assert.equal(view.block().style.height, '0px');
+    assert.equal(view.block().hasAttribute('inert'), true);
+
+    const picture = view.image('pic');
+    assert.equal(picture.tagName, 'IMG');
+    assert.equal(picture.getAttribute('src'), 'https://cdn.example/pic.jpg');
+    // The link carries the label, so the picture is not announced a second time.
+    assert.equal(picture.getAttribute('alt'), '');
+    assert.equal(view.container.querySelector('video'), null);
+
+    await view.pictured('pic', 300, 250);
+    assert.equal(view.block().getAttribute('data-ready'), 'true');
+    assert.equal(view.block().hasAttribute('inert'), false);
+    assert.equal(view.block().style.height, '');
+    assert.equal(view.block().getAttribute('data-layout'), 'stack', 'one banner has the column to itself');
+    const link = view.container.querySelector('[data-sponsor-link="pic"]') as any;
+    assert.equal(link.style.aspectRatio, '300 / 250');
+    assert.equal(link.getAttribute('href'), 'https://ads.example/go?p=1&q=2');
+    assert.equal(link.getAttribute('target'), '_blank');
+    assert.equal(link.getAttribute('rel'), 'sponsored nofollow noopener');
+    assert.match(link.getAttribute('aria-label'), /Sponsored.*new tab/);
+    assert.match(view.block().textContent, /Sponsored/);
+    assert.match(view.block().textContent, /18\+/);
+    assert.equal(played.length, 0, 'there is nothing to play');
+  } finally {
+    await view.unmount();
+  }
+});
+
+test('a still that fails to load, or loads with no size, leaves nothing behind', async () => {
+  const blocked = await mount(STILL);
+  try {
+    await blocked.unpictured('pic');
+    assert.equal(blocked.container.innerHTML, '');
+  } finally {
+    await blocked.unmount();
+  }
+  const empty = await mount(STILL);
+  try {
+    await empty.pictured('pic', 0, 0);
+    assert.equal(empty.container.innerHTML, '');
+  } finally {
+    await empty.unmount();
+  }
+});
+
+test('a still and a video can share a block', async () => {
+  const view = await mount([...STILL, TWO[0]]);
+  try {
+    await view.pictured('pic', 300, 250);
+    await view.loaded('one', 300, 250);
+    assert.equal(view.block().getAttribute('data-layout'), 'pair');
+    assert.deepEqual([...view.container.querySelectorAll('a')].map((link: any) => link.dataset.sponsorLink), ['pic', 'one']);
+    assert.ok(played.includes('play:one'));
+  } finally {
+    await view.unmount();
+  }
+});
+
 test('with reduced motion the banner is shown but not played', async () => {
   const before = dom.window.matchMedia;
   (dom.window as any).matchMedia = (query: string) => ({ matches: /reduced-motion/.test(query), media: query, addEventListener() {}, removeEventListener() {} });
@@ -246,9 +351,24 @@ test('a visitor saving data, or an empty list, gets no banner and no request', a
   }
 });
 
+test('a visitor saving data gets no still banner either', async () => {
+  Object.defineProperty(dom.window.navigator, 'connection', { value: { saveData: true }, configurable: true });
+  try {
+    const view = await mount(STILL, 80);
+    try {
+      assert.equal(view.container.innerHTML, '');
+    } finally {
+      await view.unmount();
+    }
+  } finally {
+    Object.defineProperty(dom.window.navigator, 'connection', { value: undefined, configurable: true });
+  }
+});
+
 test('nothing is rendered on the server: no advertiser address in the page’s HTML', async () => {
   const React = await import('react');
   const { renderToString } = await import('react-dom/server');
   const Banners = (await import('../../src/components/SponsorBanners')).default;
   assert.equal(renderToString(React.createElement(Banners as never, {} as never)), '');
+  assert.equal(renderToString(React.createElement(Banners as never, { banners: SPONSOR_INLINE_BANNERS } as never)), '');
 });

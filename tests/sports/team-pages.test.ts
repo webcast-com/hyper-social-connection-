@@ -366,6 +366,49 @@ test('a player page shows the reported biography, team link and statistics', asy
   }
 });
 
+test('the player card shows up to three reported figures, and none when nothing was reported', async () => {
+  const figures = (container: Element) => [...container.querySelectorAll('[aria-label="Key figures"] > div')]
+    .map((tile) => `${tile.querySelector('dt')!.textContent} ${tile.querySelector('dd')!.textContent}`);
+
+  const page = await mountAthlete(() => Response.json(readyAthlete));
+  try {
+    // ESPN's own labels and values; the place statistics leave is filled from the biography.
+    assert.deepEqual(figures(page.container), ['PTS 33.9', 'GP 78', 'Age 27']);
+    const card = page.container.querySelector('.pl-card')!;
+    assert.equal(card.querySelector('h1')!.textContent, 'Luka Dončić');
+    assert.equal(card.querySelector('img[src*="teamlogos"]')!.getAttribute('alt'), '', 'the crest is decoration beside the team name');
+    const close = card.querySelector('a[aria-label="Back to sports scores"]')!;
+    assert.equal(close.getAttribute('href'), '/sports');
+    assert.equal(close.textContent!.trim(), '', 'the close control is named by its label, not by stray text');
+    // The card's controls are icons; each still has a name a screen reader can say.
+    assert.ok(page.button('Refresh details'));
+  } finally {
+    await page.unmount();
+  }
+
+  const bare = await mountAthlete(() => Response.json({
+    ...readyAthlete,
+    athlete: { ...readyAthlete.athlete, statGroups: [], age: null, height: null, weight: null },
+  }));
+  try {
+    assert.equal(bare.container.querySelector('[aria-label="Key figures"]'), null, 'no tile is padded with a zero or a dash');
+    assert.match(bare.text(), /Luka Dončić/);
+  } finally {
+    await bare.unmount();
+  }
+
+  const refused = await mountAthlete(() => Response.json(initialAthlete));
+  try {
+    await refused.settle();
+    assert.equal(refused.container.querySelector('[aria-label="Key figures"]'), null);
+    // Nobody to name: the ring holds a plain figure, not a letter that reads as an initial.
+    assert.equal(refused.container.querySelector('.pl-portrait')!.textContent, '');
+    assert.ok(refused.container.querySelector('.pl-portrait svg[aria-hidden="true"]'));
+  } finally {
+    await refused.unmount();
+  }
+});
+
 test('an unanswered player page says so, and a player without statistics shows none', async () => {
   const refused = await mountAthlete(() => Response.json({
     ...initialAthlete,

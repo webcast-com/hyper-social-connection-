@@ -904,6 +904,18 @@ Tests: `sportsrc.test.ts` (parsing and rules), `sportsrc-feed.test.ts` (key,
 caching, allowance, failures), `stream-dashboard.test.ts` (the screen mounted in
 jsdom, including the frame's attributes).
 
+### Highlights that play in the rail
+
+"Latest Highlights" on `/sports/live` (`src/components/StreamHighlightClips.tsx`) plays each clip in its own row instead of linking to the clip's page.
+
+- The row is the size it was: an 84×54 picture and the title. The picture is the player. Pressing the row plays, pressing again pauses; a 3 px bar under the picture shows progress.
+- Each playable row has a 32 px full-screen button; the browser's own controls are shown only in full screen.
+- One clip at a time. A clip stops when the match player above is started.
+- Nothing is fetched before a press (`preload="none"`, no `autoplay`). The file is the clip's stored ESPN `mp4`, https only.
+- A clip with no file, or whose file will not play for this reader (ESPN restricts renditions by region), is the link to `/sports/highlights/<id>` that every row used to be.
+- "See All" still opens `/sports/highlights`.
+- Tests: `tests/sports/stream-highlight-clips.test.ts` (6). Browser check with stand-in clips at 390, 768 and 1440 px: list 258 px tall before, during and after play; player 84×54; full screen fills the window; the page address never changes.
+
 ## Sponsored banners
 
 Two paid betting banners, listed in `src/lib/sponsor-banners.ts` (the link and
@@ -941,6 +953,137 @@ Not verified: the real creatives could not be loaded from the build sandbox, so
 the layout was checked in a browser with stand-in videos of three shapes
 (728×90, 600×500, 360×640) at 390, 768 and 1440 px. Tests:
 `sponsor-banners.test.ts`.
+
+### The still banner (second set)
+
+A third creative, a `.jpg`, is its own list (`SPONSOR_INLINE_BANNERS`), so the
+placements above show exactly what they showed before. An entry now names a
+`video` or an `image`; a still is drawn with an `<img>` in the same marked link
+and follows every rule above (nothing until the slot is near the viewport, no
+room until it has loaded, removed if it fails, none with data saving). Where:
+
+- **`/sports`** (and its competition pages): after the first competition's
+  fixtures, never above the scores. Capped at 13rem tall.
+- **`/sports/highlights`**: between the filters and the clips. Capped at 13rem.
+- **`/post/<id>`**: under the post and its comments. Capped at 16rem.
+
+Checked in a browser with stand-in images (300×250, 728×90, 160×600) at 390,
+768 and 1440 px: one request for the still per page, none on the homepage, no
+sideways overflow, and no gap left when the request is blocked. A 300×250 is
+drawn 250×208 in the lists and 307×256 on a post; a 728×90 fills the column. A
+tall creative (160×600) comes out narrow (55×208) under the 13rem cap: if the
+real one is a skyscraper, raise `maxHeight` or move it to a sidebar.
+
+Not verified: the real image, for the same reason as the videos.
+
+## The sports page's head and hero (from ScoreHub)
+
+`/sports` opens with the head and hero of the ScoreHub layout
+(`scorehub/index.htm`): the brand bar with its section links, the strip of
+sports, and the hero with the headline "Every Score. Every Moment.", two
+buttons, four figures and the featured match on the right. It is one component,
+`src/components/SportsScoreHero.tsx`, rendered by `SportsBoard.tsx` on the main
+page only; a league page keeps its own title.
+
+The layout is ScoreHub's; the content is this page's. The original is a static
+mock-up, and none of its made-up content came across:
+
+| In ScoreHub's mock-up | On `/sports` |
+| --- | --- |
+| Home, Live Scores, Fixtures, Leagues, News, Teams, Stats, More (all `#` links) | Scores, Live Streams, Highlights, Predictions, ScoreHub dashboard, Basketball & NFL dashboard: pages that exist. These replace the old row of buttons and the amber ScoreHub note |
+| Search box, theme toggle, bell, Login | Left out: the board has its search, the site is dark-only, the site header has the account controls. The feed badge ("Live feeds" and so on) and "Refresh scores" sit there instead |
+| Strip of twelve sports | The board's own sport filter (same buttons, same names), moved up into the strip. There is one filter, not two |
+| "54 Matches Live Now" | Counted from fixtures ESPN reports as live; "No matches live right now" when ESPN answered and none are; "Live scores unavailable right now" on a sample board or when every feed failed |
+| 54 live matches, 12 sports, 98 leagues, 2.4M users | Live matches and loaded matches counted from ESPN's fixtures (a dash when not known, never a zero); sports and leagues are the sizes of the board's catalog. There is no user count, so that tile is "Matches" |
+| Arsenal 2 - 1 Chelsea, with scorers and "Watch Live" | The board's own featured match (`SportsFeaturedMatch`), moved from above the competitions into the hero. With nothing in play there is no card |
+| Carousel arrows and dots | Left out: there is one featured match |
+| Stadium photograph hot-linked from Unsplash | `public/sports/hero-scores.webp` (32 KB), generated for this page and served by this site |
+
+The two hero buttons set the board's status filter (Live, Upcoming) and scroll
+to the scores. The rules for the figures are in `src/lib/sports-hero.ts`.
+
+The page's `<h1>` is now "Every Score. Every Moment." instead of "Sports". The
+title, description and structured data in the document head are unchanged.
+
+**On a phone the first fixture starts lower than before** (about 970 px down at
+390 px wide with nothing live, against roughly 730 px): the hero is taller than
+the title and buttons it replaced. The paragraph is shortened and the figures
+kept to one row there to limit it.
+
+Checked in a browser at 320, 390, 768, 1024 and 1440 px with stand-in ESPN
+answers: matches in play, nothing in play, and every feed failing. No sideways
+scroll, no control under 44 px, no console errors. Tests:
+`tests/sports/sports-hero.test.ts`. The Playwright board spec
+(`npm run test:sports-layout`, `layout.spec.ts`) was updated in two places: the
+phone test now measures from the bottom of the hero, and the featured-card
+comparison allows for the card being narrower than a list card from 768 px (the
+same face at the smaller container step). Two tests in that spec fail on `main`
+as well and are unrelated (they expect basketball to be absent from the board),
+and `home-layout.spec.ts` does not build there (`node:crypto`).
+
+## The hero's featured card, league news and top scorers
+
+- `/sports` hero: `SportsHeroFeatured` draws the featured match as the ScoreHub layout's card. `featuredLineup` (in `src/lib/featured-match.ts`) gives it the match `pickFeaturedEvent` chose, then the other matches in play in board order, five at most; never a sample fixture, a race or a match that is not live. Arrows (44 px) step through them; with one match there are no arrows. One link per card, to the match page, when ESPN gave an id. League pages still use `SportsFeaturedMatch`.
+- `/api/sports/news` (`src/lib/espn-news.ts`, `espn-news-feed.ts`): article cards from ESPN's league news. An article needs a headline and an `https` page on espn.com; description, picture and date are null when unreported.
+- `/api/sports/scorers/<league>` (`src/lib/espn-scorers.ts`, `espn-scorers-feed.ts`): the goals table from ESPN's football statistics, in ESPN's order. A row needs a name and a goals figure. Football competitions only.
+- Both routes: `unavailable` with an empty list and `no-store` when ESPN does not answer; no sample data. Used by `public/scorehub/script.js`; details in `SCOREHUB_INTEGRATION.md`.
+- Tests: `tests/sports/news-scorers.test.ts` (10), `tests/sports/featured-match.test.ts` (three added), `tests/scorehub/integration.test.ts` (two added, one changed), and the browser test "match cards share one face and the hero's featured match wears the ScoreHub card" in `tests/sports/layout.spec.ts`.
+- The statistics address and its response shape are **not verified against ESPN** from the build sandbox; see the note in `SCOREHUB_INTEGRATION.md`.
+
+## The player page as a card
+
+`/sports/athletes/<competition>/<id>` is laid out as a player card, after a
+design supplied for it: a dark violet panel, the portrait in a neon ring, the
+name, the position line and three figures, with the overview and season
+statistics beside the card on a wide screen (from 1024 px) and under it on a
+narrow one.
+
+**Only the look changed.** `SportsAthleteDetails.tsx` asks what it asked before,
+in the same order (ESPN's two player addresses from the browser, then
+`/api/sports/athletes/<competition>/<id>`), and the diff does not touch
+`refresh`, the effect that calls it or the board validation. Not edited at all:
+`espn-athlete.ts`, `espn-athlete-feed.ts`, `espn-browser.ts`, `espn-team.ts`,
+`/api/sports/athletes/**`, `/api/sports/teams/**` and `SportsTeamDetails.tsx`.
+
+- **The three figures** are chosen by `src/lib/athlete-headline.ts`, which only
+  picks from what the page already holds. Each is one ESPN reported, under
+  ESPN's label and with ESPN's value. The ones a fan looks for first lead where
+  the sport has an obvious three (football: goals, assists, appearances;
+  basketball: points, rebounds, assists per game; ice hockey: goals, assists,
+  points); any place left goes to the next statistics in ESPN's order, then to
+  age, height and weight. Fewer than three reported means fewer tiles, and none
+  reported means no tiles. A tile is never padded with a zero or a dash.
+- **The portrait** follows the same ladder as before: the photo ESPN reported
+  (or the ESPN headshot for NBA and NFL), else initials. With no player to name
+  (loading, or ESPN did not answer) the ring holds a plain figure rather than a
+  "P", which read as somebody's initial.
+- **The card's opening line** is the club: "@ Real Madrid", with the crest ESPN
+  reported and the link to the team page it always had. The design shows a
+  member handle there; a player has none, and none is made up.
+- **The controls** are the design's round buttons: refresh, and a close button
+  that is the old "Back to sports scores" link (same destination, same name for
+  a screen reader). Both are 44 px.
+- **The styling** that Tailwind cannot say (the lit backgrounds, the ring, its
+  glow) is in `player.css` beside the route. Every rule is under `.pl-card`,
+  except the page background, which is under `body:has(.pl-card)` and so applies
+  only while a card is on the page. The glow turns slowly; it stands still under
+  `prefers-reduced-motion`.
+- The section buttons no longer stick to the top while scrolling: with two short
+  sections they covered more than they saved.
+
+Checked in a browser at 320, 390, 768 and 1440 px, with stand-in answers for the
+player endpoint (ESPN is not reachable from the build sandbox): a footballer
+with a photo and two statistics groups, a basketball player with two statistics,
+a player with a very long name and club and no photo, and an unanswered request.
+No sideways scroll at any width, no control under 44 px, no console errors.
+**Not checked: a real ESPN answer**, so which labels ESPN actually sends for a
+footballer is taken from the parser's tests, not seen live. If the three tiles
+are not the ones wanted for some competition, the label lists at the top of
+`athlete-headline.ts` are the place to add its wording.
+
+Tests: `tests/sports/athlete-headline.test.ts` (the choice of figures, and that
+the stylesheet reaches nothing outside the card) and the player tests in
+`tests/sports/team-pages.test.ts`.
 
 ## Predictions page and removed integration
 

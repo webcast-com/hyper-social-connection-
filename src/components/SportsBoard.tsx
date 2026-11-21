@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Clapperboard, Radio, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
@@ -12,9 +12,14 @@ import { competitionCountry, sportsDate } from '@/lib/sports-navigation';
 import SportsCompetitionBrowser from './SportsCompetitionBrowser';
 import SportsEventCard from '@/components/SportsEventCard';
 import SportsFeaturedMatch from '@/components/SportsFeaturedMatch';
+import SportsHeroFeatured from '@/components/SportsHeroFeatured';
+import SportsScoreHero from '@/components/SportsScoreHero';
+import { sportsHeroFigures } from '@/lib/sports-hero';
 import SportsBackToTop from '@/components/SportsBackToTop';
 import SportsMatchday from '@/components/SportsMatchday';
-import { pickFeaturedEvent } from '@/lib/featured-match';
+import SponsorBanners from '@/components/SponsorBanners';
+import { SPONSOR_INLINE_BANNERS } from '@/lib/sponsor-banners';
+import { featuredLineup, pickFeaturedEvent } from '@/lib/featured-match';
 import { browserSportsBoard, mergeBrowserProgress, prioritizeSportsLeagues, SportsApiError } from '@/lib/espn-browser';
 import {
   filterSportsEvents,
@@ -24,7 +29,7 @@ import {
 } from '@/lib/sports';
 
 import {
-  SPORT_LABELS, SPORTS_BOARD_COMPETITIONS, SPORTS_BOARD_LEAGUES, SPORTS_BOARD_SPORTS, SPORTS_COMPETITIONS, SPORTS_REGIONS,
+  SPORT_EMOJI, SPORT_LABELS, SPORTS_BOARD_COMPETITIONS, SPORTS_BOARD_LEAGUES, SPORTS_BOARD_SPORTS, SPORTS_COMPETITIONS, SPORTS_REGIONS,
   competitionRegion, type SportsRegion,
 } from '@/lib/sports-catalog';
 
@@ -116,6 +121,8 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   // The live match that leads the view. With one fixture on screen there is
   // nothing to feature it over, so the card would only repeat it.
   const featured = useMemo(() => (filtered.length > 1 ? pickFeaturedEvent(filtered) : null), [filtered]);
+  // The hero's card steps through the matches in play, that one first.
+  const lineup = useMemo(() => (filtered.length > 1 ? featuredLineup(filtered) : []), [filtered]);
   // The board's clock for kickoff countdowns. Unset until mounted, so the first
   // render matches the server's, then refreshed once a minute.
   const [now, setNow] = useState<number>();
@@ -130,10 +137,54 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   const browser = <SportsCompetitionBrowser competitions={leagueOptions} counts={counts} selected={league} onSelect={setLeague} />;
   const deniedCount = board.sources.filter((source) => source.httpStatus === 403).length;
   const liveCount = board.events.filter((e) => e.status === 'live' && e.source !== 'demo').length;
+  const feedLabel = initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board';
+  const feedTitle = board.sources.filter((s) => !s.ok).map((s) => `${s.id}: ${s.error}`).join('\n') || 'All sources ok';
+
+  // The sport filter. On the main page it is the strip under the ScoreHub brand
+  // bar; on a league page it stays a row of pills above the other filters.
+  const strip = !leaguePage;
+  const sportFilter = (
+    <div role="group" aria-label="Filter by sport" className={strip ? 'flex w-max' : 'flex shrink-0 gap-2'}>
+      {(['all', ...SPORTS_BOARD_SPORTS] as const).map((id) => (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={sport === id}
+          onClick={() => update({ sport: id })}
+          className={strip
+            ? `inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-r border-r-[#101c2a] px-3.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00d6a0] ${
+              sport === id ? 'border-b-[#00d6a0] bg-[#0a1722] font-bold text-white' : 'border-b-transparent text-[#d0d9e5] hover:bg-[#0a1722] hover:text-white'}`
+            : `shrink-0 min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
+              sport === id
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+        >
+          {strip && <span aria-hidden="true">{id === 'all' ? '🏟️' : SPORT_EMOJI[id]}</span>}
+          {id === 'all' ? 'All sports' : SPORT_LABELS[id]}
+        </button>
+      ))}
+    </div>
+  );
+  /** The hero's two buttons: set the status, then bring the scores into view. */
+  const showStatus = (next: 'live' | 'upcoming') => {
+    update({ status: next });
+    const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('sports-scores')?.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
-      <div className="relative mb-3">
+      {!leaguePage && <SportsScoreHero
+        figures={sportsHeroFigures(board, { sports: SPORTS_BOARD_SPORTS.length, competitions: SPORTS_BOARD_COMPETITIONS.length }, initialLoading)}
+        feedLabel={feedLabel} feedTone={initialLoading ? 'loading' : board.mode} feedTitle={feedTitle}
+        refreshing={refreshing} onRefresh={() => void refreshScores(true)}
+        predictions={board.predictions?.length ?? 0}
+        status={status} onStatus={showStatus}
+        sportFilter={sportFilter}
+        featured={lineup.length ? <SportsHeroFeatured events={lineup} returnTo={returnTo} /> : undefined}
+      />}
+      {leaguePage && <><div className="relative mb-3">
         <div>
           <h1 className="pr-28 text-xl font-black flex items-center gap-2 text-gray-900 sm:text-2xl dark:text-white">
             <Trophy className="shrink-0 text-amber-500" /> {page?.name ?? 'Sports'}
@@ -156,21 +207,11 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
                 ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
           }`}
-          title={board.sources.filter((s) => !s.ok).map((s) => `${s.id}: ${s.error}`).join('\n') || 'All sources ok'}
+          title={feedTitle}
         >
-          {initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'}
+          {feedLabel}
         </span>
       </div>
-
-      {!leaguePage && <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:px-4 sm:py-3 sm:text-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-        <a href="/scorehub" className="font-bold underline hover:no-underline">ScoreHub</a>
-        {' '}— a separate dashboard using the same ESPN scores.
-        <span aria-hidden="true" className="px-1 text-amber-400">·</span>
-        {/* The dashboard is a separate document served by a route handler, not a page of this app: it needs a full page load. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/nfl-basketball/" className="font-bold text-blue-600 underline hover:no-underline dark:text-blue-400">Basketball &amp; NFL dashboard</a>
-        {' '}— a separate sports experience with live feeds when available and sample content otherwise.
-      </div>}
 
       {page && <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Open a game for reported statistics, rosters, player stats, form, head-to-head and standings. Coverage varies by game.</p>}
       <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -203,7 +244,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           <Radio aria-hidden="true" className="h-4 w-4" />
           Live streams
         </Link>
-      </div>
+      </div></>}
 
       {refreshError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{refreshError}</p>}
       {initialLoading && <p role="status" className="mb-4 text-sm text-gray-500 dark:text-gray-400">Loading ESPN scores from your browser…</p>}
@@ -226,23 +267,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>}
         </li>)}</ul>
       </details>}
-      <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto pb-2 sm:flex-wrap"><div role="group" aria-label="Filter by sport" className="flex shrink-0 gap-2">
-        {(['all', ...SPORTS_BOARD_SPORTS] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={sport === id}
-            onClick={() => update({ sport: id })}
-            className={`shrink-0 min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
-              sport === id
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-          >
-            {id === 'all' ? 'All sports' : SPORT_LABELS[id]}
-          </button>
-        ))}
-      </div></div>
+      {leaguePage && <div className="mb-3 flex min-w-0 gap-2 overflow-x-auto pb-2 sm:flex-wrap">{sportFilter}</div>}
       <div id="sports-filters" className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
         <label className={`${moreFilters ? '' : 'hidden sm:block'} min-w-0 text-xs font-semibold text-gray-600 dark:text-gray-300`}>
           Match status
@@ -290,11 +315,11 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           <span className="min-w-0 truncate">{chip.label}: {chip.value}</span><X aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
         </button>)}
       </div>}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+      <div id="sports-scores" className="mb-3 flex scroll-mt-20 flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
         <p aria-live="polite" className="min-w-0 flex-1">{filtered.length} events in {groups.length} competitions</p>
         <div className="flex shrink-0 items-center gap-2">
           <SportsMatchday events={filtered} returnTo={returnTo} now={now} refreshing={refreshing}
-            feedLabel={initialLoading ? 'Loading' : board.mode === 'live' ? 'Live feeds' : board.mode === 'partial' ? 'Partial feeds' : 'Sample board'} />
+            feedLabel={feedLabel} />
           <button type="button" onClick={resetFilters} className="min-h-11 font-semibold text-blue-600 hover:underline dark:text-blue-400">Reset filters</button>
         </div>
       </div>
@@ -320,10 +345,12 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
         </EmptyState>
       ) : (
         <>
-        {featured && <SportsFeaturedMatch event={featured} returnTo={returnTo} />}
+        {/* On the main page the featured match is in the hero above. */}
+        {leaguePage && featured && <SportsFeaturedMatch event={featured} returnTo={returnTo} />}
         <div className="space-y-4">
-          {groups.map((group) => (
-            <section key={group.league} className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-2 sm:p-3 dark:border-gray-700 dark:bg-gray-900/40">
+          {groups.map((group, index) => (
+            <Fragment key={group.league}>
+            <section className="min-w-0 rounded-2xl border border-gray-200 bg-gray-50 p-2 sm:p-3 dark:border-gray-700 dark:bg-gray-900/40">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
                 {group.leagueName}
                 <span className="ml-2 font-normal normal-case tracking-normal">{competitionCountry(group.league) ?? SPORTS_REGIONS.find((item) => item.id === competitionRegion(group.league))?.name} · {group.events.length}</span>
@@ -335,6 +362,10 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
                 ))}
               </div>
             </section>
+            {/* One sponsored banner, after the first competition: below the scores
+                a visitor came for, and never above them. */}
+            {index === 0 && <SponsorBanners placement="sports" banners={SPONSOR_INLINE_BANNERS} maxHeight="13rem" />}
+            </Fragment>
           ))}
         </div>
         </>

@@ -1,0 +1,109 @@
+/*
+ * The player page's card: a dark panel lit from two corners, with the portrait
+ * inside a neon ring. Every rule is under `.pl-card`, or under
+ * `body:has(.pl-card)` for the one thing the page changes outside itself (the
+ * page background), so nothing here reaches another page. Colours and layout
+ * that Tailwind can say are in the component; this file holds only what it
+ * cannot: the backgrounds, the ring and its glow.
+ */
+
+/*
+ * The page behind the card: near-black with a violet tint, in place of the
+ * site's navy. A browser without `:has()` keeps the navy; nothing breaks.
+ * The selector repeats the site's own (`.dark body.app-page-bg`) so that it
+ * wins by specificity rather than by the order two stylesheets load in.
+ */
+.dark body.app-page-bg:has(.pl-card) {
+  background:
+    radial-gradient(circle at 12% 6%, rgba(168, 85, 247, 0.2), transparent 26rem),
+    radial-gradient(circle at 92% 18%, rgba(255, 61, 242, 0.1), transparent 24rem),
+    linear-gradient(160deg, #0a0814 0%, #0d0a1a 50%, #08070f 100%);
+  background-attachment: fixed;
+}
+
+.pl-card {
+  --pl-pink: #ff3df2;
+  --pl-violet: #a855f7;
+  --pl-deep: #6d28d9;
+  /* No `position` here: the component makes the card sticky on a wide screen. */
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2rem;
+  background:
+    radial-gradient(120% 70% at 85% 0%, rgba(168, 85, 247, 0.3), transparent 62%),
+    radial-gradient(90% 60% at 0% 100%, rgba(255, 61, 242, 0.14), transparent 60%),
+    linear-gradient(180deg, #120d22 0%, #0b0915 100%);
+  box-shadow: 0 30px 60px -30px rgba(109, 40, 217, 0.55);
+}
+
+/* The stage the portrait stands on: a square that the ring fills. */
+.pl-card .pl-stage {
+  position: relative;
+  width: min(15rem, 68vw);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+/* The ring is a conic gradient with its middle masked out. */
+.pl-card .pl-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 200deg, var(--pl-pink), var(--pl-violet) 28%, var(--pl-deep) 52%, var(--pl-pink) 78%, #ff8af7 90%, var(--pl-pink));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+}
+/* The same ring again, wider and blurred: the light it throws. */
+.pl-card .pl-ring--glow {
+  inset: -6px;
+  filter: blur(14px);
+  opacity: 0.85;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 20px), #000 calc(100% - 12px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 20px), #000 calc(100% - 12px));
+  animation: pl-turn 18s linear infinite;
+}
+/* A few points of light around the ring. Decoration, so it is a background. */
+.pl-card .pl-sparks {
+  position: absolute;
+  inset: -14%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 30%, rgba(255, 255, 255, 0.9) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 88% 22%, rgba(255, 138, 247, 0.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 94% 64%, rgba(255, 255, 255, 0.7) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 6% 72%, rgba(196, 148, 255, 0.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 4%, rgba(255, 255, 255, 0.6) 0 1px, transparent 2px),
+    radial-gradient(circle at 30% 96%, rgba(255, 138, 247, 0.7) 0 1.5px, transparent 2.5px);
+  animation: pl-twinkle 4s ease-in-out infinite alternate;
+}
+
+/* The portrait sits inside the ring, clear of it. */
+.pl-card .pl-portrait {
+  position: absolute;
+  inset: 13px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, rgba(168, 85, 247, 0.35), rgba(13, 10, 26, 0.9) 72%);
+}
+.pl-card .pl-portrait img {
+  width: 100%;
+  height: 100%;
+  /* A headshot is head and shoulders: keep the head, let the shoulders crop. */
+  object-fit: cover;
+  object-position: 50% 12%;
+}
+
+@keyframes pl-turn {
+  to { transform: rotate(360deg); }
+}
+@keyframes pl-twinkle {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pl-card .pl-ring--glow,
+  .pl-card .pl-sparks {
+    animation: none;
+  }
+}
