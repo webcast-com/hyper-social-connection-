@@ -904,6 +904,18 @@ Tests: `sportsrc.test.ts` (parsing and rules), `sportsrc-feed.test.ts` (key,
 caching, allowance, failures), `stream-dashboard.test.ts` (the screen mounted in
 jsdom, including the frame's attributes).
 
+### Highlights that play in the rail
+
+"Latest Highlights" on `/sports/live` (`src/components/StreamHighlightClips.tsx`) plays each clip in its own row instead of linking to the clip's page.
+
+- The row is the size it was: an 84×54 picture and the title. The picture is the player. Pressing the row plays, pressing again pauses; a 3 px bar under the picture shows progress.
+- Each playable row has a 32 px full-screen button; the browser's own controls are shown only in full screen.
+- One clip at a time. A clip stops when the match player above is started.
+- Nothing is fetched before a press (`preload="none"`, no `autoplay`). The file is the clip's stored ESPN `mp4`, https only.
+- A clip with no file, or whose file will not play for this reader (ESPN restricts renditions by region), is the link to `/sports/highlights/<id>` that every row used to be.
+- "See All" still opens `/sports/highlights`.
+- Tests: `tests/sports/stream-highlight-clips.test.ts` (6). Browser check with stand-in clips at 390, 768 and 1440 px: list 258 px tall before, during and after play; player 84×54; full screen fills the window; the page address never changes.
+
 ## Sponsored banners
 
 Two paid betting banners, listed in `src/lib/sponsor-banners.ts` (the link and

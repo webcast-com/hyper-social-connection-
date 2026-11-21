@@ -58,6 +58,8 @@ export default async function SportsLivePage({ searchParams }: { searchParams: P
     thumbnail: clip.thumbnail,
     duration: clockDuration(clip.duration),
     href: clipHref(clip),
+    // Played in the rail itself; a clip with no progressive file stays a link.
+    mp4: clip.mp4,
   }));
 
   // The streamed fixtures as schema.org broadcasts, from the same board the

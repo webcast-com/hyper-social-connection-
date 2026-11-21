@@ -294,6 +294,27 @@ body:has(.sx-shell) .app-main {
 .sx-clips__title { font-size: 13px; color: var(--sx-text); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; }
 .sx-shell .sx-clips__link:hover .sx-clips__title { color: var(--sx-accent); }
 .sx-thumb--empty { display: block; background: linear-gradient(135deg, #2a2a2a, #1c1c1c); }
+/* A clip that plays in its row: the same picture and title, the picture is the player. */
+.sx-clips__item { position: relative; display: flex; align-items: center; gap: 12px; }
+.sx-clips__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+.sx-clips__video:fullscreen { object-fit: contain; }
+.sx-clips__item .sx-clips__img { position: relative; }
+.sx-clips__item .sx-clips__play, .sx-clips__item .sx-clips__time, .sx-clips__bar { pointer-events: none; }
+.sx-clips__toggle { flex: 1 1 auto; min-width: 0; text-align: left; }
+/* The button's hit area is the whole row, picture included. */
+.sx-clips__toggle::after { content: ""; position: absolute; inset: 0; border-radius: 8px; }
+.sx-shell .sx-clips__toggle:focus-visible { outline: none; }
+.sx-shell .sx-clips__toggle:focus-visible::after { outline: 2px solid var(--sx-accent); outline-offset: 3px; }
+.sx-shell .sx-clips__item:hover .sx-clips__title, .sx-shell .sx-clips__item.is-active .sx-clips__title { color: var(--sx-accent); }
+.sx-clips__full { position: relative; z-index: 1; flex: none; }
+.sx-shell .sx-clips__full svg { width: 15px; height: 15px; }
+/* While it plays the picture is left clear; the pause mark shows on hover or focus. */
+.sx-clips__item.is-playing .sx-clips__play { opacity: 0; transition: opacity 0.15s ease; }
+.sx-clips__item.is-playing:has(.sx-clips__toggle:focus-visible) .sx-clips__play { opacity: 1; }
+/* Only where there is a pointer to hover with: on a touch screen a tap would leave the mark over the picture. */
+@media (hover: hover) { .sx-clips__item.is-playing:hover .sx-clips__play { opacity: 1; } }
+.sx-clips__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.25); }
+.sx-clips__bar span { display: block; height: 100%; background: var(--sx-accent); }
 
 /* ---- tablets: the rail moves beside the centre ------------------------- */
 /* ---- from 640px: one line per match, as in the design ------------------- */
