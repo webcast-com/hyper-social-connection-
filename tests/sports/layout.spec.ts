@@ -144,8 +144,11 @@ test('mobile competitions start within the first screen instead of below all the
   await expect(page.getByRole('button', { name: 'Refresh scores', exact: true })).toBeEnabled();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
+  // The page opens with the ScoreHub head and hero, so the measure is what lies
+  // between the hero and the first fixture: the filters, collapsed on a phone.
   const firstCard = await page.getByRole('article').first().boundingBox();
-  expect(firstCard!.y).toBeLessThan(700);
+  const hero = (await page.getByRole('region', { name: 'ScoreHub', exact: true }).boundingBox())!;
+  expect(firstCard!.y - (hero.y + hero.height)).toBeLessThan(450);
   const filters = page.getByRole('group', { name: 'Filter by sport' });
   expect((await filters.boundingBox())!.height).toBeLessThan(65);
 });
@@ -288,13 +291,30 @@ for (const width of [320, 768, 1280]) {
     await expect(featured).toHaveCount(1);
     const want = await cardLook(featured);
     const got = await cardLook(card);
-    // List layout: one card a row, as wide as the featured match less the
-    // competition's own padding, so the two step up in size together.
-    expect(got.frame).toEqual(want.frame);
+    // Both wear one face, and a face's sizes follow the card's own width (they
+    // step up at the `@xl` container width, 36rem). On a phone the featured
+    // match, in the hero, and the card below are the same width and so look
+    // exactly alike. From 768px the hero puts the featured match in a column
+    // beside the headline: it is then the narrower of the two and is drawn at
+    // the smaller step, the way a card in a two-column grid is.
+    const step = (look: { width: number }) => look.width >= 576;
     expect(got.pill).toEqual(want.pill);
-    expect(got.score).toEqual(want.score);
-    expect(got.crest).toEqual(want.crest);
-    expect(got.name).toEqual(want.name);
+    if (step(got) === step(want)) {
+      expect(got.frame).toEqual(want.frame);
+      expect(got.score).toEqual(want.score);
+      expect(got.crest).toEqual(want.crest);
+      expect(got.name).toEqual(want.name);
+    } else {
+      expect(step(want)).toBe(false);
+      // Everything that does not step is still identical: the frame's border,
+      // radius, tint and shadow, and the weight, face and colour of the text.
+      const unstepped = (frame: string[]) => [...frame.slice(0, 4), frame[6]];
+      expect(unstepped(got.frame)).toEqual(unstepped(want.frame));
+      expect(got.score.slice(1)).toEqual(want.score.slice(1));
+      expect(got.name.slice(1)).toEqual(want.name.slice(1));
+      expect(parseFloat(want.score[0])).toBeLessThanOrEqual(parseFloat(got.score[0]));
+      expect(want.crest[0]).toBeLessThanOrEqual(got.crest[0]);
+    }
     await expect(card.locator('span.rounded-full.uppercase')).toHaveText('Live');
     await expect(featured.locator('span.rounded-full.uppercase')).toHaveText('Featured');
     // The whole card is the link's target, the way the featured match is.
@@ -336,6 +356,9 @@ for (const width of [320, 768, 1280]) {
     // The site ships dark: the two must match there as well. The frame's
     // colours are transitioned, so let them settle before reading them.
     await page.evaluate(() => document.documentElement.classList.add('dark'));
+    // The pointer is still where the layout button was, and the scroll above can
+    // leave it resting on a card: a hovered frame has a different border.
+    await page.mouse.move(0, 0);
     await page.waitForTimeout(500);
     const darkWant = await cardLook(featured);
     const darkGot = await cardLook(card);

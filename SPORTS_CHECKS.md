@@ -964,6 +964,51 @@ real one is a skyscraper, raise `maxHeight` or move it to a sidebar.
 
 Not verified: the real image, for the same reason as the videos.
 
+## The sports page's head and hero (from ScoreHub)
+
+`/sports` opens with the head and hero of the ScoreHub layout
+(`scorehub/index.htm`): the brand bar with its section links, the strip of
+sports, and the hero with the headline "Every Score. Every Moment.", two
+buttons, four figures and the featured match on the right. It is one component,
+`src/components/SportsScoreHero.tsx`, rendered by `SportsBoard.tsx` on the main
+page only; a league page keeps its own title.
+
+The layout is ScoreHub's; the content is this page's. The original is a static
+mock-up, and none of its made-up content came across:
+
+| In ScoreHub's mock-up | On `/sports` |
+| --- | --- |
+| Home, Live Scores, Fixtures, Leagues, News, Teams, Stats, More (all `#` links) | Scores, Live Streams, Highlights, Predictions, ScoreHub dashboard, Basketball & NFL dashboard: pages that exist. These replace the old row of buttons and the amber ScoreHub note |
+| Search box, theme toggle, bell, Login | Left out: the board has its search, the site is dark-only, the site header has the account controls. The feed badge ("Live feeds" and so on) and "Refresh scores" sit there instead |
+| Strip of twelve sports | The board's own sport filter (same buttons, same names), moved up into the strip. There is one filter, not two |
+| "54 Matches Live Now" | Counted from fixtures ESPN reports as live; "No matches live right now" when ESPN answered and none are; "Live scores unavailable right now" on a sample board or when every feed failed |
+| 54 live matches, 12 sports, 98 leagues, 2.4M users | Live matches and loaded matches counted from ESPN's fixtures (a dash when not known, never a zero); sports and leagues are the sizes of the board's catalog. There is no user count, so that tile is "Matches" |
+| Arsenal 2 - 1 Chelsea, with scorers and "Watch Live" | The board's own featured match (`SportsFeaturedMatch`), moved from above the competitions into the hero. With nothing in play there is no card |
+| Carousel arrows and dots | Left out: there is one featured match |
+| Stadium photograph hot-linked from Unsplash | `public/sports/hero-scores.webp` (32 KB), generated for this page and served by this site |
+
+The two hero buttons set the board's status filter (Live, Upcoming) and scroll
+to the scores. The rules for the figures are in `src/lib/sports-hero.ts`.
+
+The page's `<h1>` is now "Every Score. Every Moment." instead of "Sports". The
+title, description and structured data in the document head are unchanged.
+
+**On a phone the first fixture starts lower than before** (about 970 px down at
+390 px wide with nothing live, against roughly 730 px): the hero is taller than
+the title and buttons it replaced. The paragraph is shortened and the figures
+kept to one row there to limit it.
+
+Checked in a browser at 320, 390, 768, 1024 and 1440 px with stand-in ESPN
+answers: matches in play, nothing in play, and every feed failing. No sideways
+scroll, no control under 44 px, no console errors. Tests:
+`tests/sports/sports-hero.test.ts`. The Playwright board spec
+(`npm run test:sports-layout`, `layout.spec.ts`) was updated in two places: the
+phone test now measures from the bottom of the hero, and the featured-card
+comparison allows for the card being narrower than a list card from 768 px (the
+same face at the smaller container step). Two tests in that spec fail on `main`
+as well and are unrelated (they expect basketball to be absent from the board),
+and `home-layout.spec.ts` does not build there (`node:crypto`).
+
 ## The player page as a card
 
 `/sports/athletes/<competition>/<id>` is laid out as a player card, after a

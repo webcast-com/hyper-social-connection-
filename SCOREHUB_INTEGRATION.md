@@ -11,3 +11,7 @@ ScoreHub is served at `/scorehub` (redirecting to `/scorehub/index.htm`) and is 
 - Responses retain `X-Robots-Tag: noindex, nofollow`. Live ESPN access depends on the hosting environment and ESPN availability.
 
 Run `npm run test:scorehub` to test the unchanged layout assets, routing, and mocked feed interactions. Do not overwrite the customized script when refreshing the original snapshot.
+
+## The head and hero on `/sports`
+
+The Sports page (`/sports`) opens with this layout's head and hero, rebuilt as a React component (`src/components/SportsScoreHero.tsx`) and filled with that page's own data. The files in `scorehub/` and `public/scorehub/` are not changed and are not loaded by `/sports`. See "The sports page's head and hero" in `SPORTS_CHECKS.md` for what was carried over and what was not.
