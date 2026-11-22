@@ -22,6 +22,7 @@
  * referrer (https://sportsrc.org/guides/embed-live-stream/).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import {
   Bell, Bookmark, BookmarkCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronUp, Clapperboard, Info, LayoutGrid,
@@ -29,7 +30,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SponsorBanners from '@/components/SponsorBanners';
-import StreamHighlightClips, { type StreamHighlightItem } from '@/components/StreamHighlightClips';
+import StreamHighlightClips, { playableClipFile, type StreamHighlightItem } from '@/components/StreamHighlightClips';
 import {
   STREAM_TABS, featuredStreamMatch, filterStreamMatches, isWatchable, localDayKey, orderStreamMatches, streamClock,
   streamDateLabel, streamMatchIcs, streamScore,
@@ -178,6 +179,11 @@ export default function SportsStreamDashboard({
   const [selectedId, setSelectedId] = useState<string | null>(initialMatchId);
   const [pinned, setPinned] = useState<StreamMatch | null>(null);
   const [playing, setPlaying] = useState(false);
+  /** The highlight in the large player. A match and a clip are never there together. */
+  const [clip, setClip] = useState<StreamHighlightItem | null>(null);
+  const [clipFailed, setClipFailed] = useState(false);
+  const [unplayableClips, setUnplayableClips] = useState<ReadonlySet<string>>(new Set());
+  const clipRef = useRef<HTMLVideoElement | null>(null);
   const [sourceIndex, setSourceIndex] = useState(0);
   const [infoId, setInfoId] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, DetailEntry>>({});
@@ -271,7 +277,36 @@ export default function SportsStreamDashboard({
 
   const stop = useCallback(() => { setPlaying(false); setSourceIndex(0); }, []);
 
+  const closeClip = () => { setClip(null); setClipFailed(false); };
+
+  /**
+   * A highlight from the rail, played in the large player. The player is put on
+   * the page inside the reader's own press (`flushSync`) and started from it,
+   * which is what lets a browser play it with sound.
+   */
+  const playClip = (item: StreamHighlightItem) => {
+    if (!playableClipFile(item.mp4)) return;
+    flushSync(() => { stop(); setClipFailed(false); setClip(item); });
+    const video = clipRef.current;
+    if (video) {
+      try {
+        const started = video.play() as Promise<void> | undefined;
+        // A refused start is not an error: the player's own controls are there to press.
+        started?.catch?.(() => undefined);
+      } catch { /* The `error` event reports a file that will not play. */ }
+    }
+    // The rail is below the player on a phone and a tablet.
+    if (window.matchMedia('(max-width: 1023px)').matches) playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const clipError = () => {
+    if (!clip) return;
+    setClipFailed(true);
+    setUnplayableClips((current) => new Set(current).add(clip.id));
+  };
+
   const select = (match: StreamMatch) => {
+    closeClip();
     if (match.id !== selected?.id) stop();
     setSelectedId(match.id);
     setPinned(match);
@@ -281,6 +316,7 @@ export default function SportsStreamDashboard({
 
   const play = () => {
     if (!selected || !watchable) return;
+    closeClip();
     // Pin the match, so a list refresh that reorders it cannot swap the stream.
     setSelectedId(selected.id);
     setPinned(selected);
@@ -318,6 +354,7 @@ export default function SportsStreamDashboard({
   const changeSport = (id: string) => {
     if (id === sport) return;
     stop();
+    closeClip();
     setSelectedId(null); setPinned(null); setLeague(null); setClub(null); setInfoId(null);
     setSport(id);
   };
@@ -488,9 +525,34 @@ export default function SportsStreamDashboard({
         <div className="sx-centre">
           <h1 className="sx-title">Streaming Now</h1>
 
-          <section ref={playerRef} className="sx-player" data-playing={playing ? 'true' : 'false'} aria-label="Stream player">
+          <section ref={playerRef} className="sx-player" data-playing={playing || clip ? 'true' : 'false'} aria-label="Stream player">
             <div ref={stageRef} className="sx-player__stage">
-              {playing && source ? (
+              {clip && !clipFailed ? (
+                // A highlight from the rail. No `autoplay`: it is started from the reader's press.
+                <video
+                  key={clip.id}
+                  ref={clipRef}
+                  src={playableClipFile(clip.mp4) ?? undefined}
+                  poster={clip.thumbnail ?? undefined}
+                  controls
+                  playsInline
+                  preload="auto"
+                  aria-label={clip.title}
+                  data-clip-player={clip.id}
+                  className="sx-player__frame sx-player__clip"
+                  onError={clipError}
+                />
+              ) : clip ? (
+                <>
+                  <img className="sx-player__bg" src="/sports/hero-soccer.webp" alt="" decoding="async" />
+                  <span aria-hidden="true" className="sx-player__veil" />
+                  <div className="sx-player__note" role="status">
+                    <p>This highlight could not be played here.</p>
+                    <small>Some clips are limited to certain countries by their publisher.</small>
+                    <Link href={clip.href} prefetch={false} className="sx-btn">Open the clip&apos;s page</Link>
+                  </div>
+                </>
+              ) : playing && source ? (
                 <iframe
                   key={source.embedUrl}
                   src={source.embedUrl}
@@ -561,17 +623,29 @@ export default function SportsStreamDashboard({
             </div>
 
             <div className="sx-player__bar">
-              {playing ? (
+              {clip ? (
+                <button type="button" className="sx-bar-btn" onClick={closeClip} aria-label="Close the highlight" title="Close"><Square aria-hidden="true" /></button>
+              ) : playing ? (
                 <button type="button" className="sx-bar-btn" onClick={stop} aria-label="Stop the stream" title="Stop"><Square aria-hidden="true" /></button>
               ) : (
                 <button type="button" className="sx-bar-btn" onClick={play} disabled={!watchable} aria-label="Play the stream" title={watchable ? 'Play' : 'Not available yet'}><Play aria-hidden="true" /></button>
               )}
-              {playing && selected ? (
-                <span className="sx-player__now" title={selected.title}>{selected.home.code} {streamScore(selected)} {selected.away.code} · {selectedClock}</span>
-              ) : null}
-              <span aria-hidden="true" className={`sx-player__line${selected?.status === 'live' ? ' is-live' : ''}`}><i /></span>
-              <span className={`sx-player__live${selected?.status === 'live' ? ' is-live' : ''}`}><i aria-hidden="true" />{selected?.status === 'live' ? 'Live' : 'Off air'}</span>
-              {playing && sources.length > 1 ? (
+              {clip ? (
+                // A clip is not a live broadcast: the bar names it and says what it is.
+                <>
+                  <span className="sx-player__now sx-player__now--clip" title={clip.title}>{clip.title}</span>
+                  <span className="sx-player__live"><i aria-hidden="true" />Highlight</span>
+                </>
+              ) : (
+                <>
+                  {playing && selected ? (
+                    <span className="sx-player__now" title={selected.title}>{selected.home.code} {streamScore(selected)} {selected.away.code} · {selectedClock}</span>
+                  ) : null}
+                  <span aria-hidden="true" className={`sx-player__line${selected?.status === 'live' ? ' is-live' : ''}`}><i /></span>
+                  <span className={`sx-player__live${selected?.status === 'live' ? ' is-live' : ''}`}><i aria-hidden="true" />{selected?.status === 'live' ? 'Live' : 'Off air'}</span>
+                </>
+              )}
+              {!clip && playing && sources.length > 1 ? (
                 <span className="sx-sources" role="group" aria-label="Stream source">
                   {sources.map((item, index) => (
                     <button key={item.id + item.embedUrl} type="button" aria-pressed={item === source} onClick={() => setSourceIndex(index)}
@@ -581,7 +655,7 @@ export default function SportsStreamDashboard({
                   ))}
                 </span>
               ) : null}
-              <button type="button" className="sx-bar-btn" onClick={fullscreen} disabled={!playing || !source} aria-label="Full screen" title="Full screen"><Maximize aria-hidden="true" /></button>
+              <button type="button" className="sx-bar-btn" onClick={fullscreen} disabled={clip ? clipFailed : !playing || !source} aria-label="Full screen" title="Full screen"><Maximize aria-hidden="true" /></button>
             </div>
           </section>
 
@@ -736,8 +810,8 @@ export default function SportsStreamDashboard({
             {highlights.length === 0 ? (
               <p className="sx-rail__empty">No highlights to show right now.</p>
             ) : (
-              // Each clip plays in its own row; it stops when the match player starts.
-              <StreamHighlightClips items={highlights.slice(0, RAIL_ROWS)} paused={playing} />
+              // Pressing a clip plays it in the large player above.
+              <StreamHighlightClips items={highlights.slice(0, RAIL_ROWS)} activeId={clip && !clipFailed ? clip.id : null} unplayable={unplayableClips} onPlay={playClip} />
             )}
           </section>
         </aside>

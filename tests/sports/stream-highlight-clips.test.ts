@@ -1,14 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
+import { parseStreamDetail, parseStreamMatches, parseStreamSports, type StreamBoard } from '../../src/lib/sportsrc';
+import { BARCA_ID, detailPayload, matchesPayload, sportsPayload } from './sportsrc-fixture';
 
 /**
- * "Latest Highlights" on the live-stream page: a clip plays in its own row.
+ * "Latest Highlights" on the live-stream page: pressing a clip plays it in the
+ * page's large player, where a match stream would be.
  *
  * Mounted in jsdom, which has a `<video>` element but no media engine, so
- * `play` and `pause` are stood in for and the element's own events are sent by
- * hand. What is checked is the row's behaviour around them: one clip at a time,
- * nothing fetched before a press, no navigation, and an honest fallback.
+ * `play` is stood in for and the element's own events are sent by hand. What is
+ * checked is the page's behaviour around them: the rows keep their parts, the
+ * reader stays on the page, a match and a clip are never in the player
+ * together, and a clip that will not play has an honest way out.
  */
 const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'https://hyper.co.ke/sports/live', pretendToBeVisual: true });
 const g = globalThis as any;
@@ -16,187 +20,207 @@ g.window = dom.window;
 g.self = dom.window;
 g.document = dom.window.document;
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
-for (const name of ['HTMLElement', 'Element', 'Node', 'Event', 'HTMLImageElement']) g[name] = (dom.window as any)[name];
+for (const name of ['HTMLElement', 'Element', 'Node', 'Event', 'StorageEvent', 'HTMLInputElement', 'HTMLImageElement', 'Blob']) g[name] = (dom.window as any)[name];
+g.getComputedStyle = dom.window.getComputedStyle;
+g.requestAnimationFrame = (callback: any) => setTimeout(callback, 0);
+g.cancelAnimationFrame = (id: any) => clearTimeout(id);
 g.IS_REACT_ACT_ENVIRONMENT = true;
+// A desktop: the player is beside the rail, so nothing is scrolled.
+let narrow = false;
+(dom.window as any).matchMedia = () => ({ matches: narrow, addEventListener() {}, removeEventListener() {} });
+const scrolled: string[] = [];
+(dom.window as any).Element.prototype.scrollIntoView = function scrollIntoView() { scrolled.push(this.className); };
 
-/** A stand-in media engine: records what was asked, and keeps `paused` true to it. */
-const calls: string[] = [];
+/** A stand-in media engine: records which file was started. */
+const started: string[] = [];
 let playResult: () => Promise<void> = () => Promise.resolve();
-const proto = (dom.window as any).HTMLMediaElement.prototype;
-const state = new WeakMap<object, boolean>();
-Object.defineProperty(proto, 'paused', { configurable: true, get() { return state.get(this) !== true; } });
-proto.play = function play() { calls.push(`play ${this.getAttribute('src').split('/').pop()}`); state.set(this, true); return playResult(); };
-proto.pause = function pause() { calls.push(`pause ${this.getAttribute('src').split('/').pop()}`); state.set(this, false); this.dispatchEvent(new dom.window.Event('pause')); };
-proto.requestFullscreen = function requestFullscreen() { calls.push(`fullscreen ${this.getAttribute('src').split('/').pop()}`); return Promise.resolve(); };
+(dom.window as any).HTMLMediaElement.prototype.play = function play() { started.push(this.getAttribute('src').split('/').pop()); return playResult(); };
 
-const ITEMS = [
+const CLIPS = [
   { id: 'a', title: 'Saka opens the scoring', thumbnail: 'https://a.espncdn.com/a.jpg', duration: '1:02', href: '/sports/highlights/a', mp4: 'https://media.video-cdn.espn.com/a.mp4' },
   { id: 'b', title: 'Palmer equalises', thumbnail: null, duration: '5:04', href: '/sports/highlights/b', mp4: 'https://media.video-cdn.espn.com/b.mp4' },
   { id: 'c', title: 'No file for this one', thumbnail: null, duration: null, href: '/sports/highlights/c', mp4: null },
   { id: 'd', title: 'An unsafe file', thumbnail: null, duration: null, href: '/sports/highlights/d', mp4: 'http://insecure.test/d.mp4' },
 ];
 
-async function mount(props: Record<string, unknown> = {}) {
+// Fixture times are relative to a fixed instant; the component reads the clock.
+const RealDate = Date;
+const FIXED = RealDate.parse('2026-11-19T18:00:00Z');
+g.Date = class extends RealDate {
+  constructor(...args: any[]) { if (args.length) super(...(args as [any])); else super(FIXED); }
+  static now() { return FIXED; }
+};
+
+const liveBoard = (): StreamBoard => ({
+  state: 'ok', sport: 'football', date: '', fetchedAt: new RealDate(FIXED).toISOString(),
+  sports: parseStreamSports(sportsPayload()), ...parseStreamMatches(matchesPayload()),
+});
+
+async function mount() {
   const React = await import('react');
   const { createRoot } = await import('react-dom/client');
-  const Clips = (await import('../../src/components/StreamHighlightClips')).default;
+  const Dashboard = (await import('../../src/components/SportsStreamDashboard')).default;
   const act = (React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> }).act;
-  calls.length = 0;
+  dom.window.localStorage.clear();
+  started.length = 0; scrolled.length = 0; narrow = false;
   playResult = () => Promise.resolve();
+  const board = liveBoard();
+  g.fetch = async (input: string) => {
+    const url = new URL(String(input), 'https://hyper.co.ke');
+    if (url.pathname === '/api/sports/streams/detail') return new Response(JSON.stringify({ state: 'ok', detail: parseStreamDetail(detailPayload(url.searchParams.get('id') ?? '')) }), { status: 200 });
+    return new Response(JSON.stringify(board), { status: 200 });
+  };
   const container = dom.window.document.getElementById('root')!;
   container.innerHTML = '';
   const root = createRoot(container);
-  const render = (next: Record<string, unknown>) => act(async () => { root.render(React.createElement(Clips as never, { items: ITEMS, ...next } as never)); });
-  await render(props);
-  const rows = () => [...container.querySelectorAll('.sx-clips > li')] as any[];
+  await act(async () => { root.render(React.createElement(Dashboard as never, { initial: board, news: [], highlights: CLIPS, viewer: null } as never)); });
+  const $ = (selector: string) => container.querySelector(selector) as any;
+  const $$ = (selector: string) => [...container.querySelectorAll(selector)] as any[];
   const click = async (target: any) => {
     assert.ok(target, 'the control to click exists');
-    await act(async () => { target.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); await new Promise((resolve) => setTimeout(resolve, 0)); });
+    await act(async () => { target.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   };
-  /** One of the video element's own events, the way the browser would send it. */
-  const send = async (row: any, type: string, set: Record<string, number> = {}) => {
-    const video = row.querySelector('video');
-    for (const [key, value] of Object.entries(set)) Object.defineProperty(video, key, { configurable: true, writable: true, value });
-    await act(async () => { video.dispatchEvent(new dom.window.Event(type)); });
-  };
-  return { container, rows, click, send, render, unmount: async () => { await act(() => root.unmount()); } };
+  const send = async (target: any, type: string) => { await act(async () => { target.dispatchEvent(new dom.window.Event(type)); }); };
+  const rows = () => $$('.sx-clips > li');
+  return { container, $, $$, click, send, rows, unmount: async () => { await act(() => root.unmount()); } };
 }
 
-test('a clip with a file is a play button in a row of the same parts; one without is still the link', async () => {
+test('a clip with a file is a button of the link\'s own shape; one without is still the link', async () => {
   const view = await mount();
   try {
     const [a, b, c, d] = view.rows();
-    // Playable rows: a player behind the picture, one labelled button, a full-screen button. No link.
     for (const row of [a, b]) {
+      const button = row.querySelector('button');
+      assert.ok(button);
       assert.equal(row.querySelector('a'), null);
-      assert.equal(row.querySelectorAll('.sx-clips__thumb').length, 1);
-      assert.equal(row.querySelectorAll('.sx-clips__title').length, 1);
-      assert.equal(row.querySelectorAll('button').length, 2);
+      // The same class, so the same box, as the link it replaces; the same two parts inside.
+      assert.match(button.className, /(^| )sx-clips__link( |$)/);
+      assert.deepEqual([...button.children].map((child: any) => child.className), ['sx-clips__thumb', 'sx-clips__title']);
+      // The rail holds no player of its own.
+      assert.equal(row.querySelector('video'), null);
     }
-    const video = a.querySelector('video');
-    assert.equal(video.getAttribute('src'), 'https://media.video-cdn.espn.com/a.mp4');
-    // Nothing is fetched until the reader presses play, and the picture is never a tab stop or a control strip.
-    assert.equal(video.getAttribute('preload'), 'none');
-    assert.equal(video.hasAttribute('controls'), false);
-    assert.equal(video.hasAttribute('autoplay'), false);
-    assert.equal(video.hasAttribute('playsinline'), true);
-    assert.equal(video.tabIndex, -1);
-    assert.equal(a.querySelector('.sx-clips__toggle').getAttribute('aria-label'), 'Play highlight: Saka opens the scoring');
-    assert.equal(a.querySelector('.sx-clips__toggle').getAttribute('aria-pressed'), 'false');
+    assert.equal(a.querySelector('button').getAttribute('aria-label'), 'Play in the player: Saka opens the scoring');
     assert.equal(a.querySelector('.sx-clips__time').textContent, '1:02');
-    assert.equal(a.querySelector('img.sx-clips__img').getAttribute('src'), 'https://a.espncdn.com/a.jpg');
-    assert.equal(a.querySelector('.sx-clips__full').getAttribute('aria-label'), 'Play full screen: Saka opens the scoring');
+    assert.equal(a.querySelector('img').getAttribute('src'), 'https://a.espncdn.com/a.jpg');
     // No file, or a file that is not https: the link to the clip's own page, as before.
     for (const [row, href] of [[c, '/sports/highlights/c'], [d, '/sports/highlights/d']] as const) {
-      assert.equal(row.querySelector('video'), null);
       assert.equal(row.querySelector('button'), null);
       assert.equal(row.querySelector('a.sx-clips__link').getAttribute('href'), href);
+      assert.deepEqual([...row.querySelector('a').children].map((child: any) => child.className), ['sx-clips__thumb', 'sx-clips__title']);
     }
-    assert.doesNotMatch(view.container.innerHTML, /insecure\.test/);
-    assert.deepEqual(calls, []);
+    // Nothing is loaded or played before a press.
+    assert.equal(view.$('video'), null);
+    assert.doesNotMatch(view.container.innerHTML, /insecure\.test|\.mp4/);
+    assert.deepEqual(started, []);
   } finally { await view.unmount(); }
 });
 
-test('pressing a row plays the clip in it, pressing again pauses, and starting another stops the first', async () => {
+test('pressing a clip plays it in the large player, on this page, and marks its row', async () => {
   const view = await mount();
   try {
-    await view.click(view.rows()[0].querySelector('.sx-clips__toggle'));
-    assert.deepEqual(calls, ['play a.mp4']);
+    await view.click(view.rows()[0].querySelector('button'));
+    const video = view.$('.sx-player__stage video');
+    assert.ok(video, 'the clip is in the stream player\'s stage');
+    assert.equal(video.getAttribute('src'), 'https://media.video-cdn.espn.com/a.mp4');
+    assert.equal(video.getAttribute('poster'), 'https://a.espncdn.com/a.jpg');
+    assert.equal(video.hasAttribute('controls'), true);
+    assert.equal(video.hasAttribute('playsinline'), true);
+    assert.equal(video.getAttribute('aria-label'), 'Saka opens the scoring');
+    // Started from the press itself, not by an `autoplay` attribute.
+    assert.equal(video.hasAttribute('autoplay'), false);
+    assert.deepEqual(started, ['a.mp4']);
     assert.equal(dom.window.location.href, 'https://hyper.co.ke/sports/live', 'the reader stays on the page');
-    await view.send(view.rows()[0], 'play');
-    let a = view.rows()[0];
-    assert.match(a.className, /is-active/);
-    assert.match(a.className, /is-playing/);
-    assert.equal(a.querySelector('.sx-clips__toggle').getAttribute('aria-pressed'), 'true');
-    assert.equal(a.querySelector('.sx-clips__toggle').getAttribute('aria-label'), 'Pause highlight: Saka opens the scoring');
-    // The picture gives way to the player, in the same box; the length gives way to a progress bar.
-    assert.equal(a.querySelector('img'), null);
-    assert.equal(a.querySelector('.sx-clips__time'), null);
-    assert.equal(a.querySelectorAll('.sx-clips__thumb').length, 1);
-    await view.send(a, 'timeupdate', { currentTime: 15.5, duration: 62 });
-    assert.equal(a.querySelector('.sx-clips__bar span').style.width, '25%');
+    assert.equal(view.$('.sx-player__stage iframe'), null);
+    assert.equal(view.$('.sx-player').getAttribute('data-playing'), 'true');
+    // The bar names the clip and calls it what it is, not a live broadcast.
+    assert.equal(view.$('.sx-player__now').textContent, 'Saka opens the scoring');
+    assert.equal(view.$('.sx-player__live').textContent, 'Highlight');
+    assert.equal(view.$('.sx-player__bar button[aria-label="Full screen"]').disabled, false);
+    // Its row is marked; the others are not.
+    const button = view.rows()[0].querySelector('button');
+    assert.match(button.className, /is-active/);
+    assert.equal(button.getAttribute('aria-current'), 'true');
+    assert.equal(button.getAttribute('aria-label'), 'Now in the player: Saka opens the scoring');
+    assert.doesNotMatch(view.rows()[1].querySelector('button').className, /is-active/);
+    assert.deepEqual(scrolled, [], 'on a desktop the player is already in view');
 
-    // The second clip: the first is paused before the second starts.
-    await view.click(view.rows()[1].querySelector('.sx-clips__toggle'));
-    assert.deepEqual(calls, ['play a.mp4', 'pause a.mp4', 'play b.mp4']);
-    await view.send(view.rows()[1], 'play');
-    assert.doesNotMatch(view.rows()[0].className, /is-active|is-playing/);
-    assert.ok(view.rows()[0].querySelector('img'), 'the first row shows its picture again');
-    assert.match(view.rows()[1].className, /is-playing/);
+    // Another clip replaces it: one player, one clip.
+    await view.click(view.rows()[1].querySelector('button'));
+    assert.equal(view.$$('.sx-player__stage video').length, 1);
+    assert.equal(view.$('.sx-player__stage video').getAttribute('src'), 'https://media.video-cdn.espn.com/b.mp4');
+    assert.equal(view.$('.sx-player__stage video').hasAttribute('poster'), false);
+    assert.deepEqual(started, ['a.mp4', 'b.mp4']);
+    assert.doesNotMatch(view.rows()[0].querySelector('button').className, /is-active/);
+    assert.match(view.rows()[1].querySelector('button').className, /is-active/);
 
-    // Pressing the playing row pauses it; it stays the active row, paused.
-    await view.click(view.rows()[1].querySelector('.sx-clips__toggle'));
-    assert.equal(calls.at(-1), 'pause b.mp4');
-    assert.match(view.rows()[1].className, /is-active/);
-    assert.doesNotMatch(view.rows()[1].className, /is-playing/);
-    assert.equal(view.rows()[1].querySelector('.sx-clips__toggle').getAttribute('aria-pressed'), 'false');
-
-    // At the end the row goes back to its picture.
-    await view.click(view.rows()[1].querySelector('.sx-clips__toggle'));
-    await view.send(view.rows()[1], 'play');
-    await view.send(view.rows()[1], 'ended');
-    assert.doesNotMatch(view.rows()[1].className, /is-active|is-playing/);
-    assert.equal(view.rows()[1].querySelector('.sx-clips__time').textContent, '5:04');
+    // "Close" puts the match player back.
+    await view.click(view.$('.sx-player__bar button[aria-label="Close the highlight"]'));
+    assert.equal(view.$('.sx-player__stage video'), null);
+    assert.equal(view.$('.sx-player').getAttribute('data-playing'), 'false');
+    assert.ok(view.$('.sx-player__bar button[aria-label="Play the stream"]'));
+    assert.equal(view.$$('.sx-clips__button.is-active').length, 0);
   } finally { await view.unmount(); }
 });
 
-test('the full-screen button starts the clip and asks for full screen; the row follows the video\'s own events', async () => {
+test('a match and a clip are never in the player together', async () => {
   const view = await mount();
   try {
-    await view.click(view.rows()[0].querySelector('.sx-clips__full'));
-    assert.deepEqual(calls, ['play a.mp4', 'fullscreen a.mp4']);
-    await view.send(view.rows()[0], 'play');
-    // The browser's controls are on only while the clip fills the screen.
-    const video = view.rows()[0].querySelector('video');
-    Object.defineProperty(dom.window.document, 'fullscreenElement', { configurable: true, get: () => video });
-    const React = await import('react');
-    const act = (React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> }).act;
-    await act(async () => { dom.window.document.dispatchEvent(new dom.window.Event('fullscreenchange')); });
-    assert.equal(view.rows()[0].querySelector('video').hasAttribute('controls'), true);
-    // Paused from the full-screen controls: the row says so too.
-    await view.send(view.rows()[0], 'pause');
-    assert.equal(view.rows()[0].querySelector('.sx-clips__toggle').getAttribute('aria-pressed'), 'false');
-    Object.defineProperty(dom.window.document, 'fullscreenElement', { configurable: true, get: () => null });
-    await act(async () => { dom.window.document.dispatchEvent(new dom.window.Event('fullscreenchange')); });
-    assert.equal(view.rows()[0].querySelector('video').hasAttribute('controls'), false);
+    // A stream is playing…
+    await view.click(view.$('.sx-player__big'));
+    assert.ok(view.$('.sx-player__stage iframe'));
+    // …a clip takes the player: the stream's frame is removed, not left running behind it.
+    await view.click(view.rows()[0].querySelector('button'));
+    assert.equal(view.$('.sx-player__stage iframe'), null);
+    assert.ok(view.$('.sx-player__stage video'));
+    assert.equal(view.$('.sx-sources'), null);
+    // Choosing a match closes the clip.
+    await view.click(view.$(`[data-stream-match="${BARCA_ID}"] .sx-row__main`));
+    assert.equal(view.$('.sx-player__stage video'), null);
+    assert.equal(view.$$('.sx-clips__button.is-active').length, 0);
+    assert.ok(view.$('.sx-player__big'), 'the match is ready to be played');
   } finally { await view.unmount(); }
 });
 
-test('a clip that will not play here becomes the link to its own page; the others are untouched', async () => {
+test('on a phone the player is scrolled into view, because the rail is below it', async () => {
   const view = await mount();
   try {
-    await view.click(view.rows()[0].querySelector('.sx-clips__toggle'));
-    await view.send(view.rows()[0], 'error');
-    const a = view.rows()[0];
-    assert.equal(a.querySelector('video'), null);
-    assert.equal(a.querySelector('button'), null);
-    assert.equal(a.querySelector('a.sx-clips__link').getAttribute('href'), '/sports/highlights/a');
-    assert.match(a.querySelector('a').getAttribute('title'), /could not be played here/);
-    assert.ok(view.rows()[1].querySelector('video'));
-
-    // A file the browser cannot decode rejects `play()` without an `error` event in some browsers.
-    playResult = () => Promise.reject(Object.assign(new Error('no supported source'), { name: 'NotSupportedError' }));
-    await view.click(view.rows()[1].querySelector('.sx-clips__toggle'));
-    assert.equal(view.rows()[1].querySelector('video'), null);
-    assert.equal(view.rows()[1].querySelector('a.sx-clips__link').getAttribute('href'), '/sports/highlights/b');
+    narrow = true;
+    await view.click(view.rows()[0].querySelector('button'));
+    assert.deepEqual(scrolled, ['sx-player']);
   } finally { await view.unmount(); }
-  // A refused autoplay is not a broken file: the row stays a player.
-  const again = await mount();
+});
+
+test('a clip that will not play says so in the player, offers its page, and its row becomes the link', async () => {
+  const view = await mount();
+  try {
+    await view.click(view.rows()[0].querySelector('button'));
+    await view.send(view.$('.sx-player__stage video'), 'error');
+    assert.equal(view.$('.sx-player__stage video'), null);
+    const note = view.$('.sx-player__note');
+    assert.match(note.textContent, /could not be played here/);
+    assert.equal(note.querySelector('a').getAttribute('href'), '/sports/highlights/a');
+    assert.equal(view.$('.sx-player__bar button[aria-label="Full screen"]').disabled, true);
+    const row = view.rows()[0];
+    assert.equal(row.querySelector('button'), null);
+    assert.equal(row.querySelector('a.sx-clips__link').getAttribute('href'), '/sports/highlights/a');
+    assert.match(row.querySelector('a').getAttribute('title'), /could not be played here/);
+    // The other clips still play.
+    await view.click(view.rows()[1].querySelector('button'));
+    assert.equal(view.$('.sx-player__stage video').getAttribute('src'), 'https://media.video-cdn.espn.com/b.mp4');
+    assert.equal(view.rows()[0].querySelector('button'), null, 'the failed clip stays a link');
+  } finally { await view.unmount(); }
+});
+
+test('a refused start is not a broken clip: the player stays, with its own controls to press', async () => {
+  const view = await mount();
   try {
     playResult = () => Promise.reject(Object.assign(new Error('not allowed'), { name: 'NotAllowedError' }));
-    await again.click(again.rows()[0].querySelector('.sx-clips__toggle'));
-    assert.ok(again.rows()[0].querySelector('video'));
-  } finally { await again.unmount(); }
-});
-
-test('a clip stops when the page\'s main player starts', async () => {
-  const view = await mount();
-  try {
-    await view.click(view.rows()[0].querySelector('.sx-clips__toggle'));
-    await view.send(view.rows()[0], 'play');
-    await view.render({ paused: true });
-    assert.equal(calls.at(-1), 'pause a.mp4');
-    assert.doesNotMatch(view.rows()[0].className, /is-playing/);
+    await view.click(view.rows()[0].querySelector('button'));
+    const video = view.$('.sx-player__stage video');
+    assert.ok(video);
+    assert.equal(video.hasAttribute('controls'), true);
+    assert.ok(view.rows()[0].querySelector('button'));
   } finally { await view.unmount(); }
 });
 
