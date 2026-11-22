@@ -303,7 +303,7 @@ export default function Post({
 
       {/* Post Attached Media */}
       {post.imageUrl && (
-        <div className="relative group cursor-pointer bg-gray-900/5 dark:bg-black/40 overflow-hidden" onClick={() => setShowLightbox(true)}>
+        <div className="relative group cursor-pointer bg-gray-900/5 dark:bg-black/40 overflow-hidden post-card__media" onClick={() => setShowLightbox(true)}>
           <img
             src={post.imageUrl}
             alt="Post media"
@@ -318,7 +318,7 @@ export default function Post({
       )}
 
       {post.videoUrl && (
-        <div className="bg-black w-full min-w-0 overflow-hidden">
+        <div className="bg-black w-full min-w-0 overflow-hidden post-card__media">
           <video
             src={post.videoUrl}
             controls
@@ -406,7 +406,7 @@ export default function Post({
       </div>
 
       {/* Action Buttons Row — labels drop to icon-only on very narrow phones */}
-      <div className="px-2 py-1 flex items-center justify-between text-sm">
+      <div className="px-2 py-1 flex items-center justify-between text-sm post-card__actions">
         <form action={toggleLike.bind(null, post.id)} className="flex-1">
           <button
             type="submit"

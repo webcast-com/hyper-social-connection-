@@ -648,3 +648,173 @@ html[data-launch] .launch-screen {
   background:
     linear-gradient(180deg, rgba(8, 13, 24, 0.5) 0%, rgba(8, 13, 24, 0.72) 38%, rgba(8, 13, 24, 0.9) 100%);
 }
+
+/* ── Homepage: violet theme ─────────────────────────────────────────────
+   The homepage in a plum-and-violet palette with rounder, glassier cards.
+   Colour and card finish only: no element is added, moved or resized apart
+   from the media and action strip inside a feed card.
+
+   Scoped with `body:has(.home-violet)` — the class sits on the homepage's
+   root — so the top bar, the bottom bar and any dialog the page opens (they
+   render outside the page's own element) take the palette too, and every
+   other route keeps the blue one. A browser without `:has()` shows the
+   homepage in the blue palette, as before.
+
+   Two layers, because the app's dark palette is written two ways:
+   1. Tailwind's colour variables — every `blue-*`, `indigo-*`, `gray-*` and
+      `slate-*` utility reads these, so remapping them recolours the page
+      without touching a component.
+   2. The fixed dark rules earlier in this file (`.dark .bg-white`, the glass
+      surfaces, the page background), restated here in the same palette. */
+body:has(.home-violet) {
+  /* Accent: blue → violet. */
+  --color-blue-50: #f5f0ff;
+  --color-blue-100: #ebe1ff;
+  --color-blue-200: #dcc9ff;
+  --color-blue-300: #cbaeff;
+  --color-blue-400: #c39bff;
+  --color-blue-500: #a855f7;
+  --color-blue-600: #9333ea;
+  --color-blue-700: #7e22ce;
+  --color-blue-800: #6b21a8;
+  --color-blue-900: #4c1d95;
+  --color-blue-950: #2e1065;
+  /* Second accent (gradient ends): indigo → magenta. */
+  --color-indigo-300: #f0abfc;
+  --color-indigo-400: #e879f9;
+  --color-indigo-500: #d946ef;
+  --color-indigo-600: #c026d3;
+  --color-indigo-700: #a21caf;
+  --color-indigo-900: #701a75;
+  --color-indigo-950: #4a044e;
+  /* Neutrals: slate greys → plum greys. */
+  --color-gray-50: #f6f1fb;
+  --color-gray-100: #ede4f7;
+  --color-gray-200: #dccbee;
+  --color-gray-300: #c6b3e0;
+  --color-gray-400: #b3a1cc;
+  --color-gray-500: #9a86b8;
+  --color-gray-600: #5f4a80;
+  --color-gray-700: #452f66;
+  --color-gray-800: #2a1845;
+  --color-gray-900: #1a0d2e;
+  --color-gray-950: #11071f;
+  --color-slate-200: #dccbee;
+  --color-slate-300: #c6b3e0;
+  --color-slate-400: #b3a1cc;
+  --color-slate-500: #9a86b8;
+  --color-slate-600: #5f4a80;
+  --color-slate-700: #452f66;
+  --color-slate-800: #2b1947;
+  --color-slate-900: #1b0e30;
+  --color-slate-950: #120821;
+
+  /* Fixed dark fills, text and borders, in the plum greys. */
+  & .bg-white { background-color: #261540; }
+  & .bg-gray-50 { background-color: #2f1b4d; }
+  & .bg-gray-100 { background-color: #3a2360; }
+  & .bg-gray-200 { background-color: #4a2f76; }
+  & .hover\:bg-gray-50:hover { background-color: #352057; }
+  & .hover\:bg-gray-100:hover { background-color: #432a6c; }
+  & .hover\:bg-gray-200:hover { background-color: #563886; }
+  & .text-gray-400,
+  & .text-gray-500 { color: #b3a1cc; }
+  & .text-gray-600,
+  & .text-gray-700 { color: #d6c9e8; }
+  & .text-gray-800 { color: #e9e0f5; }
+  & .text-gray-900 { color: #f6f1fb; }
+  & .border-gray-100,
+  & .border-gray-200 { border-color: #3d2760; }
+  & .border-gray-300 { border-color: #54377f; }
+  & .bg-blue-50 { background-color: #2e1065; }
+  & .hover\:bg-blue-50:hover { background-color: #4c1d95; }
+  /* Violet text on a plum card: the lighter shades, so it stays readable. */
+  & .text-blue-500,
+  & .text-blue-600,
+  & .text-blue-700 { color: #c9a8ff; }
+
+  /* Glass surfaces: cards, panels, inputs. */
+  & .app-surface .bg-white,
+  & .app-surface .dark\:bg-gray-800 {
+    background-color: rgba(43, 22, 72, 0.78);
+    border-color: rgba(216, 180, 254, 0.14);
+    box-shadow: 0 18px 44px rgba(8, 2, 20, 0.42);
+  }
+  & .app-surface .border-gray-100,
+  & .app-surface .border-gray-200 { border-color: rgba(216, 180, 254, 0.14); }
+  & .app-surface input,
+  & .app-surface textarea { background-color: rgba(21, 9, 38, 0.72); }
+  /* Primary buttons and the active feed tab: violet into magenta. */
+  & .app-surface .bg-blue-600 { background-image: linear-gradient(135deg, #9333ea, #c026d3); }
+  & .app-surface .hover\:bg-blue-700:hover { background-image: linear-gradient(135deg, #7e22ce, #a21caf); }
+}
+
+.dark body.app-page-bg:has(.home-violet) {
+  background:
+    radial-gradient(circle at 10% 6%, rgba(168, 85, 247, 0.30), transparent 28rem),
+    radial-gradient(circle at 92% 12%, rgba(217, 70, 239, 0.20), transparent 25rem),
+    radial-gradient(circle at 50% 96%, rgba(99, 102, 241, 0.16), transparent 28rem),
+    linear-gradient(135deg, #12061f 0%, #1c0b30 45%, #160a29 100%);
+  background-attachment: fixed;
+}
+
+/* The page's own panel behind the three columns. */
+body .home-violet {
+  background-image:
+    radial-gradient(circle at top left, rgba(168, 85, 247, 0.20), transparent 36%),
+    radial-gradient(circle at top right, rgba(236, 72, 153, 0.12), transparent 30%);
+}
+
+/* Cards: rounder corners, a violet sheen from the top-left corner, and a
+   hairline of light along the top edge. Cards that paint their own gradient
+   keep it. */
+.home-violet :is(article, section, div):is(.rounded-xl, .rounded-2xl).bg-white.border:not([class*='bg-gradient']) {
+  border-radius: 1.5rem;
+  background-image: linear-gradient(160deg, rgba(168, 85, 247, 0.17), rgba(168, 85, 247, 0) 44%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 44px rgba(8, 2, 20, 0.45);
+}
+.home-violet article:is(.rounded-xl, .rounded-2xl).bg-white.border {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+@media (hover: hover) {
+  .home-violet article:is(.rounded-xl, .rounded-2xl).bg-white.border:hover {
+    border-color: rgba(216, 180, 254, 0.30);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      0 22px 52px rgba(8, 2, 20, 0.55),
+      0 0 0 1px rgba(168, 85, 247, 0.10);
+  }
+}
+
+/* A post's picture or video: set in from the card's edge with its own round
+   corners, so it reads as a framed picture rather than a strip. */
+.home-violet article .post-card__media {
+  margin-inline: 0.625rem;
+  border-radius: 1.125rem;
+  box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.12);
+}
+.home-violet article .post-card__media.w-full {
+  width: auto;
+}
+
+/* The author's picture: a violet ring, as on a story. */
+.home-violet article :is(img, div).w-10.h-10.rounded-full {
+  box-shadow:
+    0 0 0 2px #1c0b30,
+    0 0 0 3.5px #a855f7;
+}
+
+/* Like / Comment / Share / Save: one frosted strip inside the card. */
+.home-violet article .post-card__actions {
+  margin: 0.5rem 0.625rem 0.625rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(216, 180, 254, 0.14);
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+.home-violet article .post-card__actions :is(button, a) {
+  border-radius: 9999px;
+}

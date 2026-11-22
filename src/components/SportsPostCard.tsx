@@ -312,7 +312,7 @@ export default function SportsPostCard({
       </div>
 
       {/* Action buttons row - Like, Comment, Share and save, as on a post. */}
-      <div className="@container relative px-2 py-1 flex items-center justify-between text-sm">
+      <div className="@container relative px-2 py-1 flex items-center justify-between text-sm post-card__actions">
         {canEngage ? (
           <form action={likeSportsAnchor.bind(null, anchor!.kind, anchor!.id)} className="flex-1 min-w-0">
             <button

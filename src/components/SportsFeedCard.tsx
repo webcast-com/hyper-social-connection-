@@ -175,7 +175,7 @@ export default function SportsFeedCard({
         )}
       </Link>
 
-      <div className="grid grid-cols-3 border-t border-gray-100 px-2 py-1 text-sm dark:border-gray-700">
+      <div className="grid grid-cols-3 border-t border-gray-100 px-2 py-1 text-sm dark:border-gray-700 post-card__actions">
         <button
           type="button"
           onClick={() => openMode('comment')}

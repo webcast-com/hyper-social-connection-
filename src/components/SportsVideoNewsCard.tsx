@@ -211,7 +211,7 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
         </div>
       </div>
 
-      <div className="grid grid-cols-2 border-t border-gray-100 px-2 py-1 text-sm dark:border-gray-700">
+      <div className="grid grid-cols-2 border-t border-gray-100 px-2 py-1 text-sm dark:border-gray-700 post-card__actions">
         <button
           type="button"
           onClick={() => { setMode(mode === 'comment' ? null : 'comment'); setText(''); }}

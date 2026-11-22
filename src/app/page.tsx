@@ -525,7 +525,7 @@ export default async function Home() {
     // `xl` the navigation rail joins them. Both rails are fixed widths, so the
     // feed column takes what is left rather than a quarter-based share, and both
     // stay on screen while the feed scrolls.
-    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto home-violet bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
       {/* The site's name, and who publishes it (name, address and logo). */}
       <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
