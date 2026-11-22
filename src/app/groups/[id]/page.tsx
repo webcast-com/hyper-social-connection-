@@ -176,7 +176,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                 isFollower: viewerFollowIds.has(p.sharedProfileId),
               })
             : null,
-          group: { id: group.id, name: group.name },
+          group: { id: group.id, name: group.name, privacy: group.privacy },
           poll: postPoll,
           likes: allLikes.filter((l) => l.postId === p.id).map((l) => ({ ...l, user: usersById.get(l.userId) })),
           comments: allComments

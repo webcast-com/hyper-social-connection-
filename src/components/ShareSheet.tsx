@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { EXTERNAL_NETWORKS, absoluteShareUrl, type ExternalNetwork } from '@/lib/share';
 import { getShareableGroups, getShareableRecipients } from '@/app/share-actions';
+import type { ShareVideo } from '@/lib/share-video';
+import ShareVideoButton from './ShareVideoButton';
 
 export type ShareResult = { success: boolean; message?: string };
 
@@ -35,6 +37,11 @@ export type ShareSubject = {
   text: string;
   /** What "Share to your feed" does with this, in one line. */
   feedHint: string;
+  /**
+   * A video of this site's own that may be sent as a file, so it plays where it
+   * lands (`shareableVideo`). Left out, the sheet is the sheet it always was.
+   */
+  video?: ShareVideo | null;
 };
 
 type Tab = 'feed' | 'group' | 'message' | 'external';
@@ -271,6 +278,15 @@ export default function ShareSheet({
               )}
             </div>
           </div>
+
+          {/* The video itself, where there is one and the device can send it. */}
+          {subject.video && (
+            <ShareVideoButton
+              video={subject.video}
+              caption={`${shareText} ${shareUrl}`.trim()}
+              onSent={() => record?.('video')}
+            />
+          )}
 
           {/* Copy link row */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">

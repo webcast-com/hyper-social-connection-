@@ -115,7 +115,7 @@ export default async function PostPage({ params }: Params) {
         let postGroup: any = null;
         if (row.groupId) {
           const g = await db.orm.public.Group.where({ id: row.groupId }).first();
-          if (g) postGroup = { id: g.id, name: g.name };
+          if (g) postGroup = { id: g.id, name: g.name, privacy: g.privacy };
         }
 
         if (currentUser?.id) {

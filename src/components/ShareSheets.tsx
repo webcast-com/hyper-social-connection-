@@ -2,6 +2,7 @@
 
 import ShareSheet, { type ShareSubject } from './ShareSheet';
 import { absoluteShareUrl, postPath, messageTextFromPost } from '@/lib/share';
+import { shareableVideo } from '@/lib/share-video';
 import {
   shareContentToFeed,
   shareContentToMessage,
@@ -36,6 +37,8 @@ export function postShareSubject(post: any): ShareSubject {
     link: postPath(post.id),
     text: `Check out this post by ${author} on Hyper`,
     feedHint: 'Reposts it to your followers, with your note above it if you add one.',
+    // The post's own uploaded video, when anybody may read the post.
+    video: shareableVideo(post),
   };
 }
 
