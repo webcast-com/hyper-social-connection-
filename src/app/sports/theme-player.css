@@ -1,23 +1,27 @@
 /*
- * The player page's colours, for the other sports detail pages: a match, a team
- * and a single highlight. A near-black violet page, glass panels, and fuchsia
- * where the rest of the site is blue. Colour only: nothing here adds, moves or
- * resizes an element.
+ * The player page's colours, for the other sports pages: the scores board, a
+ * match, a team and a single highlight, and for the top bar and the phone's
+ * bottom bar while one of those pages (or the player page itself) is open.
+ * A near-black violet page, glass panels, and fuchsia where the rest of the
+ * site is blue. Colour only: nothing here adds, moves or resizes an element.
  *
- * Each of those pages says its own colours in its own markup, in the same
- * words the player page uses. This file holds what markup cannot say:
+ * Each of those pages says its own colours in its own markup where it can, in
+ * the same words the player page uses. This file holds what markup cannot say:
  *   1. the page background, which belongs to `body`;
  *   2. the lit panel behind a page's heading (`.theme-player-hero`), the same
  *      panel as the player card (`.pl-card` in `player.css`);
- *   3. the palette for the parts these pages share with others (the league
- *      table, form and head-to-head, predictions and odds, the video player).
- *      Those are written in the site's blue and slate, so the colours they
- *      read are remapped under `.theme-player` and nowhere else.
+ *   3. the palette for everything these pages share with the rest of the site
+ *      (the two bars, the league table, form and head-to-head, predictions and
+ *      odds, the video player, the board's lists and filters). Those are
+ *      written in the site's blue and slate, so the colours they read are
+ *      remapped while one of these pages is open, and at no other time.
  *
- * Every rule is under `.theme-player`, or under `body:has(.theme-player)` for
- * the page background, so no other page changes, and the same components keep
- * the site's blue wherever else they are used. Each route that wears the
- * palette imports this file itself, as the player route imports `player.css`.
+ * A page opts in with `.theme-player` on its root (the player page is known by
+ * its own `.pl-card`). Every rule is under `body:has(...)` of one of those, so
+ * no other page changes, and the same components keep the site's blue wherever
+ * else they are used. Each route that wears the palette imports this file
+ * itself, as the player route imports `player.css`. A browser without `:has()`
+ * shows these pages in the site's blue, as before.
  */
 
 /*
@@ -44,20 +48,24 @@
 }
 
 /*
- * The shared parts. Tailwind's `blue-*`, `sky-*`, `gray-*` and `slate-*`
- * utilities read these variables, so setting them here recolours a shared
- * component inside these pages without editing it.
+ * The shared parts. Tailwind's `blue-*`, `sky-*`, `indigo-*`, `gray-*` and
+ * `slate-*` utilities read these variables, so setting them here recolours a
+ * shared component without editing it. They are set on `body` so that the top
+ * bar, the bottom bar and any menu or dialog the page opens (all of which
+ * render outside the page's own element) take the palette too.
  */
-.theme-player {
+body:has(.theme-player),
+body:has(.pl-card) {
   /* Accent: blue and sky → fuchsia. */
   --color-blue-50: #fdf4ff;
   --color-blue-100: #fae8ff;
   --color-blue-200: #f5d0fe;
   --color-blue-300: #f0abfc;
   --color-blue-400: #f0abfc;
-  --color-blue-500: #e879f9;
-  --color-blue-600: #d946ef;
-  --color-blue-700: #c026d3;
+  --color-blue-500: #d946ef;
+  /* A filled button keeps white text, so the fills are the deep shades. */
+  --color-blue-600: #c026d3;
+  --color-blue-700: #a21caf;
   --color-blue-800: #86198f;
   --color-blue-900: #701a75;
   --color-blue-950: #3b0a45;
@@ -103,3 +111,42 @@
 .dark .app-surface .theme-player .text-blue-600,
 .dark .app-surface .theme-player .text-blue-700,
 .dark .app-surface .theme-player .text-blue-800 { color: #f0abfc; }
+
+/*
+ * The top bar and the phone's bottom bar. Both sit outside the page's element,
+ * directly under `body`, so they are reached from `body`. The variables above
+ * already turn their blue to fuchsia and their slate to violet-black; these
+ * restate the site's fixed dark fills (plain colours in `globals.css`) in the
+ * player page's glass, and swap the blue glow under each bar for a violet one.
+ */
+.dark body:has(.theme-player, .pl-card) > header {
+  box-shadow: 0 10px 35px rgba(168, 85, 247, 0.12);
+}
+.dark body:has(.theme-player, .pl-card) > .mobile-bottom-nav {
+  box-shadow: 0 -14px 36px rgba(168, 85, 247, 0.16);
+}
+.dark body:has(.theme-player, .pl-card) > header .bg-gray-100 { background-color: rgba(255, 255, 255, 0.07); }
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-200:hover { background-color: rgba(255, 255, 255, 0.13); }
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-50:hover,
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.08); }
+.dark body:has(.theme-player, .pl-card) > header .border-gray-100,
+.dark body:has(.theme-player, .pl-card) > header .border-gray-200,
+.dark body:has(.theme-player, .pl-card) > header .border-gray-300 { border-color: rgba(255, 255, 255, 0.12); }
+/* A menu that drops from the bar covers the page behind it, so it is solid. */
+.dark body:has(.theme-player, .pl-card) > header .bg-white { background-color: #17122a; }
+/* The open tab of the bottom bar: a fuchsia wash, as the open nav item's text. */
+.dark body:has(.theme-player, .pl-card) > .mobile-bottom-nav .bg-blue-50 { background-color: rgba(232, 121, 249, 0.14); }
+
+/*
+ * Filled buttons. The site paints `bg-blue-600` inside the page with a fixed
+ * blue-to-violet gradient; here it runs fuchsia to violet, under white text.
+ * The top bar's "Sign up" takes the same fill.
+ */
+.dark body:has(.theme-player, .pl-card) .app-surface .bg-blue-600,
+.dark body:has(.theme-player, .pl-card) > header .bg-blue-600 {
+  background-image: linear-gradient(135deg, #c026d3, #7c3aed);
+}
+.dark body:has(.theme-player, .pl-card) .app-surface .hover\:bg-blue-700:hover,
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-blue-700:hover {
+  background-image: linear-gradient(135deg, #a21caf, #6d28d9);
+}

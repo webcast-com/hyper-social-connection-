@@ -84,7 +84,7 @@ or resized, and nothing about what is asked of ESPN changed.
   not edited and stay blue everywhere else.
 - **Statistic bars** are pink for the first team and violet for the second
   (they were blue and purple); the sentence above the table says so.
-- **Not changed:** the top bar (it stays blue on the player page too).
+- **Not changed here:** the top bar (it stayed blue on the player page too). It was recoloured in the follow-up at the end of this file.
 
 ### Verification (this change)
 
@@ -120,3 +120,37 @@ local server: the team page with a fixture board (all three sections), the
 highlight page with two scratch stored clips (removed afterwards), and no blue
 left inside either page by computed colour. Not verified here: real ESPN data
 and the live site.
+
+## Follow-up: the top bar and the sports board (2026-11)
+
+Colours only; no element was added, moved or resized, and nothing asked of ESPN
+changed.
+
+- **Top bar and phone bottom bar.** The colour remap in
+  `src/app/sports/theme-player.css` moved from `.theme-player` to
+  `body:has(.theme-player), body:has(.pl-card)`, so the bars, the profile menu
+  and dialogs take the palette while a palette page is open: the player, match,
+  team and single highlight pages and `/sports`. Every other page keeps the
+  site's blue, and the palette drops when an in-app link leaves a palette page.
+  `Navbar.tsx` and `ProfileMenu.tsx` are not edited. The filled buttons
+  ("Sign up", back to top) run fuchsia to violet on those pages.
+- **Sports board (`/sports`).** `SportsBoard.tsx` carries `theme-player` on its
+  root and the route imports the stylesheet. The score hero
+  (`SportsScoreHero.tsx`, `SportsHeroFeatured.tsx`) had its navy surfaces and
+  green accents written as fixed colours, so those were remapped by hand to
+  violet-black and fuchsia; red "live" marks are kept. The player route now
+  imports the stylesheet too (after `player.css`).
+- **Left as it was:** the "hyper" wordmark in the top bar (an image, still
+  blue-violet); the highlights list `/sports/highlights` (plum theme); the
+  `.score-hero*` rules in `globals.css`.
+- A browser without `:has()` keeps the blue bars and the blue board.
+
+Checks: `tsc` clean, `test:sports` 695, `test:seo` 123, `test:theme` 2,
+`layout.spec.ts` 51 pass (`:537`, `:551` fail as before). Looked at in a browser
+at 1440 and 390 px against a local server: `/sports` with sample fixtures and
+with an intercepted live scoreboard (no blue left in the bar, the board or the
+bottom bar by computed colour; page heights unchanged), and the player, match,
+team and highlight pages signed in and signed out. `/discover` keeps blue, also
+when reached by an in-app link from `/sports`. Not verified here: real ESPN
+data and the live site; `test:mobile-navigation` was not re-run (the bar's
+markup is untouched).

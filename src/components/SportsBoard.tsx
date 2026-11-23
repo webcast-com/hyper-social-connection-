@@ -152,11 +152,11 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
           aria-pressed={sport === id}
           onClick={() => update({ sport: id })}
           className={strip
-            ? `inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-r border-r-[#101c2a] px-3.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00d6a0] ${
-              sport === id ? 'border-b-[#00d6a0] bg-[#0a1722] font-bold text-white' : 'border-b-transparent text-[#d0d9e5] hover:bg-[#0a1722] hover:text-white'}`
+            ? `inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 border-r border-r-[#1c1730] px-3.5 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#e879f9] ${
+              sport === id ? 'border-b-[#e879f9] bg-[#1a1430] font-bold text-white' : 'border-b-transparent text-[#d0d9e5] hover:bg-[#1a1430] hover:text-white'}`
             : `shrink-0 min-h-11 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${
               sport === id
-                ? 'bg-blue-600 text-white border-blue-600'
+                ? 'bg-fuchsia-200 text-gray-950 border-fuchsia-200'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
         >
@@ -174,7 +174,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
+    <div className="theme-player max-w-7xl mx-auto p-3 sm:p-4 mt-2 sm:mt-4">
       {!leaguePage && <SportsScoreHero
         figures={sportsHeroFigures(board, { sports: SPORTS_BOARD_SPORTS.length, competitions: SPORTS_BOARD_COMPETITIONS.length }, initialLoading)}
         feedLabel={feedLabel} feedTone={initialLoading ? 'loading' : board.mode} feedTitle={feedTitle}
@@ -326,7 +326,7 @@ export default function SportsBoardView({ initial, initialFilters = DEFAULT_SPOR
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <div role="group" aria-label="Quick match status" className="flex min-w-0 flex-1 gap-1 overflow-x-auto sm:flex-none">
-          {([['all', 'All matches'], ['live', 'Live'], ['upcoming', 'Upcoming'], ['final', 'Results']] as const).map(([id, label]) => <button type="button" key={id} aria-pressed={status === id} onClick={() => update({ status: id })} className={`min-h-11 shrink-0 rounded-xl px-3 text-xs font-bold ${status === id ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{label}</button>)}
+          {([['all', 'All matches'], ['live', 'Live'], ['upcoming', 'Upcoming'], ['final', 'Results']] as const).map(([id, label]) => <button type="button" key={id} aria-pressed={status === id} onClick={() => update({ status: id })} className={`min-h-11 shrink-0 rounded-xl px-3 text-xs font-bold ${status === id ? 'bg-fuchsia-200 text-gray-950' : 'bg-white text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{label}</button>)}
         </div>
         <button type="button" aria-expanded={moreFilters} aria-controls="sports-filters" onClick={() => setMoreFilters((value) => !value)} className="min-h-11 text-xs font-semibold text-blue-600 sm:hidden dark:text-blue-400">{moreFilters ? 'Fewer filters' : (date !== 'all' || region !== 'all') ? 'More filters (active)' : 'More filters'}</button>
         <div role="group" aria-label="Score layout" className="flex gap-1">{(['list', 'cards'] as const).map((id) => <button type="button" key={id} aria-pressed={view === id} onClick={() => update({ view: id })} className={`min-h-11 rounded-xl px-3 text-xs font-bold capitalize ${view === id ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>{id}</button>)}</div>
