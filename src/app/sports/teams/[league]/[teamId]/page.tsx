@@ -4,6 +4,8 @@ import SportsTeamDetails from '@/components/SportsTeamDetails';
 import { getPageMetadata } from '@/lib/seo';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import { cdnPortraits, resolveTeam, teamHref, TeamInputError, type TeamBoard } from '@/lib/espn-team';
+// The player page's colours, for this page.
+import '../../../theme-player.css';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;

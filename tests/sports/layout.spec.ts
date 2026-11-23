@@ -162,7 +162,7 @@ for (const width of [320, 1280]) {
     // The fixture stays in its competition below: the featured card adds no article.
     await expect(page.getByRole('article')).toHaveCount(SPORTS_BOARD_COMPETITIONS.length);
     await expect(featured.getByRole('article')).toHaveCount(0);
-    await expect(featured.getByRole('link')).toHaveAttribute('href', '/sports/matches/epl/401234567');
+    await expect(featured.getByRole('link')).toHaveAttribute('href', '/sports/matches/epl/premier-league-home-vs-premier-league-away-401234567');
     await expect(featured.getByRole('link')).toHaveAccessibleName('Featured live match: Premier League Away 1, Premier League Home 2, Premier League. Open match details');
     await expect(featured.locator('[data-featured-score]')).toHaveText('1–2');
     const bounds = (await featured.boundingBox())!;
@@ -223,7 +223,7 @@ for (const width of [320, 1280]) {
     await expect(cards.locator('[data-matchday-score]')).toHaveText('1–2');
     await expect(cards.getByText('Live', { exact: true })).toBeVisible();
     await expect(dialog.getByRole('link', { name: 'Match details: Premier League Away vs Premier League Home', exact: true }))
-      .toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent('/sports?league=epl')}`);
+      .toHaveAttribute('href', `/sports/matches/epl/premier-league-home-vs-premier-league-away-401234567?returnTo=${encodeURIComponent('/sports?league=epl')}`);
     await expect(dialog.getByRole('status')).toHaveText('Page 1 of 1 · 1 match');
     await dialog.getByRole('button', { name: 'Exit matchday', exact: true }).click();
     await expect(dialog).toHaveCount(0);
@@ -324,7 +324,7 @@ for (const width of [320, 768, 1280]) {
       const hit = document.elementFromPoint(frame.left + 6, frame.top + 6);
       return { inside: !!hit?.closest('a'), href: hit?.closest('a')?.getAttribute('href') ?? null };
     });
-    expect(target).toEqual({ inside: true, href: '/sports/matches/epl/401234567' });
+    expect(target).toEqual({ inside: true, href: '/sports/matches/epl/premier-league-home-vs-premier-league-away-401234567' });
     // "Copy to post" is still a button, and still a full-size touch target.
     const copy = page.getByRole('article').getByRole('button', { name: 'Copy to post', exact: true }).first();
     expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -526,7 +526,7 @@ test('score cards link to real match details, excluding samples and motorsport',
   await page.evaluate(() => window.renderSports('live'));
   // Each card is one link to its match, the way the featured match is.
   const cardLinks = page.getByRole('article').getByRole('link', { name: /^Open .* match details$/ });
-  await expect(cardLinks.first()).toHaveAttribute('href', /^\/sports\/matches\/[^/]+\/401234567$/);
+  await expect(cardLinks.first()).toHaveAttribute('href', /^\/sports\/matches\/[^/]+\/[a-z0-9-]+-401234567$/);
   await expect(page.getByRole('article').first().getByRole('link')).toHaveCount(1);
   await page.getByRole('button', { name: 'Motorsport', exact: true }).click();
   await expect(cardLinks).toHaveCount(0);
@@ -565,7 +565,7 @@ test('desktop country browser selects a league, and status/list/card controls pr
   for (const label of ['cards', 'list']) {
     await layouts.getByRole('button', { name: label, exact: true }).click();
     await expect(page.getByRole('article')).toHaveCount(1);
-    await expect(page.getByRole('article').getByRole('link', { name: /^Open .* match details$/ })).toHaveAttribute('href', `/sports/matches/epl/401234567?returnTo=${encodeURIComponent(`/sports?league=epl${label === 'cards' ? '&view=cards' : ''}`)}`);
+    await expect(page.getByRole('article').getByRole('link', { name: /^Open .* match details$/ })).toHaveAttribute('href', `/sports/matches/epl/premier-league-home-vs-premier-league-away-401234567?returnTo=${encodeURIComponent(`/sports?league=epl${label === 'cards' ? '&view=cards' : ''}`)}`);
   }
   await page.getByRole('group', { name: 'Quick match status', exact: true }).getByRole('button', { name: 'Results', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No events in this view', exact: true })).toBeVisible();

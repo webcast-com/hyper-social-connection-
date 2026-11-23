@@ -21,6 +21,7 @@
  * (`match-page`, `highlight-clip`, `stream-seo`, `dashboard-seo`).
  */
 import { clipHref } from './highlight-clip';
+import { postHref, profileHref } from './social-href';
 
 type Json = Record<string, unknown>;
 
@@ -162,7 +163,9 @@ export function socialPostStructuredData(post: PostFacts, origin: string): Json 
   const modified = isoDate(post.updatedAt);
   const avatar = publicUrl(post.author.avatar, origin);
   const interactions = [counter('LikeAction', count(post.likes)), counter('CommentAction', count(post.comments))].filter(present);
-  const url = `${site}/post/${post.id}`;
+  // Only ever built for a post anybody may read (see the comment above), so its
+  // address is the one that post answers at: its opening words, then its id.
+  const url = `${site}${postHref(post, true)}`;
   return {
     '@context': CONTEXT,
     '@type': 'SocialMediaPosting',
@@ -175,7 +178,7 @@ export function socialPostStructuredData(post: PostFacts, origin: string): Json 
     author: {
       '@type': 'Person',
       name,
-      url: `${site}/profile/${post.author.id}`,
+      url: `${site}${profileHref(post.author)}`,
       ...(avatar ? { image: avatar } : {}),
     },
     ...(interactions.length ? { interactionStatistic: interactions } : {}),
@@ -205,7 +208,7 @@ export type ProfileFacts = {
 export function profilePageStructuredData(profile: ProfileFacts, origin: string): Json | null {
   const name = text(profile.name);
   if (!name) return null;
-  const url = `${base(origin)}/profile/${profile.id}`;
+  const url = `${base(origin)}${profileHref(profile)}`;
   const handle = text(profile.username);
   const bio = text(profile.bio);
   const image = publicUrl(profile.avatar, origin);

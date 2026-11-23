@@ -18,6 +18,9 @@ test.beforeAll(async () => {
   const result = await build({
     entryPoints: [path.resolve('tests/sports/home-browser-fixture.tsx')], bundle: true, write: false,
     format: 'iife', platform: 'browser', define: { 'process.env.NODE_ENV': '"development"', 'process.env': '{}' },
+    // The match page imports its own stylesheet (colour only); esbuild will not
+    // bundle one into a script, and these checks measure layout, not colour.
+    loader: { '.css': 'empty' },
     plugins: [{ name: 'homepage-server-boundaries', setup(builder) {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
@@ -368,12 +371,13 @@ test('real feed and odds cards link to match details while sample cards never do
   // A feed match card is the sports board's card: the whole card is the link,
   // named the way the board names it.
   await page.evaluate(() => window.renderHomeReview(false));
-  await expect(page.getByRole('link', { name: /^Open .+ match details/ }).first()).toHaveAttribute('href', '/sports/matches/epl/401234567');
+  await expect(page.getByRole('link', { name: /^Open .+ match details/ }).first()).toHaveAttribute('href', /^\/sports\/matches\/epl\/very-long-international-home-club-name-vs-[a-z0-9-]*-401234567$/);
   await page.evaluate(() => window.renderHomeReview(false, true));
   await expect(page.getByRole('link', { name: /^Open .+ match details/ })).toHaveCount(0);
   await page.evaluate(() => window.renderPredictionsReview('ready'));
   const link = page.getByRole('link', { name: 'View match details', exact: true }).first();
-  await expect(link).toHaveAttribute('href', '/sports/matches/epl/401234567');
+  // The fixture's name reads in front of the id; the id is what the page is found by.
+  await expect(link).toHaveAttribute('href', /^\/sports\/matches\/epl\/(?:[a-z0-9-]+-)?401234567$/);
 });
 
 for (const width of [320, 768, 1440]) {
@@ -575,7 +579,7 @@ for (const width of [320, 768, 1440]) {
     await expect(page.getByLabel('Win', { exact: true })).toHaveCount(2);
     await expect(page.getByLabel('Loss', { exact: true })).toHaveCount(2);
     const result = page.getByRole('link').filter({ hasText: 'Reported Team 100' }).first();
-    await expect(result).toHaveAttribute('href', '/sports/matches/epl/9001?returnTo=%2Fsports%3Fleague%3Depl%26view%3Dcards');
+    await expect(result).toHaveAttribute('href', /^\/sports\/matches\/epl\/(?:[a-z0-9-]+-)?9001\?returnTo=%2Fsports%3Fleague%3Depl%26view%3Dcards$/);
     await result.focus(); await expect(result).toBeFocused(); await assertFit(page);
     await page.getByRole('button', { name: 'Statistics', exact: true }).click();
     await expect(page.getByRole('table')).toContainText('Possession');

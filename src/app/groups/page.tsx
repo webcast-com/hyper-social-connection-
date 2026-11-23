@@ -3,6 +3,7 @@ import { getPageMetadata } from '@/lib/seo';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
 import Link from 'next/link';
+import { groupHref } from '@/lib/social-href';
 import CreateGroupButton from '@/components/CreateGroupButton';
 import { Users, Check, Compass } from 'lucide-react';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
@@ -49,7 +50,7 @@ export default async function GroupsPage() {
     const memberList = membersByGroup.get(group.id) || [];
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden group border border-gray-100 dark:border-gray-700/60 flex flex-col">
-        <Link href={`/groups/${group.id}`} className="block h-32 bg-gradient-to-r from-blue-400 to-indigo-500 relative">
+        <Link href={groupHref(group)} className="block h-32 bg-gradient-to-r from-blue-400 to-indigo-500 relative">
           {group.coverPhoto && (
             <img src={group.coverPhoto} alt={`${group.name} cover`} className="w-full h-full object-cover" />
           )}
@@ -96,7 +97,7 @@ export default async function GroupsPage() {
             </div>
           )}
           <Link
-            href={`/groups/${group.id}`}
+            href={groupHref(group)}
             className="block text-center w-full bg-gray-100 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 font-semibold py-2 rounded-lg transition-colors text-sm"
           >
             {joined ? 'Open Group' : 'View Group'}

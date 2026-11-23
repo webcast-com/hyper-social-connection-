@@ -1,0 +1,152 @@
+/*
+ * The player page's colours, for the other sports pages: the scores board, a
+ * match, a team and a single highlight, and for the top bar and the phone's
+ * bottom bar while one of those pages (or the player page itself) is open.
+ * A near-black violet page, glass panels, and fuchsia where the rest of the
+ * site is blue. Colour only: nothing here adds, moves or resizes an element.
+ *
+ * Each of those pages says its own colours in its own markup where it can, in
+ * the same words the player page uses. This file holds what markup cannot say:
+ *   1. the page background, which belongs to `body`;
+ *   2. the lit panel behind a page's heading (`.theme-player-hero`), the same
+ *      panel as the player card (`.pl-card` in `player.css`);
+ *   3. the palette for everything these pages share with the rest of the site
+ *      (the two bars, the league table, form and head-to-head, predictions and
+ *      odds, the video player, the board's lists and filters). Those are
+ *      written in the site's blue and slate, so the colours they read are
+ *      remapped while one of these pages is open, and at no other time.
+ *
+ * A page opts in with `.theme-player` on its root (the player page is known by
+ * its own `.pl-card`). Every rule is under `body:has(...)` of one of those, so
+ * no other page changes, and the same components keep the site's blue wherever
+ * else they are used. Each route that wears the palette imports this file
+ * itself, as the player route imports `player.css`. A browser without `:has()`
+ * shows these pages in the site's blue, as before.
+ */
+
+/*
+ * The same background as the player page. The selector repeats the site's own
+ * (`.dark body.app-page-bg`) so that it wins by specificity rather than by the
+ * order two stylesheets load in. A browser without `:has()` keeps the navy.
+ */
+.dark body.app-page-bg:has(.theme-player) {
+  background:
+    radial-gradient(circle at 12% 6%, rgba(168, 85, 247, 0.2), transparent 26rem),
+    radial-gradient(circle at 92% 18%, rgba(255, 61, 242, 0.1), transparent 24rem),
+    linear-gradient(160deg, #0a0814 0%, #0d0a1a 50%, #08070f 100%);
+  background-attachment: fixed;
+}
+
+/* A page's heading panel: the player card's light, on that panel's own shape. */
+.theme-player .theme-player-hero {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(120% 70% at 85% 0%, rgba(168, 85, 247, 0.3), transparent 62%),
+    radial-gradient(90% 60% at 0% 100%, rgba(255, 61, 242, 0.14), transparent 60%),
+    linear-gradient(180deg, #120d22 0%, #0b0915 100%);
+  box-shadow: 0 30px 60px -30px rgba(109, 40, 217, 0.55);
+}
+
+/*
+ * The shared parts. Tailwind's `blue-*`, `sky-*`, `indigo-*`, `gray-*` and
+ * `slate-*` utilities read these variables, so setting them here recolours a
+ * shared component without editing it. They are set on `body` so that the top
+ * bar, the bottom bar and any menu or dialog the page opens (all of which
+ * render outside the page's own element) take the palette too.
+ */
+body:has(.theme-player),
+body:has(.pl-card) {
+  /* Accent: blue and sky → fuchsia. */
+  --color-blue-50: #fdf4ff;
+  --color-blue-100: #fae8ff;
+  --color-blue-200: #f5d0fe;
+  --color-blue-300: #f0abfc;
+  --color-blue-400: #f0abfc;
+  --color-blue-500: #d946ef;
+  /* A filled button keeps white text, so the fills are the deep shades. */
+  --color-blue-600: #c026d3;
+  --color-blue-700: #a21caf;
+  --color-blue-800: #86198f;
+  --color-blue-900: #701a75;
+  --color-blue-950: #3b0a45;
+  --color-sky-300: #f0abfc;
+  --color-sky-400: #e879f9;
+  --color-sky-950: #3b0a45;
+  /* Gradient ends that run from blue into indigo: fuchsia into violet. */
+  --color-indigo-400: #a78bfa;
+  --color-indigo-500: #8b5cf6;
+  --color-indigo-600: #7c3aed;
+  /* Neutrals: slate → the player page's violet-black. */
+  --color-gray-600: #3a3350;
+  --color-gray-700: #262038;
+  --color-gray-800: #17122a;
+  --color-gray-900: #0f0b1c;
+  --color-gray-950: #08070f;
+  --color-slate-600: #3a3350;
+  --color-slate-700: #262038;
+  --color-slate-800: #17122a;
+  --color-slate-900: #0f0b1c;
+  --color-slate-950: #08070f;
+}
+
+/*
+ * The site's fixed dark fills and borders (`.dark .bg-white` and the rest in
+ * `globals.css`) are plain colours, not variables, so they are restated here in
+ * the same glass the player page's tiles use. `.dark .app-surface` in front
+ * outranks the site's own rules whichever stylesheet loads first.
+ */
+.dark .app-surface .theme-player .bg-white {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: none;
+}
+.dark .app-surface .theme-player .bg-gray-50,
+.dark .app-surface .theme-player .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06); }
+.dark .app-surface .theme-player .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.1); }
+.dark .app-surface .theme-player .border-gray-100,
+.dark .app-surface .theme-player .border-gray-200 { border-color: rgba(255, 255, 255, 0.07); }
+.dark .app-surface .theme-player .border-gray-300 { border-color: rgba(255, 255, 255, 0.15); }
+.dark .app-surface .theme-player .bg-blue-50 { background-color: rgba(232, 121, 249, 0.12); }
+/* Fuchsia text on a dark panel: the light shade, as the player page's links. */
+.dark .app-surface .theme-player .text-blue-600,
+.dark .app-surface .theme-player .text-blue-700,
+.dark .app-surface .theme-player .text-blue-800 { color: #f0abfc; }
+
+/*
+ * The top bar and the phone's bottom bar. Both sit outside the page's element,
+ * directly under `body`, so they are reached from `body`. The variables above
+ * already turn their blue to fuchsia and their slate to violet-black; these
+ * restate the site's fixed dark fills (plain colours in `globals.css`) in the
+ * player page's glass, and swap the blue glow under each bar for a violet one.
+ */
+.dark body:has(.theme-player, .pl-card) > header {
+  box-shadow: 0 10px 35px rgba(168, 85, 247, 0.12);
+}
+.dark body:has(.theme-player, .pl-card) > .mobile-bottom-nav {
+  box-shadow: 0 -14px 36px rgba(168, 85, 247, 0.16);
+}
+.dark body:has(.theme-player, .pl-card) > header .bg-gray-100 { background-color: rgba(255, 255, 255, 0.07); }
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-200:hover { background-color: rgba(255, 255, 255, 0.13); }
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-50:hover,
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.08); }
+.dark body:has(.theme-player, .pl-card) > header .border-gray-100,
+.dark body:has(.theme-player, .pl-card) > header .border-gray-200,
+.dark body:has(.theme-player, .pl-card) > header .border-gray-300 { border-color: rgba(255, 255, 255, 0.12); }
+/* A menu that drops from the bar covers the page behind it, so it is solid. */
+.dark body:has(.theme-player, .pl-card) > header .bg-white { background-color: #17122a; }
+/* The open tab of the bottom bar: a fuchsia wash, as the open nav item's text. */
+.dark body:has(.theme-player, .pl-card) > .mobile-bottom-nav .bg-blue-50 { background-color: rgba(232, 121, 249, 0.14); }
+
+/*
+ * Filled buttons. The site paints `bg-blue-600` inside the page with a fixed
+ * blue-to-violet gradient; here it runs fuchsia to violet, under white text.
+ * The top bar's "Sign up" takes the same fill.
+ */
+.dark body:has(.theme-player, .pl-card) .app-surface .bg-blue-600,
+.dark body:has(.theme-player, .pl-card) > header .bg-blue-600 {
+  background-image: linear-gradient(135deg, #c026d3, #7c3aed);
+}
+.dark body:has(.theme-player, .pl-card) .app-surface .hover\:bg-blue-700:hover,
+.dark body:has(.theme-player, .pl-card) > header .hover\:bg-blue-700:hover {
+  background-image: linear-gradient(135deg, #a21caf, #6d28d9);
+}

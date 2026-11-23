@@ -62,3 +62,95 @@ No other competition gets a synthesized URL. The CDN folder is not derivable fro
 - **Not verifiable here:** live ESPN responses. This sandbox has no ESPN egress (`curl https://a.espncdn.com/…` and `site.api.espn.com` both fail with `SSL_ERROR_SYSCALL`), so whether a given competition's summary actually carries `athlete.headshot.href`, and whether a synthesized NBA/NFL file exists for a particular ID, still needs a deployment check. Every assertion above uses controlled fixtures, not a live provider audit.
 
 After deploying, open one real NBA or NFL match and one soccer match, expand **Lineups & rosters**, and confirm photos appear where ESPN reports them and initials appear elsewhere — with no missing-player rows and no horizontal overflow at 320px.
+
+## Follow-up: the player page's colours (2026-11)
+
+The match page now uses the same palette as the player page
+(`/sports/athletes/<league>/<id>`): a near-black violet page, glass panels, and
+fuchsia where it used the site's blue. Colour only: no element was added, moved
+or resized, and nothing about what is asked of ESPN changed.
+
+- **The page's own markup** (`SportsMatchDetails.tsx`, and the stored-highlights
+  block in the route) says its colours in the same classes the player page uses:
+  `text-fuchsia-300` links, `bg-white/[0.04]` tiles with a `border-white/[0.07]`
+  hairline, a `bg-fuchsia-200` pill for the open section.
+- **`src/app/sports/theme-player.css`**, imported by the route as `player.css`
+  is, holds the rest: the page background (the player page's, under
+  `body:has(.theme-player)`), the lit panel behind the heading
+  (`.theme-player-hero`, the player card's gradients), and a palette for the
+  parts shared with other pages. The league table, form and head-to-head, and
+  predictions are written in blue and slate, so the Tailwind colour variables
+  they read are remapped under `.theme-player`; the components themselves are
+  not edited and stay blue everywhere else.
+- **Statistic bars** are pink for the first team and violet for the second
+  (they were blue and purple); the sentence above the table says so.
+- **Not changed here:** the top bar (it stayed blue on the player page too). It was recoloured in the follow-up at the end of this file.
+
+### Verification (this change)
+
+`npm run test:sports` (695), `npm run test:seo` (123),
+`tests/sports/layout.spec.ts` (51 pass; `:537` and `:551` fail as before).
+Looked at in a browser at 1440 and 390 px against a local server with the
+match, standings and player feeds answered from the test fixtures: every
+section tab, and no blue left inside the page by computed colour. The test
+builds that bundle the route (`tests/seo/metadata.test.ts`,
+`tests/sports/home-layout.spec.ts`) now load a stylesheet as empty;
+`home-layout.spec.ts` still cannot be built here for an older, unrelated reason.
+Not verified here: real ESPN data and the live site.
+
+## Follow-up: the team page and the single highlight page (2026-11)
+
+The same palette now covers the team page (`/sports/teams/<league>/<id>`) and
+the page of one highlight (`/sports/highlights/<title>-<id>`). Same method, and
+colour only again:
+
+- `SportsTeamDetails.tsx` and the highlight route's own markup use the player
+  page's classes; the highlight's card is the lit panel (`.theme-player-hero`).
+- Both routes import `src/app/sports/theme-player.css` (the match page's
+  stylesheet, moved up a level and renamed from `match.css` so three routes can
+  share it) and carry `.theme-player` on their root. The video player inside
+  the highlight page (`LinkMediaPlayer`) is recoloured by the variable remap,
+  not edited.
+- The highlights list (`/sports/highlights`) keeps its own violet theme.
+
+Checks: `npm run test:sports` (695), `npm run test:seo` (123),
+`npm run test:theme` (2), `tests/sports/layout.spec.ts` (51 pass; `:537` and
+`:551` fail as before). Looked at in a browser at 1440 and 390 px against a
+local server: the team page with a fixture board (all three sections), the
+highlight page with two scratch stored clips (removed afterwards), and no blue
+left inside either page by computed colour. Not verified here: real ESPN data
+and the live site.
+
+## Follow-up: the top bar and the sports board (2026-11)
+
+Colours only; no element was added, moved or resized, and nothing asked of ESPN
+changed.
+
+- **Top bar and phone bottom bar.** The colour remap in
+  `src/app/sports/theme-player.css` moved from `.theme-player` to
+  `body:has(.theme-player), body:has(.pl-card)`, so the bars, the profile menu
+  and dialogs take the palette while a palette page is open: the player, match,
+  team and single highlight pages and `/sports`. Every other page keeps the
+  site's blue, and the palette drops when an in-app link leaves a palette page.
+  `Navbar.tsx` and `ProfileMenu.tsx` are not edited. The filled buttons
+  ("Sign up", back to top) run fuchsia to violet on those pages.
+- **Sports board (`/sports`).** `SportsBoard.tsx` carries `theme-player` on its
+  root and the route imports the stylesheet. The score hero
+  (`SportsScoreHero.tsx`, `SportsHeroFeatured.tsx`) had its navy surfaces and
+  green accents written as fixed colours, so those were remapped by hand to
+  violet-black and fuchsia; red "live" marks are kept. The player route now
+  imports the stylesheet too (after `player.css`).
+- **Left as it was:** the "hyper" wordmark in the top bar (an image, still
+  blue-violet); the highlights list `/sports/highlights` (plum theme); the
+  `.score-hero*` rules in `globals.css`.
+- A browser without `:has()` keeps the blue bars and the blue board.
+
+Checks: `tsc` clean, `test:sports` 695, `test:seo` 123, `test:theme` 2,
+`layout.spec.ts` 51 pass (`:537`, `:551` fail as before). Looked at in a browser
+at 1440 and 390 px against a local server: `/sports` with sample fixtures and
+with an intercepted live scoreboard (no blue left in the bar, the board or the
+bottom bar by computed colour; page heights unchanged), and the player, match,
+team and highlight pages signed in and signed out. `/discover` keeps blue, also
+when reached by an in-app link from `/sports`. Not verified here: real ESPN
+data and the live site; `test:mobile-navigation` was not re-run (the bar's
+markup is untouched).

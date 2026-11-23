@@ -17,6 +17,7 @@
  * A fragment written by hand still works on a fresh load, where the browser
  * handles it: `/profile/{id}?tab=saved#profile-posts`.
  */
+import { profileHref } from './social-href';
 
 export const SAVED_SECTION_ID = 'profile-posts';
 export const SAVED_SECTION_EVENT = 'hyper:saved-section-requested';
@@ -26,7 +27,8 @@ const REQUEST_LIFETIME_MS = 15_000;
 
 let requestedAt: number | null = null;
 
-export const savedPostsHref = (userId: number | string) => `/profile/${userId}?tab=saved`;
+/** The member's own page with the Saved tab selected; their name, when given, reads in front of the id. */
+export const savedPostsHref = (userId: number | string, name?: string | null) => `${profileHref({ id: userId, name })}?tab=saved`;
 
 /** The menu's Saved link was pressed. */
 export function requestSavedSection(now = Date.now()) {

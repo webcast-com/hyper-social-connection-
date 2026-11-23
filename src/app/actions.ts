@@ -133,7 +133,7 @@ export async function createPost(formData: FormData) {
 
   revalidatePath('/');
   revalidatePath('/discover');
-  if (requestedGroupId > 0) revalidatePath(`/groups/${requestedGroupId}`);
+  if (requestedGroupId > 0) revalidatePath('/groups/[id]', 'page');
 }
 
 export async function toggleLike(postId: number) {
@@ -213,7 +213,7 @@ export async function toggleFollow(followingId: number) {
     if (existingFollow) {
       await db.orm.public.Follow.where({ followerId, followingId }).deleteAndCount();
       await db.orm.public.FollowRequest.where({ followerId, followingId }).deleteAndCount();
-      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/profile/[id]', 'page');
       revalidatePath('/discover');
       revalidatePath('/notifications');
       return { status: 'none' as const };
@@ -224,7 +224,7 @@ export async function toggleFollow(followingId: number) {
       .first();
     if (pending) {
       await db.orm.public.FollowRequest.where({ followerId, followingId }).deleteAndCount();
-      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/profile/[id]', 'page');
       return { status: 'none' as const };
     }
 
@@ -243,7 +243,7 @@ export async function toggleFollow(followingId: number) {
         );
       }
       await createNotification(followingId, followerId, 'follow_request');
-      revalidatePath(`/profile/${followingId}`);
+      revalidatePath('/profile/[id]', 'page');
       revalidatePath('/notifications');
       revalidatePath('/settings');
       return { status: 'requested' as const };
@@ -256,7 +256,7 @@ export async function toggleFollow(followingId: number) {
     return { status: 'error' as const };
   }
 
-  revalidatePath(`/profile/${followingId}`);
+  revalidatePath('/profile/[id]', 'page');
   revalidatePath('/discover');
   revalidatePath('/notifications');
   return { status: 'following' as const };
@@ -338,7 +338,7 @@ export async function updateProfile(formData: FormData) {
   }
 
   revalidatePath('/settings');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
   return { success: true, message: 'Profile saved' };
 }
 
@@ -385,7 +385,7 @@ export async function updateAvatar(avatarUrl: string) {
 
   revalidatePath('/');
   revalidatePath('/settings');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
 }
 
 export async function updateCoverPhoto(coverUrl: string) {
@@ -402,7 +402,7 @@ export async function updateCoverPhoto(coverUrl: string) {
   }
 
   revalidatePath('/settings');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
 }
 
 export async function sendMessage(receiverId: number, formData: FormData) {
@@ -626,7 +626,7 @@ export async function createGroup(formData: FormData) {
     });
 
     revalidatePath('/groups');
-    revalidatePath(`/groups/${group.id}`);
+    revalidatePath('/groups/[id]', 'page');
     return group;
   } catch (e) {
     console.warn('[action:createGroup] DB unavailable:', (e as Error)?.message);
@@ -659,7 +659,7 @@ export async function joinGroup(groupId: number) {
         );
       }
       await createNotification(group.adminId, userId, 'follow');
-      revalidatePath(`/groups/${groupId}`);
+      revalidatePath('/groups/[id]', 'page');
       revalidatePath('/groups');
       return { success: true, pending: true, message: 'Request sent' };
     }
@@ -674,7 +674,7 @@ export async function joinGroup(groupId: number) {
     console.warn('[action:joinGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, pending: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   revalidatePath('/groups');
   return { success: true, pending: false };
 }
@@ -693,7 +693,7 @@ export async function leaveGroup(groupId: number) {
     console.warn('[action:leaveGroup] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   revalidatePath('/groups');
   return { success: true };
 }
@@ -741,7 +741,7 @@ export async function updateGroup(groupId: number, formData: FormData) {
     return { success: false, message: 'Database unavailable' };
   }
   revalidatePath('/groups');
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   return { success: true };
 }
 
@@ -777,7 +777,7 @@ export async function inviteGroupMember(groupId: number, query: string) {
     console.warn('[action:inviteGroupMember] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   revalidatePath('/groups');
   return { success: true, message: 'Invite sent — they are now a member' };
 }
@@ -802,7 +802,7 @@ export async function removeGroupMember(groupId: number, memberId: number) {
     console.warn('[action:removeGroupMember] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   return { success: true };
 }
 
@@ -825,7 +825,7 @@ export async function setGroupMemberRole(groupId: number, memberId: number, role
     console.warn('[action:setGroupMemberRole] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   return { success: true };
 }
 
@@ -851,7 +851,7 @@ export async function reviewJoinRequest(groupId: number, requestUserId: number, 
     console.warn('[action:reviewJoinRequest] DB unavailable:', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   return { success: true };
 }
 
@@ -902,12 +902,12 @@ export async function toggleBookmark(postId: number) {
     if (existing) {
       await db.orm.public.Bookmark.where({ userId, postId }).deleteAndCount();
       revalidatePath('/');
-      revalidatePath(`/profile/${userId}`);
+      revalidatePath('/profile/[id]', 'page');
       return false;
     } else {
       await db.orm.public.Bookmark.create({ userId, postId });
       revalidatePath('/');
-      revalidatePath(`/profile/${userId}`);
+      revalidatePath('/profile/[id]', 'page');
       return true;
     }
   } catch (e) {
@@ -927,7 +927,7 @@ export async function deletePost(postId: number) {
   }
   revalidatePath('/');
   revalidatePath('/discover');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
 }
 
 export async function deleteComment(commentId: number) {
@@ -1002,8 +1002,8 @@ export async function editPost(postId: number, content: string) {
   }
 
   revalidatePath('/');
-  revalidatePath(`/post/${postId}`);
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/post/[id]', 'page');
+  revalidatePath('/profile/[id]', 'page');
   return { success: true };
 }
 

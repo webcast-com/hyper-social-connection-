@@ -1,10 +1,19 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { MatchDetails } from '@/lib/espn-match';
+import { fixtureName, matchHref, type MatchDetails } from '@/lib/espn-match';
 import { historyOutcome, isMatchHistoryBoard, type HistoryGame, type MatchHistoryBoard } from '@/lib/espn-match-history';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
+
+/**
+ * An earlier fixture's address, named when the feed says which side was at home.
+ * Without both sides it is the id alone, which the match page serves just the same.
+ */
+function historyMatchHref(league: string, game: HistoryGame) {
+  const side = (which: string) => game.teams.find((team) => team.side === which)?.name;
+  return matchHref({ league, eventId: game.id }, fixtureName(side('home'), side('away')));
+}
 
 function Results({ games, match, teamId, returnTo }: { games: HistoryGame[]; match: MatchDetails; teamId?: string; returnTo?: string }) {
   return <ol className="mt-3 space-y-3">{games.map((game) => {
@@ -14,7 +23,7 @@ function Results({ games, match, teamId, returnTo }: { games: HistoryGame[]; mat
         {teamId && <span className="rounded bg-blue-50 px-2 py-1 font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-200" aria-label={outcome === 'W' ? 'Win' : outcome === 'L' ? 'Loss' : outcome === 'D' ? 'Draw or tie' : 'Outcome not reported'}>{outcome ?? '—'}</span>}
         <span>{formatPredictionKickoff(game.kickoff)}</span><span>{game.status ?? 'Completed'}</span>
       </div>
-      <Link prefetch={false} href={`/sports/matches/${encodeURIComponent(match.reference.league)}/${game.id}?returnTo=${encodeURIComponent(safeSportsReturnPath(returnTo))}`} className="mt-2 block rounded text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <Link prefetch={false} href={`${historyMatchHref(match.reference.league, game)}?returnTo=${encodeURIComponent(safeSportsReturnPath(returnTo))}`} className="mt-2 block rounded text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500">
         {game.teams.map((team) => <span key={team.id} className="flex min-w-0 justify-between gap-3 py-1"><span className="min-w-0 break-words">{team.name}{team.side && <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({team.side})</span>}</span><span className="shrink-0 font-bold tabular-nums">{team.score}</span></span>)}
       </Link>
       {game.teams.some((team) => team.shootout !== null) && <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">Shootout: {game.teams.map((team) => `${team.name} ${team.shootout ?? '—'}`).join(' · ')}</p>}

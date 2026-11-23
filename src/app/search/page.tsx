@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { searchUsers, searchPosts } from '@/app/actions';
 import { Search, Hash, Users, Sparkles } from 'lucide-react';
 import FormattedContent from '@/components/FormattedContent';
@@ -142,7 +143,7 @@ export default function SearchPage() {
                 {userResults.map((user: any) => (
                   <Link
                     key={user.id}
-                    href={`/profile/${user.id}`}
+                    href={profileHref(user)}
                     className="flex items-center space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-700/80 transition-colors group"
                   >
                     {user.avatar ? (
@@ -176,7 +177,7 @@ export default function SearchPage() {
                 {postResults.map((res: any) => (
                   <Link
                     key={res.post.id}
-                    href={`/profile/${res.post.userId}#post-${res.post.id}`}
+                    href={`${profileHref({ id: res.post.userId, name: res.user?.name })}#post-${res.post.id}`}
                     className="block p-4 bg-gray-50 dark:bg-gray-900/60 rounded-2xl hover:bg-blue-50/40 dark:hover:bg-blue-900/20 border border-gray-100 dark:border-gray-700/60 transition-colors"
                   >
                     <div className="flex items-center space-x-2.5 mb-2">

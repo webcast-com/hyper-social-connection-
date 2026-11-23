@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import SportsMatchFace, { MATCH_CARD, MATCH_FRAME, matchFaceTone } from './SportsMatchFace';
 import { kickoffCountdown, scoreKey, winningSide } from '@/lib/featured-match';
 import type { SportsEvent } from '@/lib/sports';
@@ -47,7 +47,7 @@ export default function SportsEventCard({ event, returnTo, now }: { event: Sport
   const countdown = now === undefined ? null : kickoffCountdown(event, now);
   const back = safeSportsReturnPath(returnTo);
   const href = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
-    ? `${matchHref(event.details)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
+    ? `${eventMatchHref(event)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
   const showScore = event.status !== 'upcoming';
   const shareLine = event.race ? `${event.race.title} — ${event.leagueName}` :
     event.status === 'upcoming'

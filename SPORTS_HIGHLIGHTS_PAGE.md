@@ -126,3 +126,25 @@ is no database. What changed:
   prints its report.
 - Chip badges count stored clips while anything is stored (with a caption saying
   so) and the board's own clips otherwise.
+
+## The heading carries no description (2026-11)
+
+The lines under "Match highlights" were removed at the owner's request: the
+"Sample cards · ESPN highlight videos are unreachable right now" / "Clips from
+N ESPN games…" line, the stored totals ("N clips stored across N
+competitions…"), the note that ESPN publishes per-game clips for some
+competitions only, and the two captions under the filter chips. Where this
+document or others say the page is "headed" by one of those lines, that is how
+it was before.
+
+Nothing they said is lost. The collapsed "ESPN highlights feed and stored index
+details" block at the foot of the page still states the board's status
+(including "sample cards"), the stored totals, and now the last sweep and the
+oldest clip; each chip keeps its own label ("Stored clips in …" / "Clips on the
+live board in …"); and a sample card still says in its own text that it is a
+sample. The notice shown when the stored index cannot be read stays under the
+heading, because it reports a fault rather than describing the page.
+
+The page also carries `theme-violet theme-violet-rose` on its root: the violet
+palette of the homepage (see the "Violet theme" block in `globals.css`), with
+the page's former rose accent mapped to violet.

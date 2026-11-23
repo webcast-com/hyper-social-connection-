@@ -16,6 +16,7 @@
 import type { LinkMedia } from './link-media';
 import type { SportsHighlightClip } from './espn-highlights';
 import { highlightAnchorId } from './sports-anchor';
+import { namedSegment, trailingId } from './seo-slug';
 
 /** Where a clip's own page lives, under the list it came from. */
 export const CLIP_PAGE_ROOT = '/sports/highlights';
@@ -31,10 +32,30 @@ export const CLIP_STATUS_LABEL: Record<SportsHighlightClip['status'], string> = 
  * The clip's own URL.
  *
  * Keyed by the same identity the clip's post anchor uses, so a card, its Like
- * button and its permalink cannot disagree about which clip they mean.
+ * button and its permalink cannot disagree about which clip they mean. The title
+ * goes in front of that identity when the caller has it and the identity is
+ * numeric (`seo-slug.ts`); the page finds the clip by the identity alone and sends
+ * any other spelling of the address to this one.
  */
-export function clipHref(clip: Pick<SportsHighlightClip, 'id'>): string {
-  return `${CLIP_PAGE_ROOT}/${highlightAnchorId(clip)}`;
+export function clipHref(clip: Pick<SportsHighlightClip, 'id'> & { title?: string | null }): string {
+  return `${CLIP_PAGE_ROOT}/${namedSegment(clip.title, highlightAnchorId(clip))}`;
+}
+
+/**
+ * The stored ids a clip address may be naming, likeliest first.
+ *
+ * A clip's address is its title in front of its id — `saka-opens-the-scoring-50476535`
+ * — so the id is the digits after the last dash. The whole segment is still tried
+ * after that: an address from before clips had names is the id alone, and the few
+ * clips ESPN reported without a numeric id are stored under an id that has dashes
+ * of its own. Reading it both ways costs a second lookup only for an address that
+ * the first reading did not find.
+ */
+export function clipIdCandidates(segment: string): string[] {
+  const wanted = String(segment ?? '').trim();
+  if (!wanted) return [];
+  const read = trailingId(wanted);
+  return read && read.named ? [read.id, wanted] : [wanted];
 }
 
 /**

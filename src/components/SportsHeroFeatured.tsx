@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import type { SportsEvent } from '@/lib/sports';
 
@@ -11,7 +11,7 @@ import type { SportsEvent } from '@/lib/sports';
  * The featured match in the hero of `/sports`, drawn as the card in the hero of
  * the ScoreHub layout (`.featured-match` in `scorehub/index.htm`): the
  * competition and a red "LIVE" with the clock across the top, a shield-shaped
- * crest either side of a large scoreline, a line of facts, a wide green bar at
+ * crest either side of a large scoreline, a line of facts, a wide fuchsia bar at
  * the foot, and a row of dots under the card for the other matches in play.
  *
  * What the layout's sample card shows and this one does not: goal scorers. The
@@ -36,7 +36,7 @@ export default function SportsHeroFeatured({ events, returnTo }: { events: reado
 
   const back = safeSportsReturnPath(returnTo);
   const href = event.source === 'espn' && event.details
-    ? `${matchHref(event.details)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
+    ? `${eventMatchHref(event)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
   const spoken = `Featured live match: ${event.away.name} ${event.away.score ?? 'not reported'}, ${event.home.name} ${event.home.score ?? 'not reported'}, ${event.leagueName}${event.detail ? `, ${event.detail}` : ''}`;
 
   const face = (
@@ -46,7 +46,7 @@ export default function SportsHeroFeatured({ events, returnTo }: { events: reado
         <span className="flex shrink-0 items-center gap-1.5 font-extrabold text-[#ff4c5f]">
           <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff4058] shadow-[0_0_8px_#ff304b]" />
           LIVE
-          {event.detail && <b data-featured-clock className="ml-1 text-[#00d6a0]">{event.detail}</b>}
+          {event.detail && <b data-featured-clock className="ml-1 text-[#e879f9]">{event.detail}</b>}
         </span>
       </div>
       <div className="my-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-center sm:my-5">
@@ -64,19 +64,19 @@ export default function SportsHeroFeatured({ events, returnTo }: { events: reado
       </p>
       {href && (
         // The bar is the visible end of the card's one link, not a control of its own.
-        <span aria-hidden="true" className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-[#29394c] bg-gradient-to-r from-[#00b989] to-[#111d2d] text-xs font-bold text-white">
+        <span aria-hidden="true" className="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-[#3a3352] bg-gradient-to-r from-[#a21caf] to-[#1e1836] text-xs font-bold text-white">
           <Play className="h-3.5 w-3.5" />Live match details
         </span>
       )}
     </>
   );
-  const frame = 'block rounded-[9px] border border-[#29384b] bg-gradient-to-br from-[#111d2e]/95 to-[#08121f]/95 p-4 text-[#f4f7fb] shadow-[0_15px_35px_rgba(0,0,0,0.27)]';
+  const frame = 'block rounded-[9px] border border-[#3a3352] bg-gradient-to-br from-[#1a1430]/95 to-[#0d0a1a]/95 p-4 text-[#f4f7fb] shadow-[0_15px_35px_rgba(0,0,0,0.27)]';
 
   return (
     <section aria-label="Featured match" data-featured-match={event.id} className="mx-auto w-full min-w-0 max-w-[470px]">
       {href ? (
         <Link href={href} prefetch={false} aria-label={`${spoken}. Open match details`}
-          className={`${frame} outline-none transition-colors hover:border-[#00d6a0]/60 focus-visible:ring-2 focus-visible:ring-[#00d6a0]`}>
+          className={`${frame} outline-none transition-colors hover:border-[#e879f9]/60 focus-visible:ring-2 focus-visible:ring-[#e879f9]`}>
           {face}
         </Link>
       ) : (
@@ -85,18 +85,18 @@ export default function SportsHeroFeatured({ events, returnTo }: { events: reado
       {events.length > 1 && (
         <div className="mt-1 flex items-center justify-center gap-1">
           <button type="button" onClick={() => step(-1)} aria-label="Previous live match"
-            className="grid h-11 w-11 place-items-center rounded-full text-[#aab7c9] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[#00d6a0]">
+            className="grid h-11 w-11 place-items-center rounded-full text-[#aab7c9] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[#e879f9]">
             <ChevronLeft aria-hidden="true" className="h-5 w-5" />
           </button>
           <span aria-hidden="true" className="flex items-center gap-1.5">
             {events.map((entry, at) => (
-              <i key={entry.id} className={`block rounded-full ${at === index ? 'h-1.5 w-1.5 bg-[#57f2d6]' : 'h-[5px] w-[5px] bg-[#5b6879]'}`} />
+              <i key={entry.id} className={`block rounded-full ${at === index ? 'h-1.5 w-1.5 bg-[#f0abfc]' : 'h-[5px] w-[5px] bg-[#5b6879]'}`} />
             ))}
           </span>
           {/* Read out when the arrows change the match. */}
           <span role="status" className="sr-only">{`Match ${index + 1} of ${events.length}`}</span>
           <button type="button" onClick={() => step(1)} aria-label="Next live match"
-            className="grid h-11 w-11 place-items-center rounded-full text-[#aab7c9] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[#00d6a0]">
+            className="grid h-11 w-11 place-items-center rounded-full text-[#aab7c9] outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-[#e879f9]">
             <ChevronRight aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
@@ -114,7 +114,7 @@ function Side({ team }: { team: SportsEvent['home'] }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-2">
       <span data-featured-crest aria-hidden="true" style={{ clipPath: SHIELD }}
-        className="grid h-[52px] w-12 shrink-0 place-items-center bg-[#182536] text-2xl font-black text-white shadow-[inset_0_0_0_3px_rgba(255,255,255,0.19)]">
+        className="grid h-[52px] w-12 shrink-0 place-items-center bg-[#241d3d] text-2xl font-black text-white shadow-[inset_0_0_0_3px_rgba(255,255,255,0.19)]">
         {logo
           ? <img src={logo} alt="" onError={() => setFailed(team.logo ?? null)} className="h-8 w-8 object-contain" />
           : (team.short || team.name).slice(0, 1).toUpperCase()}

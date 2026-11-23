@@ -19,7 +19,7 @@ import { browserMatchBoard } from '@/lib/espn-browser';
 const sections = [['statistics', 'Statistics'], ['lineups', 'Lineups & rosters'], ['players', 'Player stats'], ['events', 'Match events'], ['table', 'League table'], ['history', 'Form & H2H'], ['information', 'Match info'], ['insights', 'Predictions & odds']] as const;
 type Section = typeof sections[number][0];
 function EmptySection({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-2xl border border-dashed border-gray-300 p-5 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">{children}</p>;
+  return <p className="rounded-2xl border border-dashed border-white/15 p-5 text-sm text-gray-300">{children}</p>;
 }
 /**
  * One listed player. The portrait ladder matches the leaders board: the reported
@@ -37,32 +37,32 @@ function LineupPlayer({ person, league }: { person: MatchPlayer; league: string 
       <img
         src={person.headshot}
         alt=""
-        className="h-8 w-8 shrink-0 rounded-full bg-gray-100 object-cover dark:bg-gray-700"
+        className="h-8 w-8 shrink-0 rounded-full bg-white/[0.08] object-cover"
         loading="lazy"
         onError={() => setPhotoFailed(true)}
       />
     ) : (
-      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-[10px] font-bold text-gray-300">
         {initials || person.name.charAt(0)}
       </span>
     )}
-    <span className="w-7 shrink-0 text-gray-500">{person.jersey ?? '—'}</span>
+    <span className="w-7 shrink-0 text-gray-400">{person.jersey ?? '—'}</span>
     {/* A listed player links to their own page only when ESPN reported a
         numeric id for them; a name is never turned into one. */}
     <span className="min-w-0 break-words">{validEntityId(person.id)
-      ? <Link href={athleteHref({ league, athleteId: person.id })} prefetch={false} className="font-semibold text-blue-600 hover:underline dark:text-blue-400">{person.name}</Link>
-      : person.name}{person.position && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-500">Did not play</span>}</span>
+      ? <Link href={athleteHref({ league, athleteId: person.id })} prefetch={false} className="font-semibold text-fuchsia-300 hover:underline">{person.name}</Link>
+      : person.name}{person.position && <span className="ml-2 text-xs text-gray-400">{person.position}</span>}{person.didNotPlay && <span className="ml-2 text-xs text-gray-400">Did not play</span>}</span>
   </li>;
 }
 function Lineup({ lineup, name, league }: { lineup: MatchLineup; name: string; league: string }) {
-  return <article className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+  return <article className="min-w-0 rounded-2xl border border-white/[0.06] bg-white/[0.04] p-4">
     <h3 className="break-words font-bold">{validEntityId(lineup.teamId)
-      ? <Link href={teamHref({ league, teamId: lineup.teamId })} prefetch={false} className="inline-flex min-h-11 items-center text-blue-600 hover:underline dark:text-blue-400">{name}</Link>
+      ? <Link href={teamHref({ league, teamId: lineup.teamId })} prefetch={false} className="inline-flex min-h-11 items-center text-fuchsia-300 hover:underline">{name}</Link>
       : name}</h3>
-    {lineup.formation && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Reported formation: {lineup.formation}</p>}
+    {lineup.formation && <p className="mt-1 text-sm text-gray-400">Reported formation: {lineup.formation}</p>}
     {([[true, 'Starters'], [false, 'Non-starters'], [null, 'Listed players']] as const).map(([starter, label]) => {
       const people = lineup.players.filter((person) => person.starter === starter);
-      return people.length ? <div key={label} className="mt-4"><h4 className="mb-2 text-xs font-bold uppercase text-blue-600 dark:text-blue-400">{label}</h4>
+      return people.length ? <div key={label} className="mt-4"><h4 className="mb-2 text-xs font-bold uppercase text-fuchsia-300">{label}</h4>
         <ul className="space-y-2">{people.map((person) => <LineupPlayer key={person.id} person={person} league={league} />)}</ul>
       </div> : null;
     })}
@@ -123,55 +123,55 @@ export default function SportsMatchDetails({ initial, reference, returnTo, known
   const match = board.match;
   const source = failure ?? board.source;
   const teamName = (id: string) => match?.teams.find((team) => team.id === id)?.name ?? 'Team';
-  return <div className="mx-auto max-w-5xl p-3 text-gray-900 sm:p-5 dark:text-white">
+  return <div className="theme-player mx-auto max-w-5xl p-3 text-white sm:p-5">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-      <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
-      <button type="button" onClick={refresh} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-bold text-white disabled:opacity-60"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Refreshing…' : 'Refresh details'}</button>
+      <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-fuchsia-300"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
+      <button type="button" onClick={refresh} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm font-bold text-white outline-none transition hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-fuchsia-300 disabled:opacity-60"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Refreshing…' : 'Refresh details'}</button>
     </div>
-    {error && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
-    <nav aria-label="Match navigation" className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+    {error && <p role="alert" className="mb-3 text-sm text-red-200">{error}</p>}
+    <nav aria-label="Match navigation" className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-400">
       <span>{competitionCountry(reference.league) ?? 'Competition'}</span><span aria-hidden="true">/</span>
-      <Link href={`/sports?league=${encodeURIComponent(reference.league)}`} prefetch={false} className="inline-flex min-h-11 items-center break-words font-semibold text-blue-600 hover:underline dark:text-blue-400">{match?.leagueName ?? 'Browse this competition'}</Link>
+      <Link href={`/sports?league=${encodeURIComponent(reference.league)}`} prefetch={false} className="inline-flex min-h-11 items-center break-words font-semibold text-fuchsia-300 hover:underline">{match?.leagueName ?? 'Browse this competition'}</Link>
     </nav>
-    <header className="mb-5 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 dark:border-gray-700 dark:bg-gray-800">
-      <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">ESPN · {match?.leagueName ?? 'Match details'}</p>
+    <header className="theme-player-hero mb-5 rounded-3xl p-4 sm:p-6">
+      <p className="text-xs font-bold uppercase tracking-wide text-fuchsia-300">ESPN · {match?.leagueName ?? 'Match details'}</p>
       <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? knownTitle ?? (loading ? 'Loading match details…' : 'Match details unavailable')}</h1>
       {match && <>
-        <p className="mt-2 break-words text-sm text-gray-600 dark:text-gray-300">{match.statusText ?? 'Status not reported'}{match.kickoff ? ` · ${formatPredictionKickoff(match.kickoff)}` : ''}</p>
-        {match.venue && <p className="mt-1 break-words text-sm text-gray-500 dark:text-gray-400">{match.venue}</p>}
-        <div className="mt-4 grid grid-cols-2 gap-3">{match.teams.map((team) => <div key={team.id} className="min-w-0 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900">
+        <p className="mt-2 break-words text-sm text-gray-300">{match.statusText ?? 'Status not reported'}{match.kickoff ? ` · ${formatPredictionKickoff(match.kickoff)}` : ''}</p>
+        {match.venue && <p className="mt-1 break-words text-sm text-gray-400">{match.venue}</p>}
+        <div className="mt-4 grid grid-cols-2 gap-3">{match.teams.map((team) => <div key={team.id} className="min-w-0 rounded-2xl border border-white/[0.07] bg-white/[0.05] p-3">
           <p className="break-words text-sm font-bold">{validEntityId(team.id)
-            ? <Link href={teamHref({ league: reference.league, teamId: team.id })} prefetch={false} className="text-blue-600 hover:underline dark:text-blue-400">{team.name}</Link>
+            ? <Link href={teamHref({ league: reference.league, teamId: team.id })} prefetch={false} className="text-fuchsia-300 hover:underline">{team.name}</Link>
             : team.name}</p>
-          {team.side && <p className="text-xs capitalize text-gray-500 dark:text-gray-400">{team.side}</p>}
+          {team.side && <p className="text-xs capitalize text-gray-400">{team.side}</p>}
           {match.state !== 'pre' && <p className="mt-2 break-all text-4xl font-black tabular-nums sm:text-5xl">{team.score ?? '—'}</p>}
         </div>)}</div>
       </>}
-      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Only ESPN-reported data is shown. — means not reported. Coverage varies by sport and match status.</p>
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400" suppressHydrationWarning>Last checked: {formatPredictionKickoff(board.fetchedAt)}</p>
+      <p className="mt-3 text-xs text-gray-400">Only ESPN-reported data is shown. — means not reported. Coverage varies by sport and match status.</p>
+      <p className="mt-1 text-xs text-gray-400" suppressHydrationWarning>Last checked: {formatPredictionKickoff(board.fetchedAt)}</p>
     </header>
-    {!match ? <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{loading ? 'Loading ESPN match details…' : source.httpStatus === 403 ? 'Access to ESPN match details was refused (HTTP 403).' : 'ESPN match details are currently unavailable.'} No sample statistics or lineups are substituted.</p> : <>
-      <div role="group" aria-label="Match detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 gap-2 overflow-x-auto rounded-2xl bg-gray-100 py-2 dark:bg-gray-900">
-        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => { setSection(id); if (id === 'table') setTableOpened(true); if (id === 'history') setHistoryOpened(true); if (id === 'insights') setInsightsOpened(true); }} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold ${section === id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}>{label}</button>)}
+    {!match ? <p role="status" className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-100">{loading ? 'Loading ESPN match details…' : source.httpStatus === 403 ? 'Access to ESPN match details was refused (HTTP 403).' : 'ESPN match details are currently unavailable.'} No sample statistics or lineups are substituted.</p> : <>
+      <div role="group" aria-label="Match detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 gap-2 overflow-x-auto rounded-2xl bg-[#0f0b1c]/90 py-2">
+        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => { setSection(id); if (id === 'table') setTableOpened(true); if (id === 'history') setHistoryOpened(true); if (id === 'insights') setInsightsOpened(true); }} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold outline-none transition focus-visible:ring-2 focus-visible:ring-fuchsia-300 ${section === id ? 'border-fuchsia-200 bg-fuchsia-200 text-gray-950' : 'border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]'}`}>{label}</button>)}
       </div>
-      <section id={sectionId} aria-label={sections.find(([id]) => id === section)?.[1]} aria-busy={loading} className="min-w-0 rounded-3xl bg-white p-3 shadow-sm sm:p-5 dark:bg-gray-800">
+      <section id={sectionId} aria-label={sections.find(([id]) => id === section)?.[1]} aria-busy={loading} className="min-w-0 rounded-3xl border border-white/[0.07] bg-white/[0.03] p-3 sm:p-5">
         <h2 className="mb-4 text-lg font-bold">{section === 'events' ? match.updatesLabel : sections.find(([id]) => id === section)?.[1]}</h2>
-        {section === 'statistics' && (match.statistics.length ? <><p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Bars compare reported numeric values only: blue for {match.teams[0].name}, purple for {match.teams[1].name}. Missing values and incompatible formats are not compared.</p><table className="w-full table-fixed text-sm">
+        {section === 'statistics' && (match.statistics.length ? <><p className="mb-3 text-xs text-gray-400">Bars compare reported numeric values only: pink for {match.teams[0].name}, violet for {match.teams[1].name}. Missing values and incompatible formats are not compared.</p><table className="w-full table-fixed text-sm">
           <thead><tr><th scope="col" className="w-2/5 p-2 text-left">Statistic</th>{match.teams.map((team) => <th scope="col" key={team.id} className="break-words p-2 text-center">{team.name}</th>)}</tr></thead>
           <tbody>{match.statistics.map((stat) => {
             const values = match.teams.map((team) => stat.values.find((value) => value.teamId === team.id)?.value);
             const share = statisticShare(values);
-            return <tr key={stat.name} className="border-t border-gray-100 dark:border-gray-700"><th scope="row" className="break-words p-2 text-left font-medium">{stat.label}
-              {share !== null && <div role="img" aria-label={`Relative comparison: ${match.teams[0].name} ${values[0]}, ${match.teams[1].name} ${values[1]}`} className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-violet-400"><span className="h-full bg-blue-500" style={{ width: `${share}%` }} /></div>}
+            return <tr key={stat.name} className="border-t border-white/[0.07]"><th scope="row" className="break-words p-2 text-left font-medium">{stat.label}
+              {share !== null && <div role="img" aria-label={`Relative comparison: ${match.teams[0].name} ${values[0]}, ${match.teams[1].name} ${values[1]}`} className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-violet-500"><span className="h-full bg-fuchsia-400" style={{ width: `${share}%` }} /></div>}
             </th>{match.teams.map((team, index) => <td key={team.id} className="break-all p-2 text-center tabular-nums">{values[index] ?? '—'}</td>)}</tr>;
           })}</tbody>
         </table></> : <EmptySection>Team statistics have not been provided by ESPN for this match yet.</EmptySection>)}
-        {section === 'lineups' && (match.lineups.length ? <div className="grid min-w-0 gap-3 md:grid-cols-2">{match.teams.map((team) => { const lineup = match.lineups.find((item) => item.teamId === team.id); return lineup ? <Lineup key={team.id} lineup={lineup} name={team.name} league={reference.league} /> : <article key={team.id} className="min-w-0 rounded-2xl border border-gray-200 p-4 dark:border-gray-700"><h3 className="break-words font-bold">{team.name}</h3><p className="mt-3 text-sm text-gray-500 dark:text-gray-400">No roster reported for this team.</p></article>; })}</div> : <EmptySection>Lineups and rosters have not been provided by ESPN. Starting lineups are often published closer to kickoff.</EmptySection>)}
+        {section === 'lineups' && (match.lineups.length ? <div className="grid min-w-0 gap-3 md:grid-cols-2">{match.teams.map((team) => { const lineup = match.lineups.find((item) => item.teamId === team.id); return lineup ? <Lineup key={team.id} lineup={lineup} name={team.name} league={reference.league} /> : <article key={team.id} className="min-w-0 rounded-2xl border border-white/[0.06] bg-white/[0.04] p-4"><h3 className="break-words font-bold">{team.name}</h3><p className="mt-3 text-sm text-gray-400">No roster reported for this team.</p></article>; })}</div> : <EmptySection>Lineups and rosters have not been provided by ESPN. Starting lineups are often published closer to kickoff.</EmptySection>)}
         {section === 'players' && (match.playerStats.length ? <div className="space-y-5">{match.playerStats.map((group, index) => <div key={index} className="min-w-0">
           <h3 className="mb-2 break-words font-bold">{teamName(group.teamId)} · {group.label}</h3>
-          <div role="region" aria-label={`${teamName(group.teamId)} ${group.label} statistics`} tabIndex={0} className="max-w-full overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700"><table className="w-full whitespace-nowrap text-sm">
+          <div role="region" aria-label={`${teamName(group.teamId)} ${group.label} statistics`} tabIndex={0} className="max-w-full overflow-x-auto rounded-xl border border-white/[0.07]"><table className="w-full whitespace-nowrap text-sm">
             <thead><tr><th scope="col" className="p-3 text-left">Player</th>{group.columns.map((label, i) => <th scope="col" key={i} className="p-3 text-right">{label}</th>)}</tr></thead>
-            <tbody>{group.players.map((person) => <tr key={person.id} className="border-t border-gray-100 dark:border-gray-700"><th scope="row" className="p-3 text-left font-medium">{person.name}</th>{person.values.map((value, i) => <td key={i} className="p-3 text-right tabular-nums">{value ?? '—'}</td>)}</tr>)}</tbody>
+            <tbody>{group.players.map((person) => <tr key={person.id} className="border-t border-white/[0.07]"><th scope="row" className="p-3 text-left font-medium">{person.name}</th>{person.values.map((value, i) => <td key={i} className="p-3 text-right tabular-nums">{value ?? '—'}</td>)}</tr>)}</tbody>
           </table></div>
         </div>)}</div> : <EmptySection>Individual player statistics have not been provided by ESPN for this match.</EmptySection>)}
         <div hidden={section !== 'table'}>{tableOpened && <SportsLeagueTable key={`${match.reference.league}-${match.season?.year ?? 'current'}`} match={match} />}</div>
@@ -179,18 +179,18 @@ export default function SportsMatchDetails({ initial, reference, returnTo, known
         <div hidden={section !== 'insights'}>{insightsOpened && <SportsPredictionInsights key={`${reference.league}-${reference.eventId}`} reference={reference} />}</div>
         {section === 'information' && <SportsMatchInformation match={match} />}
         {section === 'events' && (match.updates.length ? <>
-          <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">Up to 200 reported updates, in ESPN’s supplied order. This may be a key-event or scoring-only feed, not every play.</p>
-          <ol className="space-y-3">{match.updates.map((update) => <li key={update.id} className="min-w-0 rounded-2xl border border-gray-100 p-3 dark:border-gray-700">
-            <p className="mb-1 break-words text-xs font-semibold text-blue-600 dark:text-blue-400">{[update.period ? `Period ${update.period}` : '', update.clock, update.team].filter(Boolean).join(' · ')}</p><p className="break-words text-sm">{update.text}</p>{!!update.participants?.length && <p className="mt-1 break-words text-xs text-gray-500 dark:text-gray-400">Reported players: {update.participants.join(', ')}</p>}
+          <p className="mb-3 text-xs text-gray-400">Up to 200 reported updates, in ESPN’s supplied order. This may be a key-event or scoring-only feed, not every play.</p>
+          <ol className="space-y-3">{match.updates.map((update) => <li key={update.id} className="min-w-0 rounded-2xl border border-white/[0.06] bg-white/[0.04] p-3">
+            <p className="mb-1 break-words text-xs font-semibold text-fuchsia-300">{[update.period ? `Period ${update.period}` : '', update.clock, update.team].filter(Boolean).join(' · ')}</p><p className="break-words text-sm">{update.text}</p>{!!update.participants?.length && <p className="mt-1 break-words text-xs text-gray-400">Reported players: {update.participants.join(', ')}</p>}
           </li>)}</ol>
         </> : <EmptySection>Match events and play-by-play updates have not been provided by ESPN for this match yet.</EmptySection>)}
       </section>
     </>}
-    <details className="mt-5 min-w-0 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
+    <details className="mt-5 min-w-0 rounded-xl border border-white/[0.07] p-3 text-xs text-gray-300">
       <summary className="min-h-11 cursor-pointer font-semibold">ESPN match feed details</summary>
       <p className="break-words">{source.httpStatus === null ? 'No HTTP response' : `HTTP ${source.httpStatus}`}{source.errorKind ? ` · ${source.errorKind}` : ''}{source.error ? ` · ${source.error}` : ''}</p>
       <EspnResponseDetails metadata={source.responseMetadata} />
-      <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-blue-600 underline dark:text-blue-400">{source.url}</a>
+      <a href={source.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-fuchsia-300 underline">{source.url}</a>
     </details>
   </div>;
 }

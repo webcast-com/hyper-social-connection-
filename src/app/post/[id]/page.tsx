@@ -11,8 +11,9 @@ import { ArrowLeft, Compass } from 'lucide-react';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
 import { sharedProfileCardData } from '@/lib/profile';
-import { routeIdFromParam } from '@/lib/route-id';
-import { notFound } from 'next/navigation';
+import { routeIdFromSegment } from '@/lib/route-id';
+import { canonicalRedirect, groupHref, postHref } from '@/lib/social-href';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Post from '@/components/Post';
 
 /**
@@ -24,7 +25,10 @@ import Post from '@/components/Post';
  * <Post> component so every interaction behaves like in the feed.
  */
 
-type Params = { params: Promise<{ id: string }> };
+type Params = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
 /**
  * Small shared loader so page + metadata don't diverge. Read once per request:
@@ -46,7 +50,8 @@ const loadPost = cache(async (postId: number) => {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
-  const postId = routeIdFromParam(id);
+  // The address is the post's id, with or without its opening words in front.
+  const postId = routeIdFromSegment(id);
   const post = postId ? await loadPost(postId) : null;
   const isPublic = !!post && isPublicPost(post);
   const content = isPublic ? post.content.replace(/\s+/g, ' ').trim() : '';
@@ -54,13 +59,26 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return getPageMetadata({
     title: snippet ? `${snippet}${content.length > 60 ? '…' : ''}` : 'Post',
     description: content.slice(0, 160) || 'View a post on Hyper.',
-    path: `/post/${encodeURIComponent(id)}`, type: 'article', index: isPublic,
+    // A post anybody may read answers at its words and its id. Any other post —
+    // private, in a private group, not yet published — claims the bare id, so
+    // nothing it says is ever written into an address by this site.
+    path: post && postId ? postHref({ id: postId, content: post.content }, isPublic) : `/post/${encodeURIComponent(id)}`, type: 'article', index: isPublic,
   });
 }
 
-export default async function PostPage({ params }: Params) {
+export default async function PostPage({ params, searchParams }: Params) {
   const { id } = await params;
-  const postId = routeIdFromParam(id);
+  const postId = routeIdFromSegment(id);
+  // One public post, one address: the id alone (every link made before posts had
+  // words in theirs), words the post no longer opens with and anyone's made-up
+  // words all leave permanently for `/post/{words}-{id}`. Only a post anybody may
+  // read is corrected: redirecting a private one would hand its words to whoever
+  // asked for its number. Outside every try, because a redirect unwinds by throwing.
+  const judgedFirst = postId ? await loadPost(postId) : null;
+  if (judgedFirst && isPublicPost(judgedFirst)) {
+    const moved = canonicalRedirect(postHref({ id: postId!, content: judgedFirst.content }, true), `/post/${id}`, await searchParams);
+    if (moved) permanentRedirect(moved);
+  }
   const viewer = await getViewer();
   const currentUser = viewer || null;
 
@@ -115,7 +133,7 @@ export default async function PostPage({ params }: Params) {
         let postGroup: any = null;
         if (row.groupId) {
           const g = await db.orm.public.Group.where({ id: row.groupId }).first();
-          if (g) postGroup = { id: g.id, name: g.name };
+          if (g) postGroup = { id: g.id, name: g.name, privacy: g.privacy };
         }
 
         if (currentUser?.id) {
@@ -192,8 +210,8 @@ export default async function PostPage({ params }: Params) {
         }, origin),
         breadcrumbStructuredData([
           HOME_CRUMB,
-          ...(judged.group && post.groupId ? [GROUPS_CRUMB, { name: judged.group.name, path: `/groups/${post.groupId}` }] : []),
-          { name: post.user?.name ? `Post by ${post.user.name}` : 'Post', path: `/post/${post.id}` },
+          ...(judged.group && post.groupId ? [GROUPS_CRUMB, { name: judged.group.name, path: groupHref({ id: post.groupId, name: judged.group.name, privacy: judged.group.privacy }) }] : []),
+          { name: post.user?.name ? `Post by ${post.user.name}` : 'Post', path: postHref(post, true) },
         ], origin),
       ]
     : [];

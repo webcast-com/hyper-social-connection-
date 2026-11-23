@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { Bookmark, User as UserIcon } from 'lucide-react';
 import { requestSavedSection, savedPostsHref } from '@/lib/saved-section';
 
@@ -120,13 +121,13 @@ export default function ProfileMenu({ user, pathname }: { user: { id: number | s
               {user.name}
             </p>
           )}
-          <Link role="menuitem" href={`/profile/${user.id}`} onClick={() => setOpen(false)} className={itemClass}>
+          <Link role="menuitem" href={profileHref(user)} onClick={() => setOpen(false)} className={itemClass}>
             <UserIcon aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
             <span>Your profile</span>
           </Link>
           <Link
             role="menuitem"
-            href={savedPostsHref(user.id)}
+            href={savedPostsHref(user.id, user.name)}
             onClick={() => {
               setOpen(false);
               // The link selects the section; this puts it in front of the member.

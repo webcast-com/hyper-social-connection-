@@ -164,3 +164,109 @@ every client-side navigation (`vendor/nfl-nba/src/seo/RouteMetaProvider.jsx`).
 Checks: `npm run test:seo` (82), `npm --prefix vendor/nfl-nba test` (182),
 `npm run test:nfl-basketball` (3). Not verified here: how Google or Bing render
 and rank these pages, and live ESPN responses (the sandbox cannot reach ESPN).
+
+## Named addresses for matches and highlights (2026-11)
+
+A match and a highlight clip are now addressed by name, with the id kept at the
+end:
+
+| Page | Before | Now |
+| --- | --- | --- |
+| Match | `/sports/matches/epl/740123` | `/sports/matches/epl/arsenal-vs-chelsea-740123` |
+| Highlight | `/sports/highlights/50476535` | `/sports/highlights/saka-opens-the-scoring-50476535` |
+
+- **The id decides the page; the name is checked afterwards.** The page reads the
+  digits after the last dash (`matchEventId`, `clipIdCandidates`) and looks the
+  record up by those alone. The words are built by `slugWords` in
+  `src/lib/seo-slug.ts`: lower case, accents folded, "&" spoken, at most 80
+  characters, cut at a word.
+- **One address per page.** A clip page answers only at `clipHref(clip)`. Every
+  other spelling — the id alone, an old title, different capitals, made-up words —
+  gets a **308** to it. A match page does the same when stored clips name the
+  fixture, and carries the query string (`returnTo`) across.
+- **A match with no stored clips is not corrected.** The server has no name to
+  check against, so it answers wherever it was asked (boards link by name from
+  live data, and a redirect on every click would be wrong). It was already
+  `noindex`, and its canonical is the plain id.
+- **Old links keep working.** Links in posts, messages, the ScoreHub page and the
+  team page still use the id alone and are redirected.
+- **Sitemap.** Clip and match entries are written in the named form, from the
+  same title and fixture name the page uses, so the sitemap does not submit an
+  address that only redirects. The two clip stores (database and folder) return
+  the same names: `HIGHLIGHTS_COMPARE=1` run of
+  `tests/sports/highlights-folder-vs-database.test.ts`, 3 of 3.
+- **No name, no words.** A title with no Latin letters or digits, a clip whose id
+  is not a number (sample cards), and a fixture missing one side keep the id-only
+  address.
+- **Not changed:** `/api/sports/matches/**` (id only) and the `/nfl-basketball/**`
+  dashboard's own match pages. Profiles, groups and posts followed in the next
+  section.
+
+Checks: `npm run test:seo` (117, of which `tests/seo/named-addresses.test.ts` is
+7), `npm run test:sports` (695). Over HTTP against a local server with two
+stored scratch clips: id-only, stale-name and wrong-case addresses → 308 to the
+named address; named address → 200 with the named canonical, `embedUrl` and
+`SportsEvent.url`; unknown ids and addresses not ending in an id → 404; in-app
+navigation to an old address lands on the named one without a full page load.
+Not verified here: how search engines treat the change, and the live site's data.
+
+## Named addresses for profiles, groups and posts (2026-11)
+
+The second half of the same change. A profile, a group and a post are addressed
+by name, with the id kept at the end:
+
+| Page | Before | Now |
+| --- | --- | --- |
+| Profile | `/profile/2` | `/profile/maya-patel-2` |
+| Group | `/groups/1` | `/groups/travel-and-adventure-1` |
+| Post | `/post/9` | `/post/dropped-a-new-original-track-today-9` |
+
+- **The id decides the page.** `routeIdFromSegment` (`src/lib/route-id.ts`) reads
+  the digits after the last dash and the record is looked up by those alone. A
+  bare id is still valid input. `04`, `-4`, `4-maya`, `maya--4` and a name with no
+  id are not addresses and answer 404.
+- **Builders live in `src/lib/social-href.ts`**: `profileHref`, `groupHref`,
+  `postHref`. Every link on the site, the canonical, `og:url`, the breadcrumbs,
+  the structured data and the sitemap go through them.
+- **A name enters an address only where anybody may already read it.**
+  - A profile is always named: a member's name is printed beside everything they
+    post. A private profile stays `noindex`.
+  - A group is named only when it is public. A private group keeps `/groups/<id>`.
+  - A post is named only when it is public (its own privacy, its author's
+    visibility, its group's privacy and its publish time all allow it). Any other
+    post keeps `/post/<id>`. Client cards decide with `mayNamePost`, which is the
+    stricter of the two checks.
+- **Post words.** `postSlugText` takes the first line that has words, drops links,
+  and stops at 60 characters on a word. A post that is only a link, only emoji,
+  or a bare repost keeps the id-only address.
+- **One address per public page.** The id alone, an old name, different capitals
+  or made-up words get a **308** to the current address, with the query string
+  kept (`?tab=saved`, `?u=`).
+- **A private group or post is never redirected.** It answers wherever it was
+  asked, its canonical is the bare id, and words typed into the address are not
+  echoed back in the page head. Redirecting would confirm the name to somebody
+  who only guessed the id.
+- **Renames.** A renamed member or group, or an edited post, moves to a new
+  address; the old one redirects because the id is unchanged.
+- **Cache refresh.** Server actions used `revalidatePath('/profile/7')` and the
+  like. A literal id path no longer matches the address that is served, so the
+  41 calls became `revalidatePath('/profile/[id]', 'page')` (and the same for
+  groups and posts). This refreshes every page of that kind rather than one.
+- **Still id-only, relying on the redirect:** the link put in a shared post or a
+  group invite (`postPath`, `buildGroupUrl` in `src/lib/share.ts`), the copied
+  call invite, the address opened after creating a group, the post link in a
+  notification, and the discussion links on sports cards.
+
+Checks: `npm run test:seo` (123, of which `tests/seo/named-addresses.test.ts` is
+13), `npm run test:share` (11), `npm run test:sports` (695), the profile-menu
+cases of `npm run test:mobile-navigation` (6). Over HTTP against a local server
+with the demo data plus a scratch private group, a private post, a post inside
+that group and an accented public post: id-only, stale-name and wrong-case
+addresses → 308 to the named address, query kept; named address → 200 with the
+named canonical; private group and private posts → 200 with the bare-id
+canonical, no redirect, no name in the head; malformed addresses → 404; the
+sitemap lists only named public addresses. Signed in, in a browser: follow and
+like still update on a named page, Saved opens `/profile/alex-rivera-1?tab=saved`,
+Copy Link gives the named address for a public post and the bare id for a
+private one. Not verified here: how search engines treat the change, and the
+live site's data.

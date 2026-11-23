@@ -86,7 +86,7 @@ test('the card falls back rather than leaving a reader with a dead click', () =>
   assert.equal(scoreCardTarget(event()), '/nfl-basketball/basketball/match/401584798');
   assert.equal(
     scoreCardTarget(event({ league: 'euroleague', leagueName: 'EuroLeague', details: { league: 'euroleague', eventId: '401584804' } })),
-    '/sports/matches/euroleague/401584804',
+    '/sports/matches/euroleague/los-angeles-lakers-vs-boston-celtics-401584804',
     'a league the dashboard does not serve still has this app\'s own match page',
   );
   assert.equal(scoreCardTarget(event({ source: 'demo', details: undefined })), '/sports', 'a sample fixture goes to the board');

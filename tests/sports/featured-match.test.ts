@@ -173,7 +173,7 @@ test('the featured card is one link to the match, reads away–home like the boa
     assert.equal(mounted.container.querySelectorAll('h1, h2, h3').length, 0);
     const links = [...section.querySelectorAll('a')];
     assert.equal(links.length, 1);
-    assert.equal(links[0].getAttribute('href'), `/sports/matches/epl/401234567?returnTo=${encodeURIComponent('/sports?league=epl')}`);
+    assert.equal(links[0].getAttribute('href'), `/sports/matches/epl/arsenal-vs-chelsea-401234567?returnTo=${encodeURIComponent('/sports?league=epl')}`);
     assert.equal(links[0].getAttribute('aria-label'), "Featured live match: Chelsea 1, Arsenal 2, Premier League, 54'. Open match details");
     assert.equal(section.querySelector('[data-featured-score]').textContent, '1–2');
     assert.match(section.textContent, /Live · 54'/);
@@ -400,7 +400,7 @@ test('the hero\'s featured card: ScoreHub\'s card with one link, away first, a d
     assert.equal(mounted.container.querySelector('article'), null);
     const links = section().querySelectorAll('a');
     assert.equal(links.length, 1);
-    assert.equal(links[0].getAttribute('href'), '/sports/matches/epl/401234567?returnTo=%2Fsports%3Fleague%3Depl');
+    assert.equal(links[0].getAttribute('href'), '/sports/matches/epl/arsenal-vs-chelsea-401234567?returnTo=%2Fsports%3Fleague%3Depl');
     assert.equal(links[0].getAttribute('aria-label'), "Featured live match: Chelsea 1, Arsenal 2, Premier League, 54'. Open match details");
     assert.equal(section().querySelector('[data-featured-score]').textContent, '1–2');
     assert.equal(section().querySelector('[data-featured-clock]').textContent, "54'");
@@ -435,7 +435,7 @@ test('the hero\'s featured card has no arrows for a single match and draws nothi
   try {
     assert.equal(one.container.querySelectorAll('button').length, 0);
     assert.equal(one.container.querySelector('[role="status"]'), null);
-    assert.equal(one.container.querySelector('a').getAttribute('href'), '/sports/matches/epl/401234567');
+    assert.equal(one.container.querySelector('a').getAttribute('href'), '/sports/matches/epl/arsenal-vs-chelsea-401234567');
   } finally { await one.unmount(); }
   const none = await mount('hero', { events: [] });
   try { assert.equal(none.container.innerHTML, ''); } finally { await none.unmount(); }

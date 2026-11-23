@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
-import { matchHref } from '@/lib/espn-match';
+import { fixtureName, matchHref } from '@/lib/espn-match';
 import { ArrowLeft, BarChart2, CalendarClock, RefreshCw, Share2, Trophy } from 'lucide-react';
 import SportsPredictionInsights from './SportsPredictionInsights';
 import EmptyState from '@/components/EmptyState';
@@ -172,7 +172,7 @@ function MatchCard({ match, currentUserId, pick = null }: { match: OddsMatch; cu
         </p>
       )}
 
-      {match.details && <Link href={matchHref(match.details)} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
+      {match.details && <Link href={matchHref(match.details, fixtureName(match.home_team, match.away_team))} prefetch={false} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-blue-600 hover:underline dark:text-blue-400">View match details</Link>}
       {match.details && <SportsPredictionInsights key={`${match.details.league}-${match.details.eventId}`} reference={match.details} />}
       {currentUserId ? <>
         <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} aria-label={`Your take on ${match.home_team} vs ${match.away_team}`}

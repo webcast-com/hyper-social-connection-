@@ -36,7 +36,7 @@ export default function ShareProfileModal({
         subtitle: profile.username ? `@${profile.username}` : null,
         image: profile.avatar ?? null,
         imageShape: 'round',
-        link: profilePath(profile.id, profile.username),
+        link: profilePath(profile.id, profile.username, profile.name),
         text: defaultShareText(profile.name),
         feedHint: 'Posts a profile card your followers will see.',
       }}

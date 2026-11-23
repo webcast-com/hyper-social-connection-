@@ -7,6 +7,8 @@ import { SPORTS_BOARD_KEYWORDS } from '@/lib/sports-keywords';
 import { getSiteUrl } from '@/lib/site-url';
 import { HOME_CRUMB, SPORTS_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
 import JsonLd from '@/components/JsonLd';
+// The player page's colours, for the board and the bars around it.
+import './theme-player.css';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Live Sports Scores and Fixtures',

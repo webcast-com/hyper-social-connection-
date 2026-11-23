@@ -363,7 +363,6 @@ export default function SportsHighlightsPage({
    * reading zero next to four cards would be a lie about those cards.
    */
   const countsAreStored = hasIndex && (summary?.clips ?? 0) > 0;
-  const countLabel = countsAreStored ? 'Stored clips' : 'Clips on the live board';
 
   // Competitions offered as filters: every one the board has clips for, plus every
   // one the index has stored clips for. A filter cannot be chosen that empties the
@@ -393,7 +392,7 @@ export default function SportsHighlightsPage({
     />;
   };
 
-  return <div className="mx-auto max-w-3xl p-3 text-gray-900 sm:p-5 dark:text-white">
+  return <div className="theme-violet theme-violet-rose mx-auto max-w-3xl p-3 text-gray-900 sm:p-5 dark:text-white">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
       <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400">
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores
@@ -424,21 +423,6 @@ export default function SportsHighlightsPage({
       <h1 className="flex items-center gap-2 text-xl font-black sm:text-2xl">
         <span aria-hidden="true" className="text-rose-500">🎬</span> Match highlights
       </h1>
-      <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-        {sample
-          ? 'Sample cards · ESPN highlight videos are unreachable right now'
-          : `Clips from ${board.games} ESPN ${board.games === 1 ? 'game' : 'games'} in the last seven days of finished fixtures.`}
-      </p>
-      {hasIndex && summary && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
-        <span>
-          <span className="font-bold">{summary.clips.toLocaleString(undefined)}</span>
-          {' '}{noun(summary.clips, 'clip')} stored across {plural(summary.competitions, 'competition')}
-        </span>
-        <span aria-hidden="true">·</span>
-        <span>{summary.matchClips} match, {summary.leagueClips} league video</span>
-        {summary.lastSweepAt && <><span aria-hidden="true">·</span><span>{scheduled ? 'last collected' : 'last swept'} {ago(summary.lastSweepAt)}</span></>}
-        {summary.oldestAt && <><span aria-hidden="true">·</span><span>oldest {shortDate(summary.oldestAt)}</span></>}
-      </p>}
       {index && !index.ok && <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
         {index.reason === 'no-database'
           ? 'No database is configured on this deployment, so there is nowhere to keep clips between requests. Showing the live board only.'
@@ -446,10 +430,6 @@ export default function SportsHighlightsPage({
             ? 'The stored clip list could not be read from the repository just now, so this page is showing the live board only. Stored clips are kept, not lost.'
             : 'The stored clip index could not be read, so this page is showing the live board only. Stored clips are kept, not lost.'}
       </p>}
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        ESPN publishes per-game clips for some competitions and not others — the Premier League and the NFL answer a game’s
-        own collection with an empty list — so league video is stored and shown alongside them rather than left out.
-      </p>
     </header>
 
     {error && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
@@ -499,13 +479,6 @@ export default function SportsHighlightsPage({
           onClick={() => chooseDays(age.days)}
         />)}
       </div>}
-      {countsAreStored && <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        Counts on these chips are clips stored in the index, not clips on this page.
-      </p>}
-      {hasIndex && <p className="text-[11px] text-gray-500 dark:text-gray-400">
-        {countLabel} are counted here. League video has no match state, so a state filter shows match clips only, and an age
-        filter measures from the match or the publication ESPN reported.
-      </p>}
     </div>}
 
     {/* One sponsored banner, between the filters and the clips. */}
@@ -615,7 +588,7 @@ export default function SportsHighlightsPage({
       {board.source.url && <a href={board.source.url} target="_blank" rel="noopener noreferrer" className="mt-1 block break-all text-blue-600 underline dark:text-blue-400">{board.source.url}</a>}
       <p className="mt-2 break-words">
         Stored index: {index
-          ? `${index.ok ? 'read' : `unavailable (${index.reason ?? 'unknown'})`} · ${plural(summary?.clips ?? 0, 'clip')} (${summary?.matchClips ?? 0} match, ${summary?.leagueClips ?? 0} league video) across ${plural(summary?.competitions ?? 0, 'competition')} · ${plural(summary?.sweptCells ?? 0, 'scoreboard')} walked · showing ${shown}`
+          ? `${index.ok ? 'read' : `unavailable (${index.reason ?? 'unknown'})`} · ${plural(summary?.clips ?? 0, 'clip')} (${summary?.matchClips ?? 0} match, ${summary?.leagueClips ?? 0} league video) across ${plural(summary?.competitions ?? 0, 'competition')} · ${plural(summary?.sweptCells ?? 0, 'scoreboard')} walked · showing ${shown}${summary?.lastSweepAt ? ` · ${scheduled ? 'last collected' : 'last swept'} ${ago(summary.lastSweepAt)}` : ''}${summary?.oldestAt ? ` · oldest ${shortDate(summary.oldestAt)}` : ''}`
           : 'not read for this page'}
       </p>
       {scheduled ? <>

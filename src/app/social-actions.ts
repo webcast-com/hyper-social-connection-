@@ -17,7 +17,7 @@ export async function toggleBlock(targetId: number) {
     const existing = await db.orm.public.Block.where({ blockerId: userId, blockedId: targetId }).first();
     if (existing) {
       await db.orm.public.Block.where({ blockerId: userId, blockedId: targetId }).deleteAndCount();
-      revalidatePath(`/profile/${targetId}`);
+      revalidatePath('/profile/[id]', 'page');
       revalidatePath('/');
       revalidatePath('/settings');
       return { success: true, blocked: false };
@@ -40,7 +40,7 @@ export async function toggleBlock(targetId: number) {
     console.warn('[action:toggleBlock]', (e as Error)?.message);
     return { success: false, blocked: false };
   }
-  revalidatePath(`/profile/${targetId}`);
+  revalidatePath('/profile/[id]', 'page');
   revalidatePath('/');
   revalidatePath('/settings');
   return { success: true, blocked: true };
@@ -54,7 +54,7 @@ export async function toggleMute(targetId: number) {
     if (existing) {
       await db.orm.public.Mute.where({ muterId: userId, mutedId: targetId }).deleteAndCount();
       revalidatePath('/');
-      revalidatePath(`/profile/${targetId}`);
+      revalidatePath('/profile/[id]', 'page');
       revalidatePath('/settings');
       return { success: true, muted: false };
     }
@@ -64,7 +64,7 @@ export async function toggleMute(targetId: number) {
     return { success: false, muted: false };
   }
   revalidatePath('/');
-  revalidatePath(`/profile/${targetId}`);
+  revalidatePath('/profile/[id]', 'page');
   revalidatePath('/settings');
   return { success: true, muted: true };
 }
@@ -110,7 +110,7 @@ export async function reviewFollowRequest(requesterId: number, decision: 'approv
   }
   revalidatePath('/settings');
   revalidatePath('/notifications');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
   return { success: true };
 }
 
@@ -132,7 +132,7 @@ export async function transferGroupOwnership(groupId: number, newOwnerId: number
     console.warn('[action:transferGroupOwnership]', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   revalidatePath('/groups');
   return { success: true, message: 'Ownership transferred' };
 }
@@ -165,7 +165,7 @@ export async function createGroupEvent(groupId: number, formData: FormData) {
     console.warn('[action:createGroupEvent]', (e as Error)?.message);
     return { success: false, message: 'Database unavailable' };
   }
-  revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/groups/[id]', 'page');
   return { success: true };
 }
 
@@ -187,7 +187,7 @@ export async function rsvpGroupEvent(eventId: number, status: 'going' | 'maybe' 
         conflictOn: { eventId, userId },
       });
     }
-    revalidatePath(`/groups/${event.groupId}`);
+    revalidatePath('/groups/[id]', 'page');
   } catch (e) {
     console.warn('[action:rsvpGroupEvent]', (e as Error)?.message);
     return { success: false };

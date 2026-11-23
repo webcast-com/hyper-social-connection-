@@ -7,6 +7,8 @@ import { athleteHref, resolveAthlete, AthleteInputError, type AthleteBoard } fro
 import { cdnPortraits } from '@/lib/espn-team';
 // The card's lit background and neon ring. Scoped to `.pl-card`.
 import './player.css';
+// The same palette for the top bar and the bottom bar while this page is open.
+import '../../../theme-player.css';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { profileHref } from '@/lib/social-href';
 import { getViewer } from '@/lib/viewer';
 import { redirect } from 'next/navigation';
 import { getNotifications } from '@/app/actions';
@@ -54,10 +55,10 @@ export default async function NotificationsPage() {
               const href =
                 notification.type === 'message' ? `/messages/${notification.actorId}` :
                 notification.type === 'follow_request' ? '/settings' :
-                notification.type === 'follow' ? `/profile/${notification.actorId}` :
+                notification.type === 'follow' ? profileHref({ id: notification.actorId, name: actor?.name }) :
                 notification.type === 'group_invite' ? '/groups' :
                 notification.type === 'group_invite_accepted' ? '/groups' :
-                notification.postId ? `/post/${notification.postId}` : `/profile/${notification.actorId}`;
+                notification.postId ? `/post/${notification.postId}` : profileHref({ id: notification.actorId, name: actor?.name });
 
               return (
                 <NotificationItem

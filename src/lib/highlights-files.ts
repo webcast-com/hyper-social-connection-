@@ -534,7 +534,7 @@ export class HighlightsFiles {
     const refs: ClipRef[] = [];
     for (const row of rows) {
       const id = row.clip_id.trim();
-      if (id) refs.push({ id, at: row.occurred_at ? new Date(row.occurred_at) : null });
+      if (id) refs.push({ id, title: row.title?.trim() || null, at: row.occurred_at ? new Date(row.occurred_at) : null });
     }
     return refs;
   }
@@ -550,16 +550,27 @@ export class HighlightsFiles {
   async eventRefs(limit: number): Promise<EventRef[]> {
     const groups = new Map<string, EventRef>();
     const scanned = new Set<string>();
+    // The newest row of each fixture that names it: the fixture's name is taken
+    // from that row, which is the row the table's own ordering would put first.
+    const named = new Map<EventRef, FileRow>();
+    const name = (group: EventRef, row: FileRow) => {
+      if (!row.event_name?.trim()) return;
+      const held = named.get(group);
+      if (held && newestFirst(held, row) <= 0) return;
+      named.set(group, row);
+      group.name = row.event_name.trim();
+    };
     const add = (row: FileRow) => {
       if (row.kind !== 'match' || !row.event_id || !row.league) return;
       const key = `${row.event_id}\u0000${row.league}`;
-      const group = groups.get(key);
+      let group = groups.get(key);
       const at = row.occurred_at ? new Date(row.occurred_at) : null;
-      if (!group) groups.set(key, { eventId: row.event_id, league: row.league, at, clips: 1 });
+      if (!group) groups.set(key, group = { eventId: row.event_id, league: row.league, name: null, at, clips: 1 });
       else {
         group.clips += 1;
         if (at && (!group.at || at > group.at)) group.at = at;
       }
+      name(group, row);
     };
 
     outer: for (const month of await this.monthsNewestFirst(true)) {
@@ -591,7 +602,10 @@ export class HighlightsFiles {
       for (const day of await this.lookup(keyOfEvent(group.eventId))) {
         if (scanned.has(day)) continue;
         for (const row of await this.day(day)) {
-          if (row.kind === 'match' && row.event_id === group.eventId && row.league === group.league) group.clips += 1;
+          if (row.kind === 'match' && row.event_id === group.eventId && row.league === group.league) {
+            group.clips += 1;
+            name(group, row);
+          }
         }
       }
     }

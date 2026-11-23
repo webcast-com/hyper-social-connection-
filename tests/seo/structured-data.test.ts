@@ -61,14 +61,14 @@ test('a public post is a SocialMediaPosting with what the page prints', () => {
   assert.deepEqual(socialPostStructuredData(post({ updatedAt: '2026-11-11T09:30:00.000Z' }), SITE), {
     '@context': 'https://schema.org',
     '@type': 'SocialMediaPosting',
-    url: 'https://hyper.co.ke/post/41',
-    mainEntityOfPage: 'https://hyper.co.ke/post/41',
+    url: 'https://hyper.co.ke/post/match-day-at-kikuyu-grounds-41',
+    mainEntityOfPage: 'https://hyper.co.ke/post/match-day-at-kikuyu-grounds-41',
     headline: 'Match day at Kikuyu grounds. What a finish!',
     text: 'Match day at Kikuyu grounds. What a finish!',
     image: 'https://hyper.co.ke/uploads/goal.jpg',
     datePublished: '2026-11-10T15:00:00.000Z',
     dateModified: '2026-11-11T09:30:00.000Z',
-    author: { '@type': 'Person', name: 'Wanjiru Kamau', url: 'https://hyper.co.ke/profile/7', image: 'https://cdn.example.org/w.png' },
+    author: { '@type': 'Person', name: 'Wanjiru Kamau', url: 'https://hyper.co.ke/profile/wanjiru-kamau-7', image: 'https://cdn.example.org/w.png' },
     interactionStatistic: [
       { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: 12 },
       { '@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: 3 },
@@ -132,7 +132,7 @@ test('an address is absolute https without credentials, or it is left out', () =
   // A picture that is not usable is dropped; the post is still described.
   const data = socialPostStructuredData(post({ imageUrl: 'data:image/png;base64,AAAA', author: { id: 7, name: 'W', avatar: 'javascript:alert(1)' } }), SITE)!;
   assert.equal('image' in data, false);
-  assert.deepEqual(data.author, { '@type': 'Person', name: 'W', url: 'https://hyper.co.ke/profile/7' });
+  assert.deepEqual(data.author, { '@type': 'Person', name: 'W', url: 'https://hyper.co.ke/profile/w-7' });
 });
 
 /* ── Profiles ───────────────────────────────────────────────────────────── */
@@ -141,16 +141,16 @@ test('a public profile is a ProfilePage about a Person, with what the header pri
   assert.deepEqual(profilePageStructuredData(profile(), SITE), {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
-    url: 'https://hyper.co.ke/profile/7',
+    url: 'https://hyper.co.ke/profile/wanjiru-kamau-7',
     dateCreated: '2026-03-04T08:00:00.000Z',
     mainEntity: {
       '@type': 'Person',
-      '@id': 'https://hyper.co.ke/profile/7#person',
+      '@id': 'https://hyper.co.ke/profile/wanjiru-kamau-7#person',
       name: 'Wanjiru Kamau',
       alternateName: 'wanjiru',
       description: 'Midfielder at Kikuyu United.',
       image: 'https://hyper.co.ke/uploads/w.png',
-      url: 'https://hyper.co.ke/profile/7',
+      url: 'https://hyper.co.ke/profile/wanjiru-kamau-7',
       // Who follows them, then who they follow.
       interactionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/FollowAction', userInteractionCount: 120 },
       agentInteractionStatistic: { '@type': 'InteractionCounter', interactionType: 'https://schema.org/FollowAction', userInteractionCount: 45 },
@@ -162,8 +162,8 @@ test('a profile with only a name is still a profile; one without a name is not d
   assert.deepEqual(profilePageStructuredData({ id: 9, name: 'Otieno' }, SITE), {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
-    url: 'https://hyper.co.ke/profile/9',
-    mainEntity: { '@type': 'Person', '@id': 'https://hyper.co.ke/profile/9#person', name: 'Otieno', url: 'https://hyper.co.ke/profile/9' },
+    url: 'https://hyper.co.ke/profile/otieno-9',
+    mainEntity: { '@type': 'Person', '@id': 'https://hyper.co.ke/profile/otieno-9#person', name: 'Otieno', url: 'https://hyper.co.ke/profile/otieno-9' },
   });
   assert.equal(profilePageStructuredData(profile({ name: '' }), SITE), null);
   assert.equal(profilePageStructuredData(profile({ name: null }), SITE), null);

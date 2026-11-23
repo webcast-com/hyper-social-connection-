@@ -183,7 +183,9 @@ test('every clip on the board is listed, and the filters only offer what it hold
       'nothing is held back behind the homepage card\u2019s "show all" control');
     assert.deepEqual(page.urls, [], 'the page asks ESPN and this site for nothing on load');
 
-    assert.match(page.text(), /Clips from 5 ESPN games in the last seven days of finished fixtures\./);
+    // What the board holds is said in the details block, not under the heading.
+    assert.equal(page.container.querySelector('header').querySelectorAll('p').length, 0, 'the heading has no description under it');
+    assert.match(page.text(), /Live board: live · 5 clips from 5 games/);
     // Only competitions and states this board really has clips for are offered.
     const labels = [...page.container.querySelectorAll('[role="group"] button[aria-pressed]')].map((node: any) => node.textContent.trim());
     assert.deepEqual(labels, [
@@ -238,12 +240,15 @@ test('a filter chosen on the query string is honoured on the first render', asyn
   }
 });
 
-test('a sample board stays labelled, and its cards stay read-only', async () => {
+test('a sample board is labelled in the details, and its cards stay read-only', async () => {
   // Signed in, so the only thing standing between this reader and engagement is
   // that a placeholder clip has no anchor post to engage with.
   const page = await mountPage(board(fiveClips(), 'unavailable'), { signedIn: true });
   try {
-    assert.match(page.text(), /Sample cards · ESPN highlight videos are unreachable right now/);
+    // The heading no longer carries a description; the label is in the details
+    // block at the foot of the page, and each sample card says what it is.
+    assert.ok(!page.text().includes('Sample cards · ESPN highlight videos are unreachable right now'));
+    assert.match(page.text(), /Live board: unavailable · 5 clips from \d+ games? · sample cards, no posts to engage with/);
     assert.equal(page.cards().length, 5);
     for (const card of page.cards()) {
       assert.equal(card.querySelectorAll('form').length, 0, 'no like, save, share or comment form on a sample card');
@@ -361,8 +366,9 @@ test('stored clips render in their own section, and a clip on both is shown once
   try {
     assert.deepEqual(page.urls, [], 'reading the stored index costs no request on load');
 
-    assert.match(page.text(), /3 clips stored across 2 competitions/);
-    assert.match(page.text(), /2 match, 1 league video/);
+    // The stored totals are in the details block, not under the heading.
+    assert.equal(page.container.querySelector('header').querySelectorAll('p').length, 0, 'the heading has no description under it');
+    assert.match(page.text(), /Stored index: read · 3 clips \(2 match, 1 league video\) across 2 competitions/);
     assert.match(page.text(), /last swept 2 min ago/);
     assert.match(page.text(), /oldest Oct 1, 2026/);
 
@@ -388,7 +394,9 @@ test('stored clips render in their own section, and a clip on both is shown once
     assert.equal(page.chip('Every competition')!.textContent.trim(), 'Every competition3');
     assert.equal(page.chip('Full time')!.textContent.trim(), 'Full time3');
     assert.equal(page.chip('Any state')!.getAttribute('title'), null);
-    assert.match(page.text(), /Counts on these chips are clips stored in the index, not clips on this page\./);
+    assert.ok(!page.text().includes('Counts on these chips are clips stored in the index'), 'the chips carry their own labels; no caption repeats them');
+    assert.ok(!page.text().includes('are counted here'));
+    assert.ok(!page.text().includes('ESPN publishes per-game clips'));
 
     assert.deepEqual([...page.container.querySelectorAll('[role="group"]')].map((node: any) => node.getAttribute('aria-label')),
       ['Filter highlights by competition', 'Filter highlights by match state', 'Filter highlights by age'],
@@ -590,7 +598,7 @@ test('the sweep button reports what the pass asked and stored, including a pass 
     assert.equal(page.urls[0], '/api/sports/highlights/sweep?force=1');
     assert.match(page.text(), /Sweep: 24 scoreboards walked, 18 games asked, 41 match clips and 7 league clips stored, 54 requests in 3\.1s\./);
     assert.match(page.text(), /The pass stopped at its deadline or its slice; the rest of the catalog waits for the next one\./);
-    assert.match(page.text(), /48 clips stored across 9 competitions/, 'a pass that stored clips re-reads the index');
+    assert.match(page.text(), /48 clips \(\d+ match, \d+ league video\) across 9 competitions/, 'a pass that stored clips re-reads the index');
     assert.ok(page.urls.some((url) => url.startsWith('/api/sports/highlights?index=1')));
     assert.match(page.text(), /72 scoreboards walked/);
   } finally {
@@ -611,7 +619,6 @@ test('the sweep button reports what the pass asked and stored, including a pass 
     // with stored counts: a zero next to a card would be a lie about that card.
     assert.equal(limited.chip('Premier League')!.textContent.trim(), 'Premier League1');
     assert.equal(limited.chip('Premier League')!.getAttribute('title'), 'Clips on the live board in Premier League');
-    assert.ok(!limited.text().includes('Counts on these chips are clips stored in the index'), 'and the caption says which count is which');
   } finally {
     await limited.unmount();
   }
@@ -671,7 +678,7 @@ test('a stored clip that is also on the board is one card, and a broken indexed 
   try {
     assert.equal(page.cards().length, 1, 'the same clip on the board and in the index is one card');
     assert.equal(page.section('Stored match highlights'), null, 'and an empty stored section is not rendered');
-    assert.match(page.text(), /1 clip stored across 1 competition/);
+    assert.match(page.text(), /1 clip \(\d+ match, \d+ league video\) across 1 competition/);
 
     // The indexed response must carry both halves; one without the other is a
     // broken response, and what is on screen stays.

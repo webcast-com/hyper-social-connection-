@@ -78,7 +78,7 @@ test('a basketball fixture is rendered by the board’s own match card', async (
     // football-shaped page.
     const links = [...card.querySelectorAll('a')];
     assert.equal(links.length, 1);
-    assert.equal(links[0].getAttribute('href'), '/sports/matches/nba/401234567');
+    assert.equal(links[0].getAttribute('href'), '/sports/matches/nba/los-angeles-lakers-vs-boston-celtics-401234567');
     assert.equal(links[0].getAttribute('aria-label'), 'Open Boston Celtics (74) vs Los Angeles Lakers (78) match details');
     assert.match(links[0].textContent!, /Match details/);
     // "Copy to post" stays a button of its own, outside the link.

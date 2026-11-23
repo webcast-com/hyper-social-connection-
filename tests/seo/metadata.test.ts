@@ -25,6 +25,9 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
   const result = await build({
     stdin: { contents: path.endsWith('sitemap.ts') ? `export { default } from './${path}';` : `export { generateMetadata } from './${path}';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'cjs', platform: 'node', packages: 'external',
+    // A route may import its own stylesheet (the match page does). It has nothing
+    // to say about metadata, and esbuild will not bundle one into a script.
+    loader: { '.css': 'empty' },
     plugins: [{ name: 'seo-server-fixtures', setup(builder) {
       builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed|highlights-index)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
       // The filter combinators the pages import next to the client; stubbed so a
@@ -78,7 +81,7 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
       `, loader: 'js' }));
     } }],
   });
-  const loaded = { exports: {} as { default: () => Promise<Array<{ url: string; lastModified?: unknown }>>; generateMetadata: (input: { params: Promise<Record<string, string>> }) => Promise<import('next').Metadata> } };
+  const loaded = { exports: {} as { default: () => Promise<Array<{ url: string; lastModified?: unknown }>>; generateMetadata: (input: { params: Promise<Record<string, string>>; searchParams?: Promise<Record<string, string>> }) => Promise<import('next').Metadata> } };
   new Function('require', 'module', 'exports', 'fixture', result.outputFiles[0].text)(createRequire(import.meta.url), loaded, loaded.exports, fixture);
   return loaded.exports;
 }
@@ -207,15 +210,17 @@ test('dynamic sitemap queries require public profiles, public groups and public 
     const loaded = await loadMetadataModule('src/app/sitemap.ts', {
       db,
       clipRefs: { ok: true, refs: [
-        { id: '50476535', at: new Date('2026-11-14T02:00:00.000Z') },
-        { id: '50464264', at: null },
+        { id: '50476535', title: 'Gabe Perreault lights the lamp for Rangers', at: new Date('2026-11-14T02:00:00.000Z') },
+        { id: '50464264', title: null, at: null },
       ] },
     });
     const rows = await loaded.default();
     assert.ok(rows.some((row) => row.url === 'https://hyper.co.ke/post/7'));
     // Every stored clip is a page now, so every stored clip is a URL — and one
     // whose time was never reported gets no invented modification date.
-    const dated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50476535');
+    // The URL is the one the clip page answers at — its title in front of its
+    // id — so the sitemap never submits an address that only redirects.
+    const dated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/gabe-perreault-lights-the-lamp-for-rangers-50476535');
     assert.ok(dated, 'the clip has its own URL');
     assert.equal(dated?.lastModified instanceof Date && dated.lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
     const undated = rows.find((row) => row.url === 'https://hyper.co.ke/sports/highlights/50464264');
@@ -287,8 +292,18 @@ test('a stored highlight clip gets an indexable page of its own, with the clip a
       startAt: '2026-11-14T02:00:00.000Z', status: 'live',
     };
     const loaded = await loadMetadataModule('src/app/sports/highlights/[clipId]/page.tsx', { clip });
-    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ clipId: '50476535' }) });
-    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/highlights/50476535');
+    const named = 'gabe-perreault-lights-the-lamp-for-rangers-50476535';
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ clipId: named }) });
+    assert.equal(metadata.alternates?.canonical, `https://hyper.co.ke/sports/highlights/${named}`);
+    // One clip, one address: the id alone (every link made before clips had
+    // names), an old title and anyone's made-up words all leave permanently for it.
+    for (const other of ['50476535', 'an-older-title-50476535', 'Gabe-Perreault-Lights-The-Lamp-For-Rangers-50476535']) {
+      await assert.rejects(
+        () => loaded.generateMetadata({ params: Promise.resolve({ clipId: other }) }),
+        (error: unknown) => (error as { digest?: string })?.digest === `NEXT_REDIRECT;replace;/sports/highlights/${named};308;`,
+        `${other} is sent to the clip's own address`,
+      );
+    }
     assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'a stored clip is a real page, so it is indexable');
     assert.match(String(metadata.title), /Gabe Perreault lights the lamp for Rangers/);
     assert.match(String(metadata.title), /Vancouver Canucks vs New York Rangers/, 'the fixture names the clip for a reader who searched it');
@@ -332,8 +347,10 @@ test('a fixture with stored clips gets one match URL, and only when the id rever
       eventRefs: { ok: true, refs: [
         // One fixture reported twice: a scoreboard carrying more than one
         // competition appends to the stored id, but it is still one match page.
-        { eventId: 'espn-nhl-401892706', league: 'nhl', at: new Date('2026-11-14T02:00:00.000Z'), clips: 2 },
-        { eventId: 'espn-nhl-401892706-7', league: 'nhl', at: new Date('2026-11-13T02:00:00.000Z'), clips: 1 },
+        // The newest report did not name the fixture and the older one did: it
+        // is one page either way, and the name is taken from whichever has it.
+        { eventId: 'espn-nhl-401892706', league: 'nhl', name: null, at: new Date('2026-11-14T02:00:00.000Z'), clips: 2 },
+        { eventId: 'espn-nhl-401892706-7', league: 'nhl', name: 'Vancouver Canucks vs New York Rangers', at: new Date('2026-11-13T02:00:00.000Z'), clips: 1 },
         // A league slug with a dash in it must still reverse cleanly.
         { eventId: 'espn-league-one-401880754', league: 'league-one', at: new Date('2026-11-12T02:00:00.000Z'), clips: 3 },
         // An id this site cannot turn into a match URL is not submitted as one.
@@ -345,7 +362,8 @@ test('a fixture with stored clips gets one match URL, and only when the id rever
     const rows = await loaded.default();
     const matches = rows.filter((row) => row.url.startsWith('https://hyper.co.ke/sports/matches/'));
     assert.deepEqual(matches.map((row) => row.url), [
-      'https://hyper.co.ke/sports/matches/nhl/401892706',
+      'https://hyper.co.ke/sports/matches/nhl/vancouver-canucks-vs-new-york-rangers-401892706',
+      // A fixture no stored clip names keeps the address it always had.
       'https://hyper.co.ke/sports/matches/league-one/401880754',
     ], 'one URL per fixture, newest first, and no guessed or unreversable ones');
     assert.equal(matches[0].lastModified instanceof Date && matches[0].lastModified.toISOString(), '2026-11-14T02:00:00.000Z');
@@ -393,14 +411,26 @@ test('public posts get a dedicated article canonical and private/unpublished pos
     const loaded = await loadMetadataModule('src/app/post/[id]/page.tsx', { db: { post: { first: async () => row } } });
     const input = { params: Promise.resolve({ id: '7' }) };
     const metadata = await loaded.generateMetadata(input);
-    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/post/7');
+    // A post anybody may read answers at its opening words and its id.
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/post/private-content-marker-7');
     assert.equal(metadata.description, base.content);
+    // The same post asked for by its words is the same post, at the same address.
+    const named = await loaded.generateMetadata({ params: Promise.resolve({ id: 'private-content-marker-7' }) });
+    assert.equal(named.alternates?.canonical, 'https://hyper.co.ke/post/private-content-marker-7');
     assert.equal(metadata.openGraph && 'type' in metadata.openGraph && metadata.openGraph.type, 'article');
     for (const value of [null, { ...base, privacy: 'friends' }, { ...base, user: { profileVisibility: 'followers' } }, { ...base, group: { privacy: 'private' } }, { ...base, scheduledAt: new Date('2099-01-01') }]) {
       row = value;
       const hidden = await loaded.generateMetadata(input);
       assert.equal(typeof hidden.robots === 'object' && hidden.robots?.index, false);
       assert.ok(!JSON.stringify(hidden).includes(base.content));
+      // Nor in its address: a post not everybody may read claims the bare id,
+      // whatever words it was asked for by.
+      assert.equal(hidden.alternates?.canonical, 'https://hyper.co.ke/post/7');
+      assert.ok(!JSON.stringify(hidden).toLowerCase().includes('private-content-marker'));
+      if (value) {
+        const asked = await loaded.generateMetadata({ params: Promise.resolve({ id: 'private-content-marker-7' }) });
+        assert.equal(asked.alternates?.canonical, 'https://hyper.co.ke/post/7', 'the words in a request are not repeated back');
+      }
     }
   });
 });
@@ -413,6 +443,19 @@ test('private profile and group metadata are noindex and omit private descriptio
       const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
       assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
       assert.ok(!JSON.stringify(metadata).includes('PRIVATE-'));
+      // A member's name is printed beside everything they post and titles their
+      // page whoever asks, so it is in their address too. A private group's name
+      // is its members', and its address stays the bare id.
+      assert.equal(
+        metadata.alternates?.canonical,
+        kind === 'profile' ? '/profile/reported-name-7' : '/groups/7',
+      );
+      const publicRow = { ...row, profileVisibility: 'public', privacy: 'public' };
+      const open = await loadMetadataModule(`src/app/${kind}/[id]/page.tsx`, { db: { [model]: { first: async () => publicRow } } });
+      for (const id of ['7', 'reported-name-7', 'some-older-name-7']) {
+        const named = await open.generateMetadata({ params: Promise.resolve({ id }) });
+        assert.equal(named.alternates?.canonical, `/${kind}/reported-name-7`, `/${kind}/${id} names the one address`);
+      }
     }
   });
 });
@@ -486,8 +529,20 @@ test('a fixture this site holds clips for is server-verified, so its match page 
       board: { status: 'unavailable', match: null },
       eventClips: [storedClip],
     });
-    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ league: 'nhl', eventId: '401892706' }) });
-    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/matches/nhl/401892706');
+    const named = 'vancouver-canucks-vs-new-york-rangers-401892706';
+    const metadata = await loaded.generateMetadata({ params: Promise.resolve({ league: 'nhl', eventId: named }) });
+    assert.equal(metadata.alternates?.canonical, `https://hyper.co.ke/sports/matches/nhl/${named}`);
+    // The server knows this fixture's name, so every other spelling of its
+    // address — the id alone, the sides the other way round — leaves permanently
+    // for the one it answers at, and takes the reader's way back with it.
+    const redirected = (eventId: string, query: Record<string, string>, to: string) => assert.rejects(
+      () => loaded.generateMetadata({ params: Promise.resolve({ league: 'nhl', eventId }), searchParams: Promise.resolve(query) }),
+      (error: unknown) => (error as { digest?: string })?.digest === `NEXT_REDIRECT;replace;${to};308;`,
+      `${eventId} is sent to ${to}`,
+    );
+    await redirected('401892706', {}, `/sports/matches/nhl/${named}`);
+    await redirected('new-york-rangers-vs-vancouver-canucks-401892706', {}, `/sports/matches/nhl/${named}`);
+    await redirected('401892706', { returnTo: '/sports?league=nhl' }, `/sports/matches/nhl/${named}?returnTo=%2Fsports%3Fleague%3Dnhl`);
     assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, true, 'the server can name the fixture, so the page is worth crawling');
     assert.equal(metadata.title, 'Vancouver Canucks vs New York Rangers — National Hockey League highlights and match stats');
     assert.equal(
@@ -508,6 +563,24 @@ test('browser-first match metadata keeps its canonical and remains noindex until
     const input = { params: Promise.resolve({ league: 'epl', eventId: '401234567' }) };
     const metadata = await loaded.generateMetadata(input);
     assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/sports/matches/epl/401234567');
+    // A board links to the fixture by name before this site has stored anything
+    // for it. With nothing to check the name against, the page answers where it
+    // was asked — no redirect on every click — and, still a `noindex` shell,
+    // claims the plain id as its address.
+    const byName = await loaded.generateMetadata({ params: Promise.resolve({ league: 'epl', eventId: 'arsenal-vs-chelsea-401234567' }) });
+    assert.equal(byName.alternates?.canonical, 'https://hyper.co.ke/sports/matches/epl/401234567');
+    assert.equal(typeof byName.robots === 'object' && byName.robots?.index, false);
+    // An address that does not end in an event id is not a match at all.
+    for (const bad of ['arsenal-vs-chelsea', '401234567-arsenal', 'arsenal-vs-chelsea-0', '-']) {
+      await assert.rejects(
+        () => loaded.generateMetadata({ params: Promise.resolve({ league: 'epl', eventId: bad }) }),
+        (error: unknown) => {
+          const text = `${(error as { digest?: string })?.digest ?? ''} ${(error as Error)?.message ?? ''}`;
+          return text.includes('NEXT_NOT_FOUND') || text.includes('NEXT_HTTP_ERROR_FALLBACK;404');
+        },
+        `${bad} is a 404`,
+      );
+    }
     assert.match(String(metadata.title), /Premier League match details/);
     assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
     fixture.board = { status: 'unavailable', match: null };

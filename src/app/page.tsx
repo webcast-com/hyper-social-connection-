@@ -13,6 +13,7 @@ import FeedTabs from '@/components/FeedTabs';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
+import { groupHref, profileHref } from '@/lib/social-href';
 import { ArrowRight, Clapperboard, Compass, Radio, Users, Sparkles, Target, Trophy } from 'lucide-react';
 import SportsMatchCentre from '@/components/SportsMatchCentre';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
@@ -525,7 +526,7 @@ export default async function Home() {
     // `xl` the navigation rail joins them. Both rails are fixed widths, so the
     // feed column takes what is left rather than a quarter-based share, and both
     // stay on screen while the feed scrolls.
-    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto theme-violet home-panel bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
       {/* The site's name, and who publishes it (name, address and logo). */}
       <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
@@ -533,7 +534,7 @@ export default async function Home() {
       <aside className="hidden min-w-0 xl:block">
         <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto scrollbar-hide pb-2">
           {viewer ? (
-            <Link href={`/profile/${viewer.id}`} className="group flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-gray-200/70 dark:hover:bg-gray-800">
+            <Link href={profileHref(viewer)} className="group flex items-center gap-3 rounded-2xl p-2 transition-colors hover:bg-gray-200/70 dark:hover:bg-gray-800">
               {viewer.avatar ? (
                 <img src={viewer.avatar} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-blue-500/30" />
               ) : (
@@ -597,7 +598,7 @@ export default async function Home() {
             {viewerGroups.slice(0, 4).map((g, i) => {
               const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-pink-500', 'bg-amber-500'];
               return (
-                <RailLink key={g.id} href={`/groups/${g.id}`} label={g.name} well={`${colors[i % colors.length]} text-sm text-white`}>
+                <RailLink key={g.id} href={groupHref(g)} label={g.name} well={`${colors[i % colors.length]} text-sm text-white`}>
                   {g.name?.charAt(0) || 'G'}
                 </RailLink>
               );
@@ -641,7 +642,7 @@ export default async function Home() {
               {mobileGroups.length > 0 ? mobileGroups.map((g, i) => {
                 const colors = ['from-violet-500 to-fuchsia-500', 'from-blue-500 to-cyan-500', 'from-emerald-500 to-teal-500', 'from-amber-500 to-orange-500'];
                 return (
-                  <Link key={g.id} href={`/groups/${g.id}`} className="w-[132px] shrink-0 snap-start rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
+                  <Link key={g.id} href={groupHref(g)} className="w-[132px] shrink-0 snap-start rounded-2xl bg-violet-50 p-3 ring-1 ring-violet-100 dark:bg-violet-950/30 dark:ring-violet-900/50">
                     <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${colors[i % colors.length]} text-sm font-black text-white shadow-sm`}>
                       {g.name?.charAt(0) || 'G'}
                     </div>
@@ -685,7 +686,7 @@ export default async function Home() {
             </div>
             <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
               {otherUsers.slice(0, 6).map((u) => (
-                <Link key={u.id} href={`/profile/${u.id}`} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
+                <Link key={u.id} href={profileHref(u)} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
                   ) : (
@@ -711,7 +712,7 @@ export default async function Home() {
               {/* To a member each of these is a conversation; to a visitor it is
                   a person, and the person's page is the one worth crawling. */}
               {otherUsers.slice(0, 8).map((u) => (
-                <Link key={u.id} href={signedIn ? `/messages/${u.id}` : `/profile/${u.id}`} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
+                <Link key={u.id} href={signedIn ? `/messages/${u.id}` : profileHref(u)} className="relative shrink-0 rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100 dark:bg-emerald-950/30 dark:ring-emerald-900/50">
                   <div className="flex items-center gap-2">
                     <div className="relative">
                       {u.avatar ? (
@@ -809,7 +810,7 @@ export default async function Home() {
           <div className="space-y-3">
             {otherUsers.slice(0, 4).map((u) => (
               <div key={u.id} className="flex items-center justify-between">
-                <Link href={`/profile/${u.id}`} className="flex items-center space-x-2.5 min-w-0">
+                <Link href={profileHref(u)} className="flex items-center space-x-2.5 min-w-0">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
                   ) : (
@@ -831,7 +832,7 @@ export default async function Home() {
                     </div>
                   </div>
                 </Link>
-                <Link href={`/profile/${u.id}`} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">
+                <Link href={profileHref(u)} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">
                   View
                 </Link>
               </div>
@@ -844,7 +845,7 @@ export default async function Home() {
           <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide mb-3">Contacts</h3>
           <div className="space-y-1">
             {otherUsers.slice(0, 6).map((u) => (
-              <Link key={u.id} href={signedIn ? `/messages/${u.id}` : `/profile/${u.id}`} className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-colors">
+              <Link key={u.id} href={signedIn ? `/messages/${u.id}` : profileHref(u)} className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700/60 rounded-xl cursor-pointer transition-colors">
                 <div className="relative">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full object-cover" />

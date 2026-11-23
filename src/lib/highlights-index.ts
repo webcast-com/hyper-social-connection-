@@ -912,7 +912,8 @@ export type EventClipsRead = {
 };
 
 /** One stored clip's identity and when it happened, for a list of URLs. */
-export type ClipRef = { id: string; at: Date | null };
+/** `title` is there for the address only: a clip's URL carries its title in front of its id. */
+export type ClipRef = { id: string; title: string | null; at: Date | null };
 
 export type ClipRefsRead = {
   ok: boolean;
@@ -1009,7 +1010,12 @@ export async function readEventClips(eventId: string, limit: number = EVENT_CLIP
 }
 
 /** One fixture this site holds clips for, as a list of URLs needs it. */
-export type EventRef = { eventId: string; league: string; at: Date | null; clips: number };
+/**
+ * `name` is the fixture as its newest clip that names it reports it ("Home vs
+ * Away"), for the address only. It is chosen the way `readEventClips` orders the
+ * clips a match page reads, so a sitemap and the page it lists build one address.
+ */
+export type EventRef = { eventId: string; league: string; name: string | null; at: Date | null; clips: number };
 
 export type EventRefsRead = {
   ok: boolean;
@@ -1025,7 +1031,7 @@ export const MAX_EVENT_REFS = 2_000;
  *
  * A fixture with stored clips is a fixture this site can say something true about
  * without a browser, so it is a fixture worth a URL in the sitemap. One grouped
- * query, and only the three columns a URL and a `lastmod` need.
+ * query, and only the columns a URL and a `lastmod` need.
  */
 export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promise<EventRefsRead> {
   if (inFiles()) return (await files()).readRecentEventRefs(limit);
@@ -1035,8 +1041,10 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
   const bounded = Math.max(1, Math.min(MAX_EVENT_REFS, asked || MAX_EVENT_REFS));
   try {
     await ensureMigrated();
-    const rows = await rawQuery<{ event_id: string | null; league: string | null; occurred_at: Date | null; clips: number }>(
-      `SELECT "event_id", "league", max("occurred_at") AS "occurred_at", count(*)::int AS "clips"
+    const rows = await rawQuery<{ event_id: string | null; league: string | null; name: string | null; occurred_at: Date | null; clips: number }>(
+      `SELECT "event_id", "league", max("occurred_at") AS "occurred_at", count(*)::int AS "clips",
+              (array_agg("event_name" ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC)
+                 FILTER (WHERE btrim(coalesce("event_name", '')) <> ''))[1] AS "name"
          FROM "sports_highlight_clips"
         WHERE "kind" = 'match' AND "event_id" IS NOT NULL AND "league" IS NOT NULL
         GROUP BY "event_id", "league"
@@ -1050,7 +1058,8 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
       const league = typeof row.league === 'string' ? row.league.trim() : '';
       // A row that cannot name both halves of a match URL is not a URL.
       if (!eventId || !league) continue;
-      refs.push({ eventId, league, at: row.occurred_at instanceof Date ? row.occurred_at : null, clips: Number.isFinite(row.clips) ? row.clips : 0 });
+      const name = typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null;
+      refs.push({ eventId, league, name, at: row.occurred_at instanceof Date ? row.occurred_at : null, clips: Number.isFinite(row.clips) ? row.clips : 0 });
     }
     return { ok: true, refs };
   } catch (error) {
@@ -1061,8 +1070,8 @@ export async function readRecentEventRefs(limit: number = MAX_EVENT_REFS): Promi
 /**
  * The newest stored match clips as identities and timestamps, for a sitemap.
  *
- * Only what a sitemap needs — an id to build a URL from and a time to report as
- * `lastmod` — so it reads two columns and no rows it cannot publish.
+ * Only what a sitemap needs — an id and a title to build a URL from and a time to
+ * report as `lastmod` — so it reads three columns and no rows it cannot publish.
  */
 export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise<ClipRefsRead> {
   if (inFiles()) return (await files()).readRecentClipRefs(limit);
@@ -1072,8 +1081,8 @@ export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise
   const bounded = Math.max(1, Math.min(MAX_CLIP_REFS, asked || MAX_CLIP_REFS));
   try {
     await ensureMigrated();
-    const rows = await rawQuery<{ clip_id: string | null; occurred_at: Date | null }>(
-      `SELECT "clip_id", "occurred_at" FROM "sports_highlight_clips"
+    const rows = await rawQuery<{ clip_id: string | null; title: string | null; occurred_at: Date | null }>(
+      `SELECT "clip_id", "title", "occurred_at" FROM "sports_highlight_clips"
          WHERE "kind" = 'match' AND "clip_id" IS NOT NULL
          ORDER BY "occurred_at" DESC NULLS LAST, "id" DESC
          LIMIT $1`,
@@ -1083,7 +1092,8 @@ export async function readRecentClipRefs(limit: number = MAX_CLIP_REFS): Promise
     for (const row of rows) {
       const id = typeof row.clip_id === 'string' ? row.clip_id.trim() : '';
       if (!id) continue;
-      refs.push({ id, at: row.occurred_at instanceof Date ? row.occurred_at : null });
+      const title = typeof row.title === 'string' && row.title.trim() ? row.title.trim() : null;
+      refs.push({ id, title, at: row.occurred_at instanceof Date ? row.occurred_at : null });
     }
     return { ok: true, refs };
   } catch (error) {

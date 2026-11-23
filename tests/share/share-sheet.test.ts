@@ -31,6 +31,9 @@ test('a profile\u2019s link is what it always was', () => {
   assert.equal(profilePath(4, 'maya p'), '/profile/4?u=maya%20p');
   assert.equal(profilePath(4, null), '/profile/4');
   assert.equal(buildProfileUrl('https://hyper.co.ke/', 4, 'maya'), 'https://hyper.co.ke/profile/4?u=maya');
+  // With the member's name, the address is the one their page answers at.
+  assert.equal(profilePath(4, 'maya', 'Maya Patel'), '/profile/maya-patel-4?u=maya');
+  assert.equal(buildProfileUrl('https://hyper.co.ke/', 4, null, 'Maya Patel'), 'https://hyper.co.ke/profile/maya-patel-4');
   assert.equal(postPath(91), '/post/91');
 });
 
@@ -227,7 +230,7 @@ test('the profile\u2019s share dialog is still the dialog it was', async () => {
   assert.equal(sheet.querySelector('h2').textContent.trim(), 'Share profile');
   assert.match(sheet.textContent, /Maya Patel/);
   assert.match(sheet.textContent, /@maya/);
-  assert.equal(sheet.querySelector('input[aria-label="Profile link"]').value, 'https://hyper.co.ke/profile/2?u=maya');
+  assert.equal(sheet.querySelector('input[aria-label="Profile link"]').value, 'https://hyper.co.ke/profile/maya-patel-2?u=maya');
   assert.deepEqual(tabLabels(sheet), ['Feed', 'Groups', 'Send to', 'Elsewhere']);
   assert.equal(sheet.querySelector('textarea').getAttribute('placeholder'), 'Say something about this profile (optional)\u2026');
   assert.match(sheet.textContent, /Share to your feed/);
