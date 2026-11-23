@@ -1,0 +1,99 @@
+/*
+ * The match page in the player page's colours: a near-black violet page, glass
+ * panels, and fuchsia where the rest of the site is blue. Colour only: nothing
+ * here adds, moves or resizes an element.
+ *
+ * The match page's own markup says its colours in the component, in the same
+ * words the player page uses. This file holds what a component cannot say:
+ *   1. the page background, which belongs to `body`;
+ *   2. the lit panel behind the fixture's heading (`.mt-hero`), the same panel
+ *      as the player card (`.pl-card` in `player.css`);
+ *   3. the palette for the parts the match page shares with other pages (the
+ *      league table, form and head-to-head, predictions and odds, the stored
+ *      highlights). Those are written in the site's blue and slate, so the
+ *      colours they read are remapped under `.mt-page` and nowhere else.
+ *
+ * Every rule is under `.mt-page`, or under `body:has(.mt-page)` for the page
+ * background, so no other page changes, and the same components keep the
+ * site's blue wherever else they are used.
+ */
+
+/*
+ * The same background as the player page. The selector repeats the site's own
+ * (`.dark body.app-page-bg`) so that it wins by specificity rather than by the
+ * order two stylesheets load in. A browser without `:has()` keeps the navy.
+ */
+.dark body.app-page-bg:has(.mt-page) {
+  background:
+    radial-gradient(circle at 12% 6%, rgba(168, 85, 247, 0.2), transparent 26rem),
+    radial-gradient(circle at 92% 18%, rgba(255, 61, 242, 0.1), transparent 24rem),
+    linear-gradient(160deg, #0a0814 0%, #0d0a1a 50%, #08070f 100%);
+  background-attachment: fixed;
+}
+
+/* The fixture's heading panel: the player card's light, on this panel's own shape. */
+.mt-page .mt-hero {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(120% 70% at 85% 0%, rgba(168, 85, 247, 0.3), transparent 62%),
+    radial-gradient(90% 60% at 0% 100%, rgba(255, 61, 242, 0.14), transparent 60%),
+    linear-gradient(180deg, #120d22 0%, #0b0915 100%);
+  box-shadow: 0 30px 60px -30px rgba(109, 40, 217, 0.55);
+}
+
+/*
+ * The shared parts. Tailwind's `blue-*`, `sky-*`, `gray-*` and `slate-*`
+ * utilities read these variables, so setting them here recolours a shared
+ * component inside the match page without editing it.
+ */
+.mt-page {
+  /* Accent: blue and sky → fuchsia. */
+  --color-blue-50: #fdf4ff;
+  --color-blue-100: #fae8ff;
+  --color-blue-200: #f5d0fe;
+  --color-blue-300: #f0abfc;
+  --color-blue-400: #f0abfc;
+  --color-blue-500: #e879f9;
+  --color-blue-600: #d946ef;
+  --color-blue-700: #c026d3;
+  --color-blue-800: #86198f;
+  --color-blue-900: #701a75;
+  --color-blue-950: #3b0a45;
+  --color-sky-300: #f0abfc;
+  --color-sky-400: #e879f9;
+  --color-sky-950: #3b0a45;
+  /* Neutrals: slate → the player page's violet-black. */
+  --color-gray-600: #3a3350;
+  --color-gray-700: #262038;
+  --color-gray-800: #17122a;
+  --color-gray-900: #0f0b1c;
+  --color-gray-950: #08070f;
+  --color-slate-600: #3a3350;
+  --color-slate-700: #262038;
+  --color-slate-800: #17122a;
+  --color-slate-900: #0f0b1c;
+  --color-slate-950: #08070f;
+}
+
+/*
+ * The site's fixed dark fills and borders (`.dark .bg-white` and the rest in
+ * `globals.css`) are plain colours, not variables, so they are restated here in
+ * the same glass the player page's tiles use. `.dark .app-surface` in front
+ * outranks the site's own rules whichever stylesheet loads first.
+ */
+.dark .app-surface .mt-page .bg-white {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: none;
+}
+.dark .app-surface .mt-page .bg-gray-50,
+.dark .app-surface .mt-page .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06); }
+.dark .app-surface .mt-page .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.1); }
+.dark .app-surface .mt-page .border-gray-100,
+.dark .app-surface .mt-page .border-gray-200 { border-color: rgba(255, 255, 255, 0.07); }
+.dark .app-surface .mt-page .border-gray-300 { border-color: rgba(255, 255, 255, 0.15); }
+.dark .app-surface .mt-page .bg-blue-50 { background-color: rgba(232, 121, 249, 0.12); }
+/* Fuchsia text on a dark panel: the light shade, as the player page's links. */
+.dark .app-surface .mt-page .text-blue-600,
+.dark .app-surface .mt-page .text-blue-700,
+.dark .app-surface .mt-page .text-blue-800 { color: #f0abfc; }

@@ -25,6 +25,9 @@ async function loadMetadataModule(path: string, fixture: Record<string, unknown>
   const result = await build({
     stdin: { contents: path.endsWith('sitemap.ts') ? `export { default } from './${path}';` : `export { generateMetadata } from './${path}';`, resolveDir: process.cwd() },
     bundle: true, write: false, format: 'cjs', platform: 'node', packages: 'external',
+    // A route may import its own stylesheet (the match page does). It has nothing
+    // to say about metadata, and esbuild will not bundle one into a script.
+    loader: { '.css': 'empty' },
     plugins: [{ name: 'seo-server-fixtures', setup(builder) {
       builder.onResolve({ filter: /^@\/(lib\/(prisma|viewer|espn-match-feed|highlights-index)|components\/|app\/.*actions)/ }, (args) => ({ path: args.path, namespace: 'seo-boundary' }));
       // The filter combinators the pages import next to the client; stubbed so a

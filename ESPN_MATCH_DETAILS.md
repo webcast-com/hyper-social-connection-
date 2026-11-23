@@ -62,3 +62,38 @@ No other competition gets a synthesized URL. The CDN folder is not derivable fro
 - **Not verifiable here:** live ESPN responses. This sandbox has no ESPN egress (`curl https://a.espncdn.com/…` and `site.api.espn.com` both fail with `SSL_ERROR_SYSCALL`), so whether a given competition's summary actually carries `athlete.headshot.href`, and whether a synthesized NBA/NFL file exists for a particular ID, still needs a deployment check. Every assertion above uses controlled fixtures, not a live provider audit.
 
 After deploying, open one real NBA or NFL match and one soccer match, expand **Lineups & rosters**, and confirm photos appear where ESPN reports them and initials appear elsewhere — with no missing-player rows and no horizontal overflow at 320px.
+
+## Follow-up: the player page's colours (2026-11)
+
+The match page now uses the same palette as the player page
+(`/sports/athletes/<league>/<id>`): a near-black violet page, glass panels, and
+fuchsia where it used the site's blue. Colour only: no element was added, moved
+or resized, and nothing about what is asked of ESPN changed.
+
+- **The page's own markup** (`SportsMatchDetails.tsx`, and the stored-highlights
+  block in the route) says its colours in the same classes the player page uses:
+  `text-fuchsia-300` links, `bg-white/[0.04]` tiles with a `border-white/[0.07]`
+  hairline, a `bg-fuchsia-200` pill for the open section.
+- **`match.css`**, imported by the route as `player.css` is, holds the rest:
+  the page background (the player page's, under `body:has(.mt-page)`), the lit
+  panel behind the heading (`.mt-hero`, the player card's gradients), and a
+  palette for the parts shared with other pages. The league table, form and
+  head-to-head, and predictions are written in blue and slate, so the Tailwind
+  colour variables they read are remapped under `.mt-page`; the components
+  themselves are not edited and stay blue everywhere else.
+- **Statistic bars** are pink for the first team and violet for the second
+  (they were blue and purple); the sentence above the table says so.
+- **Not changed:** the top bar (it stays blue on the player page too), the team
+  page, and the single highlight page.
+
+### Verification (this change)
+
+`npm run test:sports` (695), `npm run test:seo` (123),
+`tests/sports/layout.spec.ts` (51 pass; `:537` and `:551` fail as before).
+Looked at in a browser at 1440 and 390 px against a local server with the
+match, standings and player feeds answered from the test fixtures: every
+section tab, and no blue left inside the page by computed colour. The test
+builds that bundle the route (`tests/seo/metadata.test.ts`,
+`tests/sports/home-layout.spec.ts`) now load a stylesheet as empty;
+`home-layout.spec.ts` still cannot be built here for an older, unrelated reason.
+Not verified here: real ESPN data and the live site.

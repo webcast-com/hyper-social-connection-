@@ -15,6 +15,8 @@ import {
   type MatchPageFacts,
 } from '@/lib/match-page';
 import { clipHref, clockDuration } from '@/lib/highlight-clip';
+// The player page's colours, for this page and the parts it shares with others.
+import './match.css';
 
 /**
  * One fixture.
@@ -141,18 +143,18 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
         <section
           data-match-stored={clips.length}
           aria-label="Stored highlights for this fixture"
-          className="mx-auto max-w-5xl px-3 pt-3 text-gray-900 sm:px-5 sm:pt-5 dark:text-white"
+          className="mt-page mx-auto max-w-5xl px-3 pt-3 text-white sm:px-5 sm:pt-5"
         >
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             {facts.leagueName ?? resolved.meta.name}
           </p>
           {/* The fixture's own reported facts as prose: this is the paragraph a
               search result shows, and the only text here a browser did not fetch. */}
-          <p className="mt-1 break-words text-sm leading-relaxed text-gray-700 sm:text-base dark:text-gray-300">
+          <p className="mt-1 break-words text-sm leading-relaxed text-gray-300 sm:text-base">
             {matchPageDescription(facts, resolved.meta.name)}
           </p>
 
-          <h2 className="mt-4 mb-2 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <h2 className="mt-4 mb-2 text-sm font-bold uppercase tracking-wide text-gray-400">
             Highlights stored for this fixture
           </h2>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -160,7 +162,7 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
               <li key={`${clip.eventId}-${clip.id}`}>
                 <Link
                   href={clipHref(clip)}
-                  className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-2.5 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+                  className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5 outline-none transition hover:border-fuchsia-300/40 focus-visible:ring-2 focus-visible:ring-fuchsia-300"
                 >
                   {clip.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -172,10 +174,10 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
                     />
                   ) : null}
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="block truncate text-sm font-semibold text-gray-100">
                       {clip.title}
                     </span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    <span className="block text-xs text-gray-400">
                       {clockDuration(clip.duration) ?? 'Length not reported'}
                     </span>
                   </span>

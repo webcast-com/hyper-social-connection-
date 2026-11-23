@@ -18,6 +18,9 @@ test.beforeAll(async () => {
   const result = await build({
     entryPoints: [path.resolve('tests/sports/home-browser-fixture.tsx')], bundle: true, write: false,
     format: 'iife', platform: 'browser', define: { 'process.env.NODE_ENV': '"development"', 'process.env': '{}' },
+    // The match page imports its own stylesheet (colour only); esbuild will not
+    // bundle one into a script, and these checks measure layout, not colour.
+    loader: { '.css': 'empty' },
     plugins: [{ name: 'homepage-server-boundaries', setup(builder) {
       // Keep the real Home, navigation, feed, stories, composer and score views.
       // Substitute only server data/actions/router so no credentials are needed.
