@@ -24,7 +24,7 @@
  *
  * Nothing here reads a database or a network, so the card stays client-safe.
  */
-import { matchHref, matchReference } from './espn-match';
+import { eventMatchHref, matchReference } from './espn-match';
 import type { SportsEvent } from './sports';
 import type { SportKind } from './sports-catalog';
 
@@ -96,7 +96,7 @@ export function dashboardMatchHref(event: SportsEvent): string | null {
  * answer for this fixture.
  */
 export function scoreCardTarget(event: SportsEvent): string {
-  return dashboardMatchHref(event) ?? (event.details ? matchHref(event.details) : '/sports');
+  return dashboardMatchHref(event) ?? (event.details ? eventMatchHref(event) : '/sports');
 }
 
 /** What the card's link says itself to be, in the dashboard's own words. */

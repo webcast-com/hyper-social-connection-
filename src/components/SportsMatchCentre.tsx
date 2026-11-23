@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import { Trophy } from 'lucide-react';
 import {
   liveFixtureCount, selectMatchCentreRows,
@@ -10,7 +10,7 @@ import type { SportsBoard, SportsEvent } from '@/lib/sports';
 
 /** The match page for a fixture the provider reported, otherwise the board: never a dead click. */
 function eventHref(event: SportsEvent) {
-  return event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : '/sports';
+  return event.source === 'espn' && !event.race && event.details ? eventMatchHref(event) : '/sports';
 }
 
 /**

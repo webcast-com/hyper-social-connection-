@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import type { SportsEvent } from '@/lib/sports';
 
@@ -36,7 +36,7 @@ export default function SportsHeroFeatured({ events, returnTo }: { events: reado
 
   const back = safeSportsReturnPath(returnTo);
   const href = event.source === 'espn' && event.details
-    ? `${matchHref(event.details)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
+    ? `${eventMatchHref(event)}${back === '/sports' ? '' : `?returnTo=${encodeURIComponent(back)}`}` : undefined;
   const spoken = `Featured live match: ${event.away.name} ${event.away.score ?? 'not reported'}, ${event.home.name} ${event.home.score ?? 'not reported'}, ${event.leagueName}${event.detail ? `, ${event.detail}` : ''}`;
 
   const face = (

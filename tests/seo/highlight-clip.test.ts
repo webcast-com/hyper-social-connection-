@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CLIP_PAGE_ROOT, CLIP_STATUS_LABEL, clipBreadcrumbFor, clipFixtureHref, clipHref, clipMedia,
+  CLIP_PAGE_ROOT, CLIP_STATUS_LABEL, clipBreadcrumbFor, clipFixtureHref, clipHref, clipIdCandidates, clipMedia,
   clipPageDescription, clipPageTitle, clockDuration, iso8601Duration, videoObjectFor,
 } from '../../src/lib/highlight-clip';
 import { highlightAnchorId } from '../../src/lib/sports-anchor';
@@ -47,8 +47,12 @@ const clip = (over: Partial<SportsHighlightClip> = {}): SportsHighlightClip => (
 
 test('a clip page is keyed by the same identity as its post anchor', () => {
   const subject = clip();
-  assert.equal(clipHref(subject), `${CLIP_PAGE_ROOT}/${highlightAnchorId(subject)}`);
-  assert.equal(clipHref(subject), '/sports/highlights/50476535');
+  // The title reads in front; the identity is what the address ends in, and it
+  // is the only part the page looks the clip up by.
+  assert.equal(clipHref(subject), '/sports/highlights/gabe-perreault-lights-the-lamp-for-rangers-50476535');
+  assert.ok(clipHref(subject).endsWith(`-${highlightAnchorId(subject)}`));
+  assert.equal(clipHref({ id: subject.id }), `${CLIP_PAGE_ROOT}/${highlightAnchorId(subject)}`, 'with no title to hand, the identity alone');
+  assert.deepEqual(clipIdCandidates(clipHref(subject).slice(CLIP_PAGE_ROOT.length + 1))[0], highlightAnchorId(subject), 'and the address reads back to it');
   assert.equal(CLIP_PAGE_ROOT, '/sports/highlights', 'under the list the clip came from');
 });
 
@@ -135,7 +139,7 @@ test('a clip with everything ESPN reported becomes a VideoObject', () => {
   assert.equal(value.thumbnailUrl, 'https://espnmedia-cdn.akamaized.net/espn/media/common/wsc/2026/1114/f1136ae8.jpg');
   assert.equal(value.uploadDate, '2026-11-14T02:00:00.000Z');
   assert.equal(value.contentUrl, clip().mp4, 'the file itself, so the clip is playable from a result');
-  assert.equal(value.embedUrl, 'https://hyper.co.ke/sports/highlights/50476535', 'the result a reader clicks is the page on this site');
+  assert.equal(value.embedUrl, 'https://hyper.co.ke/sports/highlights/gabe-perreault-lights-the-lamp-for-rangers-50476535', 'the result a reader clicks is the page on this site');
   assert.equal(value.duration, 'PT48S');
   assert.deepEqual(value.publisher, { '@type': 'Organization', name: 'Hyper', url: `${ORIGIN}/` });
 });
@@ -156,7 +160,7 @@ test('a length and a file that were not reported are left out rather than filled
   assert.ok(value);
   assert.equal('duration' in value, false, 'no duration this site cannot support');
   assert.equal('contentUrl' in value, false, 'no file means no contentUrl');
-  assert.equal(value.embedUrl, 'https://hyper.co.ke/sports/highlights/50476535', 'the page is still the thing a result points at');
+  assert.equal(value.embedUrl, 'https://hyper.co.ke/sports/highlights/gabe-perreault-lights-the-lamp-for-rangers-50476535', 'the page is still the thing a result points at');
 });
 
 test('the trail to a clip is a breadcrumb list ending on this page', () => {

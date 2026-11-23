@@ -127,7 +127,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Newest clip first, and no `lastModified` for one whose time was never
   // reported: a date this site made up would be a lie in a file crawlers trust.
   const clipRoutes: MetadataRoute.Sitemap = clipRefs.map((ref) => ({
-    url: `${baseUrl}${clipHref({ id: ref.id })}`,
+    url: `${baseUrl}${clipHref(ref)}`,
     ...(ref.at ? { lastModified: ref.at } : {}),
     changeFrequency: "weekly" as const,
     priority: 0.7,
@@ -138,23 +138,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // costs the crawl budget it was meant to earn. Two stored forms of one fixture
   // — a scoreboard reporting more than one competition appends to the id — are one
   // URL, so the newest report of it is the one listed.
-  const matchRoutes = new Map<string, MetadataRoute.Sitemap[number]>();
+  // The address carries the fixture's name in front of its id, the way the match
+  // page spells it, so what is submitted is the page's own address and not one
+  // that redirects to it. The fixture is told apart by its reference, not by its
+  // URL: two stored forms may name it differently, and it is still one page.
+  const matchRoutes = new Map<string, MetadataRoute.Sitemap[number] & { named: boolean }>();
   for (const ref of eventRefs) {
     const reference = storedMatchReference(ref.league, ref.eventId);
     if (!reference) continue;
-    const url = `${baseUrl}${matchHref(reference)}`;
-    if (matchRoutes.has(url)) continue;
-    matchRoutes.set(url, {
-      url,
+    const fixture = `${reference.league}/${reference.eventId}`;
+    const held = matchRoutes.get(fixture);
+    if (held) {
+      // The newest report of a fixture is the one listed; an older one only
+      // supplies the name when the newest had none.
+      if (!held.named && ref.name) {
+        held.url = `${baseUrl}${matchHref(reference, ref.name)}`;
+        held.named = true;
+      }
+      continue;
+    }
+    matchRoutes.set(fixture, {
+      url: `${baseUrl}${matchHref(reference, ref.name)}`,
+      named: !!ref.name,
       ...(ref.at ? { lastModified: ref.at } : {}),
       changeFrequency: "daily" as const,
       priority: 0.6,
     });
   }
+  const matchEntries: MetadataRoute.Sitemap = [...matchRoutes.values()].map(({ named: _named, ...entry }) => entry);
 
   // The dashboard's hubs, sections and team pages need no database: they are
   // listed whether or not the queries above succeeded.
   const dashboardRoutes = dashboardSitemapEntries(baseUrl);
 
-  return [...staticRoutes, ...dashboardRoutes, ...clipRoutes, ...matchRoutes.values(), ...profileRoutes, ...groupRoutes, ...postRoutes];
+  return [...staticRoutes, ...dashboardRoutes, ...clipRoutes, ...matchEntries, ...profileRoutes, ...groupRoutes, ...postRoutes];
 }

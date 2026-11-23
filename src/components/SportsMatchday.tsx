@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Expand, X } from 'lucide-react';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import { kickoffCountdown, matchdayPage, matchdayStatus, winningSide } from '@/lib/featured-match';
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import SportsRaceSummary from './SportsRaceSummary';
@@ -39,7 +39,7 @@ const STATUS_TONES = {
 /** One fixture at matchday size. Away is first, as on every card of the board. */
 function MatchdayCard({ event, returnTo, now }: { event: SportsEvent; returnTo: string; now?: number }) {
   const href = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
-    ? `${matchHref(event.details)}${returnTo === '/sports' ? '' : `?returnTo=${encodeURIComponent(returnTo)}`}` : undefined;
+    ? `${eventMatchHref(event)}${returnTo === '/sports' ? '' : `?returnTo=${encodeURIComponent(returnTo)}`}` : undefined;
   const showScore = event.status !== 'upcoming';
   const winner = winningSide(event);
   const dim = (side: 'home' | 'away') => (winner && winner !== side ? ' text-gray-500' : ' text-gray-900');

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import { getPageMetadata } from '@/lib/seo';
 import { getSiteUrl } from '@/lib/site-url';
 import { EVENT_CLIPS_LIMIT, readEventClips, readStoredClip } from '@/lib/highlights-index';
 import {
-  CLIP_PAGE_ROOT, CLIP_STATUS_LABEL, clipBreadcrumbFor, clipFixtureHref, clipHref, clipMedia,
+  CLIP_PAGE_ROOT, CLIP_STATUS_LABEL, clipBreadcrumbFor, clipFixtureHref, clipHref, clipIdCandidates, clipMedia,
   clipPageDescription, clipPageTitle, clockDuration, videoObjectFor,
 } from '@/lib/highlight-clip';
 import LinkMediaPlayer from '@/components/LinkMediaPlayer';
@@ -32,14 +32,40 @@ export const maxDuration = 30;
 
 type Props = { params: Promise<{ clipId: string }> };
 
-/** Read once per request: the metadata and the page both need the same clip. */
-const loadClip = cache((clipId: string) => readStoredClip(clipId));
+/**
+ * Read once per request: the metadata and the page both need the same clip.
+ *
+ * The address carries the clip's title in front of its id, so the segment is read
+ * as each id it could be naming (`clipIdCandidates`) until storage has one. The
+ * title in the address is never trusted: whatever the clip is found by, the page
+ * then answers only at the address `clipHref` builds for it.
+ */
+const loadClip = cache(async (segment: string) => {
+  let last = await readStoredClip('');
+  for (const id of clipIdCandidates(segment)) {
+    last = await readStoredClip(id);
+    if (last.clip) break;
+  }
+  return last;
+});
+
+/**
+ * One clip, one address. The id on its own (every link made before clips had
+ * names), an old title, or someone else's words in front of the right id all
+ * leave with a permanent redirect to the current address, so a search engine
+ * keeps one page per clip and old links keep working.
+ */
+function sendToCanonical(segment: string, clip: Parameters<typeof clipHref>[0]): void {
+  const canonical = clipHref(clip);
+  if (canonical !== `${CLIP_PAGE_ROOT}/${segment}`) permanentRedirect(canonical);
+}
 const loadSiblings = cache((eventId: string) => readEventClips(eventId, EVENT_CLIPS_LIMIT));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { clipId } = await params;
   const { clip } = await loadClip(clipId);
   if (!clip) notFound();
+  sendToCanonical(clipId, clip);
   return getPageMetadata({
     title: clipPageTitle(clip),
     description: clipPageDescription(clip),
@@ -56,6 +82,7 @@ export default async function HighlightClipPage({ params }: Props) {
   const { clipId } = await params;
   const { clip } = await loadClip(clipId);
   if (!clip) notFound();
+  sendToCanonical(clipId, clip);
 
   const origin = getSiteUrl();
   const siblings = clip.eventId

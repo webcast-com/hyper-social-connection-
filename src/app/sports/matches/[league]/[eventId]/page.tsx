@@ -1,15 +1,18 @@
 import { safeSportsReturnPath } from '@/lib/sports-filters';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import SportsMatchDetails from '@/components/SportsMatchDetails';
 import { getPageMetadata } from '@/lib/seo';
 import { getSiteUrl } from '@/lib/site-url';
-import { matchHref, MatchInputError, resolveMatch, type MatchBoard } from '@/lib/espn-match';
+import {
+  matchEventId, matchHref, MatchInputError, resolveMatch, type MatchBoard, type MatchReference,
+} from '@/lib/espn-match';
 import { EVENT_CLIPS_LIMIT, readEventClips } from '@/lib/highlights-index';
 import {
   matchBreadcrumbFor, matchPageDescription, matchPageFacts, matchPageTitle, sportsEventObjectFor,
+  type MatchPageFacts,
 } from '@/lib/match-page';
 import { clipHref, clockDuration } from '@/lib/highlight-clip';
 
@@ -49,17 +52,58 @@ type Props = {
  */
 const loadStoredClips = cache((league: string, eventId: string) => readEventClips(`espn-${league}-${eventId}`, EVENT_CLIPS_LIMIT));
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { league, eventId } = await params;
-  let resolved;
-  try { resolved = resolveMatch(league, eventId); }
-  catch { notFound(); }
-  const { clips } = await loadStoredClips(league, eventId);
+/**
+ * The fixture an address names, or a 404.
+ *
+ * The last segment is the ESPN event id, with or without the fixture's name in
+ * front of it (`arsenal-vs-chelsea-740123`). Only the id is read; the name is
+ * checked afterwards, against what this site stored.
+ */
+function resolveAddress(league: string, segment: string) {
+  const eventId = matchEventId(segment);
+  if (!eventId) notFound();
+  try { return resolveMatch(league, eventId); }
+  catch (error) { if (error instanceof MatchInputError) notFound(); throw error; }
+}
+
+/**
+ * One fixture, one address — when this site knows the fixture's name.
+ *
+ * The name comes only from stored clips, like every other fact this page states
+ * before the browser fetches anything. With it, the id alone, an old name and a
+ * made-up name all leave with a permanent redirect to the named address, so old
+ * links keep working and a search engine keeps one page per fixture. The query
+ * string goes with it: `returnTo` is how the reader gets back to their board.
+ *
+ * Without it, nothing is known to correct the address against, so the page
+ * answers wherever it was asked for and — being the `noindex` shell it already
+ * was — claims the plain id as its address.
+ */
+function matchAddress(
+  reference: MatchReference,
+  facts: MatchPageFacts | null,
+  segment: string,
+  query: Record<string, string | string[] | undefined> | undefined,
+): string {
+  const canonical = matchHref(reference, facts?.eventName);
+  if (!facts?.eventName || canonical === matchHref({ league: reference.league, eventId: segment })) return canonical;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    for (const item of Array.isArray(value) ? value : [value]) if (typeof item === 'string') search.append(key, item);
+  }
+  const suffix = search.toString();
+  permanentRedirect(suffix ? `${canonical}?${suffix}` : canonical);
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const { league, eventId: segment } = await params;
+  const resolved = resolveAddress(league, segment);
+  const { clips } = await loadStoredClips(league, resolved.reference.eventId);
   const facts = matchPageFacts(clips);
   return getPageMetadata({
     title: matchPageTitle(facts, resolved.meta.name),
     description: matchPageDescription(facts, resolved.meta.name),
-    path: matchHref(resolved.reference),
+    path: matchAddress(resolved.reference, facts, segment, await searchParams),
     // Indexable only when this server can say something about the fixture itself,
     // rather than only about the shape of the page that will fetch it.
     index: !!facts,
@@ -70,16 +114,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function MatchDetailsPage({ params, searchParams }: Props) {
-  const { league, eventId } = await params;
-  let resolved;
-  try { resolved = resolveMatch(league, eventId); }
-  catch (error) { if (error instanceof MatchInputError) notFound(); throw error; }
+  const { league, eventId: segment } = await params;
+  const resolved = resolveAddress(league, segment);
+  const { eventId } = resolved.reference;
   const query = await searchParams;
   const returnTo = safeSportsReturnPath(query?.returnTo);
   const { clips } = await loadStoredClips(league, eventId);
   const facts = matchPageFacts(clips);
   const origin = getSiteUrl();
-  const href = matchHref(resolved.reference);
+  const href = matchAddress(resolved.reference, facts, segment, query);
   const structured = [
     sportsEventObjectFor(facts, origin, href),
     matchBreadcrumbFor(facts, origin, resolved.meta.name, href),

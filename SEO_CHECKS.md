@@ -164,3 +164,47 @@ every client-side navigation (`vendor/nfl-nba/src/seo/RouteMetaProvider.jsx`).
 Checks: `npm run test:seo` (82), `npm --prefix vendor/nfl-nba test` (182),
 `npm run test:nfl-basketball` (3). Not verified here: how Google or Bing render
 and rank these pages, and live ESPN responses (the sandbox cannot reach ESPN).
+
+## Named addresses for matches and highlights (2026-11)
+
+A match and a highlight clip are now addressed by name, with the id kept at the
+end:
+
+| Page | Before | Now |
+| --- | --- | --- |
+| Match | `/sports/matches/epl/740123` | `/sports/matches/epl/arsenal-vs-chelsea-740123` |
+| Highlight | `/sports/highlights/50476535` | `/sports/highlights/saka-opens-the-scoring-50476535` |
+
+- **The id decides the page; the name is checked afterwards.** The page reads the
+  digits after the last dash (`matchEventId`, `clipIdCandidates`) and looks the
+  record up by those alone. The words are built by `slugWords` in
+  `src/lib/seo-slug.ts`: lower case, accents folded, "&" spoken, at most 80
+  characters, cut at a word.
+- **One address per page.** A clip page answers only at `clipHref(clip)`. Every
+  other spelling — the id alone, an old title, different capitals, made-up words —
+  gets a **308** to it. A match page does the same when stored clips name the
+  fixture, and carries the query string (`returnTo`) across.
+- **A match with no stored clips is not corrected.** The server has no name to
+  check against, so it answers wherever it was asked (boards link by name from
+  live data, and a redirect on every click would be wrong). It was already
+  `noindex`, and its canonical is the plain id.
+- **Old links keep working.** Links in posts, messages, the ScoreHub page and the
+  team page still use the id alone and are redirected.
+- **Sitemap.** Clip and match entries are written in the named form, from the
+  same title and fixture name the page uses, so the sitemap does not submit an
+  address that only redirects. The two clip stores (database and folder) return
+  the same names: `HIGHLIGHTS_COMPARE=1` run of
+  `tests/sports/highlights-folder-vs-database.test.ts`, 3 of 3.
+- **No name, no words.** A title with no Latin letters or digits, a clip whose id
+  is not a number (sample cards), and a fixture missing one side keep the id-only
+  address.
+- **Not changed:** `/api/sports/matches/**` (id only), profiles, groups and posts,
+  the `/nfl-basketball/**` dashboard's own match pages.
+
+Checks: `npm run test:seo` (117, of which `tests/seo/named-addresses.test.ts` is
+7), `npm run test:sports` (695). Over HTTP against a local server with two
+stored scratch clips: id-only, stale-name and wrong-case addresses → 308 to the
+named address; named address → 200 with the named canonical, `embedUrl` and
+`SportsEvent.url`; unknown ids and addresses not ending in an id → 404; in-app
+navigation to an old address lands on the named one without a full page load.
+Not verified here: how search engines treat the change, and the live site's data.

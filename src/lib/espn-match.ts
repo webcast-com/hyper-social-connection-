@@ -1,5 +1,6 @@
 import { ESPN_LEAGUES } from './sports-catalog';
 import { safeProviderImage } from './espn-image';
+import { namedSegment, trailingId } from './seo-slug';
 import type { EspnEndpointDetails } from './espn-endpoints';
 
 export type MatchReference = { league: string; eventId: string };
@@ -47,9 +48,48 @@ export function storedMatchReference(league: string, eventId: string | null | un
   return digits ? matchReference(league, digits) : undefined;
 }
 
-export function matchHref(reference: MatchReference) {
-  return `/sports/matches/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.eventId)}`;
+/**
+ * A fixture's address, with the fixture's name in front of its id when one is given:
+ * `/sports/matches/epl/arsenal-vs-chelsea-740123`.
+ *
+ * The id alone still decides which fixture is served (`matchEventId`), so the
+ * address without a name keeps working, and a name that is wrong or out of date
+ * is corrected by the page with a permanent redirect.
+ */
+export function matchHref(reference: MatchReference, name?: string | null) {
+  return `/sports/matches/${encodeURIComponent(reference.league)}/${encodeURIComponent(namedSegment(name, reference.eventId))}`;
 }
+/**
+ * The name a fixture's address carries: "Home vs Away".
+ *
+ * The same wording the highlights sweep stores as a clip's `eventName`, on purpose:
+ * a board builds its links from the live fixture and the match page checks them
+ * against what was stored, and two wordings would make every click a redirect.
+ */
+export function fixtureName(home: string | null | undefined, away: string | null | undefined): string | null {
+  const h = home?.trim();
+  const a = away?.trim();
+  return h && a ? `${h} vs ${a}` : null;
+}
+/**
+ * The address of a fixture a board is showing, named after its two sides.
+ *
+ * Callers check `details` before they ask, because not every event has a match
+ * page; with none this answers with the board rather than a broken address.
+ */
+export function eventMatchHref(event: { details?: MatchReference; home: { name: string }; away: { name: string } }): string {
+  return event.details ? matchHref(event.details, fixtureName(event.home.name, event.away.name)) : '/sports';
+}
+/**
+ * The ESPN event id a match address names: the address itself when it is only an
+ * id, and the digits after the last dash when a name comes first. Null for
+ * anything else, which the route answers as a page that does not exist.
+ */
+export function matchEventId(segment: string): string | null {
+  const read = trailingId(segment);
+  return read && matchReference('', read.id) ? read.id : null;
+}
+/** Takes an event id, never an address: a page reads its address with `matchEventId` first. */
 export function resolveMatch(league: string, eventId: string) {
   const meta = ESPN_LEAGUES.find((item) => item.slug === league && item.kind !== 'motorsport');
   if (!meta) throw new MatchInputError('Unknown match competition', 404);

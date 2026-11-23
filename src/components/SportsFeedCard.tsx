@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { matchHref } from '@/lib/espn-match';
+import { eventMatchHref } from '@/lib/espn-match';
 import { matchLine, matchPostText, matchStatusLabel } from '@/lib/match-post';
 import { scoreCardLabel, scoreCardTarget, usesScoreCard } from '@/lib/score-card';
 import { winningSide } from '@/lib/featured-match';
@@ -63,7 +63,7 @@ export default function SportsFeedCard({
   const scoreCard = usesScoreCard(event);
   // The board's rule for which fixtures have a match page (`SportsEventCard`).
   const matchPage = event.source === 'espn' && event.sport !== 'motorsport' && !event.race && event.details
-    ? matchHref(event.details) : null;
+    ? eventMatchHref(event) : null;
   const bodyHref = scoreCard ? scoreCardTarget(event) : matchPage ?? '/sports';
   const showScore = event.status !== 'upcoming';
   const winner = winningSide(event);
@@ -295,7 +295,7 @@ export default function SportsFeedCard({
             title: matchLine(event),
             subtitle: `${event.leagueName} · ${matchStatusLabel(event)}`,
             image: event.home.logo || event.away.logo || null,
-            link: event.source === 'espn' && !event.race && event.details ? matchHref(event.details) : bodyHref,
+            link: event.source === 'espn' && !event.race && event.details ? eventMatchHref(event) : bodyHref,
             text: `${matchLine(event)} — ${event.leagueName} on Hyper`,
             feedHint: 'Posts this match to your followers, with your note if you add one.',
           }}
