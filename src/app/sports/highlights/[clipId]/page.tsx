@@ -10,6 +10,8 @@ import {
   clipPageDescription, clipPageTitle, clockDuration, videoObjectFor,
 } from '@/lib/highlight-clip';
 import LinkMediaPlayer from '@/components/LinkMediaPlayer';
+// The player page's colours, for this page and the video player inside it.
+import '../../theme-player.css';
 
 /**
  * One stored highlight clip, as a page of its own.
@@ -104,23 +106,23 @@ export default async function HighlightClipPage({ params }: Props) {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 sm:px-4 py-4 sm:py-6">
+    <main className="theme-player mx-auto w-full max-w-3xl px-3 sm:px-4 py-4 sm:py-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structured).replace(/</g, '\\u003c') }}
       />
 
       <nav aria-label="Breadcrumb" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
           <li>
-            <Link href="/sports" className="hover:underline">Sports</Link>
+            <Link href="/sports" className="text-fuchsia-300 hover:underline">Sports</Link>
             <span aria-hidden="true" className="mx-1">/</span>
           </li>
           <li>
-            <Link href={CLIP_PAGE_ROOT} className="hover:underline">Match highlights</Link>
+            <Link href={CLIP_PAGE_ROOT} className="text-fuchsia-300 hover:underline">Match highlights</Link>
             <span aria-hidden="true" className="mx-1">/</span>
           </li>
-          <li aria-current="page" className="text-gray-900 dark:text-gray-100 truncate max-w-[16rem]">
+          <li aria-current="page" className="text-gray-100 truncate max-w-[16rem]">
             {clip.title}
           </li>
         </ol>
@@ -128,21 +130,21 @@ export default async function HighlightClipPage({ params }: Props) {
 
       <article
         data-highlight-clip={clip.id}
-        className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-5 dark:border-gray-800 dark:bg-gray-900"
+        className="theme-player-hero rounded-2xl p-3 sm:p-5"
       >
         <header className="mb-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <p className="text-xs font-medium uppercase tracking-wide text-fuchsia-300">
             {clip.leagueName}
             <span aria-hidden="true"> · </span>
             {CLIP_STATUS_LABEL[clip.status]}
           </p>
-          <h1 className="mt-1 text-lg sm:text-2xl font-semibold leading-snug text-gray-900 dark:text-gray-100">
+          <h1 className="mt-1 text-lg sm:text-2xl font-semibold leading-snug text-white">
             {clip.title}
           </h1>
         </header>
 
         {media ? (
-          <div data-clip-player="" className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800">
+          <div data-clip-player="" className="rounded-xl overflow-hidden border border-white/[0.07]">
             <LinkMediaPlayer
               url={clip.page ?? clip.mp4 ?? origin}
               media={media}
@@ -159,12 +161,12 @@ export default async function HighlightClipPage({ params }: Props) {
             src={clip.thumbnail}
             alt={clip.title}
             data-clip-poster=""
-            className="w-full rounded-xl border border-gray-200 object-cover dark:border-gray-800"
+            className="w-full rounded-xl border border-white/[0.07] object-cover"
           />
         ) : (
           <p
             data-clip-unplayable=""
-            className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+            className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-300"
           >
             ESPN has not reported a playable file for this clip.
           </p>
@@ -172,15 +174,15 @@ export default async function HighlightClipPage({ params }: Props) {
 
         {/* The description as real text: this is the sentence a search result shows,
             and the only prose on the page that is about this clip. */}
-        <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-gray-900 dark:text-gray-100">
+        <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-gray-100">
           {clipPageDescription(clip)}
         </p>
 
         <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 text-sm">
           {facts.filter(([, value]) => !!value).map(([label, value]) => (
-            <div key={label} className="flex items-baseline justify-between gap-3 border-b border-gray-100 pb-1 dark:border-gray-800">
-              <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-              <dd className="font-medium text-gray-900 dark:text-gray-100 text-right">{value}</dd>
+            <div key={label} className="flex items-baseline justify-between gap-3 border-b border-white/[0.07] pb-1">
+              <dt className="text-gray-400">{label}</dt>
+              <dd className="font-medium text-gray-100 text-right">{value}</dd>
             </div>
           ))}
         </dl>
@@ -188,13 +190,13 @@ export default async function HighlightClipPage({ params }: Props) {
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           <Link
             href={clipFixtureHref(clip)}
-            className="rounded-full border border-gray-300 px-3 py-1.5 font-medium text-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-medium text-gray-100 outline-none transition hover:bg-white/[0.1] focus-visible:ring-2 focus-visible:ring-fuchsia-300"
           >
             {clip.leagueName} board
           </Link>
           <Link
             href={CLIP_PAGE_ROOT}
-            className="rounded-full border border-gray-300 px-3 py-1.5 font-medium text-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-medium text-gray-100 outline-none transition hover:bg-white/[0.1] focus-visible:ring-2 focus-visible:ring-fuchsia-300"
           >
             All match highlights
           </Link>
@@ -203,7 +205,7 @@ export default async function HighlightClipPage({ params }: Props) {
             <a
               href={clip.page}
               rel="noopener noreferrer"
-              className="rounded-full px-3 py-1.5 font-medium text-blue-600 hover:underline dark:text-blue-400"
+              className="rounded-full px-3 py-1.5 font-medium text-fuchsia-300 hover:underline"
             >
               Open original on ESPN
             </a>
@@ -213,7 +215,7 @@ export default async function HighlightClipPage({ params }: Props) {
 
       {siblings.length ? (
         <section aria-label="More clips from this match" className="mt-4" data-related-clips={siblings.length}>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-400">
             More from {clip.eventName || 'this match'}
           </h2>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -221,7 +223,7 @@ export default async function HighlightClipPage({ params }: Props) {
               <li key={`${other.eventId}-${other.id}`}>
                 <Link
                   href={clipHref(other)}
-                  className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+                  className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.04] p-3 outline-none transition hover:border-fuchsia-300/40 focus-visible:ring-2 focus-visible:ring-fuchsia-300"
                 >
                   {other.thumbnail ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -232,10 +234,10 @@ export default async function HighlightClipPage({ params }: Props) {
                     />
                   ) : null}
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <span className="block truncate text-sm font-medium text-gray-100">
                       {other.title}
                     </span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    <span className="block text-xs text-gray-400">
                       {other.leagueName}
                       {clockDuration(other.duration) ? ` · ${clockDuration(other.duration)}` : ''}
                     </span>

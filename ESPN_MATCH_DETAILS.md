@@ -74,17 +74,17 @@ or resized, and nothing about what is asked of ESPN changed.
   block in the route) says its colours in the same classes the player page uses:
   `text-fuchsia-300` links, `bg-white/[0.04]` tiles with a `border-white/[0.07]`
   hairline, a `bg-fuchsia-200` pill for the open section.
-- **`match.css`**, imported by the route as `player.css` is, holds the rest:
-  the page background (the player page's, under `body:has(.mt-page)`), the lit
-  panel behind the heading (`.mt-hero`, the player card's gradients), and a
-  palette for the parts shared with other pages. The league table, form and
-  head-to-head, and predictions are written in blue and slate, so the Tailwind
-  colour variables they read are remapped under `.mt-page`; the components
-  themselves are not edited and stay blue everywhere else.
+- **`src/app/sports/theme-player.css`**, imported by the route as `player.css`
+  is, holds the rest: the page background (the player page's, under
+  `body:has(.theme-player)`), the lit panel behind the heading
+  (`.theme-player-hero`, the player card's gradients), and a palette for the
+  parts shared with other pages. The league table, form and head-to-head, and
+  predictions are written in blue and slate, so the Tailwind colour variables
+  they read are remapped under `.theme-player`; the components themselves are
+  not edited and stay blue everywhere else.
 - **Statistic bars** are pink for the first team and violet for the second
   (they were blue and purple); the sentence above the table says so.
-- **Not changed:** the top bar (it stays blue on the player page too), the team
-  page, and the single highlight page.
+- **Not changed:** the top bar (it stays blue on the player page too).
 
 ### Verification (this change)
 
@@ -97,3 +97,26 @@ builds that bundle the route (`tests/seo/metadata.test.ts`,
 `tests/sports/home-layout.spec.ts`) now load a stylesheet as empty;
 `home-layout.spec.ts` still cannot be built here for an older, unrelated reason.
 Not verified here: real ESPN data and the live site.
+
+## Follow-up: the team page and the single highlight page (2026-11)
+
+The same palette now covers the team page (`/sports/teams/<league>/<id>`) and
+the page of one highlight (`/sports/highlights/<title>-<id>`). Same method, and
+colour only again:
+
+- `SportsTeamDetails.tsx` and the highlight route's own markup use the player
+  page's classes; the highlight's card is the lit panel (`.theme-player-hero`).
+- Both routes import `src/app/sports/theme-player.css` (the match page's
+  stylesheet, moved up a level and renamed from `match.css` so three routes can
+  share it) and carry `.theme-player` on their root. The video player inside
+  the highlight page (`LinkMediaPlayer`) is recoloured by the variable remap,
+  not edited.
+- The highlights list (`/sports/highlights`) keeps its own violet theme.
+
+Checks: `npm run test:sports` (695), `npm run test:seo` (123),
+`npm run test:theme` (2), `tests/sports/layout.spec.ts` (51 pass; `:537` and
+`:551` fail as before). Looked at in a browser at 1440 and 390 px against a
+local server: the team page with a fixture board (all three sections), the
+highlight page with two scratch stored clips (removed afterwards), and no blue
+left inside either page by computed colour. Not verified here: real ESPN data
+and the live site.

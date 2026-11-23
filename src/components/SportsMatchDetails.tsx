@@ -123,7 +123,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo, known
   const match = board.match;
   const source = failure ?? board.source;
   const teamName = (id: string) => match?.teams.find((team) => team.id === id)?.name ?? 'Team';
-  return <div className="mt-page mx-auto max-w-5xl p-3 text-white sm:p-5">
+  return <div className="theme-player mx-auto max-w-5xl p-3 text-white sm:p-5">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
       <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-fuchsia-300"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
       <button type="button" onClick={refresh} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm font-bold text-white outline-none transition hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-fuchsia-300 disabled:opacity-60"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Refreshing…' : 'Refresh details'}</button>
@@ -133,7 +133,7 @@ export default function SportsMatchDetails({ initial, reference, returnTo, known
       <span>{competitionCountry(reference.league) ?? 'Competition'}</span><span aria-hidden="true">/</span>
       <Link href={`/sports?league=${encodeURIComponent(reference.league)}`} prefetch={false} className="inline-flex min-h-11 items-center break-words font-semibold text-fuchsia-300 hover:underline">{match?.leagueName ?? 'Browse this competition'}</Link>
     </nav>
-    <header className="mt-hero mb-5 rounded-3xl p-4 sm:p-6">
+    <header className="theme-player-hero mb-5 rounded-3xl p-4 sm:p-6">
       <p className="text-xs font-bold uppercase tracking-wide text-fuchsia-300">ESPN · {match?.leagueName ?? 'Match details'}</p>
       <h1 className="mt-2 break-words text-xl font-black sm:text-3xl">{match?.title ?? knownTitle ?? (loading ? 'Loading match details…' : 'Match details unavailable')}</h1>
       {match && <>

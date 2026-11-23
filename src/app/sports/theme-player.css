@@ -1,21 +1,23 @@
 /*
- * The match page in the player page's colours: a near-black violet page, glass
- * panels, and fuchsia where the rest of the site is blue. Colour only: nothing
- * here adds, moves or resizes an element.
+ * The player page's colours, for the other sports detail pages: a match, a team
+ * and a single highlight. A near-black violet page, glass panels, and fuchsia
+ * where the rest of the site is blue. Colour only: nothing here adds, moves or
+ * resizes an element.
  *
- * The match page's own markup says its colours in the component, in the same
- * words the player page uses. This file holds what a component cannot say:
+ * Each of those pages says its own colours in its own markup, in the same
+ * words the player page uses. This file holds what markup cannot say:
  *   1. the page background, which belongs to `body`;
- *   2. the lit panel behind the fixture's heading (`.mt-hero`), the same panel
- *      as the player card (`.pl-card` in `player.css`);
- *   3. the palette for the parts the match page shares with other pages (the
- *      league table, form and head-to-head, predictions and odds, the stored
- *      highlights). Those are written in the site's blue and slate, so the
- *      colours they read are remapped under `.mt-page` and nowhere else.
+ *   2. the lit panel behind a page's heading (`.theme-player-hero`), the same
+ *      panel as the player card (`.pl-card` in `player.css`);
+ *   3. the palette for the parts these pages share with others (the league
+ *      table, form and head-to-head, predictions and odds, the video player).
+ *      Those are written in the site's blue and slate, so the colours they
+ *      read are remapped under `.theme-player` and nowhere else.
  *
- * Every rule is under `.mt-page`, or under `body:has(.mt-page)` for the page
- * background, so no other page changes, and the same components keep the
- * site's blue wherever else they are used.
+ * Every rule is under `.theme-player`, or under `body:has(.theme-player)` for
+ * the page background, so no other page changes, and the same components keep
+ * the site's blue wherever else they are used. Each route that wears the
+ * palette imports this file itself, as the player route imports `player.css`.
  */
 
 /*
@@ -23,7 +25,7 @@
  * (`.dark body.app-page-bg`) so that it wins by specificity rather than by the
  * order two stylesheets load in. A browser without `:has()` keeps the navy.
  */
-.dark body.app-page-bg:has(.mt-page) {
+.dark body.app-page-bg:has(.theme-player) {
   background:
     radial-gradient(circle at 12% 6%, rgba(168, 85, 247, 0.2), transparent 26rem),
     radial-gradient(circle at 92% 18%, rgba(255, 61, 242, 0.1), transparent 24rem),
@@ -31,8 +33,8 @@
   background-attachment: fixed;
 }
 
-/* The fixture's heading panel: the player card's light, on this panel's own shape. */
-.mt-page .mt-hero {
+/* A page's heading panel: the player card's light, on that panel's own shape. */
+.theme-player .theme-player-hero {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
     radial-gradient(120% 70% at 85% 0%, rgba(168, 85, 247, 0.3), transparent 62%),
@@ -44,9 +46,9 @@
 /*
  * The shared parts. Tailwind's `blue-*`, `sky-*`, `gray-*` and `slate-*`
  * utilities read these variables, so setting them here recolours a shared
- * component inside the match page without editing it.
+ * component inside these pages without editing it.
  */
-.mt-page {
+.theme-player {
   /* Accent: blue and sky → fuchsia. */
   --color-blue-50: #fdf4ff;
   --color-blue-100: #fae8ff;
@@ -62,6 +64,10 @@
   --color-sky-300: #f0abfc;
   --color-sky-400: #e879f9;
   --color-sky-950: #3b0a45;
+  /* Gradient ends that run from blue into indigo: fuchsia into violet. */
+  --color-indigo-400: #a78bfa;
+  --color-indigo-500: #8b5cf6;
+  --color-indigo-600: #7c3aed;
   /* Neutrals: slate → the player page's violet-black. */
   --color-gray-600: #3a3350;
   --color-gray-700: #262038;
@@ -81,19 +87,19 @@
  * the same glass the player page's tiles use. `.dark .app-surface` in front
  * outranks the site's own rules whichever stylesheet loads first.
  */
-.dark .app-surface .mt-page .bg-white {
+.dark .app-surface .theme-player .bg-white {
   background-color: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.07);
   box-shadow: none;
 }
-.dark .app-surface .mt-page .bg-gray-50,
-.dark .app-surface .mt-page .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06); }
-.dark .app-surface .mt-page .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.1); }
-.dark .app-surface .mt-page .border-gray-100,
-.dark .app-surface .mt-page .border-gray-200 { border-color: rgba(255, 255, 255, 0.07); }
-.dark .app-surface .mt-page .border-gray-300 { border-color: rgba(255, 255, 255, 0.15); }
-.dark .app-surface .mt-page .bg-blue-50 { background-color: rgba(232, 121, 249, 0.12); }
+.dark .app-surface .theme-player .bg-gray-50,
+.dark .app-surface .theme-player .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06); }
+.dark .app-surface .theme-player .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.1); }
+.dark .app-surface .theme-player .border-gray-100,
+.dark .app-surface .theme-player .border-gray-200 { border-color: rgba(255, 255, 255, 0.07); }
+.dark .app-surface .theme-player .border-gray-300 { border-color: rgba(255, 255, 255, 0.15); }
+.dark .app-surface .theme-player .bg-blue-50 { background-color: rgba(232, 121, 249, 0.12); }
 /* Fuchsia text on a dark panel: the light shade, as the player page's links. */
-.dark .app-surface .mt-page .text-blue-600,
-.dark .app-surface .mt-page .text-blue-700,
-.dark .app-surface .mt-page .text-blue-800 { color: #f0abfc; }
+.dark .app-surface .theme-player .text-blue-600,
+.dark .app-surface .theme-player .text-blue-700,
+.dark .app-surface .theme-player .text-blue-800 { color: #f0abfc; }

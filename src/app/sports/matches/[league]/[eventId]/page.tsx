@@ -16,7 +16,7 @@ import {
 } from '@/lib/match-page';
 import { clipHref, clockDuration } from '@/lib/highlight-clip';
 // The player page's colours, for this page and the parts it shares with others.
-import './match.css';
+import '../../../theme-player.css';
 
 /**
  * One fixture.
@@ -143,7 +143,7 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
         <section
           data-match-stored={clips.length}
           aria-label="Stored highlights for this fixture"
-          className="mt-page mx-auto max-w-5xl px-3 pt-3 text-white sm:px-5 sm:pt-5"
+          className="theme-player mx-auto max-w-5xl px-3 pt-3 text-white sm:px-5 sm:pt-5"
         >
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
             {facts.leagueName ?? resolved.meta.name}
