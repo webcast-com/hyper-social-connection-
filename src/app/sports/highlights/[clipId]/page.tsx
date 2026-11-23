@@ -97,9 +97,7 @@ export default async function HighlightClipPage({ params }: Props) {
   const played = clip.startAt ? new Date(clip.startAt) : null;
   const facts: [string, string | null][] = [
     ['Fixture', clip.eventName || null],
-    ['Competition', clip.leagueName || null],
-    ['Match state', CLIP_STATUS_LABEL[clip.status] ?? null],
-    ['Length', length ? `${length} minutes` : null],
+    ['Length', length || null],
     ['Played', played && !Number.isNaN(played.getTime())
       ? played.toISOString().slice(0, 10)
       : null],
@@ -152,17 +150,28 @@ export default async function HighlightClipPage({ params }: Props) {
               // One video on a page whose whole subject is that video, so its
               // metadata is worth fetching — unlike a board of a dozen cards.
               preload="metadata"
+              durationLabel={length}
             />
           </div>
         ) : clip.thumbnail ? (
           // Nothing ESPN will serve, but the frame it reported is still the moment.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={clip.thumbnail}
-            alt={clip.title}
-            data-clip-poster=""
-            className="w-full rounded-xl border border-white/[0.07] object-cover"
-          />
+          <div className="relative overflow-hidden rounded-xl border border-white/[0.07]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={clip.thumbnail}
+              alt={clip.title}
+              data-clip-poster=""
+              className="w-full object-cover"
+            />
+            {length ? (
+              <span
+                aria-label={`Duration ${length}`}
+                className="pointer-events-none absolute right-2 top-2 rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-sm"
+              >
+                {length}
+              </span>
+            ) : null}
+          </div>
         ) : (
           <p
             data-clip-unplayable=""

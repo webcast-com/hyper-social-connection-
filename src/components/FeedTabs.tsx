@@ -5,6 +5,7 @@ import Post from '@/components/Post';
 import SportsFeedCard from '@/components/SportsFeedCard';
 import SportsPredictionFeedCard from '@/components/SportsPredictionFeedCard';
 import SportsVideoNewsCard from '@/components/SportsVideoNewsCard';
+import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import { HighlightPostCard } from '@/components/SportsHighlightsFeed';
 import { Sparkles, Users, Clapperboard, Compass, Radio } from 'lucide-react';
 import Link from 'next/link';
@@ -86,7 +87,7 @@ export default function FeedTabs({
   const hasVideo = livePosts.some((post) => post.type === 'video-news');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {/* Sticky Tab Selector. Four tabs do not fit a 320px column with icons and
           labels, so the icons — which are decorative, the label carries the
           meaning — appear from `sm` up and the labels truncate rather than push
@@ -94,7 +95,7 @@ export default function FeedTabs({
           its own label needs (`flex-auto`), because four equal quarters of a
           320px column are too narrow for "Highlights"; from `sm` up they are
           equal again. */}
-      <div role="group" aria-label="Feed sections" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-16 z-20 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
+      <div role="group" aria-label="Feed sections" className="mx-3 sm:mx-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-16 z-20 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
         <button
           type="button"
           onClick={() => select('for-you')}
@@ -156,7 +157,7 @@ export default function FeedTabs({
       </div>
 
       {/* Feed Content */}
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-4">
         {postsToRender.length === 0 ? (
           activeTab === 'following' ? (
             <EmptyState
@@ -218,7 +219,7 @@ export default function FeedTabs({
             {/* The Live tab says what it is showing, from the cards it was given:
                 fixtures ESPN reports as in play first, then the rest. */}
             {activeTab === 'live' && (
-              <p role="status" className="min-w-0 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
+              <p role="status" className="mx-3 sm:mx-0 min-w-0 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
                 {liveNow > 0
                   ? `${liveNow} ${liveNow === 1 ? 'fixture is' : 'fixtures are'} live now, then upcoming and results — ${fixtures} listed.`
                   : fixtures > 0
@@ -258,6 +259,14 @@ export default function FeedTabs({
                   engagement={post.engagement ?? null}
                   signedIn={!!currentUser?.id}
                 />
+              ) : post.type === 'leaders' ? (
+                <div key={post.id} className={post.desktopOnly ? 'hidden lg:block' : undefined}>
+                  <SportsLeadersBoard
+                    boards={post.boards}
+                    engagement={post.engagement ?? {}}
+                    signedIn={!!currentUser?.id}
+                  />
+                </div>
               ) : (
                 <Post
                   key={post.id}

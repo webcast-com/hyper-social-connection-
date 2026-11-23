@@ -478,6 +478,20 @@ export default async function Home() {
     forYouHighlightPosts,
     HIGHLIGHTS_FEED_SLOTS,
   );
+  // On desktop the standalone leader board above the feed was removed so highlights
+  // and leaders appear in between posts as you scroll. Insert a leaders card into
+  // the feed (desktop-only to avoid duplicating the mobile compact panel).
+  if (leaderBoards?.football?.rows?.length || leaderBoards?.basketball?.rows?.length) {
+    const leadersFeedPost = {
+      id: 'leaders-feed',
+      type: 'leaders',
+      boards: leaderBoards,
+      engagement: anchorEngagement,
+      desktopOnly: true,
+    };
+    const insertAt = Math.min(4, forYouPosts.length);
+    forYouPosts.splice(insertAt, 0, leadersFeedPost);
+  }
 
   // The Live tab is the sports desk on its own: every fixture the board reports,
   // live first and then upcoming and results, in the board's own order, with no
@@ -522,11 +536,17 @@ export default async function Home() {
   const trendingTopics = computeTrendingTopics(allPosts);
 
   return (
-    // Desktop columns. From `lg` the feed sits beside the discovery rail; from
-    // `xl` the navigation rail joins them. Both rails are fixed widths, so the
-    // feed column takes what is left rather than a quarter-based share, and both
-    // stay on screen while the feed scrolls.
-    <div className="grid grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto theme-violet home-panel bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] rounded-[2rem]">
+    <>
+      {/* Status/stories row: full-width above the desktop/tablet rails, like the header content width. */}
+      <div className="mx-auto w-full max-w-7xl px-0 pt-2 sm:px-4 sm:pt-4">
+        <Stories user={viewer} stories={enrichedStories} />
+      </div>
+
+      {/* Desktop columns. From `lg` the feed sits beside the discovery rail; from
+          `xl` the navigation rail joins them. Both rails are fixed widths, so the
+          feed column takes what is left rather than a quarter-based share, and both
+          stay on screen while the feed scrolls. */}
+      <div className="grid grid-cols-1 gap-2 px-0 py-2 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto theme-violet home-panel bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] sm:rounded-[2rem]">
       {/* The site's name, and who publishes it (name, address and logo). */}
       <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
@@ -616,9 +636,9 @@ export default async function Home() {
       </aside>
 
       {/* Main Feed — first on mobile */}
-      <div className="min-w-0 max-w-2xl mx-auto w-full space-y-4">
+      <div className="min-w-0 max-w-2xl mx-auto w-full space-y-2 sm:space-y-4">
         <h1 className="sr-only">Hyper — The Sports Community Platform for Athletes, Fans, Clubs &amp; Organizers</h1>
-        <section className="lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
+        <section className="mx-3 sm:mx-0 lg:hidden overflow-hidden rounded-[1.75rem] border border-blue-100/80 dark:border-blue-900/60 bg-white/90 dark:bg-slate-900/90 shadow-sm backdrop-blur">
           <SportsMatchCentre board={sportsBoard} compact shownEventIds={feedEventIds} />
 
           {/* Paid placements, on phones and tablets: under the scores, where
@@ -730,18 +750,10 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* On a desktop each board is one row of cards, so the feed below starts
-            within a couple of screens instead of after every card in both. */}
-        <SportsLeadersBoard boards={leaderBoards} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
-
-        {/* Paid placements, on a desktop (phones and tablets have theirs in the
-            panel above). Nothing is requested until this point of the page is
-            about to scroll into view. */}
+        {/* Paid placements on desktop (phones/tablets have theirs in the compact panel above). */}
         <SponsorBanners placement="home" className="hidden lg:block" />
 
-        <SportsHighlightsFeed board={highlightBoard} engagement={anchorEngagement} signedIn={signedIn} layout="row" />
-
-        <section aria-labelledby="explore-sports" className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
+        <section aria-labelledby="explore-sports" className="mx-3 sm:mx-0 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
           <h2 id="explore-sports" className="text-sm font-bold text-gray-900 dark:text-white">Explore sports scores and fixtures</h2>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             Follow <Link href="/sports?sport=football" className="font-semibold text-blue-600 hover:underline dark:text-blue-400">football</Link>,{' '}
@@ -752,7 +764,7 @@ export default async function Home() {
         </section>
 
         {dbFeedError && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-2xl px-4 py-3">
+          <div className="mx-3 sm:mx-0 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs rounded-2xl px-4 py-3">
             <p className="font-bold mb-0.5">Showing demo content — live data unavailable</p>
             <p className="opacity-80">
               The app is configured for a database, but the feed query failed
@@ -763,10 +775,7 @@ export default async function Home() {
           </div>
         )}
         {viewer ? (
-          <>
-            <Stories user={viewer} stories={enrichedStories} />
-            <CreatePost user={viewer} />
-          </>
+          <CreatePost user={viewer} />
         ) : (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-sm rounded-2xl px-4 py-3">
             <span className="font-semibold">
@@ -875,5 +884,6 @@ export default async function Home() {
           nothing, and shows nothing when there is nothing to watch. */}
       <LiveStreamToast />
     </div>
+    </>
   );
 }

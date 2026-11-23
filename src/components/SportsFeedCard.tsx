@@ -121,7 +121,7 @@ export default function SportsFeedCard({
   };
 
   return (
-    <article className="overflow-hidden rounded-xl border border-amber-100 bg-white shadow transition-all dark:border-amber-900/50 dark:bg-gray-800">
+    <article className="overflow-hidden rounded-none sm:rounded-xl border-y sm:border border-amber-100 bg-white shadow-none sm:shadow transition-all dark:border-amber-900/50 dark:bg-gray-800">
       <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-blue-50 px-4 py-2 dark:border-amber-900/50 dark:from-amber-950/40 dark:via-slate-900 dark:to-blue-950/30">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">

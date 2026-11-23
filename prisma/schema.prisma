@@ -130,6 +130,7 @@ model Story {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   imageUrl  String   @map("image_url")
+  videoUrl  String?  @map("video_url")
   expiresAt DateTime @map("expires_at") @db.Timestamp(6)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 

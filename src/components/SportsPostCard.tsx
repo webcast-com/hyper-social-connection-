@@ -164,7 +164,7 @@ export default function SportsPostCard({
         : 'Your first like, comment or save opens the discussion post for this card.';
 
   return (
-    <article className="relative bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-100 dark:border-gray-700/60 overflow-hidden transition-all">
+    <article className="relative bg-white dark:bg-gray-800 rounded-none sm:rounded-xl shadow-none sm:shadow border-y sm:border border-gray-200/80 dark:border-gray-700/60 sm:border-gray-100 overflow-hidden transition-all">
       {/* The card itself is clickable, exactly like a post in the feed. The
           controls below sit above it, so they keep their own behaviour. */}
       <Link href={href} className="absolute inset-0 z-0" aria-label={title} />
@@ -265,14 +265,19 @@ export default function SportsPostCard({
       {media}
 
       {/* Details, below the media. */}
-      <dl className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700">
-        {details.map((detail) => (
-          <div key={detail.label} className="px-3 py-2 text-center min-w-0">
-            <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">{detail.label}</dt>
-            <dd className="text-sm font-bold text-gray-900 dark:text-white truncate">{detail.value}</dd>
-          </div>
-        ))}
-      </dl>
+      {details.length > 0 && (
+        <dl
+          className="grid divide-x divide-gray-100 dark:divide-gray-700 border-b border-gray-100 dark:border-gray-700"
+          style={{ gridTemplateColumns: `repeat(${details.length}, minmax(0, 1fr))` }}
+        >
+          {details.map((detail) => (
+            <div key={detail.label} className="px-3 py-2 text-center min-w-0">
+              <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">{detail.label}</dt>
+              <dd className="text-sm font-bold text-gray-900 dark:text-white truncate">{detail.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {permalink ? (
         <div className="relative z-10 px-4 py-1.5 text-xs">

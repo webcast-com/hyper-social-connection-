@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'eb282c0599702eeafd284ab83be1c1439a0569298335dbbd6691a2e6ad0ec95f'>;
+  StorageHashBase<'cbcaa67ae5320afff6e242e4c3e2d43d2e7d839f0f8b9e01d93472cc3f025ca5'>;
 export type ExecutionHash =
   ExecutionHashBase<'d032233127abb6a108700f1ad5bd861df83daa1e9181ac1decc807147e70ca5e'>;
 export type ProfileHash =
@@ -617,6 +617,7 @@ export namespace Models {
     id: FieldOutputTypes['public']['Story']['id'];
     imageUrl: FieldOutputTypes['public']['Story']['imageUrl'];
     userId: FieldOutputTypes['public']['Story']['userId'];
+    videoUrl: FieldOutputTypes['public']['Story']['videoUrl'];
     user: public_User;
     readonly [RelationKeys]?: 'user';
   };
@@ -2782,6 +2783,12 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/int4';
                   readonly codecId: 'pg/int4@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly video_url: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
               };
@@ -4974,6 +4981,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
+              readonly videoUrl: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
             };
             readonly relations: {
               readonly user: {
@@ -4995,6 +5006,7 @@ type ContractBase = Omit<
                 readonly id: { readonly column: 'id' };
                 readonly imageUrl: { readonly column: 'image_url' };
                 readonly userId: { readonly column: 'user_id' };
+                readonly videoUrl: { readonly column: 'video_url' };
               };
             };
           };
