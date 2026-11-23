@@ -1,19 +1,19 @@
 {
  "version": 1,
- "updatedAt": "2026-11-23T02:56:54.627Z",
- "nextSeq": 1497,
- "clips": 1496,
+ "updatedAt": "2026-11-23T12:12:24.942Z",
+ "nextSeq": 1567,
+ "clips": 1566,
  "oldestAt": "2026-11-08T23:01:30.000Z",
- "newestAt": "2026-11-23T02:40:29.000Z",
- "lastSweepAt": "2026-11-23T02:56:54.450Z",
+ "newestAt": "2026-11-23T08:31:24.000Z",
+ "lastSweepAt": "2026-11-23T12:12:24.897Z",
  "sweptCells": 1331,
  "cube": {
   "league|epl|": 13,
-  "league|laliga|": 13,
+  "league|laliga|": 14,
   "league|ligue1|": 1,
-  "league|mls|": 7,
-  "league|nba|": 29,
-  "league|nfl|": 31,
+  "league|mls|": 8,
+  "league|nba|": 32,
+  "league|nfl|": 33,
   "league|ucl|": 2,
   "match|concacaf-nations|final": 4,
   "match|epl|final": 4,
@@ -23,13 +23,13 @@
   "match|mls|final": 16,
   "match|nba|final": 362,
   "match|nba|live": 11,
-  "match|ncaam|final": 432,
+  "match|ncaam|final": 456,
   "match|ncaam|live": 28,
-  "match|ncaaw|final": 131,
+  "match|ncaaw|final": 149,
   "match|ncaaw|live": 17,
-  "match|nfl|final": 8,
+  "match|nfl|final": 20,
   "match|nfl|live": 1,
-  "match|nhl|final": 236,
+  "match|nhl|final": 245,
   "match|nhl|live": 55,
   "match|nwsl|final": 5,
   "match|nwsl|live": 4,
@@ -39,6 +39,6 @@
   "match|womens-ucl|live": 4
  },
  "months": {
-  "2026-11": 1496
+  "2026-11": 1566
  }
 }
