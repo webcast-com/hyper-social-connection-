@@ -188,8 +188,8 @@ for (const width of [320, 375, 768, 1440]) {
     await expect(menu).toBeVisible();
     const items = menu.getByRole('menuitem');
     await expect(items).toHaveText(['Your profile', 'Saved']);
-    await expect(items.nth(0)).toHaveAttribute('href', '/profile/1');
-    await expect(items.nth(1)).toHaveAttribute('href', '/profile/1?tab=saved');
+    await expect(items.nth(0)).toHaveAttribute('href', '/profile/test-user-1');
+    await expect(items.nth(1)).toHaveAttribute('href', '/profile/test-user-1?tab=saved');
 
     // On screen, clear of the header it hangs from, and a full touch target each.
     const box = (await menu.boundingBox())!;

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { useState } from 'react';
 import {
   ThumbsUp,
@@ -424,7 +425,7 @@ export default function SportsPostCard({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="bg-gray-100 dark:bg-gray-700/80 rounded-2xl px-3.5 py-2 inline-block max-w-full">
-                    <Link href={`/profile/${comment.author.id}`} className="relative z-10 font-bold text-xs text-gray-900 dark:text-white hover:underline">
+                    <Link href={profileHref(comment.author)} className="relative z-10 font-bold text-xs text-gray-900 dark:text-white hover:underline">
                       {comment.author.name}
                     </Link>
                     <div className="text-sm text-gray-800 dark:text-gray-200 break-words mt-0.5">{comment.content}</div>

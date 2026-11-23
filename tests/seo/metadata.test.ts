@@ -408,14 +408,26 @@ test('public posts get a dedicated article canonical and private/unpublished pos
     const loaded = await loadMetadataModule('src/app/post/[id]/page.tsx', { db: { post: { first: async () => row } } });
     const input = { params: Promise.resolve({ id: '7' }) };
     const metadata = await loaded.generateMetadata(input);
-    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/post/7');
+    // A post anybody may read answers at its opening words and its id.
+    assert.equal(metadata.alternates?.canonical, 'https://hyper.co.ke/post/private-content-marker-7');
     assert.equal(metadata.description, base.content);
+    // The same post asked for by its words is the same post, at the same address.
+    const named = await loaded.generateMetadata({ params: Promise.resolve({ id: 'private-content-marker-7' }) });
+    assert.equal(named.alternates?.canonical, 'https://hyper.co.ke/post/private-content-marker-7');
     assert.equal(metadata.openGraph && 'type' in metadata.openGraph && metadata.openGraph.type, 'article');
     for (const value of [null, { ...base, privacy: 'friends' }, { ...base, user: { profileVisibility: 'followers' } }, { ...base, group: { privacy: 'private' } }, { ...base, scheduledAt: new Date('2099-01-01') }]) {
       row = value;
       const hidden = await loaded.generateMetadata(input);
       assert.equal(typeof hidden.robots === 'object' && hidden.robots?.index, false);
       assert.ok(!JSON.stringify(hidden).includes(base.content));
+      // Nor in its address: a post not everybody may read claims the bare id,
+      // whatever words it was asked for by.
+      assert.equal(hidden.alternates?.canonical, 'https://hyper.co.ke/post/7');
+      assert.ok(!JSON.stringify(hidden).toLowerCase().includes('private-content-marker'));
+      if (value) {
+        const asked = await loaded.generateMetadata({ params: Promise.resolve({ id: 'private-content-marker-7' }) });
+        assert.equal(asked.alternates?.canonical, 'https://hyper.co.ke/post/7', 'the words in a request are not repeated back');
+      }
     }
   });
 });
@@ -428,6 +440,19 @@ test('private profile and group metadata are noindex and omit private descriptio
       const metadata = await loaded.generateMetadata({ params: Promise.resolve({ id: '7' }) });
       assert.equal(typeof metadata.robots === 'object' && metadata.robots?.index, false);
       assert.ok(!JSON.stringify(metadata).includes('PRIVATE-'));
+      // A member's name is printed beside everything they post and titles their
+      // page whoever asks, so it is in their address too. A private group's name
+      // is its members', and its address stays the bare id.
+      assert.equal(
+        metadata.alternates?.canonical,
+        kind === 'profile' ? '/profile/reported-name-7' : '/groups/7',
+      );
+      const publicRow = { ...row, profileVisibility: 'public', privacy: 'public' };
+      const open = await loadMetadataModule(`src/app/${kind}/[id]/page.tsx`, { db: { [model]: { first: async () => publicRow } } });
+      for (const id of ['7', 'reported-name-7', 'some-older-name-7']) {
+        const named = await open.generateMetadata({ params: Promise.resolve({ id }) });
+        assert.equal(named.alternates?.canonical, `/${kind}/reported-name-7`, `/${kind}/${id} names the one address`);
+      }
     }
   });
 });

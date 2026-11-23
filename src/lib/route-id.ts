@@ -1,3 +1,5 @@
+import { trailingId } from './seo-slug';
+
 /**
  * Which id a dynamic route segment names, and when it names none.
  *
@@ -25,4 +27,20 @@ export function routeIdFromParam(raw: string | number | null | undefined): numbe
   if (!/^[1-9][0-9]*$/.test(raw)) return null;
   const value = Number(raw);
   return Number.isSafeInteger(value) ? value : null;
+}
+
+/**
+ * The id a route segment names when the segment may carry a name in front of it:
+ * `maya-patel-4` is member 4, and so is `4`.
+ *
+ * The id itself is held to the rule above — written in full, positive, no padding —
+ * and what comes before it must be words joined by dashes (`trailingId`). So
+ * `maya-patel-04`, `-4`, `maya-patel-` and `4-maya-patel` are all still not ids.
+ * The words are never what a record is found by; the page that reads them checks
+ * them against the record afterwards and corrects the address.
+ */
+export function routeIdFromSegment(raw: string | number | null | undefined): number | null {
+  if (typeof raw !== 'string') return null;
+  const read = trailingId(raw);
+  return read ? routeIdFromParam(read.id) : null;
 }

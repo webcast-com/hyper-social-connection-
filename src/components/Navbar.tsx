@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
@@ -120,7 +121,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
           </Link>
 
           <Link
-            href={user ? `/profile/${user.id}` : '/login'}
+            href={user ? profileHref(user) : '/login'}
             className={`transition-all relative min-h-11 py-1 px-2.5 rounded-xl flex flex-col items-center group ${
               isDesktopActive('/profile')
                 ? 'text-blue-600 dark:text-blue-400'

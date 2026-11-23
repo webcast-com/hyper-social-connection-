@@ -3,6 +3,7 @@
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { reviewFollowRequest, toggleBlock, toggleMute } from '@/app/social-actions';
 
 type Person = { id: number; name: string; username?: string | null; avatar?: string | null };
@@ -109,7 +110,7 @@ export default function SafetyPanel({
 
 function PersonChip({ person }: { person: Person }) {
   return (
-    <Link href={`/profile/${person.id}`} className="flex items-center gap-2 min-w-0">
+    <Link href={profileHref(person)} className="flex items-center gap-2 min-w-0">
       {person.avatar ? (
         <img src={person.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
       ) : (

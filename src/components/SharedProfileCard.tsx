@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { BadgeCheck, MapPin, UserRound } from 'lucide-react';
 
 /**
@@ -22,7 +23,7 @@ export default function SharedProfileCard({
 
   return (
     <Link
-      href={`/profile/${profile.id}`}
+      href={profileHref(profile)}
       className="mt-3 flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors min-w-0 w-full"
     >
       {profile.avatar ? (

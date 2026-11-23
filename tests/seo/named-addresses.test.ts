@@ -90,3 +90,83 @@ test('a clip address carries the title, and reads back to the stored id', () => 
   assert.deepEqual(clipIdCandidates('some-old-id'), ['some-old-id']);
   assert.deepEqual(clipIdCandidates('  '), []);
 });
+
+/* ── Profiles, groups and posts ────────────────────────────────────────────── */
+
+test('a member, a group and a post are addressed by name, with the id at the end', async () => {
+  const { profileHref, groupHref, postHref } = await import('../../src/lib/social-href');
+  assert.equal(profileHref({ id: 4, name: 'Maya Patel' }), '/profile/maya-patel-4');
+  assert.equal(profileHref({ id: '4', name: 'Maya Patel' }), '/profile/maya-patel-4');
+  assert.equal(profileHref({ id: 4 }), '/profile/4');
+  assert.equal(profileHref({ id: 4, name: '🙂' }), '/profile/4');
+
+  assert.equal(groupHref({ id: 12, name: 'Sunday League', privacy: 'public' }), '/groups/sunday-league-12');
+  assert.equal(postHref({ id: 91, content: 'Dropped a new original track!' }, true), '/post/dropped-a-new-original-track-91');
+});
+
+test('a private group and a post not everybody may read keep the bare id', async () => {
+  const { groupHref, postHref } = await import('../../src/lib/social-href');
+  // A private group's name is its members'. Unknown privacy is treated as private:
+  // a link built from half a record must not be the one that gives the name away.
+  assert.equal(groupHref({ id: 12, name: 'Surprise party for Wanjiru', privacy: 'private' }), '/groups/12');
+  assert.equal(groupHref({ id: 12, name: 'Surprise party for Wanjiru' }), '/groups/12');
+  assert.equal(groupHref({ id: 12, name: 'Surprise party for Wanjiru', privacy: null }), '/groups/12');
+  assert.equal(postHref({ id: 91, content: 'My new phone number is 0700 000 000' }, false), '/post/91');
+});
+
+test('a card decides a post may be named more strictly than the page does', async () => {
+  const { mayNamePost } = await import('../../src/lib/social-href');
+  const open = { privacy: 'public', user: { profileVisibility: 'public' } };
+  assert.equal(mayNamePost(open), true);
+  assert.equal(mayNamePost({ ...open, groupId: 3, group: { privacy: 'public' } }), true);
+  // Each way a post is not everybody's, and each way a card might not know.
+  assert.equal(mayNamePost({ ...open, privacy: 'friends' }), false);
+  assert.equal(mayNamePost({ ...open, user: { profileVisibility: 'followers' } }), false);
+  assert.equal(mayNamePost({ ...open, user: null }), false, 'an author the card was not given');
+  assert.equal(mayNamePost({ privacy: 'public' }), false);
+  assert.equal(mayNamePost({ ...open, groupId: 3, group: { privacy: 'private' } }), false);
+  assert.equal(mayNamePost({ ...open, groupId: 3 }), false, 'a group post handed over without its group is not a post outside any group');
+  assert.equal(mayNamePost({ ...open, groupId: 3, group: {} }), false);
+  assert.equal(mayNamePost({ ...open, scheduledAt: '2099-01-01T00:00:00Z' }), false);
+  assert.equal(mayNamePost({ ...open, scheduledAt: '2020-01-01T00:00:00Z' }), true);
+  assert.equal(mayNamePost(null), false);
+});
+
+test('a post lends its address its first line of words, without links', async () => {
+  const { postSlugText, postHref, POST_SLUG_MAX } = await import('../../src/lib/social-href');
+  assert.equal(postSlugText('Match day at Kikuyu grounds.\nWhat a finish!'), 'match-day-at-kikuyu-grounds');
+  assert.equal(postSlugText('🔥🔥🔥\nWhat a finish!'), 'what-a-finish', 'a line with no words is passed over');
+  assert.equal(postSlugText('Watch this https://youtu.be/abc123?t=4 now'), 'watch-this-now', "a link's own address is not repeated inside another");
+  assert.equal(postSlugText('https://example.com/only-a-link'), '');
+  assert.equal(postSlugText('🔁 Reposted'), '', 'a bare repost says only that it is one');
+  assert.equal(postSlugText(null), '');
+  const long = postSlugText('Honestly the best weekend I have had in a very long time and I would do every single bit of it again');
+  assert.ok(long.length <= POST_SLUG_MAX && !long.endsWith('-'));
+  assert.equal(long, 'honestly-the-best-weekend-i-have-had-in-a-very-long-time-and');
+  assert.equal(postHref({ id: 91, content: '🔥🔥🔥' }, true), '/post/91', 'no words: the id alone');
+});
+
+test('a page reads the id from the end of its address, by the same strict rule as before', async () => {
+  const { routeIdFromSegment, routeIdFromParam } = await import('../../src/lib/route-id');
+  assert.equal(routeIdFromSegment('4'), 4);
+  assert.equal(routeIdFromSegment('maya-patel-4'), 4);
+  assert.equal(routeIdFromSegment('Maya-Patel-4'), 4, 'read, so that it can be corrected');
+  assert.equal(routeIdFromSegment('room-101-12'), 12, 'a name that ends in a number is not the id');
+  // Everything the old rule refused is still refused, with or without words.
+  for (const bad of ['', 'abc', '0', '04', '-4', '+4', '4.0', '1e3', '0x10', '4-maya', 'maya-patel', 'maya-patel-', 'maya-patel-0',
+    'maya-patel-04', 'maya--4', '-maya-4', 'maya patel-4', 'maya-patel-4 ', 'maya/4', `x-${'9'.repeat(17)}`]) {
+    assert.equal(routeIdFromSegment(bad), null, JSON.stringify(bad));
+  }
+  for (const id of ['1', '7', '4521']) assert.equal(routeIdFromSegment(id), routeIdFromParam(id));
+  assert.equal(routeIdFromSegment(undefined), null);
+});
+
+test('a page corrects only the spelling of its address, and keeps what was asked with it', async () => {
+  const { canonicalRedirect } = await import('../../src/lib/social-href');
+  assert.equal(canonicalRedirect('/profile/maya-patel-4', '/profile/maya-patel-4'), null, 'already there');
+  assert.equal(canonicalRedirect('/profile/maya-patel-4', '/profile/4'), '/profile/maya-patel-4');
+  assert.equal(canonicalRedirect('/profile/maya-patel-4', '/profile/maya-p-4', { tab: 'saved' }), '/profile/maya-patel-4?tab=saved');
+  assert.equal(canonicalRedirect('/profile/maya-patel-4', '/profile/4', { u: 'maya p', tab: ['a', 'b'], gone: undefined }),
+    '/profile/maya-patel-4?u=maya+p&tab=a&tab=b');
+  assert.equal(canonicalRedirect('/groups/12', '/groups/12', { x: '1' }), null);
+});

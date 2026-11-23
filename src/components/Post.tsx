@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { groupHref, mayNamePost, postHref, profileHref } from '@/lib/social-href';
 import EmojiPicker from './EmojiPicker';
 import ReportModal from './ReportModal';
 import { SharePostSheet } from './ShareSheets';
@@ -96,9 +97,13 @@ export default function Post({
   };
 
   const handleCopyLink = async () => {
+    // The post's own address: its opening words in front of its id when anybody
+    // may read it, and the bare id otherwise — a private post's words stay out
+    // of anything that gets pasted somewhere else.
+    const path = postHref(post, mayNamePost(post));
     const postUrl = typeof window !== 'undefined'
-      ? `${window.location.origin}/post/${post.id}`
-      : `/post/${post.id}`;
+      ? `${window.location.origin}${path}`
+      : path;
     try {
       await navigator.clipboard.writeText(postUrl);
       setCopied(true);
@@ -135,7 +140,7 @@ export default function Post({
       {/* Post Author Header */}
       <div className="p-4 flex items-center justify-between relative">
         <div className="flex items-center space-x-3 min-w-0">
-          <Link href={`/profile/${post.user?.id || post.userId}`} className="shrink-0">
+          <Link href={profileHref({ id: post.user?.id || post.userId, name: post.user?.name })} className="shrink-0">
             {post.user?.avatar ? (
               <img src={post.user.avatar} alt={post.user.name} className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" />
             ) : (
@@ -145,7 +150,7 @@ export default function Post({
             )}
           </Link>
           <div className="min-w-0">
-            <Link href={`/profile/${post.user?.id || post.userId}`} className="font-bold text-gray-900 dark:text-white hover:underline text-sm truncate block">
+            <Link href={profileHref({ id: post.user?.id || post.userId, name: post.user?.name })} className="font-bold text-gray-900 dark:text-white hover:underline text-sm truncate block">
               {post.user?.name || 'Hyper Member'}
             </Link>
             <div className="text-xs text-gray-500 dark:text-gray-400" suppressHydrationWarning>
@@ -159,7 +164,7 @@ export default function Post({
                 <span title={`Posted in ${post.group.name}`}>
                   {' '}· in{' '}
                   <Link
-                    href={`/groups/${post.group.id}`}
+                    href={groupHref(post.group)}
                     className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     {post.group.name}
@@ -461,7 +466,7 @@ export default function Post({
               const isCommentAuthor = currentUser?.id && comment.userId === currentUser.id;
               return (
                 <div key={comment.id} className="flex space-x-2 group">
-                  <Link href={`/profile/${comment.user?.id || comment.userId}`}>
+                  <Link href={profileHref({ id: comment.user?.id || comment.userId, name: comment.user?.name })}>
                     {comment.user?.avatar ? (
                       <img src={comment.user.avatar} alt={comment.user.name} className="w-8 h-8 rounded-full object-cover mt-1 shrink-0" />
                     ) : (
@@ -473,7 +478,7 @@ export default function Post({
                   <div className="min-w-0 flex-1">
                     <div className="bg-gray-100 dark:bg-gray-700/80 rounded-2xl px-3.5 py-2 inline-block max-w-full">
                       <div className="flex items-center justify-between space-x-2">
-                        <Link href={`/profile/${comment.user?.id || comment.userId}`} className="font-bold text-xs text-gray-900 dark:text-white hover:underline">
+                        <Link href={profileHref({ id: comment.user?.id || comment.userId, name: comment.user?.name })} className="font-bold text-xs text-gray-900 dark:text-white hover:underline">
                           {comment.user?.name || 'Hyper user'}
                         </Link>
                         {isCommentAuthor && (
@@ -612,7 +617,7 @@ export default function Post({
               {likers.map((u: any) => (
                 <Link
                   key={u.id}
-                  href={`/profile/${u.id}`}
+                  href={profileHref(u)}
                   onClick={() => setShowLikers(false)}
                   className="flex items-center space-x-3 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
                 >

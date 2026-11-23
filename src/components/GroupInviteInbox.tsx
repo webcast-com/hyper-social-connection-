@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { groupHref, profileHref } from '@/lib/social-href';
 import { Check, LoaderCircle, MailOpen, X } from 'lucide-react';
 import { respondToGroupInvite } from '@/app/invite-actions';
 
@@ -75,14 +76,14 @@ export default function GroupInviteInbox({
 
             <div className="flex-1 min-w-0">
               <Link
-                href={`/groups/${invite.group!.id}`}
+                href={groupHref(invite.group!)}
                 className="font-semibold text-sm text-gray-900 dark:text-white hover:underline"
               >
                 {invite.group!.name}
               </Link>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Invited by{' '}
-                <Link href={`/profile/${invite.inviter?.id}`} className="font-medium hover:underline">
+                <Link href={invite.inviter ? profileHref(invite.inviter) : '/groups'} className="font-medium hover:underline">
                   {invite.inviter?.name || 'a member'}
                 </Link>
               </p>

@@ -1,14 +1,16 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import ProfilePostTabs from '@/components/ProfilePostTabs';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import CoverPhotoUpload from '@/components/CoverPhotoUpload';
 import { Camera, GraduationCap, Heart, Link as LinkIcon, MapPin, Briefcase, Users as UsersIcon, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { canMessageUser, canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
-import { routeIdFromParam } from '@/lib/route-id';
+import { cache } from 'react';
+import { routeIdFromSegment } from '@/lib/route-id';
+import { canonicalRedirect, profileHref } from '@/lib/social-href';
 import FollowButton from '@/components/FollowButton';
 import ProfileSafetyMenu from '@/components/ProfileSafetyMenu';
 import ShareProfileButton from '@/components/ShareProfileButton';
@@ -19,6 +21,26 @@ import { getSiteUrl } from '@/lib/site-url';
 import { profilePageStructuredData } from '@/lib/structured-data';
 import JsonLd from '@/components/JsonLd';
 
+/**
+ * The few facts the page's head and its address are decided by, read once per
+ * request: the metadata describes the member with them, and the page checks the
+ * address against the name before it loads anything else.
+ */
+const loadProfileHead = cache(async (profileId: number) => {
+  if (!hasDatabase) return null;
+  try {
+    return await db.orm.public.User
+      .where({ id: profileId })
+      // `email` decides whether this is a person's page at all; it is never
+      // rendered, described or shared.
+      .select('name', 'bio', 'avatar', 'profileVisibility', 'email')
+      .first();
+  } catch (err) {
+    console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
+    return null;
+  }
+});
+
 export async function generateMetadata({
   params,
 }: {
@@ -26,22 +48,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   // The same rule the page uses, so the metadata cannot describe a member the page
-  // is about to say does not exist. See `routeIdFromParam`.
-  const profileId = routeIdFromParam(id);
-  let profile: { name: string; bio: string | null; avatar: string | null; profileVisibility: string; email: string | null } | null = null;
-
-  if (hasDatabase && profileId !== null) {
-    try {
-      profile = await db.orm.public.User
-        .where({ id: profileId })
-        // `email` decides whether this is a person's page at all; it is never
-        // rendered, described or shared.
-        .select('name', 'bio', 'avatar', 'profileVisibility', 'email')
-        .first();
-    } catch (err) {
-      console.warn('[profile metadata] DB query failed:', (err as Error)?.message);
-    }
-  }
+  // is about to say does not exist. See `routeIdFromSegment`: the address is the
+  // member's id, with or without their name in front of it.
+  const profileId = routeIdFromSegment(id);
+  const profile = profileId !== null ? await loadProfileHead(profileId) : null;
+  // The member's own address: their name in front of their id. An address the
+  // database could not vouch for keeps whatever was asked.
+  const address = profile && profileId !== null ? profileHref({ id: profileId, name: profile.name }) : `/profile/${id}`;
 
   const title = profile?.name ? `${profile.name} on Hyper` : 'Profile on Hyper';
   const isPublic = profile?.profileVisibility === 'public';
@@ -59,13 +72,13 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `/profile/${id}` },
+    alternates: { canonical: address },
     robots: isIndexable ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'profile',
       title: `${title} | Hyper`,
       description,
-      url: `/profile/${id}`,
+      url: address,
       images: [profile?.avatar || '/og-image.png'],
     },
     twitter: {
@@ -103,13 +116,23 @@ export default async function Profile({
   };
   const { id } = await params;
 
-  // One rule, shared with this page's metadata: see `routeIdFromParam`.
-  const parsedId = routeIdFromParam(id);
+  // One rule, shared with this page's metadata: see `routeIdFromSegment`.
+  const parsedId = routeIdFromSegment(id);
   // With no database there is nothing to look up, and the offline demo install keeps
   // showing a sample person. With one, an id that is not an id is a 404 rather than
   // whichever member the old parse happened to land on.
   if (hasDatabase && parsedId === null) notFound();
   const profileId = parsedId ?? 1;
+  // One member, one address. The id alone (every link made before profiles had
+  // names), a name the member has since changed and anyone's made-up words all
+  // leave permanently for `/profile/{name}-{id}`, with the query string
+  // (`?tab=saved`, a share's `?u=`) carried across. Checked before anything else
+  // is loaded, and outside every try: a redirect unwinds by throwing.
+  if (parsedId !== null) {
+    const head = await loadProfileHead(parsedId);
+    const moved = head ? canonicalRedirect(profileHref({ id: parsedId, name: head.name }), `/profile/${id}`, await searchParams) : null;
+    if (moved) permanentRedirect(moved);
+  }
   let profileUser: any = null;
   let allPosts: any[] = [];
   let allUsers: any[] = [];
@@ -425,7 +448,7 @@ export default async function Profile({
             </div>
             <div className="grid grid-cols-3 gap-2">
               {followersRes.slice(0, 6).map(({ user: u }) => u && (
-                <Link key={u.id} href={`/profile/${u.id}`} className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity">
+                <Link key={u.id} href={profileHref(u)} className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name} className="w-14 h-14 rounded-xl object-cover" />
                   ) : (

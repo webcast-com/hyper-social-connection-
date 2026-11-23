@@ -4,6 +4,7 @@ import { or } from "@prisma/orm-postgres/orm-client";
 import { getSiteUrl } from "@/lib/site-url";
 import { readRecentClipRefs, readRecentEventRefs, type ClipRef, type EventRef } from "@/lib/highlights-index";
 import { clipHref } from "@/lib/highlight-clip";
+import { groupHref, postHref, profileHref } from "@/lib/social-href";
 import { matchHref, storedMatchReference } from "@/lib/espn-match";
 import { dashboardSitemapEntries, isSubmittableProfile, NO_FRESHNESS, staticSitemapRoutes, type SitemapFreshness } from "@/lib/sitemap-rules";
 
@@ -43,9 +44,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // read is made to date a page.
   let freshness: SitemapFreshness = NO_FRESHNESS;
 
-  let profileRows: { id: number; createdAt: Date; email: string | null }[] = [];
-  let groupRows: { id: number; createdAt: Date }[] = [];
-  let postRows: { id: number; createdAt: Date }[] = [];
+  let profileRows: { id: number; name: string | null; createdAt: Date; email: string | null }[] = [];
+  let groupRows: { id: number; name: string | null; createdAt: Date }[] = [];
+  let postRows: { id: number; content: string | null; createdAt: Date }[] = [];
   let clipRefs: ClipRef[] = [];
   let eventRefs: EventRef[] = [];
   // Stored highlight clips: each one is a page of its own now, so each one is
@@ -62,13 +63,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .where({ profileVisibility: "public" })
         // `email` is read only to decide whether the account is a person worth
         // submitting, and it never leaves this function.
-        .select('id', 'createdAt', 'email')
+        .select('id', 'name', 'createdAt', 'email')
         .orderBy((o) => o.createdAt.desc())
         .limit(1000)
         .all();
       groupRows = await db.orm.public.Group
         .where({ privacy: "public" })
-        .select('id', 'createdAt')
+        .select('id', 'name', 'createdAt')
         .orderBy((o) => o.createdAt.desc())
         .limit(1000)
         .all();
@@ -78,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .where((p) => p.user.some((u) => u.profileVisibility.eq("public")))
         .where((p) => or(p.groupId.isNull(), p.group.some((g) => g.privacy.eq("public"))))
         .where((p) => or(p.scheduledAt.isNull(), p.scheduledAt.lte(new Date())))
-        .select('id', 'createdAt')
+        .select('id', 'content', 'createdAt')
         .orderBy((o) => o.createdAt.desc())
         .limit(200)
         .all();
@@ -104,21 +105,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // about, for the same reason Discover and the contacts rail already leave them
   // out.
   const profileRoutes: MetadataRoute.Sitemap = profileRows.filter(isSubmittableProfile).map((u) => ({
-    url: `${baseUrl}/profile/${u.id}`,
+    url: `${baseUrl}${profileHref(u)}`,
     lastModified: u.createdAt,
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
   const groupRoutes: MetadataRoute.Sitemap = groupRows.map((g) => ({
-    url: `${baseUrl}/groups/${g.id}`,
+    // Every row here was read as public, which is what puts a group's name in its address.
+    url: `${baseUrl}${groupHref({ ...g, privacy: 'public' })}`,
     lastModified: g.createdAt,
     changeFrequency: "weekly",
     priority: 0.6,
   }));
 
   const postRoutes: MetadataRoute.Sitemap = postRows.map((p) => ({
-    url: `${baseUrl}/post/${p.id}`,
+    // Likewise: the query above is the rule for a post anybody may read.
+    url: `${baseUrl}${postHref(p, true)}`,
     lastModified: p.createdAt,
     changeFrequency: "daily",
     priority: 0.6,

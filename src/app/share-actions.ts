@@ -115,9 +115,8 @@ export async function shareProfileToFeed(
   }
 
   revalidatePath('/');
-  revalidatePath(`/profile/${userId}`);
-  revalidatePath(`/profile/${profileId}`);
-  if (groupId) revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/profile/[id]', 'page');
+  if (groupId) revalidatePath('/groups/[id]', 'page');
   return { success: true, message: groupId ? 'Shared to the group' : 'Shared to your feed' };
 }
 
@@ -134,7 +133,7 @@ export async function shareProfileToMessage(profileId: number, receiverId: numbe
     const body = (note || '').trim().slice(0, 400);
     // Absolute link — chat renders plain text, and the link should stay
     // valid if the recipient copies it out of the app.
-    const profileLink = buildProfileUrl(getSiteUrl(), profileId, check.profile.username ?? null);
+    const profileLink = buildProfileUrl(getSiteUrl(), profileId, check.profile.username ?? null, check.profile.name);
     const sent = await deliverShareMessage(
       userId,
       receiverId,
@@ -285,9 +284,9 @@ export async function sharePostToFeed(
   }
 
   revalidatePath('/');
-  revalidatePath(`/profile/${userId}`);
+  revalidatePath('/profile/[id]', 'page');
   revalidatePath('/notifications');
-  if (groupId) revalidatePath(`/groups/${groupId}`);
+  if (groupId) revalidatePath('/groups/[id]', 'page');
   return { success: true, message: groupId ? 'Shared to the group' : 'Shared to your feed' };
 }
 
@@ -338,8 +337,8 @@ export async function shareContentToFeed(
   }
 
   revalidatePath('/');
-  revalidatePath(`/profile/${userId}`);
-  if (groupId) revalidatePath(`/groups/${groupId}`);
+  revalidatePath('/profile/[id]', 'page');
+  if (groupId) revalidatePath('/groups/[id]', 'page');
   return { success: true, message: groupId ? 'Shared to the group' : 'Shared to your feed' };
 }
 
@@ -365,7 +364,7 @@ export async function recordProfileShare(profileId: number, channel: string) {
   if (!isShareChannel(channel)) return { success: false };
   const userId = await getUserId();
   await recordShare(profileId, userId, channel);
-  revalidatePath(`/profile/${profileId}`);
+  revalidatePath('/profile/[id]', 'page');
   return { success: true };
 }
 

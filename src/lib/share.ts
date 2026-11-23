@@ -8,6 +8,8 @@
  * deep-link into their composer, which is the best a web app can do.
  */
 
+import { profileHref } from './social-href';
+
 export const INTERNAL_SHARE_CHANNELS = ['feed', 'group', 'message', 'copy_link'] as const;
 
 export const EXTERNAL_SHARE_CHANNELS = [
@@ -118,14 +120,18 @@ export const EXTERNAL_NETWORKS: ExternalNetwork[] = [
   },
 ];
 
-/** A profile's address on this site, without the origin. */
-export function profilePath(profileId: number, username?: string | null) {
-  return `/profile/${profileId}${username ? `?u=${enc(username)}` : ''}`;
+/**
+ * A profile's address on this site, without the origin. With the member's name
+ * it is the address their page answers at (`/profile/maya-patel-4`); without it,
+ * the id alone, which that page redirects.
+ */
+export function profilePath(profileId: number, username?: string | null, name?: string | null) {
+  return `${profileHref({ id: profileId, name })}${username ? `?u=${enc(username)}` : ''}`;
 }
 
 /** Absolute, shareable URL for a profile. */
-export function buildProfileUrl(origin: string, profileId: number, username?: string | null) {
-  return absoluteShareUrl(origin, profilePath(profileId, username));
+export function buildProfileUrl(origin: string, profileId: number, username?: string | null, name?: string | null) {
+  return absoluteShareUrl(origin, profilePath(profileId, username, name));
 }
 
 /**

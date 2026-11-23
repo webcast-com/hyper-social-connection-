@@ -67,6 +67,10 @@ export function namedSegment(name: string | null | undefined, id: string): strin
  */
 export function trailingId(segment: string | null | undefined): { id: string; named: boolean } | null {
   if (typeof segment !== 'string') return null;
-  const match = /^(?:(.*)-)?(\d+)$/.exec(segment);
+  // Words are letters and digits joined by single dashes, in either case (a
+  // capitalised address is still read, then corrected). Anything else in front
+  // of the digits — a lone dash, a space, a sign — is not a name, and `-5` must
+  // not be read as "5".
+  const match = /^(?:([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)-)?(\d+)$/.exec(segment);
   return match ? { id: match[2], named: match[1] !== undefined } : null;
 }

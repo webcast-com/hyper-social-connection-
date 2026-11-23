@@ -5,6 +5,7 @@ import { db, hasDatabase } from '@/lib/prisma';
 import { and } from '@prisma/orm-postgres/orm-client';
 import { canViewProfileDetails } from '@/lib/profile';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import { Users, Sparkles, Trophy } from 'lucide-react';
 import DiscoveryTopScorers from '@/components/DiscoveryTopScorers';
 import { SPORTS_DESK } from '@/lib/sports-anchor';
@@ -86,7 +87,7 @@ export default async function Discover() {
             </h3>
             <div className="space-y-3">
               {filteredUsers.slice(0, 6).map(user => (
-                <Link key={user.id} href={`/profile/${user.id}`} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
+                <Link key={user.id} href={profileHref(user)} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
                   <div className="flex items-center space-x-3 min-w-0">
                     {user.avatar ? (
                       <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -121,7 +122,7 @@ export default async function Discover() {
             <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Trending Posts</h3>
             <div className="space-y-4">
               {trendingPosts.map((res: any) => (
-                <Link key={res.post.id} href={`/profile/${res.post.userId}`} className="block p-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
+                <Link key={res.post.id} href={profileHref({ id: res.post.userId, name: res.user?.name })} className="block p-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
                   <div className="flex items-center space-x-2 mb-2">
                     {res.user?.avatar ? (
                       <img src={res.user.avatar} alt={res.user.name} className="w-8 h-8 rounded-full object-cover" />

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getViewer } from '@/lib/viewer';
 import { db, hasDatabase } from '@/lib/prisma';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Crown, ArrowLeft, CalendarDays, Lock } from 'lucide-react';
 import CreatePost from '@/components/CreatePost';
@@ -14,7 +14,8 @@ import GroupInviteButton from '@/components/GroupInviteButton';
 import GroupInviteInbox from '@/components/GroupInviteInbox';
 import { getMyGroupInvites } from '@/app/invite-actions';
 import { sharedProfileCardData } from '@/lib/profile';
-import { routeIdFromParam } from '@/lib/route-id';
+import { routeIdFromSegment } from '@/lib/route-id';
+import { canonicalRedirect, groupHref, profileHref } from '@/lib/social-href';
 import { StartCallButton } from '@/components/Call/StartCallButton';
 import { getSiteUrl } from '@/lib/site-url';
 import { GROUPS_CRUMB, HOME_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
@@ -30,7 +31,7 @@ export async function generateMetadata({
   // about to say does not exist. `Number.parseInt('1e3')` is 1, and a group's
   // description under an address that names a different group is a worse answer than
   // no answer.
-  const groupId = routeIdFromParam(id);
+  const groupId = routeIdFromSegment(id);
   let group: { name: string; description: string | null; coverPhoto: string | null; privacy: string } | null = null;
 
   if (hasDatabase && groupId !== null) {
@@ -47,17 +48,21 @@ export async function generateMetadata({
   const title = group?.name ? `${group.name} Community` : 'Community Group';
   const isPublic = group?.privacy === 'public';
   const description = (isPublic ? group?.description : null) || 'Join a Hyper community and connect with people who share your interests.';
+  // A public group answers at its name and its id; a private one claims the bare
+  // id (`groupHref` leaves its name out), and an address the database could not
+  // vouch for keeps whatever was asked.
+  const address = group && groupId !== null ? groupHref({ id: groupId, name: group.name, privacy: group.privacy }) : `/groups/${id}`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/groups/${id}` },
+    alternates: { canonical: address },
     robots: isPublic ? { index: true, follow: true } : { index: false, follow: true },
     openGraph: {
       type: 'website',
       title: `${title} | Hyper`,
       description,
-      url: `/groups/${id}`,
+      url: address,
       images: [(isPublic ? group?.coverPhoto : null) || '/og-image.png'],
     },
     twitter: {
@@ -69,7 +74,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function GroupDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function GroupDetail({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const viewer = await getViewer();
   const guest = { id: 0, name: 'Guest', avatar: null } as any;
   const currentUser = viewer || guest;
@@ -78,7 +86,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   // One rule for every id this site takes from a URL: see `routeIdFromParam`. An
   // address that is not an id is a 404, rather than a NaN that Prisma rejects and an
   // error handler then reports as a database failure.
-  const parsedGroupId = routeIdFromParam(id);
+  const parsedGroupId = routeIdFromSegment(id);
   if (hasDatabase && parsedGroupId === null) notFound();
   // Offline there is nothing to look up, so the demo install keeps rendering its
   // placeholder under whatever address was asked for.
@@ -107,6 +115,16 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
     // address that names no group is not another page's address, and a crawler told
     // the two are the same learns the wrong thing.
     if (!group && !lookupFailed) notFound();
+    // One public group, one address: the id alone, a name the group has since
+    // changed and anyone's made-up words all leave permanently for
+    // `/groups/{name}-{id}`. A private group is not corrected — redirecting it
+    // would hand its name to whoever asked for its number — and answers wherever
+    // it was asked. Outside the try, like the 404 above: a redirect unwinds by
+    // throwing.
+    if (group && group.privacy === 'public') {
+      const moved = canonicalRedirect(groupHref({ id: groupId, name: group.name, privacy: group.privacy }), `/groups/${id}`, await searchParams);
+      if (moved) permanentRedirect(moved);
+    }
   }
 
   // The group exists by the time this runs, or the lookup could not be made at all.
@@ -176,7 +194,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
                 isFollower: viewerFollowIds.has(p.sharedProfileId),
               })
             : null,
-          group: { id: group.id, name: group.name },
+          group: { id: group.id, name: group.name, privacy: group.privacy },
           poll: postPoll,
           likes: allLikes.filter((l) => l.postId === p.id).map((l) => ({ ...l, user: usersById.get(l.userId) })),
           comments: allComments
@@ -267,7 +285,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
   // rule that makes the page indexable. A private group's name is not offered to
   // a search engine, and the offline placeholder is not a group.
   const structured = hasDatabase && !lookupFailed && group?.privacy === 'public'
-    ? breadcrumbStructuredData([HOME_CRUMB, GROUPS_CRUMB, { name: group.name, path: `/groups/${group.id}` }], getSiteUrl())
+    ? breadcrumbStructuredData([HOME_CRUMB, GROUPS_CRUMB, { name: group.name, path: groupHref(group) }], getSiteUrl())
     : null;
 
   return (
@@ -465,7 +483,7 @@ export default async function GroupDetail({ params }: { params: Promise<{ id: st
             </h3>
             <div className="space-y-1.5 max-h-96 overflow-y-auto">
               {members.map(({ user: u, role }) => u && (
-                <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded-lg p-1.5 transition-colors">
+                <Link key={u.id} href={profileHref(u)} className="flex items-center space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 rounded-lg p-1.5 transition-colors">
                   {u.avatar ? (
                     <img src={u.avatar} alt={u.name || 'User'} className="w-9 h-9 rounded-full object-cover shrink-0" />
                   ) : (

@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
+import { profileHref } from '@/lib/social-href';
 import {
   Bell, Bookmark, BookmarkCheck, CalendarDays, CalendarPlus, ChevronDown, ChevronUp, Clapperboard, Info, LayoutGrid,
   LoaderCircle, Maximize, Newspaper, Play, Radio, RefreshCw, Search, Settings, Square, Star, Trophy, Volleyball, X,
@@ -438,7 +439,7 @@ export default function SportsStreamDashboard({
             <Bell aria-hidden="true" />
           </Link>
           {viewer ? (
-            <Link href={`/profile/${viewer.id}`} aria-label="Your profile" title="Your profile" className="sx-avatar sx-top__account">
+            <Link href={profileHref(viewer)} aria-label="Your profile" title="Your profile" className="sx-avatar sx-top__account">
               {viewer.avatar ? <img src={viewer.avatar} alt="" /> : <span aria-hidden="true">{viewer.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
             </Link>
           ) : (

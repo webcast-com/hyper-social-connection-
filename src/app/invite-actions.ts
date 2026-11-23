@@ -85,7 +85,7 @@ export async function inviteUserToGroup(groupId: number, inviteeId: number, mess
     }
 
     await notify(inviteeId, userId, 'group_invite');
-    revalidatePath(`/groups/${groupId}`);
+    revalidatePath('/groups/[id]', 'page');
     revalidatePath('/groups');
     revalidatePath('/notifications');
     return { success: true, message: `Invite sent to ${invitee.name}` };
@@ -141,7 +141,7 @@ export async function respondToGroupInvite(inviteId: number, decision: 'accepted
 
     await db.orm.public.GroupInvite.where({ id: inviteId }).update({ status: decision });
 
-    revalidatePath(`/groups/${invite.groupId}`);
+    revalidatePath('/groups/[id]', 'page');
     revalidatePath('/groups');
     revalidatePath('/notifications');
     return {
@@ -170,7 +170,7 @@ export async function cancelGroupInvite(inviteId: number) {
       return { success: false, message: 'You cannot cancel this invite' };
     }
     await db.orm.public.GroupInvite.where({ id: inviteId }).delete();
-    revalidatePath(`/groups/${invite.groupId}`);
+    revalidatePath('/groups/[id]', 'page');
     return { success: true, message: 'Invite cancelled' };
   } catch (e) {
     console.warn('[action:cancelGroupInvite]', (e as Error)?.message);
