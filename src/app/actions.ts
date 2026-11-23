@@ -9,6 +9,7 @@ import type { OddsMatch } from '@/lib/espn-odds';
 import { pickFromFixture, type MatchPick } from '@/lib/sports-picks';
 import { placePick } from '@/lib/sports-picks-store';
 import { isSafeMediaUrl } from '@/lib/media-url';
+import { highlightsStore, readStoredClip } from '@/lib/highlights-index';
 import bcrypt from 'bcryptjs';
 import {
   GROUP_CATEGORIES,
@@ -592,6 +593,71 @@ export async function createStory(imageUrl: string) {
     console.warn('[action:createStory] DB unavailable:', (e as Error)?.message);
   }
   revalidatePath('/');
+}
+
+/** Highlight clips under 60 seconds that can be shared as video stories. */
+export async function getStoryHighlightClips() {
+  const userId = await getUserId();
+  if (!userId) return [];
+  try {
+    // Read a batch from the highlights store and keep only short, playable clips.
+    const read = await highlightsStore.read({ limit: 60 });
+    const clips = read.match
+      .filter((clip) => clip.mp4 && clip.duration !== null && clip.duration > 0 && clip.duration < 60)
+      .slice(0, 24)
+      .map((clip) => ({
+        id: clip.id,
+        eventId: clip.eventId,
+        title: clip.title,
+        thumbnail: clip.thumbnail,
+        mp4: clip.mp4,
+        duration: clip.duration,
+        leagueName: clip.leagueName,
+        eventName: clip.eventName,
+      }));
+    return clips;
+  } catch (e) {
+    console.warn('[action:getStoryHighlightClips] failed:', (e as Error)?.message);
+    return [];
+  }
+}
+
+/** Create a 24h video story from a stored highlight clip (< 1 minute). */
+export async function createStoryFromHighlight(clipId: string) {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Not signed in.' };
+  const wanted = String(clipId || '').trim();
+  if (!wanted) return { ok: false, error: 'Missing clip.' };
+
+  try {
+    const { clip } = await readStoredClip(wanted);
+    if (!clip) return { ok: false, error: 'Highlight clip not found.' };
+    if (!clip.mp4 || !isSafeMediaUrl(clip.mp4)) {
+      return { ok: false, error: 'This clip does not have a playable video.' };
+    }
+    if (clip.duration === null || clip.duration <= 0 || clip.duration >= 60) {
+      return { ok: false, error: 'Only highlight clips under 1 minute can be added to status.' };
+    }
+
+    const imageUrl = (clip.thumbnail && isSafeMediaUrl(clip.thumbnail))
+      ? clip.thumbnail
+      : (clip.homeLogo && isSafeMediaUrl(clip.homeLogo))
+        ? clip.homeLogo
+        : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80';
+
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.orm.public.Story.create({
+      userId,
+      imageUrl,
+      videoUrl: clip.mp4,
+      expiresAt,
+    });
+    revalidatePath('/');
+    return { ok: true };
+  } catch (e) {
+    console.warn('[action:createStoryFromHighlight] failed:', (e as Error)?.message);
+    return { ok: false, error: 'Could not create story from highlight.' };
+  }
 }
 
 export async function createGroup(formData: FormData) {

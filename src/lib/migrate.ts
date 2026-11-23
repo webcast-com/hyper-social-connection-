@@ -77,6 +77,7 @@ async function runMigration() {
       "id" serial PRIMARY KEY NOT NULL,
       "user_id" integer NOT NULL,
       "image_url" text NOT NULL,
+      "video_url" text,
       "expires_at" timestamp NOT NULL,
       "created_at" timestamp DEFAULT now() NOT NULL,
       CONSTRAINT "stories_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action
@@ -166,6 +167,8 @@ async function runMigration() {
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS updated_at timestamp`,
     // Group posts (nullable; NULL = regular feed post, set null if group deleted)
     `ALTER TABLE posts ADD COLUMN IF NOT EXISTS group_id integer REFERENCES groups(id) ON DELETE SET NULL`,
+    // Story video support (highlight clips can be shared as video stories)
+    `ALTER TABLE stories ADD COLUMN IF NOT EXISTS video_url text`,
     // bookmarks
     `CREATE TABLE IF NOT EXISTS "bookmarks" (
       "id" serial PRIMARY KEY NOT NULL,

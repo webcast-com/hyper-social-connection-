@@ -22,6 +22,7 @@ export default function LinkMediaPlayer({
   media,
   poster,
   preload,
+  durationLabel,
   onError,
   onRemove,
 }: {
@@ -31,6 +32,8 @@ export default function LinkMediaPlayer({
   poster?: string | null;
   /** How much of a direct video file to fetch before it is played. */
   preload?: 'none' | 'metadata' | 'auto';
+  /** Length shown as a badge on the media, e.g. "2:34". */
+  durationLabel?: string | null;
   /** Called when the media itself fails to load, so the caller can fall back. */
   onError?: () => void;
   onRemove?: () => void;
@@ -69,7 +72,7 @@ export default function LinkMediaPlayer({
         </button>
       )}
 
-      <div className="rounded-xl sm:rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700/80 bg-black w-full min-w-0">
+      <div className="relative rounded-xl sm:rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700/80 bg-black w-full min-w-0">
         {/* ── Direct video file ─────────────────────────────────────────── */}
         {resolved.kind === 'video' && (
           <video
@@ -81,6 +84,14 @@ export default function LinkMediaPlayer({
             className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
             onError={() => { setFailed(true); onError?.(); }}
           />
+        )}
+        {durationLabel && resolved.kind === 'video' && (
+          <span
+            aria-label={`Duration ${durationLabel}`}
+            className="pointer-events-none absolute right-2 top-2 rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-sm"
+          >
+            {durationLabel}
+          </span>
         )}
 
         {/* ── Direct image file ─────────────────────────────────────────── */}

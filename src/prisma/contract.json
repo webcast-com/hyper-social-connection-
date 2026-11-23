@@ -3101,6 +3101,13 @@
                   "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
+              },
+              "videoUrl": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
               }
             },
             "relations": {
@@ -3137,6 +3144,9 @@
                 },
                 "userId": {
                   "column": "user_id"
+                },
+                "videoUrl": {
+                  "column": "video_url"
                 }
               },
               "namespaceId": "public",
@@ -6347,6 +6357,11 @@
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
                   "nullable": false
+                },
+                "video_url": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 }
               },
               "foreignKeys": [
@@ -6627,7 +6642,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "eb282c0599702eeafd284ab83be1c1439a0569298335dbbd6691a2e6ad0ec95f"
+    "storageHash": "cbcaa67ae5320afff6e242e4c3e2d43d2e7d839f0f8b9e01d93472cc3f025ca5"
   },
   "execution": {
     "executionHash": "d032233127abb6a108700f1ad5bd861df83daa1e9181ac1decc807147e70ca5e",

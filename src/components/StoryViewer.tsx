@@ -4,8 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-/** How long each story stays on screen before auto-advancing. */
-const STORY_DURATION_MS = 5000;
+/** Default duration for image stories; video stories advance on end (capped). */
+const IMAGE_STORY_DURATION_MS = 5000;
+const MAX_VIDEO_STORY_MS = 60000;
+
+function storyDurationMs(story: any): number {
+  if (story?.videoUrl) {
+    const d = Number(story.videoDurationMs);
+    return Number.isFinite(d) && d > 0 ? Math.min(d, MAX_VIDEO_STORY_MS) : MAX_VIDEO_STORY_MS;
+  }
+  return IMAGE_STORY_DURATION_MS;
+}
 
 /**
  * Full-screen story preview — opens when a story card is clicked in the
@@ -13,7 +22,7 @@ const STORY_DURATION_MS = 5000;
  *
  * Features:
  *  - Segmented progress bar across the top (one segment per story).
- *  - Auto-advances every 5s; closes after the last story.
+ *  - Auto-advances after 5s for images, or when a video ends (capped at 60s).
  *  - Press-and-hold (or arrow keys) controls: hold pauses, release resumes;
  *    Esc closes; ←/→ navigate; click left third = previous, right two thirds = next.
  */
@@ -31,10 +40,16 @@ export default function StoryViewer({
     Math.min(Math.max(initialIndex, 0), Math.max(count - 1, 0)),
   );
   const [paused, setPaused] = useState(false);
+  const [videoDurationMs, setVideoDurationMs] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const story = stories[index];
+  const isVideo = !!story?.videoUrl;
+  const durationMs = isVideo ? (videoDurationMs ?? storyDurationMs(story)) : IMAGE_STORY_DURATION_MS;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedAtRef = useRef(0);
-  const remainingRef = useRef(STORY_DURATION_MS);
+  const remainingRef = useRef(durationMs);
   const prevIndexRef = useRef(index);
   // Timestamp of the current press — distinguishes a tap (navigate) from a
   // press-and-hold (pause), the same way Instagram/Facebook stories behave.
@@ -81,30 +96,37 @@ export default function StoryViewer({
     if (Date.now() - pressStartRef.current < 300) navigate();
   }, []);
 
-  /**
-   * Single countdown effect.
-   *  - New story (index changed)      → reset to the full duration.
-   *  - Not paused                     → schedule auto-advance; the cleanup
-   *    subtracts the elapsed time so pause/resume stays accurate.
-   *  - Paused (press-and-hold)        → no countdown; the CSS progress bar is
-   *    frozen at the same moment, so both stay in sync.
-   */
   useEffect(() => {
     if (prevIndexRef.current !== index) {
       prevIndexRef.current = index;
-      remainingRef.current = STORY_DURATION_MS;
+      remainingRef.current = durationMs;
+      setVideoDurationMs(null);
     }
-    if (paused) return;
+  }, [index, durationMs]);
+
+  /**
+   * Countdown / auto-advance. Image stories use a timer; video stories advance
+   * on ended (with a max-duration fallback).
+   */
+  useEffect(() => {
+    if (prevIndexRef.current !== index) return;
+    if (paused) {
+      if (videoRef.current && !videoRef.current.paused) videoRef.current.pause();
+      return;
+    }
+    if (isVideo && videoRef.current?.paused) {
+      void videoRef.current.play().catch(() => {});
+    }
     startedAtRef.current = Date.now();
     timerRef.current = setTimeout(goNext, remainingRef.current);
     return () => {
       clearTimer();
       remainingRef.current = Math.max(
         remainingRef.current - (Date.now() - startedAtRef.current),
-        150, // never resume into an instant advance
+        150,
       );
     };
-  }, [index, paused, goNext, clearTimer]);
+  }, [index, paused, goNext, clearTimer, isVideo, durationMs]);
 
   // Keyboard controls + lock body scroll while open.
   useEffect(() => {
@@ -123,7 +145,6 @@ export default function StoryViewer({
 
   if (count === 0) return null;
 
-  const story = stories[index];
   const author = story?.user || {};
   const timeLabel = story?.createdAt
     ? formatDistanceToNow(new Date(story.createdAt), { addSuffix: true })
@@ -144,10 +165,10 @@ export default function StoryViewer({
               {i < index && <div className="h-full w-full bg-white" />}
               {i === index && (
                 <div
-                  key={index} // remount to restart the fill for each story
+                  key={`${index}-${durationMs}`} // remount to restart fill per story/duration
                   className="h-full bg-white"
                   style={{
-                    animation: `story-progress ${STORY_DURATION_MS}ms linear forwards`,
+                    animation: `story-progress ${durationMs}ms linear forwards`,
                     animationPlayState: paused ? 'paused' : 'running',
                   }}
                 />
@@ -188,7 +209,7 @@ export default function StoryViewer({
           </button>
         </div>
 
-        {/* Story image (press-and-hold pauses) */}
+        {/* Story media (press-and-hold pauses) */}
         <div
           className="relative w-full h-full flex items-center justify-center overflow-hidden sm:rounded-2xl [touch-action:manipulation]"
           onPointerDown={handlePressStart}
@@ -197,13 +218,37 @@ export default function StoryViewer({
           onPointerCancel={handlePressEnd}
           onContextMenu={(e) => e.preventDefault()}
         >
-          <img
-            key={story.id ?? index}
-            src={story.imageUrl}
-            alt={author.name ? `${author.name}'s story` : 'Story'}
-            className="max-h-full max-w-full object-contain sm:rounded-2xl shadow-2xl pointer-events-none"
-            draggable={false}
-          />
+          {isVideo ? (
+            <video
+              key={story.id ?? index}
+              ref={videoRef}
+              src={story.videoUrl}
+              poster={story.imageUrl || undefined}
+              className="max-h-full max-w-full object-contain sm:rounded-2xl shadow-2xl pointer-events-none"
+              playsInline
+              autoPlay
+              muted={false}
+              preload="metadata"
+              onLoadedMetadata={(e) => {
+                const d = e.currentTarget.duration;
+                if (Number.isFinite(d) && d > 0) {
+                  const ms = Math.min(d * 1000, MAX_VIDEO_STORY_MS);
+                  setVideoDurationMs(ms);
+                  remainingRef.current = ms;
+                  startedAtRef.current = Date.now();
+                }
+              }}
+              onEnded={goNext}
+            />
+          ) : (
+            <img
+              key={story.id ?? index}
+              src={story.imageUrl}
+              alt={author.name ? `${author.name}'s story` : 'Story'}
+              className="max-h-full max-w-full object-contain sm:rounded-2xl shadow-2xl pointer-events-none"
+              draggable={false}
+            />
+          )}
 
           {/* Tap zones: left third = previous, rest = next. They also carry
               the hold-to-pause handlers — being absolutely positioned over

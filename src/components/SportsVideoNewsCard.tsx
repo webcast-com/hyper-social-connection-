@@ -109,7 +109,7 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
   const controlClass = 'flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2 sm:text-sm dark:text-gray-300 dark:hover:bg-gray-700/60';
 
   return (
-    <article className="overflow-hidden rounded-xl border border-violet-100 bg-white shadow transition-all dark:border-violet-900/50 dark:bg-gray-800">
+    <article className="overflow-hidden rounded-none sm:rounded-xl border-y sm:border border-violet-100 bg-white shadow-none sm:shadow transition-all dark:border-violet-900/50 dark:bg-gray-800">
       <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-blue-50 px-4 py-2 dark:border-violet-900/50 dark:from-violet-950/40 dark:via-slate-900 dark:to-blue-950/30">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">

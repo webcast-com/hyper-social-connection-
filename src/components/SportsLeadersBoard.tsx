@@ -215,7 +215,7 @@ export default function SportsLeadersBoard({ boards, engagement = {}, signedIn =
   return (
     // aria-label rather than aria-labelledby: the board renders twice on the
     // homepage (mobile column and desktop rail), and an id would be duplicated.
-    <section aria-label="Players & top scorers" className="rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
+    <section aria-label="Players & top scorers" className="rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-700/60 sm:border-gray-100 bg-white px-3 py-3 shadow-none sm:shadow-sm dark:bg-gray-800">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white">

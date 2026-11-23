@@ -152,7 +152,7 @@ export default function CreatePost({ user, groupId }: { user: any; groupId?: num
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 p-4 mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm border-y sm:border border-gray-200/80 dark:border-gray-700/60 sm:border-gray-100 p-4">
       <div className="flex space-x-3">
         {user?.avatar ? (
           <img src={user.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700 shrink-0" />

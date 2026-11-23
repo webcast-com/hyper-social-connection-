@@ -60,7 +60,7 @@ export default function SportsPredictionFeedCard({
   };
 
   return (
-    <article className="overflow-hidden rounded-xl border border-violet-100 bg-white shadow transition-all dark:border-violet-900/50 dark:bg-gray-800">
+    <article className="overflow-hidden rounded-none sm:rounded-xl border-y sm:border border-violet-100 bg-white shadow-none sm:shadow transition-all dark:border-violet-900/50 dark:bg-gray-800">
       <div className="border-b border-violet-100 bg-gradient-to-r from-violet-50 via-white to-fuchsia-50 px-4 py-2 dark:border-violet-900/50 dark:from-violet-950/40 dark:via-slate-900 dark:to-fuchsia-950/30">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3">

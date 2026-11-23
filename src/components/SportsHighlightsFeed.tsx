@@ -77,6 +77,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
   // geo-restricted per competition) leaves the player and shows the thumbnail.
   const [unplayable, setUnplayable] = useState(false);
 
+  const durationLabel = clip.duration && clip.duration > 0 ? mmss(clip.duration) : null;
   const media = clip.mp4 && !unplayable ? (
     // Above the card-wide link, so the player's own controls stay clickable.
     <div className="relative z-10">
@@ -87,6 +88,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
         // A board of cards must not pull a dozen streams on page load; the
         // poster carries the card until the reader presses play.
         preload="none"
+        durationLabel={durationLabel}
         onError={() => setUnplayable(true)}
       />
     </div>
@@ -108,6 +110,14 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
         <div className="font-bold text-white text-sm truncate">{clip.title}</div>
         <div className="text-xs text-white/85 truncate">{clip.eventName}</div>
       </div>
+      {durationLabel ? (
+        <span
+          aria-label={`Duration ${durationLabel}`}
+          className="pointer-events-none absolute top-2 right-2 rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-sm"
+        >
+          {durationLabel}
+        </span>
+      ) : null}
       {clip.page && (
         <a
           href={clip.page}
@@ -135,11 +145,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
       subtitle={`${clip.leagueName} · ${STATUS_LABEL[clip.status]}`}
       body={clip.description ? `${clip.title} — ${clip.description}` : clip.title}
       media={media}
-      details={[
-        { label: 'Length', value: mmss(clip.duration) },
-        { label: 'Competition', value: clip.leagueName },
-        { label: 'State', value: STATUS_LABEL[clip.status] },
-      ]}
+      details={durationLabel ? [{ label: 'Length', value: durationLabel }] : []}
       likeLabel={`Like ${clip.title}`}
       anchor={anchor}
       engagement={engagement}
@@ -179,7 +185,7 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
   const sample = board.status !== 'live' && board.status !== 'partial';
 
   return (
-    <section aria-label="Match highlights" className="rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm dark:border-gray-700/60 dark:bg-gray-800">
+    <section aria-label="Match highlights" className="rounded-none sm:rounded-2xl border-y sm:border border-gray-200/80 dark:border-gray-700/60 sm:border-gray-100 bg-white px-3 py-3 shadow-none sm:shadow-sm dark:bg-gray-800">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white">
