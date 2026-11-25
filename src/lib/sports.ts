@@ -48,7 +48,8 @@ export type SportsEvent = {
 
 export type SportsPrediction = {
   id: string;
-  source: 'manual' | 'demo';
+  /** `espn`: a pick derived from ESPN bookmaker odds (see `odds-feed-predictions.ts`). */
+  source: 'manual' | 'demo' | 'espn';
   federation: string;
   market: string;
   startAt: string;

@@ -23,6 +23,8 @@ import { sponsorBannerFor } from '@/lib/sponsor-banners';
 import SportsLeadersRail from '@/components/SportsLeadersRail';
 import SportsHighlightsFeed from '@/components/SportsHighlightsFeed';
 import { featuredSportsEvents, getSportsBoard } from '@/lib/sports';
+import { getEspnOdds } from '@/lib/espn-odds-feed';
+import { oddsFeedPredictions } from '@/lib/odds-feed-predictions';
 import { orderCentreEvents } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
 import { ALL_STORED_DAYS, getHighlightsBoardForRender, getHighlightClipsForFeed, recentHighlightClips } from '@/lib/highlights-board';
@@ -166,6 +168,10 @@ export default async function Home() {
   // of adding to them. League video news is its own stack: its own endpoints,
   // cache and card, sharing nothing with the match highlights board.
   const videoNewsPromise = getSportsVideoNewsForRender();
+  // The odds board behind /sports/predictions, started alongside the scores
+  // board so the two fan-outs overlap. It shares that page's in-process cache,
+  // and a failure simply means a feed without prediction cards.
+  const oddsBoardPromise = getEspnOdds().catch(() => null);
   const sportsBoard = await getSportsBoard();
   // Players and top scorers are the sports content visitors ask for most, so the
   // homepage renders the leaders board next to the scores. A failed leaders feed
@@ -394,11 +400,14 @@ export default async function Home() {
     return true;
   });
 
+  // The board's own predictions (none today) plus picks derived from the ESPN
+  // odds board — the same cards the /sports/predictions page builds tips from.
+  const sportsPredictions = [...(sportsBoard.predictions || []), ...oddsFeedPredictions(await oddsBoardPromise)];
   const normalizeTeam = (name?: string | null) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const findPredictionForEvent = (event: any) => {
     const home = normalizeTeam(event.home?.name);
     const away = normalizeTeam(event.away?.name);
-    return (sportsBoard.predictions || []).find((prediction) => {
+    return sportsPredictions.find((prediction) => {
       const pHome = normalizeTeam(prediction.homeTeam);
       const pAway = normalizeTeam(prediction.awayTeam);
       return !!home && !!away && !!pHome && !!pAway && (pHome.includes(home) || home.includes(pHome)) && (pAway.includes(away) || away.includes(pAway));
@@ -425,7 +434,7 @@ export default async function Home() {
     // eslint-disable-next-line react-hooks/purity
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
-  const predictionFeedPosts = (sportsBoard.predictions || []).slice(0, 2).map((prediction, index) => ({
+  const predictionFeedPosts = sportsPredictions.slice(0, 2).map((prediction, index) => ({
     id: `prediction-${prediction.id}`,
     type: 'prediction',
     prediction,
@@ -509,7 +518,7 @@ export default async function Home() {
     createdAt: new Date(Date.now() - (index + 1) * 90_000),
   }));
   const attachedPredictions = new Set(liveMatchPosts.map((post) => post.prediction?.id).filter(Boolean));
-  const livePredictionPosts = (sportsBoard.predictions || [])
+  const livePredictionPosts = sportsPredictions
     .filter((prediction) => !attachedPredictions.has(prediction.id))
     .slice(0, 2)
     .map((prediction, index) => ({
