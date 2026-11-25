@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { MatchCountdown } from "@/components/goaledge/MatchCountdown";
 import { useTipLeagueTable } from "@/app/services/espnTipTable";
+import { useTipMatchHistory } from "@/app/services/espnTipHistory";
 import { BookmakerCompare } from "@/app/components/predictions/BookmakerCompare";
 import { resolvePickOutcome } from "@/app/services/espnSecondOpinion";
 
@@ -59,13 +60,21 @@ export function TipDetailPanel({
   const inSlip = betSlipIds.has(tip.id);
   const locked = tip.isPremium && !isPremium;
 
-  // Real recent-record numbers from ESPN (see `attachTipForm`). The panel used
-  // to invent these with `Math.random()` and label them "Expected Goals (xG)",
-  // possession, shots and corners. ESPN's schedule endpoint carries only
-  // results and goals, so those are the only figures shown; anything it cannot
-  // supply is omitted rather than fabricated.
-  const homeStats = tip.homeFormStats ?? null;
-  const awayStats = tip.awayFormStats ?? null;
+  // Real recent-record numbers from ESPN. The panel used to invent these with
+  // `Math.random()` and label them "Expected Goals (xG)", possession, shots
+  // and corners. ESPN's schedule endpoint carries only results and goals, so
+  // those are the only figures shown; anything it cannot supply is omitted
+  // rather than fabricated. When the tip itself carries no form/head-to-head
+  // data, it is fetched live from this app's match-history API via the tip's
+  // ESPN reference; tips that already carry data keep it untouched.
+  const history = useTipMatchHistory(tip.espnRef ?? null, tip.homeTeam, tip.awayTeam);
+  const homeForm = tip.homeForm?.length ? tip.homeForm : history.homeForm;
+  const awayForm = tip.awayForm?.length ? tip.awayForm : history.awayForm;
+  const homeStats = tip.homeFormStats ?? history.homeStats;
+  const awayStats = tip.awayFormStats ?? history.awayStats;
+  const headToHeadText = tip.headToHead ?? history.headToHead;
+  const headToHeadRecord =
+    tip.headToHeadRecord && tip.headToHeadRecord.games > 0 ? tip.headToHeadRecord : history.headToHeadRecord;
   const perGame = (total: number | undefined, played: number | undefined) =>
     played && played > 0 ? ((total ?? 0) / played).toFixed(2) : null;
   const homeGoalsPerGame = perGame(homeStats?.goalsFor, homeStats?.played);
@@ -74,7 +83,13 @@ export function TipDetailPanel({
   const awayConcededPerGame = perGame(awayStats?.goalsAgainst, awayStats?.played);
   const hasRecord = Boolean(homeStats || awayStats);
   // Real standings, fetched only when the Stats tab is opened.
-  const tableRows = useTipLeagueTable(tip.league, tip.homeTeam, tip.awayTeam, activeTab === "stats");
+  const { rows: tableRows, status: tableStatus } = useTipLeagueTable(
+    tip.league,
+    tip.homeTeam,
+    tip.awayTeam,
+    activeTab === "stats",
+    typeof tip.espnRef?.league === "string" ? tip.espnRef.league : null,
+  );
 
   // Related tips
   const relatedTips = allTips.filter(t => t.id !== tip.id && t.league === tip.league).slice(0, 3);
@@ -227,7 +242,7 @@ export function TipDetailPanel({
                     Recent Form
                   </h4>
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    {[{ name: tip.homeTeam, form: tip.homeForm, isHome: true }, { name: tip.awayTeam, form: tip.awayForm, isHome: false }].map((team) => (
+                    {[{ name: tip.homeTeam, form: homeForm, isHome: true }, { name: tip.awayTeam, form: awayForm, isHome: false }].map((team) => (
                       <div key={team.name} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                         <div className="flex items-center gap-2">
                           <span className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-bold text-white ${team.isHome ? "bg-emerald-500" : "bg-sky-500"}`}>{team.isHome ? "H" : "A"}</span>
@@ -240,7 +255,13 @@ export function TipDetailPanel({
                             </div>
                           ))}
                         </div>
-                        <p className="mt-2 text-[10px] text-slate-400">{(team.form ?? []).filter(r => r === "W").length}/{(team.form ?? []).length} wins</p>
+                        <p className="mt-2 text-[10px] text-slate-400">
+                          {(team.form ?? []).length > 0
+                            ? `${(team.form ?? []).filter(r => r === "W").length}/${(team.form ?? []).length} wins · most recent first`
+                            : history.status === "loading"
+                              ? "Loading recent results from ESPN…"
+                              : "No completed games in ESPN's records."}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -254,26 +275,50 @@ export function TipDetailPanel({
                   </h4>
                   <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
                     <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {tip.headToHead ?? "These sides have no completed meeting in ESPN's records."}
+                      {headToHeadText ??
+                        (history.status === "loading"
+                          ? "Checking ESPN's records for previous meetings…"
+                          : "These sides have no completed meeting in ESPN's records.")}
                     </p>
                     {/* Tally from the mutual games, not the fixed 3/2/1 this
                         panel shipped with. */}
-                    {tip.headToHeadRecord && tip.headToHeadRecord.games > 0 ? (
+                    {headToHeadRecord && headToHeadRecord.games > 0 ? (
                       <div className="mt-3 flex items-center justify-between rounded-lg bg-white p-3 dark:bg-slate-800">
                         <div className="text-center">
-                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{tip.headToHeadRecord.homeWins}</p>
+                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{headToHeadRecord.homeWins}</p>
                           <p className="text-[10px] text-slate-400">Home Wins</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-black text-slate-400">{tip.headToHeadRecord.draws}</p>
+                          <p className="text-lg font-black text-slate-400">{headToHeadRecord.draws}</p>
                           <p className="text-[10px] text-slate-400">Draws</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-lg font-black text-sky-500">{tip.headToHeadRecord.awayWins}</p>
+                          <p className="text-lg font-black text-sky-500">{headToHeadRecord.awayWins}</p>
                           <p className="text-[10px] text-slate-400">Away Wins</p>
                         </div>
                       </div>
                     ) : null}
+                    {/* The meetings behind the tally — ESPN-reported finals only. */}
+                    {history.meetings.length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {history.meetings.map((game) => {
+                          const home = game.teams.find((team) => team.side === "home") ?? game.teams[0];
+                          const away = game.teams.find((team) => team.id !== home.id) ?? game.teams[1];
+                          return (
+                            <div key={game.id} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-800">
+                              <span className="shrink-0 tabular-nums text-[10px] text-slate-400">
+                                {new Date(game.kickoff).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit", timeZone: "UTC" })}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate text-right font-medium text-slate-600 dark:text-slate-300">{home.name}</span>
+                              <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 font-bold tabular-nums text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                {home.score}–{away.score}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-medium text-slate-600 dark:text-slate-300">{away.name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -398,13 +443,22 @@ export function TipDetailPanel({
                           <tr key={`${row.pos}-${row.name}`} className={`border-b border-slate-50 last:border-0 ${row.highlight ? "bg-emerald-50/50 dark:bg-emerald-950/10" : ""}`}>
                             <td className={`px-4 py-2.5 font-bold tabular-nums ${row.pos <= 3 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>{row.pos}</td>
                             <td className="px-4 py-2.5 font-semibold text-slate-700 dark:text-slate-200">{row.name}</td>
-                            <td className="px-3 py-2.5 text-center tabular-nums text-slate-400">{row.p}</td>
-                            <td className="px-3 py-2.5 text-center tabular-nums text-emerald-600 dark:text-emerald-400 font-bold">{row.w}</td>
-                            <td className="px-3 py-2.5 text-center tabular-nums text-slate-400">{row.d}</td>
-                            <td className="px-3 py-2.5 text-center tabular-nums text-red-500">{row.l}</td>
-                            <td className="px-4 py-2.5 text-right tabular-nums font-bold text-slate-700 dark:text-slate-200">{row.pts}</td>
+                            <td className="px-3 py-2.5 text-center tabular-nums text-slate-400">{row.p ?? "—"}</td>
+                            <td className="px-3 py-2.5 text-center tabular-nums text-emerald-600 dark:text-emerald-400 font-bold">{row.w ?? "—"}</td>
+                            <td className="px-3 py-2.5 text-center tabular-nums text-slate-400">{row.d ?? "—"}</td>
+                            <td className="px-3 py-2.5 text-center tabular-nums text-red-500">{row.l ?? "—"}</td>
+                            <td className="px-4 py-2.5 text-right tabular-nums font-bold text-slate-700 dark:text-slate-200">{row.pts ?? "—"}</td>
                           </tr>
                         ))}
+                        {tableRows.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-6 text-center text-xs text-slate-400">
+                              {tableStatus === "loading" || tableStatus === "idle"
+                                ? "Loading standings from ESPN…"
+                                : "Standings are unavailable for this competition."}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
