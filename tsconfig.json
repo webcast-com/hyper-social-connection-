@@ -39,6 +39,7 @@
   ],
   "exclude": [
     "node_modules",
-    "vendor/nfl-nba"
+    "vendor/nfl-nba",
+    "tests/goaledge"
   ]
 }
