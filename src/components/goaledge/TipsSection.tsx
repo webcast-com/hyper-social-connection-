@@ -194,7 +194,9 @@ export function TipsSection({
         </div>
       </FadeIn>
 
-      <StaggerContainer className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" staggerDelay={0.08}>
+      {/* Phones show two cards per row (tighter gap); from `sm` up the layout
+          is unchanged: two columns, gap-4, three from `lg`. */}
+      <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3" staggerDelay={0.08}>
         {loading ? (
           <>
             {[1, 2, 3].map((i) => (

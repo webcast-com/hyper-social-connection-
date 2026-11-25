@@ -231,19 +231,19 @@ function answerEverything(state = 'post'): Responder {
 test('the plan walks today across every competition before yesterday anywhere', () => {
   const now = Date.parse('2026-11-10T12:00:00.000Z');
   const plan = cellPlan(null, 2, now);
-  // 121 competitions, two days: day-major, so the first 121 cells are all today.
-  assert.equal(plan.length, 242);
+  // 122 competitions, two days: day-major, so the first 122 cells are all today.
+  assert.equal(plan.length, 244);
   assert.equal(plan[0].date, '20261110');
-  assert.equal(plan[120].date, '20261110');
-  assert.equal(plan[121].date, '20261109');
+  assert.equal(plan[121].date, '20261110');
+  assert.equal(plan[122].date, '20261109');
   assert.equal(plan[0].key, sweepCellKey(plan[0].meta.slug, '20261110'));
-  assert.equal(new Set(plan.map((cell) => cell.meta.slug)).size, 121, 'every configured competition is in the plan');
+  assert.equal(new Set(plan.map((cell) => cell.meta.slug)).size, 122, 'every configured competition is in the plan');
 
   const one = cellPlan('epl', 7, now);
   assert.equal(one.length, 7, 'a named competition is a week of its own scoreboards');
   assert.ok(one.every((cell) => cell.meta.slug === 'epl'));
   assert.deepEqual(cellPlan('not-a-league', 7, now), [], 'an unknown competition plans nothing rather than guessing');
-  assert.equal(cellPlan(null, 9999, now).length / 121, 30, 'a huge window is clamped, not honoured');
+  assert.equal(cellPlan(null, 9999, now).length / 122, 30, 'a huge window is clamped, not honoured');
   assert.equal(espnDate(now), '20261110');
 });
 

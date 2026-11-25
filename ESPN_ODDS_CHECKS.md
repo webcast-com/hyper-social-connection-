@@ -6,13 +6,13 @@
 
 The supplied `shared/espnOdds.ts` was not included in the repository. Its catalog, `dayStamp` and `mapOdds` helpers are implemented in `src/lib/espn-odds.ts`, using the existing trusted ESPN competition paths. Server-only fetching/cache logic lives in `src/lib/espn-odds-feed.ts`. The async page fetches the initial board server-side and gets the current viewer using the existing viewer/authentication boundary.
 
-- Default: the ten primary leagues (major European football/UCL, NBA, NFL, MLB, NHL).
-- Explicit sport filters include secondary competitions: `football` (soccer), `basketball`, `american-football`, `baseball`, `ice-hockey`, `rugby`.
-- The configured head-to-head odds catalog has 37 leagues. F1 remains on the scores page, not in a two-team odds UI. Configuration does not imply ESPN offers betting markets for every league.
+- Default: the whole odds catalog, with the fourteen primary leagues (major European football/UCL, NBA, WNBA, NCAA basketball, Australian NBL, NFL, MLB, NHL) requested first so headline fixtures land even if the time budget is hit.
+- Explicit sport filters narrow the catalog to the selected sports: `football` (soccer), `basketball`, `american-football`, `baseball`, `ice-hockey`, `rugby`.
+- The configured head-to-head odds catalog has 80 leagues (70 football/soccer, 5 basketball, NFL, MLB, NHL and 2 rugby). F1 remains on the scores page, not in a two-team odds UI. Configuration does not imply ESPN offers betting markets for every league.
 - At most 20 simultaneous requests per query, ten seconds per request, 25 seconds total search budget. Failed leagues are isolated with `Promise.allSettled`. Incomplete searches carry `truncated: true` and do not claim complete coverage.
 - Today uses the provider-default scoreboard URL without a date query. Later offsets use `?dates=YYYYMMDD&limit=100` (UTC date stamps). `days` controls how many date queries to attempt, not a strict cutoff on a provider's default schedule, which can cover a week or other period.
 - Only valid future kickoffs, pre-game/noncompleted events, named home/away teams, and at least a home/away money-line price or positive total qualify. Event IDs are deduplicated globally across leagues and days. Per-league counts span all queried days and stop further requests once satisfied.
-- Results are sorted by kickoff and capped at 48. First six have `is_premium: false`; later matches have `true`. **These are metadata only:** all returned matches are visible, with no payment or subscription gate implemented.
+- Results are sorted by kickoff and capped at 250. First six have `is_premium: false`; later matches have `true`. **These are metadata only:** all returned matches are visible, with no payment or subscription gate implemented.
 - American money-line prices are converted to decimal; explicit decimal fields and nested close/open odds are supported. Legacy draw odds are supported. A card uses one usable bookmaker row, never blends prices from different providers, and omits missing markets rather than inventing them. Spreads are not attributed to an unsupported home/away favorite.
 - A 45-second in-process cache stores up to 32 normalized queries. Identical in-flight requests share work, including refreshes; at most eight distinct queries can run per process. Cache scope is per process, not a distributed rate limiter.
 
@@ -24,7 +24,7 @@ The supplied `shared/espnOdds.ts` was not included in the repository. Its catalo
 { "sports": ["football"], "perLeague": 2, "days": 3 }
 ```
 
-`perLeague` defaults to zero (no per-league cap); positive values are floored and capped at 12. `days` defaults to one and is clamped to 1–10 only when a positive per-league cap is set; otherwise only the default scoreboard is requested. Empty `sports` selects primary leagues. Unsupported sports/non-array filters/nonfinite numeric parameters and malformed JSON return 400. Unexpected errors/busy queries return a generic 503. The API always uses `Cache-Control: no-store`; add `?refresh=1` to bypass the in-process result cache.
+`perLeague` defaults to zero (no per-league cap); positive values are floored and capped at 30. `days` defaults to one and is clamped to 1–10 only when a positive per-league cap is set; otherwise only the default scoreboard is requested. Empty `sports` selects the whole catalog, primary leagues first. Unsupported sports/non-array filters/nonfinite numeric parameters and malformed JSON return 400. Unexpected errors/busy queries return a generic 503. The API always uses `Cache-Control: no-store`; add `?refresh=1` to bypass the in-process result cache.
 
 A successful response has `matches`, `sources`, `fetchedAt`, `truncated`, and `status`:
 

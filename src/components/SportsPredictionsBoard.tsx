@@ -247,18 +247,18 @@ export default function SportsPredictionsBoard({
       <form onSubmit={refresh} aria-busy={loading} className="mb-4 grid min-w-0 grid-cols-2 items-end gap-3 sm:grid-cols-4">
         <label className="min-w-0 text-xs font-semibold text-gray-700 dark:text-gray-200">Sport
           <select value={sport} onChange={(event) => setSport(event.target.value)} disabled={loading} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
-            <option value="">Primary leagues</option>{ODDS_SPORTS.map((id) => <option key={id} value={id}>{SPORT_LABELS[id as SportKind]}</option>)}
+            <option value="">All leagues</option>{ODDS_SPORTS.map((id) => <option key={id} value={id}>{SPORT_LABELS[id as SportKind]}</option>)}
           </select>
         </label>
         <label className="min-w-0 text-xs font-semibold text-gray-700 dark:text-gray-200">Per league (0 = no cap)
-          <input type="number" min={0} max={12} value={perLeague} disabled={loading} onChange={(event) => { const value = Math.min(12, Math.max(0, Math.floor(Number(event.target.value) || 0))); setPerLeague(value); if (!value) setDays(1); }} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800" />
+          <input type="number" min={0} max={30} value={perLeague} disabled={loading} onChange={(event) => { const value = Math.min(30, Math.max(0, Math.floor(Number(event.target.value) || 0))); setPerLeague(value); if (!value) setDays(1); }} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800" />
         </label>
         <label className="min-w-0 text-xs font-semibold text-gray-700 dark:text-gray-200">Days ahead
           <input type="number" min={1} max={10} value={days} disabled={loading || !perLeague} onChange={(event) => setDays(Math.min(10, Math.max(1, Math.floor(Number(event.target.value) || 1))))} className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white p-2 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800" />
         </label>
         <button type="submit" disabled={loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-violet-600 px-3 text-xs font-bold text-white disabled:opacity-60"><RefreshCw aria-hidden="true" className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{loading ? 'Loading odds…' : 'Refresh matches'}</button>
       </form>
-      <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Up to 48 matches. The first six are flagged Free; Premium is feed metadata only, not a payment gate. Multi-day searches require a per-league cap.</p>
+      <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Up to 250 matches. The first six are flagged Free; Premium is feed metadata only, not a payment gate. Multi-day searches require a per-league cap.</p>
       {error && <p role="alert" className="mb-4 text-sm text-red-700 dark:text-red-300">{error}</p>}
       {deniedCount > 0 && <p role="note" aria-label="ESPN access restriction" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
         Access to ESPN was refused (HTTP 403) for {deniedCount} feeds. Check the hosting network’s outbound-access policy and ESPN access permissions. The status alone does not identify who blocked the request; see response metadata below.

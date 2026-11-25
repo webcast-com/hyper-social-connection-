@@ -59,7 +59,7 @@ export function TipCard({
 
   return (
     <div
-      className="tip-card tip-card-glass group relative flex h-full w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.03] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.01] hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-500"
+      className="tip-card tip-card-glass group relative flex h-full w-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-5 shadow-slate-900/[0.03] transition-all duration-200 hover:-translate-y-1 hover:scale-[1.01] hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:border-emerald-500"
       onClick={onView}
     >
       {/* Header */}
@@ -67,7 +67,7 @@ export function TipCard({
         <div className="flex min-w-0 items-center gap-2">
           <span className="text-lg leading-none">{tip.flag}</span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200 sm:text-sm">
               {tip.league}
             </p>
             <p className="truncate text-xs text-slate-400 dark:text-slate-500">
@@ -104,12 +104,12 @@ export function TipCard({
       <div className="mt-4">
         <div className="flex items-center gap-2.5">
           {tip.homeTeamCrest ? (
-            <img src={tip.homeTeamCrest} alt="" className="h-7 w-7 shrink-0 object-contain" />
+            <img src={tip.homeTeamCrest} alt="" className="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7" />
           ) : (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800">{tip.flag}</span>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800 sm:h-7 sm:w-7">{tip.flag}</span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 break-words text-base font-bold leading-snug text-slate-900 dark:text-slate-50">
+            <p className="line-clamp-2 break-words text-sm font-bold leading-snug sm:text-base text-slate-900 dark:text-slate-50">
               {tip.homeTeam}{" "}
               <span className="mx-1 text-sm font-medium text-slate-300 dark:text-slate-600">
                 vs
@@ -118,9 +118,9 @@ export function TipCard({
             </p>
           </div>
           {tip.awayTeamCrest ? (
-            <img src={tip.awayTeamCrest} alt="" className="h-7 w-7 shrink-0 object-contain" />
+            <img src={tip.awayTeamCrest} alt="" className="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7" />
           ) : (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800">{tip.flag}</span>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800 sm:h-7 sm:w-7">{tip.flag}</span>
           )}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 dark:text-slate-500">
@@ -133,7 +133,7 @@ export function TipCard({
       </div>
 
       {/* Prediction */}
-      <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3.5 transition hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-800">
+      <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-2.5 transition sm:p-3.5 hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-800">
         <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
           <Target className="h-3.5 w-3.5" />
           {tip.predictionType}

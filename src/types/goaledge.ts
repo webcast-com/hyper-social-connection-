@@ -41,6 +41,24 @@ export interface HeadToHeadRecord {
   draws: number;
 }
 
+/**
+ * One bookmaker's full quote for a fixture as reported by ESPN (e.g. DraftKings):
+ * money line, spread line with per-side prices, and total (O/U) with over/under
+ * prices. Every field is optional data straight from the feed — nothing derived.
+ */
+export interface TipBookmakerOdds {
+  provider: string | null;
+  home: number | null;
+  draw: number | null;
+  away: number | null;
+  spread: number | null;
+  spreadHomeOdds?: number | null;
+  spreadAwayOdds?: number | null;
+  overUnder: number | null;
+  overOdds?: number | null;
+  underOdds?: number | null;
+}
+
 export interface EspnRef {
   sport?: string;
   league?: string;
@@ -75,4 +93,6 @@ export interface Tip {
   headToHeadRecord?: HeadToHeadRecord | null;
   analysis?: string | null;
   espnRef?: EspnRef | null;
+  /** The feed bookmaker's full markets (money line, spread, O/U) when published. */
+  bookmakerOdds?: TipBookmakerOdds | null;
 }

@@ -13,8 +13,11 @@ const inFlight = new Map<string, Promise<OddsBoard>>();
 async function fetchBoard(request: OddsRequest): Promise<OddsBoard> {
   const now = new Date();
   const deadline = Date.now() + TOTAL_MS;
-  const leagues = ODDS_LEAGUES.filter((league) => request.sports.length
-    ? request.sports.includes(league.sport) : !league.secondary);
+  // Default requests cover the whole catalog; primary leagues go in the first
+  // batches so headline fixtures survive the total time budget if it is hit.
+  const leagues = request.sports.length
+    ? ODDS_LEAGUES.filter((league) => request.sports.includes(league.sport))
+    : [...ODDS_LEAGUES].sort((a, b) => Number(a.secondary) - Number(b.secondary));
   const matches: OddsMatch[] = [];
   const sources: OddsBoard['sources'] = [];
   const seen = new Set<string>();

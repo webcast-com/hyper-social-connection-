@@ -10,7 +10,7 @@ async function withFetch(respond: typeof fetch, run: () => Promise<void>) {
   try { await run(); } finally { globalThis.fetch = original; }
 }
 
-test('default odds requests use primary ESPN leagues, share work and cache normalized results', async () => {
+test('default odds requests cover every ESPN odds league, primary first, share work and cache normalized results', async () => {
   const urls: string[] = [];
   await withFetch(async (input, init) => {
     urls.push(String(input));
@@ -24,15 +24,17 @@ test('default odds requests use primary ESPN leagues, share work and cache norma
     assert.equal(first, second);
     const board = await first;
     assert.equal(board.status, 'ready');
-    assert.equal(board.matches.length, ODDS_LEAGUES.filter((league) => !league.secondary).length);
+    assert.equal(board.matches.length, ODDS_LEAGUES.length);
     assert.equal(urls.length, board.matches.length);
     assert.ok(urls.every((url) => new URL(url).hostname === 'site.api.espn.com' && !url.includes('?')));
+    const primaryPaths = ODDS_LEAGUES.filter((league) => !league.secondary).map((league) => league.path);
+    assert.ok(urls.slice(0, primaryPaths.length).every((url) => primaryPaths.some((path) => url.includes(`/${path}/`))));
     assert.equal(board.matches.filter((match) => !match.is_premium).length, FREE_MATCHES);
     assert.equal(await getEspnOdds(), board);
     assert.equal(urls.length, board.matches.length);
   });
 });
-test('global sort, 48-match cap and premium flags apply after aggregation', async () => {
+test('global sort, match cap and premium flags apply after aggregation', async () => {
   await withFetch(async (input) => Response.json({ events: Array.from({ length: 12 }, (_, i) => oddsEvent(`${String(input)}-game-${i}`, 12 - i)) }), async () => {
     const board = await getEspnOdds({}, { bypassCache: true });
     assert.equal(board.matches.length, MAX_MATCHES);
