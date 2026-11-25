@@ -25,6 +25,7 @@ import {
 import { MatchCountdown } from "@/components/goaledge/MatchCountdown";
 import { useTipLeagueTable } from "@/app/services/espnTipTable";
 import { useTipMatchHistory } from "@/app/services/espnTipHistory";
+import { useTipTeamNews } from "@/app/services/espnTipTeamNews";
 import { BookmakerCompare } from "@/app/components/predictions/BookmakerCompare";
 import { resolvePickOutcome } from "@/app/services/espnSecondOpinion";
 
@@ -82,6 +83,16 @@ export function TipDetailPanel({
   const homeConcededPerGame = perGame(homeStats?.goalsAgainst, homeStats?.played);
   const awayConcededPerGame = perGame(awayStats?.goalsAgainst, awayStats?.played);
   const hasRecord = Boolean(homeStats || awayStats);
+  // ESPN-reported injuries and team-related articles, fetched only when the
+  // Analysis tab is opened. ESPN publishes injury sections for its US-sport
+  // summaries; competitions without one honestly show none.
+  const teamNews = useTipTeamNews(tip.espnRef ?? null, activeTab === "analysis");
+  const injuryTone = (status: string | null) =>
+    /out|injur|suspend|doubt/i.test(status ?? "")
+      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+      : /question|day.to.day|gtd|probable/i.test(status ?? "")
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+        : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300";
   // Real standings, fetched only when the Stats tab is opened.
   const { rows: tableRows, status: tableStatus } = useTipLeagueTable(
     tip.league,
@@ -544,15 +555,75 @@ export function TipDetailPanel({
                   </div>
                 </div>
 
-                {/* Team News */}
+                {/* Team News — ESPN-reported injuries (a key factor) and
+                    articles from the league feed naming either side. The
+                    placeholder this replaced said "No team news available"
+                    unconditionally; that text now appears only when ESPN
+                    really reports nothing. */}
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                     Team News
                   </h4>
-                  <div className="mt-3 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400 dark:border-slate-700">
-                    No team news available for this fixture.
-                  </div>
+
+                  {teamNews.injuries.length > 0 && (
+                    <div className="mt-3 space-y-3">
+                      {teamNews.injuries.map((team) => (
+                        <div key={team.teamId} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                            {team.team} — injury report
+                          </p>
+                          <ul className="mt-2 space-y-2">
+                            {team.players.map((player) => (
+                              <li key={`${team.teamId}-${player.name}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">{player.name}</span>
+                                {player.position && <span className="text-[10px] text-slate-400">{player.position}</span>}
+                                {player.status && (
+                                  <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${injuryTone(player.status)}`}>
+                                    {player.status}
+                                  </span>
+                                )}
+                                {player.note && <span className="w-full text-[11px] leading-snug text-slate-400">{player.note}</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {teamNews.articles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {teamNews.articles.map((article) => (
+                        <a
+                          key={article.id}
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl border border-slate-200 p-3 transition hover:border-emerald-300 hover:bg-emerald-50/40 dark:border-slate-700 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/20"
+                        >
+                          <p className="text-xs font-semibold leading-snug text-slate-700 dark:text-slate-200">{article.headline}</p>
+                          {article.description && (
+                            <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-400">{article.description}</p>
+                          )}
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            ESPN
+                            {article.published && Number.isFinite(Date.parse(article.published))
+                              ? ` · ${new Date(article.published).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`
+                              : ""}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  {teamNews.injuries.length === 0 && teamNews.articles.length === 0 && (
+                    <div className="mt-3 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400 dark:border-slate-700">
+                      {teamNews.status === "loading"
+                        ? "Checking ESPN for injuries and team news…"
+                        : teamNews.message ?? "No team news available for this fixture. ESPN publishes injury reports for its US-sport fixtures; other competitions may not carry one."}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
