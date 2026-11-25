@@ -534,6 +534,7 @@ export function TipDetailPanel({
                     kickoffAt={tip.kickoffAt ?? null}
                     reference={tip.espnRef ?? null}
                     publishedOdds={tip.odds}
+                    bookmakerOdds={tip.bookmakerOdds ?? null}
                     selection={resolvePickOutcome(
                       tip.predictionType,
                       tip.prediction,

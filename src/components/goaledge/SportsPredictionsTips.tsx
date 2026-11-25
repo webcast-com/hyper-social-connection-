@@ -98,6 +98,21 @@ function matchToTip(match: OddsMatch): Tip {
     espnRef: match.details
       ? { sport: match.sport, league: match.details.league, eventId: String(match.details.eventId) }
       : null,
+    // The feed bookmaker's full quote (e.g. DraftKings): money line, spread
+    // with per-side prices and total (O/U). Passed through untouched so the
+    // Markets tab can show every market the book actually priced.
+    bookmakerOdds: {
+      provider: match.odds.provider ?? null,
+      home: match.odds.home ?? null,
+      draw: match.odds.draw ?? null,
+      away: match.odds.away ?? null,
+      spread: match.odds.spread ?? null,
+      spreadHomeOdds: match.odds.spread_home_odds ?? null,
+      spreadAwayOdds: match.odds.spread_away_odds ?? null,
+      overUnder: match.odds.over_under ?? null,
+      overOdds: match.odds.over_odds ?? null,
+      underOdds: match.odds.under_odds ?? null,
+    },
   };
 }
 
