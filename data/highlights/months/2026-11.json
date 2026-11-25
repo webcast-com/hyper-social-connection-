@@ -12,5 +12,5 @@
 "2026-11-22":{"n":236,"cube":{"league|epl|":3,"league|laliga|":4,"league|mls|":4,"league|nba|":6,"league|nfl|":11,"match|epl|live":7,"match|laliga|final":16,"match|laliga|live":2,"match|mls|final":5,"match|nba|final":23,"match|nba|live":4,"match|ncaam|final":43,"match|ncaam|live":5,"match|ncaaw|final":21,"match|nfl|final":12,"match|nhl|final":32,"match|nhl|live":34,"match|nwsl|live":4}},
 "2026-11-23":{"n":104,"cube":{"league|laliga|":2,"league|mls|":2,"league|nba|":6,"league|nfl|":11,"league|ucl|":1,"match|laliga|final":2,"match|nba|final":26,"match|nba|live":7,"match|ncaam|final":10,"match|ncaam|live":7,"match|ncaaw|final":11,"match|nfl|live":1,"match|nhl|final":2,"match|nhl|live":16}},
 "2026-11-24":{"n":257,"cube":{"league|afcon|":1,"league|mls|":2,"league|nba|":8,"league|nfl|":11,"league|ucl|":3,"match|mls|final":4,"match|nba|final":98,"match|ncaam|final":45,"match|ncaaw|final":27,"match|nfl|final":13,"match|nhl|final":45}},
-"2026-11-25":{"n":33,"cube":{"league|nba|":1,"match|ncaam|final":3,"match|ncaam|live":17,"match|ncaaw|final":3,"match|ncaaw|live":2,"match|nhl|live":7}}
+"2026-11-25":{"n":119,"cube":{"league|mls|":1,"league|nba|":3,"league|ucl|":3,"match|ncaam|final":57,"match|ncaam|live":17,"match|ncaaw|final":29,"match|ncaaw|live":2,"match|nhl|live":7}}
 }}
