@@ -2,7 +2,7 @@
 
 export function TipCardSkeleton() {
   return (
-    <div className="flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+    <div className="flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900 sm:p-5">
       <div className="flex items-center gap-2">
         <div className="h-5 w-5 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
         <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
