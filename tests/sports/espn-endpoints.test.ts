@@ -19,8 +19,8 @@ test('rugby labels use their documented competition IDs, not Six Nations/World C
   assert.equal(ESPN_LEAGUES.find((league) => league.slug === 'prem-rugby')?.league, '267979');
   assert.equal(ESPN_LEAGUES.find((league) => league.slug === 'super-rugby')?.league, '242041');
 });
-test('all 37 odds routes reuse scoreboard URLs for the matching competition, including dated searches', () => {
-  assert.equal(ODDS_LEAGUES.length, 37);
+test('all 80 odds routes reuse scoreboard URLs for the matching competition, including dated searches', () => {
+  assert.equal(ODDS_LEAGUES.length, 80);
   for (const league of ODDS_LEAGUES) {
     const source = ESPN_LEAGUES.find((item) => `${item.sport}/${item.league}` === league.path)!;
     assert.ok(source);
@@ -94,7 +94,7 @@ test('expanded football countries use ESPN identifiers and match/standings allow
     const filters = normalizeSportsFilters({ sport: 'football', region, country, league: slug });
     assert.equal(filters.league, slug);
     assert.deepEqual(readSportsFilters(new URLSearchParams(sportsFilterSearch(filters))), filters);
-    assert.ok(!ODDS_LEAGUES.some((league) => league.slug === slug));
+    assert.equal(ODDS_LEAGUES.some((league) => league.slug === slug), !item.excludeFromOdds);
   }
   assert.throws(() => resolveMatch('made-up-league', '123'));
   assert.throws(() => resolveStandings('made-up-league'));
@@ -131,6 +131,6 @@ test('additional global competitions map to ESPN paths and appropriate country f
     const filter = normalizeSportsFilters({ sport: 'football', region, country, league: slug });
     assert.equal(filter.league, slug);
     assert.deepEqual(readSportsFilters(new URLSearchParams(sportsFilterSearch(filter))), filter);
-    assert.ok(!ODDS_LEAGUES.some((item) => item.slug === slug));
+    assert.equal(ODDS_LEAGUES.some((item) => item.slug === slug), !meta.excludeFromOdds);
   }
 });

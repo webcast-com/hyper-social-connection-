@@ -60,6 +60,7 @@ export const COMPETITION_COUNTRIES: Record<string, string> = {
   jleague: 'Japan', saudi: 'Saudi Arabia', aleague: 'Australia & New Zealand',
   nwsl: 'United States', mls: 'United States & Canada', nba: 'United States & Canada', wnba: 'United States & Canada',
   ncaam: 'United States', ncaaw: 'United States', nfl: 'United States', mlb: 'United States & Canada', nhl: 'United States & Canada',
+  nbl: 'Australia & New Zealand',
   ucl: 'International / multi-country', uel: 'International / multi-country', uecl: 'International / multi-country',
   caf: 'International / multi-country', 'caf-confed': 'International / multi-country', 'caf-world-cup': 'International / multi-country',
   libertadores: 'International / multi-country', afc: 'International / multi-country', 'super-rugby': 'International / multi-country', f1: 'International / multi-country',

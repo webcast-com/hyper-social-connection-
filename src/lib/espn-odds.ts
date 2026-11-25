@@ -3,10 +3,11 @@ import type { EspnEndpointDetails } from './espn-endpoints';
 import { ESPN_LEAGUES, type SportKind } from './sports-catalog';
 
 export const FREE_MATCHES = 6;
-export const MAX_MATCHES = 48;
+export const MAX_MATCHES = 250;
 export const BATCH_SIZE = 20;
 
-const primary = new Set(['epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'ucl', 'nba', 'nfl', 'mlb', 'nhl']);
+/** Fetched first so headline fixtures land even if the long tail hits the time budget. */
+const primary = new Set(['epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'ucl', 'nba', 'wnba', 'ncaam', 'ncaaw', 'nbl', 'nfl', 'mlb', 'nhl']);
 // Motorsport has athlete fields, not the home/away markets this feed requires.
 export const ODDS_LEAGUES = ESPN_LEAGUES.filter((league) => league.kind !== 'motorsport' && !league.excludeFromOdds).map((league) => ({
   slug: league.slug, sport: league.kind, path: `${league.sport}/${league.league}`, name: league.name,
@@ -150,7 +151,7 @@ export function normalizeOddsRequest(input: unknown): OddsRequest {
   }
   const perLeague = body.perLeague === undefined ? 0 : number(body.perLeague);
   if (perLeague === null) throw new OddsInputError('perLeague must be a finite number');
-  const cap = perLeague > 0 ? Math.min(Math.max(Math.floor(perLeague), 1), 12) : 0;
+  const cap = perLeague > 0 ? Math.min(Math.max(Math.floor(perLeague), 1), 30) : 0;
   const days = body.days === undefined ? 1 : number(body.days);
   if (cap && days === null) throw new OddsInputError('days must be a finite number');
   return {

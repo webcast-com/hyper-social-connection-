@@ -54,7 +54,7 @@ test('normalization keeps only future pre-game home/away fixtures with reported 
 });
 test('request parameters have bounded work, deterministic keys and no user-supplied endpoint paths', () => {
   assert.deepEqual(normalizeOddsRequest({}), { sports: [], perLeague: 0, days: 1 });
-  assert.deepEqual(normalizeOddsRequest({ sports: ['football', 'football'], perLeague: '50', days: 30 }), { sports: ['football'], perLeague: 12, days: 10 });
+  assert.deepEqual(normalizeOddsRequest({ sports: ['football', 'football'], perLeague: '50', days: 30 }), { sports: ['football'], perLeague: 30, days: 10 });
   assert.equal(normalizeOddsRequest({ perLeague: 0, days: 10 }).days, 1);
   assert.throws(() => normalizeOddsRequest({ sports: ['https://attacker.test'] }), /Supported sports/);
   assert.throws(() => normalizeOddsRequest({ sports: 'football' }), /array/);
