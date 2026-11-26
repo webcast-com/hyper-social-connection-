@@ -5,6 +5,7 @@ import Post from '@/components/Post';
 import SportsFeedCard from '@/components/SportsFeedCard';
 import SportsPredictionFeedCard from '@/components/SportsPredictionFeedCard';
 import SportsVideoNewsCard from '@/components/SportsVideoNewsCard';
+import SportsNewsFeedCard from '@/components/SportsNewsFeedCard';
 import SportsLeadersBoard from '@/components/SportsLeadersBoard';
 import { HighlightPostCard } from '@/components/SportsHighlightsFeed';
 import { Sparkles, Users, Clapperboard, Compass, Radio } from 'lucide-react';
@@ -40,6 +41,12 @@ function postMatchesLeague(post: any, selectedLeague: string): boolean {
       normalizeLeagueKey(post.clip?.leagueName) === target ||
       normalizeLeagueKey(post.clip?.league) === target ||
       normalizeLeagueKey(post.clip?.sport) === target
+    );
+  }
+  if (post.type === 'news') {
+    return (
+      normalizeLeagueKey(post.article?.leagueName) === target ||
+      normalizeLeagueKey(post.article?.league) === target
     );
   }
   if (post.type === 'leaders' && Array.isArray(post.boards)) {
@@ -290,6 +297,8 @@ export default function FeedTabs({
                 <SportsPredictionFeedCard key={post.id} prediction={post.prediction} currentUser={currentUser} />
               ) : post.type === 'video-news' ? (
                 <SportsVideoNewsCard key={post.id} clip={post.clip} currentUser={currentUser} />
+              ) : post.type === 'news' ? (
+                <SportsNewsFeedCard key={post.id} article={post.article} />
               ) : post.type === 'highlight' ? (
                 // The same card the highlights list renders, with the anchor and
                 // saved state the page loaded for it. `anchor` is null for a clip

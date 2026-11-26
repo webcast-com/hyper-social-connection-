@@ -36,6 +36,8 @@ import { nudgePickGrading } from '@/lib/sports-picks-grader';
 import { dedupeAnchorRefs, highlightAnchorRefs, highlightClipsAnchorRefs, leaderAnchorRefs, loadAnchorEngagement, SPORTS_DESK } from '@/lib/sports-anchor-store';
 import { anchorKey, anchorRef, highlightAnchorId } from '@/lib/sports-anchor';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
+import { getSportsNews } from '@/lib/espn-news-feed';
+import { ESPN_LEAGUES } from '@/lib/sports-catalog';
 import { HIGHLIGHTS_FEED_SLOTS, interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
@@ -179,15 +181,21 @@ export default async function Home() {
   // Players and top scorers are the sports content visitors ask for most, so the
   // homepage renders the leaders board next to the scores. A failed leaders feed
   // resolves to an empty board — no sample players — and never blocks the page.
-  const [leaderBoards, eplScorers, wslScorers, wnbaScorers] = await Promise.all([
+  const safeScorers = (slug: string) =>
+    Promise.resolve().then(() => getSportsScorers(slug)).catch(() => null);
+
+  const [leaderBoards, eplScorers, wslScorers, nwslScorers, sportsNewsBoard] = await Promise.all([
     getSportsLeaderBoards(),
-    getSportsScorers('epl').catch(() => null),
-    getSportsScorers('wsl').catch(() => null),
-    getSportsScorers('wnba').catch(() => null),
+    safeScorers('epl'),
+    safeScorers('wsl'),
+    safeScorers('nwsl'),
+    getSportsNews(
+      ESPN_LEAGUES.filter((l) => ['epl', 'nba', 'nfl', 'ucl'].includes(l.slug)),
+    ).catch(() => null),
   ]);
 
-  // Round-robin mix of NBA, NFL, men's football (EPL), women's football (WSL),
-  // and women's basketball (WNBA) top scorers & leaders for the "People you may know" slots.
+  // Round-robin mix of NBA, NFL, men's football (EPL), and women's football (WSL, NWSL)
+  // top scorers & leaders for the "People you may know" slots.
   type FeaturedPlayer = { key: string; name: string; avatar: string | null; subtitle: string; href: string };
   const playerBuckets: FeaturedPlayer[][] = [
     (leaderBoards?.basketball?.rows ?? []).slice(0, 4).map((r) => ({
@@ -218,12 +226,12 @@ export default async function Home() {
       subtitle: `WSL · ${s.goals} G`,
       href: s.athleteId ? athleteHref({ league: 'wsl', athleteId: s.athleteId }) : '/sports',
     })),
-    (wnbaScorers?.scorers ?? []).slice(0, 4).map((s, idx) => ({
-      key: `wnba-${s.athleteId ?? idx}`,
+    (nwslScorers?.scorers ?? []).slice(0, 4).map((s, idx) => ({
+      key: `nwsl-${s.athleteId ?? idx}`,
       name: s.name,
       avatar: s.headshot ?? s.teamLogo ?? null,
-      subtitle: `WNBA · ${s.goals}`,
-      href: s.athleteId ? athleteHref({ league: 'wnba', athleteId: s.athleteId }) : '/sports',
+      subtitle: `NWSL · ${s.goals} G`,
+      href: s.athleteId ? athleteHref({ league: 'nwsl', athleteId: s.athleteId }) : '/sports',
     })),
   ];
   const featuredPlayers: FeaturedPlayer[] = [];
@@ -536,16 +544,26 @@ export default async function Home() {
   const recentHighlightIds = new Set(recentHighlightClips(feedHighlights.clips, highlightBoard).map((clip) => clip.id));
   const forYouHighlightPosts = highlightFeedPosts.filter((post) => recentHighlightIds.has(post.clip.id));
 
+  const newsFeedPosts = (sportsNewsBoard?.articles ?? []).slice(0, 6).map((article) => ({
+    id: `news-${article.id}`,
+    type: 'news',
+    article,
+  }));
+
   // Each card kind gets its own pass over the feed, so adding league video news
   // or highlights cannot move the match and prediction cards already there.
   const forYouPosts = interleaveFeedCards(
     interleaveFeedCards(
-      interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
-      videoNewsFeedPosts,
-      VIDEO_NEWS_FEED_SLOTS,
+      interleaveFeedCards(
+        interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
+        videoNewsFeedPosts,
+        VIDEO_NEWS_FEED_SLOTS,
+      ),
+      forYouHighlightPosts,
+      HIGHLIGHTS_FEED_SLOTS,
     ),
-    forYouHighlightPosts,
-    HIGHLIGHTS_FEED_SLOTS,
+    newsFeedPosts,
+    [2, 6, 11, 16, 21, 26],
   );
   // On desktop the standalone leader board above the feed was removed so highlights
   // and leaders appear in between posts as you scroll. Insert a leaders card into
