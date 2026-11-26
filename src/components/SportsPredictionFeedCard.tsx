@@ -58,7 +58,7 @@ export default function SportsPredictionFeedCard({
         onCalcStakeChange={setCalcStake}
         isBookmarked={isBookmarked}
         onToggleBookmark={() => setIsBookmarked((prev) => !prev)}
-        oddsComparison={null}
+        oddsComparison={tip.oddsComparison ?? null}
         onCompare={() => setCompareOpen(true)}
       />
 
@@ -81,7 +81,7 @@ export default function SportsPredictionFeedCard({
       <OddsCompareModal
         tip={compareOpen ? tip : null}
         onClose={() => setCompareOpen(false)}
-        comparison={null}
+        comparison={tip.oddsComparison ?? null}
       />
 
       <ShareModal

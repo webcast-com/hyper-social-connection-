@@ -6,7 +6,8 @@ import { ensureSeeded } from '@/lib/seed';
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const email = String(body.email || '').trim().toLowerCase();
+  const identifier = String(body.email || body.username || '').trim();
+  const email = identifier.toLowerCase();
   const password = String(body.password || '');
 
   try {
@@ -22,7 +23,14 @@ export async function POST(req: Request) {
 
     await ensureSeeded();
 
-    const user = await db.orm.public.User.where({ email }).first();
+    let user = await db.orm.public.User.where({ email }).first();
+    if (!user && !email.includes('@') && email) {
+      const syntheticEmail = `${email.replace(/[^a-z0-9_.-]/g, '')}@username.local`;
+      user = await db.orm.public.User.where({ email: syntheticEmail }).first();
+      if (!user) {
+        user = await db.orm.public.User.where({ name: identifier }).first();
+      }
+    }
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

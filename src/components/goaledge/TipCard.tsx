@@ -63,11 +63,11 @@ export function TipCard({
       onClick={onView}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="text-lg leading-none">{tip.flag}</span>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200 sm:text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          <span className="shrink-0 text-lg leading-none">{tip.flag}</span>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 break-words text-xs font-semibold leading-snug text-slate-700 dark:text-slate-200 sm:text-sm">
               {tip.league}
             </p>
             <p className="truncate text-xs text-slate-400 dark:text-slate-500">

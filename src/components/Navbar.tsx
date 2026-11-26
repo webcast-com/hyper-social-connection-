@@ -6,6 +6,7 @@ import { profileHref } from '@/lib/social-href';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
+  TrendingUp,
   MessageCircle,
   User as UserIcon,
   Settings,
@@ -29,8 +30,8 @@ import ProfileMenu from '@/components/ProfileMenu';
 const MOBILE_TABS = [
   { href: '/', label: 'Home', icon: Home, isActive: (p: string) => p === '/' },
   { href: '/discover', label: 'People', icon: Compass, isActive: (p: string) => p.startsWith('/discover') },
-  { href: '/sports', label: 'Sports', icon: Trophy, isActive: (p: string) => p.startsWith('/sports') },
-  { href: '/groups', label: 'Groups', icon: Users, isActive: (p: string) => p.startsWith('/groups') },
+  { href: '/sports', label: 'Sports', icon: Trophy, isActive: (p: string) => p.startsWith('/sports') && !p.startsWith('/sports/predictions') },
+  { href: '/sports/predictions', label: 'Predictions', shortLabel: 'Tips', icon: TrendingUp, isActive: (p: string) => p.startsWith('/sports/predictions') },
   { href: '/messages', label: 'Messages', icon: MessageCircle, isActive: (p: string) => p.startsWith('/messages'), memberOnly: true },
   { href: '/notifications', label: 'Notifications', shortLabel: 'Alerts', icon: Bell, isActive: (p: string) => p.startsWith('/notifications'), badge: true, memberOnly: true },
 ];

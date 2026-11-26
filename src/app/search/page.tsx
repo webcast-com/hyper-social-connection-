@@ -5,24 +5,38 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { profileHref } from '@/lib/social-href';
 import { searchUsers, searchPosts } from '@/app/actions';
-import { Search, Hash, Users, Sparkles } from 'lucide-react';
+import { Search, Hash, Users, Sparkles, Trophy, TrendingUp, Newspaper } from 'lucide-react';
 import FormattedContent from '@/components/FormattedContent';
 import EmptyState from '@/components/EmptyState';
 
 type SearchResult = {
   users: any[];
   posts: any[];
+  matches: any[];
+  predictions: any[];
+  news: any[];
+  groups: any[];
 };
 
 async function executeSearch(value: string): Promise<SearchResult> {
   const searchQuery = value.trim();
-  if (!searchQuery) return { users: [], posts: [] };
+  if (!searchQuery) return { users: [], posts: [], matches: [], predictions: [], news: [], groups: [] };
 
-  const [users, posts] = await Promise.all([
+  const [users, posts, extra] = await Promise.all([
     searchUsers(searchQuery),
     searchPosts(searchQuery),
+    fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+      .then((r) => (r.ok ? r.json() : { matches: [], predictions: [], news: [], groups: [] }))
+      .catch(() => ({ matches: [], predictions: [], news: [], groups: [] })),
   ]);
-  return { users, posts };
+  return {
+    users,
+    posts,
+    matches: extra.matches || [],
+    predictions: extra.predictions || [],
+    news: extra.news || [],
+    groups: extra.groups || [],
+  };
 }
 
 const POPULAR_TAGS = [
@@ -41,6 +55,10 @@ export default function SearchPage() {
   const [query, setQuery] = useState(urlQuery);
   const [userResults, setUserResults] = useState<any[]>([]);
   const [postResults, setPostResults] = useState<any[]>([]);
+  const [matchResults, setMatchResults] = useState<any[]>([]);
+  const [predictionResults, setPredictionResults] = useState<any[]>([]);
+  const [newsResults, setNewsResults] = useState<any[]>([]);
+  const [groupResults, setGroupResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const requestId = useRef(0);
 
@@ -56,6 +74,10 @@ export default function SearchPage() {
         setQuery('');
         setUserResults([]);
         setPostResults([]);
+        setMatchResults([]);
+        setPredictionResults([]);
+        setNewsResults([]);
+        setGroupResults([]);
       });
       return;
     }
@@ -71,6 +93,10 @@ export default function SearchPage() {
       setQuery(urlQuery);
       setUserResults(results.users);
       setPostResults(results.posts);
+      setMatchResults(results.matches);
+      setPredictionResults(results.predictions);
+      setNewsResults(results.news);
+      setGroupResults(results.groups);
       setLoading(false);
     })();
 
@@ -87,6 +113,10 @@ export default function SearchPage() {
     if (id !== requestId.current) return;
     setUserResults(results.users);
     setPostResults(results.posts);
+    setMatchResults(results.matches);
+    setPredictionResults(results.predictions);
+    setNewsResults(results.news);
+    setGroupResults(results.groups);
     setLoading(false);
   };
 
@@ -204,7 +234,100 @@ export default function SearchPage() {
             </div>
           )}
 
-          {query.trim() && !loading && userResults.length === 0 && postResults.length === 0 && (
+          {matchResults.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                <span>Matches ({matchResults.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {matchResults.map((m) => (
+                  <Link
+                    key={m.id}
+                    href={`/sports/match/${m.sport}/${m.league}/${m.id}`}
+                    className="flex items-center justify-between gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate">{m.leagueName || m.league}</p>
+                      <p className="font-bold text-gray-900 dark:text-white truncate">{m.home?.name} vs {m.away?.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{m.statusDetail || m.status}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {predictionResults.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <span>Predictions &amp; Tips ({predictionResults.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {predictionResults.map((p) => (
+                  <Link
+                    key={p.id}
+                    href="/sports/predictions"
+                    className="flex items-center justify-between gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate">{p.competition || p.federation}</p>
+                      <p className="font-bold text-gray-900 dark:text-white truncate">{p.homeTeam} vs {p.awayTeam}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{p.prediction} @ {p.winOdds}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {newsResults.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+                <Newspaper className="w-4 h-4 text-sky-500" />
+                <span>Sports News ({newsResults.length})</span>
+              </h2>
+              <div className="space-y-2">
+                {newsResults.map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.link || '/sports'}
+                    target={a.link ? '_blank' : undefined}
+                    rel={a.link ? 'noopener noreferrer' : undefined}
+                    className="block p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-sky-300 dark:hover:border-sky-700 transition-all"
+                  >
+                    <p className="text-xs font-semibold text-sky-600 dark:text-sky-400">{a.leagueName}</p>
+                    <p className="font-bold text-gray-900 dark:text-white">{a.headline}</p>
+                    {a.description && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">{a.description}</p>}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {groupResults.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+                <Users className="w-4 h-4 text-violet-500" />
+                <span>Groups ({groupResults.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {groupResults.map((g) => (
+                  <Link
+                    key={g.id}
+                    href={`/groups/${g.id}`}
+                    className="block p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-violet-300 dark:hover:border-violet-700 transition-all"
+                  >
+                    <p className="font-bold text-gray-900 dark:text-white truncate">{g.name}</p>
+                    {g.description && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{g.description}</p>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {query.trim() && !loading && userResults.length === 0 && postResults.length === 0 && matchResults.length === 0 && predictionResults.length === 0 && newsResults.length === 0 && groupResults.length === 0 && (
             <EmptyState variant="search" title={`No results found for "${query}"`}>
               Try searching for #NextJS, #Travel, #SwissAlps, or a friend&apos;s name.
             </EmptyState>

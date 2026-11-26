@@ -77,8 +77,9 @@ export function TipsSection({
    * and when it has none the cards fall back to the tip's own price, which is
    * the behaviour the empty state already had.
    */
+  const [baseNow] = useState(() => Date.now());
   const oddsComparisons = oddsComparisonsProp ?? {};
-  const selectedDayDate = new Date(Date.now() + selectedDate * 86_400_000);
+  const selectedDayDate = new Date(baseNow + selectedDate * 86_400_000);
   const headingText =
     selectedDate === 0
       ? "Today's featured tips"
@@ -148,7 +149,7 @@ export function TipsSection({
       <FadeIn delay={0.05}>
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {Array.from({ length: 7 }).map((_, i) => {
-            const d = new Date(Date.now() + i * 86_400_000);
+            const d = new Date(baseNow + i * 86_400_000);
             const dayName = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
             const dateNum = d.getUTCDate();
             const monthShort = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
