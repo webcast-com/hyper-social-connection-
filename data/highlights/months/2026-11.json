@@ -12,6 +12,6 @@
 "2026-11-22":{"n":236,"cube":{"league|epl|":3,"league|laliga|":4,"league|mls|":4,"league|nba|":6,"league|nfl|":11,"match|epl|live":7,"match|laliga|final":16,"match|laliga|live":2,"match|mls|final":5,"match|nba|final":23,"match|nba|live":4,"match|ncaam|final":43,"match|ncaam|live":5,"match|ncaaw|final":21,"match|nfl|final":12,"match|nhl|final":32,"match|nhl|live":34,"match|nwsl|live":4}},
 "2026-11-23":{"n":104,"cube":{"league|laliga|":2,"league|mls|":2,"league|nba|":6,"league|nfl|":11,"league|ucl|":1,"match|laliga|final":2,"match|nba|final":26,"match|nba|live":7,"match|ncaam|final":10,"match|ncaam|live":7,"match|ncaaw|final":11,"match|nfl|live":1,"match|nhl|final":2,"match|nhl|live":16}},
 "2026-11-24":{"n":262,"cube":{"league|afcon|":1,"league|mls|":2,"league|nba|":8,"league|nfl|":11,"league|ucl|":3,"match|mls|final":4,"match|nba|final":98,"match|ncaam|final":45,"match|ncaaw|final":27,"match|nfl|final":13,"match|nhl|final":45,"match|ucl|final":5}},
-"2026-11-25":{"n":205,"cube":{"league|epl|":1,"league|mls|":1,"league|nba|":5,"league|nfl|":3,"league|ucl|":6,"match|nba|final":7,"match|ncaam|final":98,"match|ncaam|live":18,"match|ncaaw|final":50,"match|ncaaw|live":7,"match|nhl|live":7,"match|ucl|final":2}},
-"2026-11-26":{"n":8,"cube":{"league|nba|":7,"league|ucl|":1}}
+"2026-11-25":{"n":206,"cube":{"league|epl|":1,"league|laliga|":1,"league|mls|":1,"league|nba|":5,"league|nfl|":3,"league|ucl|":6,"match|nba|final":7,"match|ncaam|final":98,"match|ncaam|live":18,"match|ncaaw|final":50,"match|ncaaw|live":7,"match|nhl|live":7,"match|ucl|final":2}},
+"2026-11-26":{"n":146,"cube":{"league|nba|":10,"league|nfl|":3,"league|ucl|":1,"match|nba|final":47,"match|ncaam|final":41,"match|nfl|final":8,"match|nhl|final":36}}
 }}
