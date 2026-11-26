@@ -587,6 +587,33 @@ async function runMigration() {
     `CREATE INDEX IF NOT EXISTS "sports_picks_user_created_idx" ON "sports_picks"("user_id", "created_at" DESC)`,
     // The leaderboard's window: graded picks, most recently graded first.
     `CREATE INDEX IF NOT EXISTS "sports_picks_graded_at_idx" ON "sports_picks"("graded_at" DESC NULLS LAST)`,
+    // PayPal Pro ($0.99/month). One row per PayPal subscription. `valid_until`
+    // carries the end of the paid-for period (from PayPal's next_billing_time),
+    // so a cancelled subscription keeps Pro access until the period it already
+    // paid for runs out. Hand-written like sports_picks — the Prisma contract
+    // stays untouched.
+    `CREATE TABLE IF NOT EXISTS "paypal_subscriptions" (
+      "id" serial PRIMARY KEY NOT NULL,
+      "user_id" integer NOT NULL,
+      "paypal_subscription_id" text NOT NULL,
+      "plan_id" text NOT NULL,
+      "status" text NOT NULL DEFAULT 'APPROVAL_PENDING',
+      "payer_email" text,
+      "valid_until" timestamptz,
+      "created_at" timestamptz DEFAULT now() NOT NULL,
+      "updated_at" timestamptz DEFAULT now() NOT NULL,
+      CONSTRAINT "paypal_subscriptions_paypal_subscription_id_key" UNIQUE ("paypal_subscription_id"),
+      CONSTRAINT "paypal_subscriptions_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action
+    )`,
+    `CREATE INDEX IF NOT EXISTS "paypal_subscriptions_user_id_idx" ON "paypal_subscriptions"("user_id")`,
+    `CREATE INDEX IF NOT EXISTS "paypal_subscriptions_status_idx" ON "paypal_subscriptions"("status")`,
+    // Key/value settings for server-managed state, e.g. the PayPal Pro plan id
+    // created on first use when PAYPAL_PLAN_ID is not set. Not user data.
+    `CREATE TABLE IF NOT EXISTS "app_settings" (
+      "key" text PRIMARY KEY NOT NULL,
+      "value" text NOT NULL,
+      "updated_at" timestamptz DEFAULT now() NOT NULL
+    )`,
     // Social-graph patches (likes uniqueness, usernames, cached counters and
     // triggers). Kept last so they apply after every table above exists.
     ...SOCIAL_DDL,

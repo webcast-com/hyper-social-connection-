@@ -495,7 +495,7 @@ export function TipDetailPanel({
                         <p className="mt-4 text-sm font-bold text-slate-700 dark:text-slate-200">Premium Content</p>
                         <p className="mt-1 max-w-xs text-xs text-slate-400">Unlock in-depth analysis, xG breakdowns, and expert reasoning for this prediction.</p>
                         <button onClick={onUpgrade} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm shadow-amber-500/20 transition hover:from-amber-600 hover:to-amber-700">
-                          <Crown className="h-4 w-4" /> Unlock for Ksh 100
+                          <Crown className="h-4 w-4" /> Unlock for $0.99/mo
                         </button>
                       </div>
                     ) : (
@@ -680,7 +680,7 @@ export function TipDetailPanel({
           {locked ? (
             <button onClick={onUpgrade} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm shadow-amber-500/20 transition hover:from-amber-600 hover:to-amber-700">
               <Crown className="h-4 w-4" />
-              Unlock Premium — Ksh 100/day
+              Unlock Pro — $0.99/month
             </button>
           ) : (
             <div className="flex items-center gap-3">

@@ -9,13 +9,18 @@ import { TipDetailPanel } from "./TipDetailPanel";
 import { TipResults } from "./TipResults";
 import { OddsCompareModal } from "./OddsCompareModal";
 import { ShareModal } from "./ShareModal";
+import { ProUpgradeModal } from "./ProUpgradeModal";
 import { toast } from "@/lib/toast";
 
 export default function SportsPredictionsTips({
   initial,
+  isPremium: isPremiumProp = false,
 }: {
   initial: OddsBoard;
+  isPremium?: boolean;
 }) {
+  const [isPremium, setIsPremium] = useState(isPremiumProp);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(0);
   const [boardsByDay, setBoardsByDay] = useState<Record<number, OddsBoard>>(() => ({ 0: initial }));
   const [loading, setLoading] = useState(false);
@@ -189,7 +194,7 @@ export default function SportsPredictionsTips({
         <TipDetailPanel
           tip={selectedTip}
           betSlipIds={new Set(betSlipIds)}
-          isPremium={false}
+          isPremium={isPremium}
           onClose={() => setSelectedTip(null)}
           onAddToSlip={() => onAddToSlip(selectedTip)}
           onCopy={() => void onCopyTip(selectedTip)}
@@ -203,10 +208,17 @@ export default function SportsPredictionsTips({
               return next;
             })
           }
-          onUpgrade={() => toast.info("Premium is not available in this build.")}
+          onUpgrade={() => setUpgradeOpen(true)}
           allTips={tips}
         />
       )}
+
+      <ProUpgradeModal
+        open={upgradeOpen}
+        isPro={isPremium}
+        onClose={() => setUpgradeOpen(false)}
+        onActivated={() => setIsPremium(true)}
+      />
 
       <OddsCompareModal
         tip={compareTip}
