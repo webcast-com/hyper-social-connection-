@@ -61,7 +61,7 @@ export default function Navbar({ user, unreadCount = 0, isDemo }: { user?: any; 
 
   return (
     <>
-      <header className="fixed top-0 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-3 sm:px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
+      <header className="relative w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800 z-50 px-3 sm:px-4 h-14 flex items-center justify-between shadow-[0_10px_35px_rgba(37,99,235,0.10)]">
         {/* Left: Brand logo + Integrated Search Bar */}
         <div className="flex items-center space-x-3 min-w-0">
           <BrandLogo ariaLabel="Hyper Home" />

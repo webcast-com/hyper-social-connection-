@@ -150,6 +150,7 @@ export default async function HighlightClipPage({ params }: Props) {
               // One video on a page whose whole subject is that video, so its
               // metadata is worth fetching — unlike a board of a dozen cards.
               preload="metadata"
+              autoPlay
               durationLabel={length}
             />
           </div>

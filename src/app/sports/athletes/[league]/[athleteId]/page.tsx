@@ -51,10 +51,14 @@ export default async function AthleteDetailsPage({ params, searchParams }: { par
     fetchedAt: new Date().toISOString(),
     sources: [{ ok: false, url: resolved.urls.site, httpStatus: null, error: 'Loading player feed' }],
   };
-  return <SportsAthleteDetails
-    key={`${league}/${athleteId}`}
-    initial={initial}
-    reference={resolved.reference}
-    returnTo={returnTo}
-  />;
+  return (
+    <div className="nfl-type-scale">
+      <SportsAthleteDetails
+        key={`${league}/${athleteId}`}
+        initial={initial}
+        reference={resolved.reference}
+        returnTo={returnTo}
+      />
+    </div>
+  );
 }

@@ -10,6 +10,7 @@ import { canViewProfileDetails, sharedProfileCardData } from '@/lib/profile';
 import CreatePost from '@/components/CreatePost';
 import Stories from '@/components/Stories';
 import FeedTabs from '@/components/FeedTabs';
+import { HomeLeagueFilterBar, HomeLeagueFilterProvider, type HomeLeagueItem } from '@/components/HomeLeagueFilter';
 import TrendingTopics from '@/components/TrendingTopics';
 import { computeTrendingTopics } from '@/lib/trending';
 import Link from 'next/link';
@@ -27,6 +28,8 @@ import { getEspnOdds } from '@/lib/espn-odds-feed';
 import { oddsFeedPredictions } from '@/lib/odds-feed-predictions';
 import { orderCentreEvents } from '@/lib/match-centre';
 import { getSportsLeaderBoards } from '@/lib/espn-leaders-feed';
+import { getSportsScorers } from '@/lib/espn-scorers-feed';
+import { athleteHref } from '@/lib/espn-athlete';
 import { ALL_STORED_DAYS, getHighlightsBoardForRender, getHighlightClipsForFeed, recentHighlightClips } from '@/lib/highlights-board';
 import { nudgeHighlightsSweep } from '@/lib/highlights-sweep';
 import { nudgePickGrading } from '@/lib/sports-picks-grader';
@@ -176,7 +179,64 @@ export default async function Home() {
   // Players and top scorers are the sports content visitors ask for most, so the
   // homepage renders the leaders board next to the scores. A failed leaders feed
   // resolves to an empty board — no sample players — and never blocks the page.
-  const leaderBoards = await getSportsLeaderBoards();
+  const [leaderBoards, eplScorers, wslScorers, wnbaScorers] = await Promise.all([
+    getSportsLeaderBoards(),
+    getSportsScorers('epl').catch(() => null),
+    getSportsScorers('wsl').catch(() => null),
+    getSportsScorers('wnba').catch(() => null),
+  ]);
+
+  // Round-robin mix of NBA, NFL, men's football (EPL), women's football (WSL),
+  // and women's basketball (WNBA) top scorers & leaders for the "People you may know" slots.
+  type FeaturedPlayer = { key: string; name: string; avatar: string | null; subtitle: string; href: string };
+  const playerBuckets: FeaturedPlayer[][] = [
+    (leaderBoards?.basketball?.rows ?? []).slice(0, 4).map((r) => ({
+      key: `nba-${r.key}`,
+      name: r.name,
+      avatar: r.headshot ?? r.teamLogo ?? null,
+      subtitle: `NBA · ${r.value}`,
+      href: r.athleteId ? athleteHref({ league: 'nba', athleteId: r.athleteId }) : '/sports',
+    })),
+    (leaderBoards?.football?.rows ?? []).slice(0, 4).map((r) => ({
+      key: `nfl-${r.key}`,
+      name: r.name,
+      avatar: r.headshot ?? r.teamLogo ?? null,
+      subtitle: `NFL · ${r.value}`,
+      href: r.athleteId ? athleteHref({ league: 'nfl', athleteId: r.athleteId }) : '/sports',
+    })),
+    (eplScorers?.scorers ?? []).slice(0, 4).map((s, idx) => ({
+      key: `epl-${s.athleteId ?? idx}`,
+      name: s.name,
+      avatar: s.headshot ?? s.teamLogo ?? null,
+      subtitle: `EPL · ${s.goals} G`,
+      href: s.athleteId ? athleteHref({ league: 'epl', athleteId: s.athleteId }) : '/sports',
+    })),
+    (wslScorers?.scorers ?? []).slice(0, 4).map((s, idx) => ({
+      key: `wsl-${s.athleteId ?? idx}`,
+      name: s.name,
+      avatar: s.headshot ?? s.teamLogo ?? null,
+      subtitle: `WSL · ${s.goals} G`,
+      href: s.athleteId ? athleteHref({ league: 'wsl', athleteId: s.athleteId }) : '/sports',
+    })),
+    (wnbaScorers?.scorers ?? []).slice(0, 4).map((s, idx) => ({
+      key: `wnba-${s.athleteId ?? idx}`,
+      name: s.name,
+      avatar: s.headshot ?? s.teamLogo ?? null,
+      subtitle: `WNBA · ${s.goals}`,
+      href: s.athleteId ? athleteHref({ league: 'wnba', athleteId: s.athleteId }) : '/sports',
+    })),
+  ];
+  const featuredPlayers: FeaturedPlayer[] = [];
+  const seenPlayerKeys = new Set<string>();
+  const maxBucketLen = Math.max(0, ...playerBuckets.map((b) => b.length));
+  for (let i = 0; i < maxBucketLen; i++) {
+    for (const bucket of playerBuckets) {
+      const p = bucket[i];
+      if (!p || seenPlayerKeys.has(p.key)) continue;
+      seenPlayerKeys.add(p.key);
+      featuredPlayers.push(p);
+    }
+  }
   // Stored clips first: a Postgres read with no ESPN request, filled by the
   // sweeper. Only when storage cannot answer in time, or holds too few clips to
   // make a card, does this fall back to the live feed — the same cached board,
@@ -544,10 +604,59 @@ export default async function Home() {
   // (real DB rows, or the demo feed offline). Empty → widget's own defaults.
   const trendingTopics = computeTrendingTopics(allPosts);
 
+  // League logos for the sticky homepage sport/league filter bar.
+  const LEAGUE_LOGOS: Record<string, string> = {
+    'nfl': 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png',
+    'nba': 'https://a.espncdn.com/i/teamlogos/leagues/500/nba.png',
+    'premier league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
+    'english premier league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
+    'mlb': 'https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png',
+    'atp tour': 'https://a.espncdn.com/i/teamlogos/leagues/500/atp.png',
+    'atp': 'https://a.espncdn.com/i/teamlogos/leagues/500/atp.png',
+    'nhl': 'https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png',
+    'la liga': 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
+    'spanish laliga': 'https://a.espncdn.com/i/leaguelogos/soccer/500/15.png',
+    'serie a': 'https://a.espncdn.com/i/leaguelogos/soccer/500/12.png',
+    'italian serie a': 'https://a.espncdn.com/i/leaguelogos/soccer/500/12.png',
+    'bundesliga': 'https://a.espncdn.com/i/leaguelogos/soccer/500/10.png',
+    'german bundesliga': 'https://a.espncdn.com/i/leaguelogos/soccer/500/10.png',
+    'pga tour': 'https://a.espncdn.com/i/teamlogos/leagues/500/pga.png',
+    'ufc': 'https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png',
+    'formula 1': 'https://a.espncdn.com/i/teamlogos/leagues/500/f1.png',
+    'uefa champions league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2.png',
+    'champions league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2.png',
+    'ligue 1': 'https://a.espncdn.com/i/leaguelogos/soccer/500/9.png',
+    'mls': 'https://a.espncdn.com/i/leaguelogos/soccer/500/19.png',
+  };
+
+  const leagueCounts = new Map<string, HomeLeagueItem>();
+  const addLeagueCount = (rawName?: string | null) => {
+    const name = rawName?.trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    const existing = leagueCounts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      leagueCounts.set(key, {
+        id: key,
+        name,
+        count: 1,
+        logo: LEAGUE_LOGOS[key] ?? null,
+      });
+    }
+  };
+  for (const event of sportsBoard.events) addLeagueCount(event.leagueName || event.league);
+  for (const pred of sportsPredictions) addLeagueCount(pred.competition || pred.federation);
+  const homeLeagues = Array.from(leagueCounts.values()).sort((a, b) => b.count - a.count);
+  const totalBoardCount = homeLeagues.reduce((sum, item) => sum + item.count, 0);
+
   return (
-    <>
+    <HomeLeagueFilterProvider>
+      <HomeLeagueFilterBar leagues={homeLeagues} totalCount={totalBoardCount} />
+
       {/* Status/stories row: full-width above the desktop/tablet rails, like the header content width. */}
-      <div className="mx-auto w-full max-w-7xl px-0 pt-2 sm:px-4 sm:pt-4">
+      <div className="nfl-type-scale mx-auto w-full max-w-7xl px-0 pt-2 sm:px-4 sm:pt-4">
         <Stories user={viewer} stories={enrichedStories} />
       </div>
 
@@ -555,7 +664,7 @@ export default async function Home() {
           `xl` the navigation rail joins them. Both rails are fixed widths, so the
           feed column takes what is left rather than a quarter-based share, and both
           stay on screen while the feed scrolls. */}
-      <div className="grid grid-cols-1 gap-2 px-0 py-2 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto theme-violet home-panel bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] sm:rounded-[2rem]">
+      <div className="nfl-type-scale grid grid-cols-1 gap-2 px-0 py-2 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-5 xl:grid-cols-[236px_minmax(0,1fr)_324px] xl:gap-6 max-w-7xl mx-auto theme-violet home-panel bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.10),transparent_30%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.12),transparent_30%)] sm:rounded-[2rem]">
       {/* The site's name, and who publishes it (name, address and logo). */}
       <JsonLd data={[getWebsiteStructuredData(), organizationStructuredData(getSiteUrl())]} />
       {/* Left rail — desktop navigation. Shown from `xl`: below that the feed
@@ -710,21 +819,35 @@ export default async function Home() {
 
           <div id="people-you-may-know" className="scroll-mt-16 border-t border-gray-100 px-3 py-3 dark:border-slate-800">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">People you may know</h2>
-              <Link href="/discover" className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
+              <h2 className="text-xs font-black uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                {featuredPlayers.length > 0 ? 'Top Scorers & Leaders' : 'People you may know'}
+              </h2>
+              <Link href={featuredPlayers.length > 0 ? '/sports' : '/discover'} className="text-[11px] font-bold text-blue-600 dark:text-blue-400">See all</Link>
             </div>
             <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory overscroll-x-contain">
-              {otherUsers.slice(0, 6).map((u) => (
-                <Link key={u.id} href={profileHref(u)} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
-                  {u.avatar ? (
-                    <img src={u.avatar} alt={u.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
-                  ) : (
-                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-white dark:ring-slate-900">{u.name.charAt(0)}</div>
-                  )}
-                  <span className="mt-1 block truncate text-[11px] font-bold text-gray-900 dark:text-white">{u.name}</span>
-                  <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">View</span>
-                </Link>
-              ))}
+              {featuredPlayers.length > 0
+                ? featuredPlayers.slice(0, 10).map((p) => (
+                    <Link key={p.key} href={p.href} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
+                      {p.avatar ? (
+                        <img src={p.avatar} alt={p.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
+                      ) : (
+                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-white dark:ring-slate-900">{p.name.charAt(0)}</div>
+                      )}
+                      <span className="mt-1 block truncate text-[11px] font-bold text-gray-900 dark:text-white">{p.name}</span>
+                      <span className="block truncate text-[10px] font-semibold text-blue-600 dark:text-blue-400">{p.subtitle}</span>
+                    </Link>
+                  ))
+                : otherUsers.slice(0, 6).map((u) => (
+                    <Link key={u.id} href={profileHref(u)} className="w-[92px] shrink-0 snap-start rounded-2xl bg-gray-50 p-2 text-center ring-1 ring-gray-100 dark:bg-slate-800/80 dark:ring-slate-700">
+                      {u.avatar ? (
+                        <img src={u.avatar} alt={u.name} className="mx-auto h-11 w-11 rounded-full object-cover ring-2 ring-white dark:ring-slate-900" />
+                      ) : (
+                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white ring-2 ring-white dark:ring-slate-900">{u.name.charAt(0)}</div>
+                      )}
+                      <span className="mt-1 block truncate text-[11px] font-bold text-gray-900 dark:text-white">{u.name}</span>
+                      <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">View</span>
+                    </Link>
+                  ))}
             </div>
           </div>
 
@@ -820,41 +943,62 @@ export default async function Home() {
         {/* Trending Topics Widget — live hashtags computed from the posts above */}
         <TrendingTopics topics={trendingTopics} />
 
-        {/* Suggested People */}
+        {/* Top Scorers & Leaders (replaces Suggested People with same layout & size) */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/60">
           <h3 className="text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> People you may know
+            <Sparkles className="w-3.5 h-3.5 text-yellow-500" /> {featuredPlayers.length > 0 ? 'Top Scorers & Leaders' : 'People you may know'}
           </h3>
           <div className="space-y-3">
-            {otherUsers.slice(0, 4).map((u) => (
-              <div key={u.id} className="flex items-center justify-between">
-                <Link href={profileHref(u)} className="flex items-center space-x-2.5 min-w-0">
-                  {u.avatar ? (
-                    <img src={u.avatar} alt={u.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0">
-                      {u.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="font-semibold text-xs text-gray-900 dark:text-white truncate">{u.name}</div>
-                    {/* Bio only when this viewer can view the profile's details. */}
-                    <div className="text-[11px] text-gray-400 truncate max-w-[120px]">
-                      {canViewProfileDetails({
-                        isSelf: false,
-                        isFollower: followingIds.has(u.id),
-                        visibility: u.profileVisibility,
-                      })
-                        ? u.bio?.slice(0, 30) || 'Hyper user'
-                        : 'Hyper user'}
-                    </div>
+            {featuredPlayers.length > 0
+              ? featuredPlayers.slice(0, 6).map((p) => (
+                  <div key={p.key} className="flex items-center justify-between">
+                    <Link href={p.href} className="flex items-center space-x-2.5 min-w-0">
+                      {p.avatar ? (
+                        <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0">
+                          {p.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-semibold text-xs text-gray-900 dark:text-white truncate">{p.name}</div>
+                        <div className="text-[11px] text-gray-400 truncate max-w-[120px]">{p.subtitle}</div>
+                      </div>
+                    </Link>
+                    <Link href={p.href} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">
+                      View
+                    </Link>
                   </div>
-                </Link>
-                <Link href={profileHref(u)} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">
-                  View
-                </Link>
-              </div>
-            ))}
+                ))
+              : otherUsers.slice(0, 4).map((u) => (
+                  <div key={u.id} className="flex items-center justify-between">
+                    <Link href={profileHref(u)} className="flex items-center space-x-2.5 min-w-0">
+                      {u.avatar ? (
+                        <img src={u.avatar} alt={u.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0">
+                          {u.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-semibold text-xs text-gray-900 dark:text-white truncate">{u.name}</div>
+                        {/* Bio only when this viewer can view the profile's details. */}
+                        <div className="text-[11px] text-gray-400 truncate max-w-[120px]">
+                          {canViewProfileDetails({
+                            isSelf: false,
+                            isFollower: followingIds.has(u.id),
+                            visibility: u.profileVisibility,
+                          })
+                            ? u.bio?.slice(0, 30) || 'Hyper user'
+                            : 'Hyper user'}
+                        </div>
+                      </div>
+                    </Link>
+                    <Link href={profileHref(u)} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-lg shrink-0">
+                      View
+                    </Link>
+                  </div>
+                ))}
           </div>
         </div>
 
@@ -893,6 +1037,6 @@ export default async function Home() {
           nothing, and shows nothing when there is nothing to watch. */}
       <LiveStreamToast />
     </div>
-    </>
+    </HomeLeagueFilterProvider>
   );
 }

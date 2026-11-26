@@ -78,13 +78,20 @@ export function TipsSection({
    * the behaviour the empty state already had.
    */
   const oddsComparisons = oddsComparisonsProp ?? {};
+  const selectedDayDate = new Date(Date.now() + selectedDate * 86_400_000);
+  const headingText =
+    selectedDate === 0
+      ? "Today's featured tips"
+      : selectedDate === 1
+        ? "Tomorrow's featured tips"
+        : `Featured tips · ${selectedDayDate.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} ${selectedDayDate.getUTCDate()} ${selectedDayDate.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}`;
   return (
     <section id="tips" className="scroll-mt-16 relative overflow-hidden mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <FadeIn>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="section-heading text-2xl font-bold tracking-tight sm:text-3xl">
-              Today&apos;s featured tips
+            <h2 className="section-heading text-2xl font-bold tracking-tight sm:text-3xl" suppressHydrationWarning>
+              {headingText}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               A taste of what&apos;s inside. Sign up to unlock the full
@@ -98,7 +105,7 @@ export function TipsSection({
                   Live Data · {tipsCount} matches from ESPN
                 </span>
               )}
-              {apiStatus !== "live" && (
+              {apiStatus !== "live" && apiStatus !== "loading" && (
                 <span
                   className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                   title={apiNote ?? "Live fixtures unavailable — showing sample tips"}
@@ -141,11 +148,10 @@ export function TipsSection({
       <FadeIn delay={0.05}>
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {Array.from({ length: 7 }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() + i);
-            const dayName = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short" });
-            const dateNum = d.getDate();
-            const monthShort = d.toLocaleDateString("en-US", { month: "short" });
+            const d = new Date(Date.now() + i * 86_400_000);
+            const dayName = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+            const dateNum = d.getUTCDate();
+            const monthShort = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
             return (
               <button
                 key={i}
@@ -156,9 +162,9 @@ export function TipsSection({
                     : "bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:border-emerald-600 dark:hover:bg-slate-700"
                 }`}
               >
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${selectedDate === i ? "text-emerald-100" : "text-slate-400 dark:text-slate-500"}`}>{dayName}</span>
-                <span className="text-lg font-extrabold leading-tight">{dateNum}</span>
-                <span className={`text-[10px] font-medium ${selectedDate === i ? "text-emerald-200" : "text-slate-400 dark:text-slate-500"}`}>{monthShort}</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${selectedDate === i ? "text-emerald-100" : "text-slate-400 dark:text-slate-500"}`} suppressHydrationWarning>{dayName}</span>
+                <span className="text-lg font-extrabold leading-tight" suppressHydrationWarning>{dateNum}</span>
+                <span className={`text-[10px] font-medium ${selectedDate === i ? "text-emerald-200" : "text-slate-400 dark:text-slate-500"}`} suppressHydrationWarning>{monthShort}</span>
               </button>
             );
           })}

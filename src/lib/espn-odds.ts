@@ -33,7 +33,7 @@ export type OddsBoard = {
   matches: OddsMatch[]; sources: OddsSource[]; fetchedAt: string;
   status: 'ready' | 'partial' | 'empty' | 'unavailable'; truncated: boolean;
 };
-export type OddsRequest = { sports: SportKind[]; perLeague: number; days: number };
+export type OddsRequest = { sports: SportKind[]; perLeague: number; days: number; dayOffset?: number };
 export class OddsInputError extends Error {}
 
 export function object(value: unknown): Record<string, unknown> {
@@ -154,10 +154,15 @@ export function normalizeOddsRequest(input: unknown): OddsRequest {
   const cap = perLeague > 0 ? Math.min(Math.max(Math.floor(perLeague), 1), 30) : 0;
   const days = body.days === undefined ? 1 : number(body.days);
   if (cap && days === null) throw new OddsInputError('days must be a finite number');
-  return {
+  const dayOffsetRaw = body.dayOffset === undefined ? 0 : number(body.dayOffset);
+  if (body.dayOffset !== undefined && dayOffsetRaw === null) throw new OddsInputError('dayOffset must be a finite number');
+  const dayOffset = Math.min(Math.max(Math.floor(dayOffsetRaw || 0), 0), 9);
+  const request: OddsRequest = {
     sports: [...new Set(requested as SportKind[])].sort(), perLeague: cap,
     days: cap ? Math.min(Math.max(Math.floor(days || 1), 1), 10) : 1,
   };
+  if (dayOffset > 0) request.dayOffset = dayOffset;
+  return request;
 }
 
 function logo(value: unknown): string | null {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Music, Play, X } from 'lucide-react';
 import { resolveLinkMedia, type LinkMedia } from '@/lib/link-media';
 
@@ -22,6 +22,7 @@ export default function LinkMediaPlayer({
   media,
   poster,
   preload,
+  autoPlay = false,
   durationLabel,
   onError,
   onRemove,
@@ -32,6 +33,8 @@ export default function LinkMediaPlayer({
   poster?: string | null;
   /** How much of a direct video file to fetch before it is played. */
   preload?: 'none' | 'metadata' | 'auto';
+  /** Auto-play muted when the video is visible in the viewport. */
+  autoPlay?: boolean;
   /** Length shown as a badge on the media, e.g. "2:34". */
   durationLabel?: string | null;
   /** Called when the media itself fails to load, so the caller can fall back. */
@@ -41,6 +44,37 @@ export default function LinkMediaPlayer({
   const resolved = useMemo(() => media ?? resolveLinkMedia(url), [media, url]);
   const [playing, setPlaying] = useState(false);
   const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!autoPlay || resolved?.kind !== 'video' || failed) return;
+    const video = videoRef.current;
+    if (!video || typeof window === 'undefined') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      video.play().catch(() => undefined);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+            video.play().catch(() => undefined);
+          } else {
+            video.pause();
+          }
+        }
+      },
+      { threshold: [0, 0.6] },
+    );
+    observer.observe(video);
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, [autoPlay, resolved?.kind, failed]);
 
   // Twitch needs the embedding page's hostname; only known at runtime.
   const src = useMemo(() => {
@@ -76,10 +110,12 @@ export default function LinkMediaPlayer({
         {/* ── Direct video file ─────────────────────────────────────────── */}
         {resolved.kind === 'video' && (
           <video
+            ref={videoRef}
             src={src}
             poster={poster ?? undefined}
             controls
             playsInline
+            muted={autoPlay}
             preload={preload ?? 'metadata'}
             className="block w-full max-h-[min(70vh,520px)] object-contain bg-black"
             onError={() => { setFailed(true); onError?.(); }}

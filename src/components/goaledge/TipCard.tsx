@@ -101,15 +101,40 @@ export function TipCard({
       </div>
 
       {/* Match */}
-      <div className="mt-4">
-        <div className="flex items-center gap-2.5">
+      <div className="mt-3 sm:mt-4">
+        {/* Mobile: stacked rows so each team gets full width with aligned crests */}
+        <div className="flex flex-col gap-1.5 sm:hidden">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {tip.homeTeamCrest ? (
+              <img src={tip.homeTeamCrest} alt="" className="h-5 w-5 shrink-0 object-contain" />
+            ) : (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs dark:bg-slate-800">{tip.flag}</span>
+            )}
+            <p className="min-w-0 flex-1 truncate text-xs font-bold leading-tight text-slate-900 dark:text-slate-50">
+              {tip.homeTeam}
+            </p>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            {tip.awayTeamCrest ? (
+              <img src={tip.awayTeamCrest} alt="" className="h-5 w-5 shrink-0 object-contain" />
+            ) : (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs dark:bg-slate-800">{tip.flag}</span>
+            )}
+            <p className="min-w-0 flex-1 truncate text-xs font-bold leading-tight text-slate-900 dark:text-slate-50">
+              {tip.awayTeam}
+            </p>
+          </div>
+        </div>
+
+        {/* Tablet/Desktop: horizontal Home vs Away with crests */}
+        <div className="hidden items-center gap-2.5 sm:flex">
           {tip.homeTeamCrest ? (
-            <img src={tip.homeTeamCrest} alt="" className="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7" />
+            <img src={tip.homeTeamCrest} alt="" className="h-7 w-7 shrink-0 object-contain" />
           ) : (
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800 sm:h-7 sm:w-7">{tip.flag}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800">{tip.flag}</span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 break-words text-sm font-bold leading-snug sm:text-base text-slate-900 dark:text-slate-50">
+            <p className="line-clamp-2 break-words text-base font-bold leading-snug text-slate-900 dark:text-slate-50">
               {tip.homeTeam}{" "}
               <span className="mx-1 text-sm font-medium text-slate-300 dark:text-slate-600">
                 vs
@@ -118,14 +143,14 @@ export function TipCard({
             </p>
           </div>
           {tip.awayTeamCrest ? (
-            <img src={tip.awayTeamCrest} alt="" className="h-6 w-6 shrink-0 object-contain sm:h-7 sm:w-7" />
+            <img src={tip.awayTeamCrest} alt="" className="h-7 w-7 shrink-0 object-contain" />
           ) : (
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800 sm:h-7 sm:w-7">{tip.flag}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm dark:bg-slate-800">{tip.flag}</span>
           )}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 dark:text-slate-500">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-400 dark:text-slate-500 sm:gap-x-3 sm:text-xs">
           <span className="inline-flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             {tip.matchTime}
           </span>
           <MatchCountdown matchTime={tip.matchTime} />
@@ -133,16 +158,16 @@ export function TipCard({
       </div>
 
       {/* Prediction */}
-      <div className="relative mt-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-2.5 transition sm:p-3.5 hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-800">
-        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
-          <Target className="h-3.5 w-3.5" />
+      <div className="relative mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-2.5 transition sm:mt-4 sm:p-3.5 hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-emerald-800">
+        <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-slate-400 sm:text-xs">
+          <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           {tip.predictionType}
         </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <p className="min-w-0 flex-1 break-words text-sm font-bold text-slate-900 dark:text-slate-100">
+        <div className="mt-1 flex items-center justify-between gap-1.5 sm:gap-2">
+          <p className="min-w-0 flex-1 break-words text-xs font-bold leading-snug text-slate-900 dark:text-slate-100 sm:text-sm">
             {tip.prediction}
           </p>
-          <span className={`shrink-0 rounded-lg bg-white px-2 py-1 text-sm font-bold ring-1 ring-slate-200 dark:bg-slate-700 dark:ring-slate-600 ${liveOddsData?.direction === "up" ? "text-emerald-600 odds-flash-up dark:text-emerald-400" : liveOddsData?.direction === "down" ? "text-red-500 odds-flash-down dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+          <span className={`shrink-0 rounded-lg bg-white px-1.5 py-0.5 text-xs font-bold ring-1 ring-slate-200 dark:bg-slate-700 dark:ring-slate-600 sm:px-2 sm:py-1 sm:text-sm ${liveOddsData?.direction === "up" ? "text-emerald-600 odds-flash-up dark:text-emerald-400" : liveOddsData?.direction === "down" ? "text-red-500 odds-flash-down dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
             {currentOdds}
             {liveOddsData ? (
               <TrendingUp className={`ml-0.5 inline h-3 w-3 ${liveOddsData.direction === "down" ? "rotate-180 text-red-400" : "text-emerald-500"}`} />

@@ -85,9 +85,8 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
         url={espnHref}
         media={clipMedia(clip)}
         poster={clip.thumbnail}
-        // A board of cards must not pull a dozen streams on page load; the
-        // poster carries the card until the reader presses play.
-        preload="none"
+        preload="metadata"
+        autoPlay
         durationLabel={durationLabel}
         onError={() => setUnplayable(true)}
       />

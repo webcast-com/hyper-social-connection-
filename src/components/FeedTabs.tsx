@@ -13,6 +13,44 @@ import EmptyState from '@/components/EmptyState';
 import { summariseLiveCards } from '@/lib/match-centre';
 import { FEED_RENDER_BATCH } from '@/lib/feed-interleave';
 import InfiniteSentinel from '@/components/InfiniteSentinel';
+import { useHomeLeagueFilter } from '@/components/HomeLeagueFilter';
+
+function normalizeLeagueKey(value?: string | null): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function postMatchesLeague(post: any, selectedLeague: string): boolean {
+  const target = normalizeLeagueKey(selectedLeague);
+  if (!target) return true;
+  if (post.type === 'sports') {
+    return (
+      normalizeLeagueKey(post.event?.leagueName) === target ||
+      normalizeLeagueKey(post.event?.league) === target ||
+      normalizeLeagueKey(post.event?.sport) === target
+    );
+  }
+  if (post.type === 'prediction') {
+    return (
+      normalizeLeagueKey(post.prediction?.competition) === target ||
+      normalizeLeagueKey(post.prediction?.federation) === target
+    );
+  }
+  if (post.type === 'highlight' || post.type === 'video-news') {
+    return (
+      normalizeLeagueKey(post.clip?.leagueName) === target ||
+      normalizeLeagueKey(post.clip?.league) === target ||
+      normalizeLeagueKey(post.clip?.sport) === target
+    );
+  }
+  if (post.type === 'leaders' && Array.isArray(post.boards)) {
+    return post.boards.some(
+      (b: any) =>
+        normalizeLeagueKey(b?.leagueName) === target ||
+        normalizeLeagueKey(b?.sport) === target,
+    );
+  }
+  return false;
+}
 
 type Tab = 'for-you' | 'following' | 'live' | 'highlights';
 
@@ -72,11 +110,15 @@ export default function FeedTabs({
   const select = (tab: Tab) => { setActiveTab(tab); setRevealed(FEED_RENDER_BATCH); };
 
   const bookmarkedSet = new Set(bookmarkedPostIds);
+  const { selectedLeague } = useHomeLeagueFilter();
 
-  const postsToRender =
+  const rawPostsToRender =
     activeTab === 'for-you' ? forYouPosts :
     activeTab === 'following' ? followingPosts :
     activeTab === 'live' ? livePosts : highlightPosts;
+  const postsToRender = selectedLeague
+    ? rawPostsToRender.filter((post) => postMatchesLeague(post, selectedLeague))
+    : rawPostsToRender;
   const shown = postsToRender.slice(0, revealed);
   const remaining = postsToRender.length - shown.length;
 
@@ -95,7 +137,7 @@ export default function FeedTabs({
           its own label needs (`flex-auto`), because four equal quarters of a
           320px column are too narrow for "Highlights"; from `sm` up they are
           equal again. */}
-      <div role="group" aria-label="Feed sections" className="mx-3 sm:mx-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-16 z-20 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
+      <div role="group" aria-label="Feed sections" className="mx-3 sm:mx-0 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700/60 p-1.5 flex items-center justify-around sticky top-[calc(var(--home-league-bar-h,7.25rem)+0.5rem)] z-30 backdrop-blur-md bg-white/90 dark:bg-gray-800/90">
         <button
           type="button"
           onClick={() => select('for-you')}

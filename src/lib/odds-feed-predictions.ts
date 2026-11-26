@@ -13,6 +13,7 @@
 import type { OddsBoard, OddsMatch } from './espn-odds';
 import type { SportsPrediction } from './sports';
 import { SPORT_LABELS } from './sports-catalog';
+import { matchToTip } from './goaledge-tip';
 
 export const MAX_FEED_PREDICTIONS = 8;
 
@@ -50,6 +51,7 @@ export function oddsFeedPredictions(board: OddsBoard | null | undefined, limit =
       prediction: pick.label,
       winOdds: pick.odds.toFixed(2),
       competition: match.league,
+      tip: matchToTip(match),
     });
   }
   return predictions;

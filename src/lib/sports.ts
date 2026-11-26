@@ -12,6 +12,7 @@ import {
 import { fetchEspnScoreboard } from './espn-client';
 import { espnFailureDetails, espnSportsScoreboardUrl, type EspnEndpointDetails } from './espn-endpoints';
 import type { MatchReference } from './espn-match';
+import type { Tip } from '@/types/goaledge';
 export type { SportKind } from './sports-catalog';
 
 export type EventStatus = 'live' | 'upcoming' | 'final';
@@ -58,6 +59,8 @@ export type SportsPrediction = {
   prediction: string;
   winOdds?: string | null;
   competition?: string | null;
+  /** Full GoalEdge tip payload when derived from the ESPN odds board. */
+  tip?: Tip;
 };
 
 export type SportsSourceReport = Partial<EspnEndpointDetails> & {
