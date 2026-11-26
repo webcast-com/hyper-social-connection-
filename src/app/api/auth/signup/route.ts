@@ -6,8 +6,11 @@ import { ensureSeeded } from '@/lib/seed';
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const name = String(body.name || '').trim();
-  const email = String(body.email || '').trim().toLowerCase();
+  const username = String(body.username || '').trim();
+  const name = String(body.name || username || '').trim();
+  const rawEmail = String(body.email || '').trim().toLowerCase();
+  const normalizedUsername = username.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+  const email = rawEmail || (normalizedUsername ? `${normalizedUsername}@username.local` : '');
   const password = String(body.password || '');
 
   try {

@@ -13,6 +13,7 @@ const FEATURES = [
 export default function Login() {
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
+  const [usernameMode, setUsernameMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
@@ -32,16 +33,18 @@ export default function Login() {
     ev.preventDefault();
     setLoading(true);
     setError('');
-    const res = await fetch('/api/auth/login', {
+    const endpoint = usernameMode ? '/api/auth/signup' : '/api/auth/login';
+    const payload = usernameMode ? { username: email, password } : { email, password };
+    const res = await fetch(endpoint, {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
     });
     if (res.ok) {
       window.location.assign('/');
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data?.error || 'Invalid email or password.');
+      setError(data?.error || (usernameMode ? 'Could not create account.' : 'Invalid email/username or password.'));
       setLoading(false);
     }
   };
@@ -117,12 +120,12 @@ export default function Login() {
             <div className="relative">
               <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
-                type="email"
-                placeholder="Email address"
+                type="text"
+                placeholder={usernameMode ? 'Choose a username' : 'Email or username'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete={usernameMode ? 'username' : 'email'}
                 className={inputCls}
               />
             </div>
@@ -164,7 +167,14 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="text-center mt-3">
+          <div className="text-center mt-3 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setUsernameMode((v) => !v); setError(''); }}
+              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              {usernameMode ? 'Back to Sign In' : 'Quick sign up with username & password'}
+            </button>
             <Link href="/login" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
               Forgot password?
             </Link>
