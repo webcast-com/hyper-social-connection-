@@ -16,7 +16,7 @@ Runs on **any PostgreSQL database** — Neon, AWS RDS, Railway, DigitalOcean, Su
 - **Movies API** — searchable, paginated demo catalog at `/api/movies`
 - **Profiles** — cover photo, avatar, bio, photo grid, followers
 - **Search** — people and posts, with trending topics computed from real hashtag usage
-- **Sports** — live scores and fixtures from ESPN (`/sports`); upcoming ESPN-reported bookmaker odds on the predictions page (`/sports/predictions`), with sport/date-query filters and manual refresh; no RapidAPI integration; live availability depends on ESPN/network access (see [odds checks](ESPN_ODDS_CHECKS.md), the [all-sports endpoint/404 audit](ESPN_ENDPOINT_AUDIT.md), and [HTTP 403 access-denial checks](ESPN_ACCESS_DENIED.md))
+- **Sports** — live scores and fixtures from ESPN (`/sports`); upcoming ESPN-reported bookmaker odds on the predictions page (`/sports/predictions`), with sport/date-query filters and manual refresh; no RapidAPI integration; live availability depends on ESPN/network access (see [odds checks](ESPN_ODDS_CHECKS.md), the [all-sports endpoint/404 audit](ESPN_ENDPOINT_AUDIT.md), and [HTTP 403 access-denial checks](ESPN_ACCESS_DENIED.md)). Locked **Pro tips** unlock with a $0.99/month PayPal subscription — see [PAYPAL_PAYMENTS.md](PAYPAL_PAYMENTS.md)
 - **Notifications** — likes, comments, follows, messages, reposts with unread badges
 - **Dark mode** — fully themed, respects system preference, no flash on load
 - **PWA** — installable via `manifest.webmanifest`
@@ -103,6 +103,9 @@ Works anywhere Next.js runs. On **Vercel**:
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Object store for media (`PRISMA_BUCKET_*` aliases are accepted). |
 | `S3_REGION`, `S3_FORCE_PATH_STYLE` | Usually `auto` and `true` for S3-compatible providers. |
 | `ALLOW_DEMO_SEED` | Set `true` **only** for demo instances — see below. |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | PayPal app credentials for **Hyper Pro** ($0.99/month predictions tips). Optional — without them the Pro paywall renders a "payments not configured" notice. See [PAYPAL_PAYMENTS.md](PAYPAL_PAYMENTS.md). |
+| `PAYPAL_ENV` | `sandbox` (default) or `live`. |
+| `PAYPAL_PLAN_ID`, `PAYPAL_WEBHOOK_ID` | Optional — the $0.99/month plan is auto-created and cached on first use; set the webhook id to sync renewals/cancellations automatically. |
 
 Notes that matter on serverless:
 

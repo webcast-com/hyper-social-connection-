@@ -3,6 +3,8 @@ import { getPageMetadata } from '@/lib/seo';
 import { getEspnOdds } from '@/lib/espn-odds-feed';
 import type { OddsBoard } from '@/lib/espn-odds';
 import SportsPredictionsTips from '@/components/goaledge/SportsPredictionsTips';
+import { getViewer } from '@/lib/viewer';
+import { isProUser } from '@/lib/paypal';
 import { getSiteUrl } from '@/lib/site-url';
 import { HOME_CRUMB, SPORTS_CRUMB, breadcrumbStructuredData } from '@/lib/structured-data';
 import JsonLd from '@/components/JsonLd';
@@ -48,18 +50,22 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export default async function SportsPredictionsPage() {
-  const initial = await getEspnOdds().catch((): OddsBoard => ({
-    matches: [],
-    sources: [],
-    fetchedAt: new Date().toISOString(),
-    status: 'unavailable',
-    truncated: false,
-  }));
+  const [initial, viewer] = await Promise.all([
+    getEspnOdds().catch((): OddsBoard => ({
+      matches: [],
+      sources: [],
+      fetchedAt: new Date().toISOString(),
+      status: 'unavailable',
+      truncated: false,
+    })),
+    getViewer(),
+  ]);
+  const isPro = viewer ? await isProUser(viewer.id).catch(() => false) : false;
 
   return (
     <>
       <JsonLd data={breadcrumbStructuredData([HOME_CRUMB, SPORTS_CRUMB, { name: 'Predictions', path: '/sports/predictions' }], getSiteUrl())} />
-      <SportsPredictionsTips initial={initial} />
+      <SportsPredictionsTips initial={initial} isPremium={isPro} />
     </>
   );
 }
