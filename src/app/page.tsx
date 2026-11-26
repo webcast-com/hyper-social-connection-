@@ -38,7 +38,7 @@ import { anchorKey, anchorRef, highlightAnchorId } from '@/lib/sports-anchor';
 import { getSportsVideoNewsForRender, MAX_FEED_CLIPS } from '@/lib/espn-video-news-feed';
 import { getSportsNews } from '@/lib/espn-news-feed';
 import { ESPN_LEAGUES } from '@/lib/sports-catalog';
-import { HIGHLIGHTS_FEED_SLOTS, interleaveFeedCards, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
+import { HIGHLIGHTS_FEED_SLOTS, interleaveFeedCards, PREDICTION_FEED_SLOTS, SPORTS_FEED_SLOTS, VIDEO_NEWS_FEED_SLOTS } from '@/lib/feed-interleave';
 
 export const metadata = getHomeMetadata(SPORTS_KEYWORDS);
 
@@ -555,7 +555,11 @@ export default async function Home() {
   const forYouPosts = interleaveFeedCards(
     interleaveFeedCards(
       interleaveFeedCards(
-        interleaveFeedCards(visiblePosts, [...sportsFeedPosts, ...predictionFeedPosts], SPORTS_FEED_SLOTS),
+        interleaveFeedCards(
+          interleaveFeedCards(visiblePosts, sportsFeedPosts, SPORTS_FEED_SLOTS),
+          predictionFeedPosts,
+          PREDICTION_FEED_SLOTS,
+        ),
         videoNewsFeedPosts,
         VIDEO_NEWS_FEED_SLOTS,
       ),
@@ -666,6 +670,25 @@ export default async function Home() {
     'eredivisie': 'https://a.espncdn.com/i/leaguelogos/soccer/500/11.png',
     'liga mx': 'https://a.espncdn.com/i/leaguelogos/soccer/500/22.png',
     'copa libertadores': 'https://a.espncdn.com/i/leaguelogos/soccer/500/13.png',
+    'epl': 'https://a.espncdn.com/i/leaguelogos/soccer/500/23.png',
+    'ucl': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2.png',
+    'uel': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2310.png',
+    'uefa europa conference league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/20296.png',
+    'europa conference league': 'https://a.espncdn.com/i/leaguelogos/soccer/500/20296.png',
+    'efl cup': 'https://a.espncdn.com/i/leaguelogos/soccer/500/41.png',
+    'carabao cup': 'https://a.espncdn.com/i/leaguelogos/soccer/500/41.png',
+    'copa del rey': 'https://a.espncdn.com/i/leaguelogos/soccer/500/80.png',
+    'coppa italia': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2192.png',
+    'dfb-pokal': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2061.png',
+    'dfb pokal': 'https://a.espncdn.com/i/leaguelogos/soccer/500/2061.png',
+  };
+
+  const resolveLeagueLogo = (key: string): string | null => {
+    if (LEAGUE_LOGOS[key]) return LEAGUE_LOGOS[key];
+    for (const [pattern, url] of Object.entries(LEAGUE_LOGOS)) {
+      if (pattern.length >= 4 && key.includes(pattern)) return url;
+    }
+    return null;
   };
 
   const leagueCounts = new Map<string, HomeLeagueItem>();
@@ -681,7 +704,7 @@ export default async function Home() {
         id: key,
         name,
         count: 1,
-        logo: LEAGUE_LOGOS[key] ?? null,
+        logo: resolveLeagueLogo(key),
       });
     }
   };

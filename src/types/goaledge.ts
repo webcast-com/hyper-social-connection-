@@ -67,6 +67,7 @@ export interface EspnRef {
 }
 
 export interface Tip {
+  oddsComparison?: OddsComparison | null;
   id: string;
   homeTeam: string;
   awayTeam: string;

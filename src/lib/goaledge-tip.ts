@@ -1,6 +1,6 @@
 import type { OddsMatch } from "@/lib/espn-odds";
 import type { SportsPrediction } from "@/lib/sports";
-import type { Tip } from "@/types/goaledge";
+import type { OddsComparison, OddsComparisonBookmaker, Tip } from "@/types/goaledge";
 
 const SPORT_FLAG: Record<string, string> = {
   football: "⚽",
@@ -58,6 +58,29 @@ function formatMatchTime(iso: string): string {
   return `${day} ${month}, ${hh}:${mm} UTC`;
 }
 
+function buildOddsComparison(match: OddsMatch, baseOdds: number, market: string): OddsComparison | null {
+  const providers = match.odds.bookmakers;
+  if (!providers || providers.length === 0) return null;
+  const side: 'home' | 'draw' | 'away' =
+    match.odds.draw && match.odds.draw > 1 && (!match.odds.home || match.odds.draw <= match.odds.home) && (!match.odds.away || match.odds.draw <= match.odds.away)
+      ? 'draw'
+      : !match.odds.away || (match.odds.home && match.odds.home <= match.odds.away)
+        ? 'home'
+        : 'away';
+  const entries: OddsComparisonBookmaker[] = [];
+  for (const row of providers) {
+    const price = row[side];
+    if (typeof price === 'number' && Number.isFinite(price) && price > 1) {
+      entries.push({ bookmaker: row.provider, odds: price });
+    }
+  }
+  if (entries.length === 0) return null;
+  const maxOdds = Math.max(...entries.map((e) => e.odds));
+  const bookmakers = entries.map((e) => ({ ...e, isBest: e.odds === maxOdds }));
+  const best = bookmakers.find((e) => e.isBest) ?? bookmakers[0];
+  return { tipId: match.id, market, bookmakers, best, baseOdds };
+}
+
 export function matchToTip(match: OddsMatch): Tip {
   const { prediction, predictionType, confidence } = pickPrediction(match);
   const bestOdds = [match.odds.home, match.odds.draw, match.odds.away]
@@ -82,6 +105,7 @@ export function matchToTip(match: OddsMatch): Tip {
     status: "upcoming",
     isPremium: Boolean(match.is_premium),
     tipster: match.odds.provider ? `${match.odds.provider} odds` : "ESPN odds",
+    oddsComparison: buildOddsComparison(match, Number(oddsStr) || 0, predictionType),
     homeTeamCrest: match.home_logo ?? null,
     awayTeamCrest: match.away_logo ?? null,
     homeForm: [],

@@ -15,12 +15,20 @@ export const ODDS_LEAGUES = ESPN_LEAGUES.filter((league) => league.kind !== 'mot
 }));
 export type OddsLeague = typeof ODDS_LEAGUES[number];
 export const ODDS_SPORTS = [...new Set(ODDS_LEAGUES.map((league) => league.sport))];
+export type MatchBookmakerOdds = {
+  provider: string;
+  home: number | null;
+  draw: number | null;
+  away: number | null;
+};
+
 export type MatchOdds = {
   home: number | null; away: number | null; draw: number | null;
   over_under: number | null; spread: number | null; provider: string | null;
   // Optional for compatibility with previously rendered/cached boards.
   spread_home_odds?: number | null; spread_away_odds?: number | null;
   over_odds?: number | null; under_odds?: number | null;
+  bookmakers?: MatchBookmakerOdds[];
 };
 export type OddsMatch = {
   details?: MatchReference;
@@ -101,6 +109,8 @@ function oddsProviderName(provider: unknown): string | null {
 export function mapOdds(competition: unknown): MatchOdds {
   const raw = field(competition, 'odds');
   const rows = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  let primary: MatchOdds | null = null;
+  const bookmakers: MatchBookmakerOdds[] = [];
   for (const row of rows) {
     const money = (side: string) => {
       const legacy = field(row, side === 'draw' ? 'drawOdds' : `${side}TeamOdds`) ?? field(row, `${side}TeamOdds`);
@@ -132,7 +142,20 @@ export function mapOdds(competition: unknown): MatchOdds {
       ...(under !== null ? { under_odds: under } : {}),
     };
     // Do not combine prices from different bookmakers, or invent missing markets.
-    if (hasOdds(odds)) return odds;
+    if (hasOdds(odds)) {
+      if (!primary) primary = odds;
+      if (odds.provider) {
+        bookmakers.push({
+          provider: odds.provider,
+          home: odds.home,
+          draw: odds.draw,
+          away: odds.away,
+        });
+      }
+    }
+  }
+  if (primary) {
+    return bookmakers.length > 0 ? { ...primary, bookmakers } : primary;
   }
   return { home: null, away: null, draw: null, over_under: null, spread: null, provider: null };
 }

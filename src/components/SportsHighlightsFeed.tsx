@@ -71,8 +71,6 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
 }) {
   // Always somewhere on this site, so the card never navigates the reader away.
   const cardHref = matchHrefFor(clip);
-  // ESPN's own clip page, offered as a labelled link rather than a redirect.
-  const espnHref = clip.page ?? cardHref;
   // A file ESPN will not serve for this reader (their renditions are
   // geo-restricted per competition) leaves the player and shows the thumbnail.
   const [unplayable, setUnplayable] = useState(false);
@@ -82,7 +80,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
     // Above the card-wide link, so the player's own controls stay clickable.
     <div className="relative z-10">
       <LinkMediaPlayer
-        url={espnHref}
+        url={cardHref}
         media={clipMedia(clip)}
         poster={clip.thumbnail}
         preload="metadata"
@@ -117,19 +115,6 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
           {durationLabel}
         </span>
       ) : null}
-      {clip.page && (
-        <a
-          href={clip.page}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute inset-0 z-10 flex items-center justify-center"
-          aria-label={`Watch ${clip.title} on ESPN`}
-        >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-transform group-hover:scale-105">
-            <Play className="ml-0.5 h-6 w-6 fill-current" />
-          </span>
-        </a>
-      )}
     </div>
   );
 
@@ -144,13 +129,12 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
       subtitle={`${clip.leagueName} · ${STATUS_LABEL[clip.status]}`}
       body={clip.description ? `${clip.title} — ${clip.description}` : clip.title}
       media={media}
-      details={durationLabel ? [{ label: 'Length', value: durationLabel }] : []}
+      details={[]}
       likeLabel={`Like ${clip.title}`}
       anchor={anchor}
       engagement={engagement}
       signedIn={signedIn}
       dense={dense}
-      permalink={{ href: clipHref(clip), label: 'Highlight page' }}
       shareNoun="highlight"
       shareImage={clip.thumbnail}
       menuLinks={[

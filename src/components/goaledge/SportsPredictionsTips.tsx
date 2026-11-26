@@ -118,7 +118,13 @@ export default function SportsPredictionsTips({
     }
   }, []);
 
-  const oddsComparisons = useMemo<Record<string, OddsComparison>>(() => ({}), []);
+  const oddsComparisons = useMemo<Record<string, OddsComparison>>(() => {
+    const map: Record<string, OddsComparison> = {};
+    for (const tip of tips) {
+      if (tip.oddsComparison) map[tip.id] = tip.oddsComparison;
+    }
+    return map;
+  }, [tips]);
 
   return (
     <div className="min-w-0">

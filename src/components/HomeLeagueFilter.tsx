@@ -118,7 +118,6 @@ export function HomeLeagueFilterBar({
                       src={league.logo!}
                       alt=""
                       className="h-full w-full object-contain"
-                      loading="lazy"
                       onError={() =>
                         setFailedLogos((prev) => ({ ...prev, [league.id]: true }))
                       }

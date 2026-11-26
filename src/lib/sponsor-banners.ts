@@ -38,6 +38,21 @@ export const SPONSOR_BANNERS: readonly SponsorBanner[] = [
     href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
     video: 'https://1w-aff.run/promo-files-uploads/2b95b9df4b0f8070e078b4faf542d1b69d258cb6cce655374e.mp4',
   },
+  {
+    id: 'gainrock',
+    href: 'https://gainrock.com/?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
+    image: 'https://gainrock.com/img/banners/gr/banner_gainrock_728x90.jpg',
+  },
+  {
+    id: 'adsy-marketers',
+    href: 'https://ref.adsy.com/marketers?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
+    image: 'https://gainrock.com/img/banners/adsy/marketers/Banner_Promote_728x90.jpg',
+  },
+  {
+    id: 'magenet',
+    href: 'https://www.magenet.com/?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
+    image: 'https://gainrock.com/img/banners/mn/728x90-Monetize_Your_Website.gif',
+  },
 ];
 
 /**

@@ -14,8 +14,11 @@
  * what the For You tab inserts.
  */
 
-/** Slots for the match and prediction cards, in the order they are built. */
+/** Slots for the match cards, in the order they are built. */
 export const SPORTS_FEED_SLOTS: readonly number[] = [1, 3, 5, 7];
+
+/** Slots for prediction / tip cards, in their own pass so match volume never pushes them to the bottom. */
+export const PREDICTION_FEED_SLOTS: readonly number[] = [8, 16];
 
 /**
  * Slots for league video news clips.
