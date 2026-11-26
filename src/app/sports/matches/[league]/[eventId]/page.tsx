@@ -133,7 +133,7 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
     source: { ok: false, url: resolved.url, httpStatus: null, error: 'Loading browser feed' } };
 
   return (
-    <>
+    <div className="nfl-type-scale">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structured).replace(/</g, '\\u003c') }}
@@ -197,6 +197,6 @@ export default async function MatchDetailsPage({ params, searchParams }: Props) 
         // instead of saying it is still loading something the server already knew.
         knownTitle={facts?.eventName ?? null}
       />
-    </>
+    </div>
   );
 }

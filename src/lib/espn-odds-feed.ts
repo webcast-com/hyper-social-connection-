@@ -23,7 +23,9 @@ async function fetchBoard(request: OddsRequest): Promise<OddsBoard> {
   const seen = new Set<string>();
   const counts = new Map<string, number>();
   let truncated = false;
-  outer: for (let offset = 0; offset < request.days; offset++) {
+  const startOffset = request.dayOffset ?? 0;
+  outer: for (let step = 0; step < request.days; step++) {
+    const offset = startOffset + step;
     const pending = leagues.filter((league) => !request.perLeague || (counts.get(league.path) || 0) < request.perLeague);
     if (!pending.length) break;
     for (let i = 0; i < pending.length; i += BATCH_SIZE) {
