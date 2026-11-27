@@ -42,6 +42,7 @@ const setTeam = (node, team) => {
   else node.replaceChildren(crest, document.createTextNode(' ' + team.name));
 };
 const detailHref = e => e.details && /^[a-z0-9-]+$/.test(e.details.league) && /^[1-9]\d{0,19}$/.test(e.details.eventId) ? `/sports/matches/${encodeURIComponent(e.details.league)}/${encodeURIComponent(e.details.eventId)}` : null;
+const scoreHubMatchPageHref = e => detailHref(e) ? `/scorehub/match.htm?league=${encodeURIComponent(e.details.league)}&eventId=${encodeURIComponent(e.details.eventId)}` : null;
 const isToday = e => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date(e.startAt)) === new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
 // Sharing, short TTLs and a bounded queue avoid one unbounded fan-out of
 // summaries when a scoreboard has hundreds of cards. The server also caches.
@@ -127,6 +128,7 @@ function renderMatches() {
     $('.match-scoreline > strong', card).textContent = score(e);
     const star = $('.star', card); star.classList.toggle('favorited', favorites.has(e.id)); star.textContent = favorites.has(e.id) ? '★' : '☆'; star.setAttribute('aria-pressed', String(favorites.has(e.id)));
     const details = $('.match-actions button:not(.star)', card); details.disabled = !detailHref(e); details.title = detailHref(e) ? 'Show match statistics' : 'Match details unavailable';
+    const fullPage = document.createElement('a'); fullPage.className = 'full-match-link'; fullPage.href = scoreHubMatchPageHref(e) || '#'; fullPage.textContent = '↗'; fullPage.setAttribute('aria-label', 'Open full match details'); fullPage.title = 'Open full match details'; fullPage.style.cssText = 'color:var(--green);font-size:12px;font-weight:800;padding:0 3px'; fullPage.hidden = !scoreHubMatchPageHref(e); $('.match-actions', card).append(fullPage);
     renderCardStats(card, null);
     list.append(card);
     if (cardObserver) cardObserver.observe(card); else loadCardStats(card, e);
@@ -146,6 +148,8 @@ function renderFeature() {
   }
   $('.event-list').replaceChildren();
   const note = document.createElement('span'); note.textContent = e ? 'Scores provided by ESPN' : 'Try another filter or check again later.'; $('.event-list').append(note);
+  const fullMatch = scoreHubMatchPageHref(e || {});
+  if (fullMatch) { const link = document.createElement('a'); link.href = fullMatch; link.textContent = 'Open match centre →'; link.setAttribute('aria-label', `Open ${e.away.name} versus ${e.home.name} match centre`); link.style.cssText = 'color:var(--green);font-size:9px;font-weight:700;margin-top:5px'; $('.event-list').append(link); }
   const selected = candidates.find(item => item.id === selectedDetailId);
   renderStatistics(selected || e);
 }
