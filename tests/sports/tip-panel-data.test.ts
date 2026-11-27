@@ -59,6 +59,6 @@ test('head-to-head tallies mutual meetings from the home side and never invents 
   const meetings = [game('1', '2', '0', true), game('2', '1', '1', null), game('3', '0', '1', false, true)];
   const { text, record } = buildHeadToHead(meetings, '10', 'Arsenal', 'Chelsea');
   assert.deepEqual(record, { games: 3, homeWins: 1, awayWins: 1, draws: 1 });
-  assert.match(text!, /Last 3 ESPN-recorded meetings: Arsenal won 1, 1 drawn, Chelsea won 1\./);
+  assert.match(text!, /Last 3 recorded meetings: Arsenal won 1, 1 drawn, Chelsea won 1\./);
   assert.deepEqual(buildHeadToHead([], '10', 'A', 'B'), { text: null, record: null });
 });

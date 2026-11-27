@@ -101,13 +101,10 @@ test('a clip card shows a poster and asks for the file only when a reader plays 
     assert.ok(chips.includes('Arsenal') && chips.includes('Brighton'));
     assert.ok(!card.textContent.includes('Arsenal vs Brighton'), 'no fixture is inferred from a league clip');
 
-    // The way out to the original is labelled and leaves the site honestly.
+    // No external ESPN clip link is shown; the league link stays on Hyper.
     const espn = [...card.querySelectorAll('a')].filter((node: any) => node.getAttribute('href') === 'https://www.espn.com/video/clip/_/id/49983806');
-    assert.equal(espn.length, 1, 'one labelled ESPN link before play');
-    assert.equal(espn[0].getAttribute('target'), '_blank');
-    assert.match(espn[0].getAttribute('rel'), /noopener/);
-    assert.equal(espn[0].getAttribute('href'), clip().page);
-    // The league link stays on Hyper.
+    assert.equal(espn.length, 0);
+    assert.ok(!card.textContent.includes('ESPN'));
     assert.ok([...card.querySelectorAll('a')].some((node: any) => node.getAttribute('href') === '/sports?league=epl'));
   } finally {
     await mount.unmount();
@@ -149,9 +146,8 @@ test('HLS is used only when this browser says it can play it', async () => {
     globalThis.fetch = (() => Promise.resolve(hlsOnly())) as typeof fetch;
     await noHls.click(noHls.playButton()!);
     assert.equal(noHls.video(), null, 'an HLS rendition is not handed to a browser that cannot play it');
-    assert.match(noHls.card().textContent, /ESPN will not serve this clip to your connection/);
-    const fallback = [...noHls.card().querySelectorAll('a')].find((node: any) => node.textContent.includes('Watch it on ESPN'))!;
-    assert.equal(fallback.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49983806');
+    assert.match(noHls.card().textContent, /This video clip is unavailable for playback right now\./);
+    assert.ok(!noHls.card().textContent.includes('ESPN'));
   } finally {
     globalThis.fetch = originalFetch;
     await noHls.unmount();
@@ -185,7 +181,7 @@ test('a clip ESPN will not serve falls back to its labelled link, not a dead pla
       await mount.click(mount.playButton()!);
       const card = mount.card();
       assert.equal(mount.video(), null, 'no player for a clip that will not play');
-      assert.match(card.textContent, /Watch it on ESPN/);
+      assert.match(card.textContent, /This video clip is unavailable for playback right now\./);
       // The poster is still there, so the card does not collapse into text.
       assert.ok(mount.poster());
     } finally {
@@ -207,7 +203,7 @@ test('a player that errors mid-clip offers the ESPN link instead of a black rect
     const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> };
     await act(async () => { video.dispatchEvent(new mount.window.Event('error')); });
     assert.equal(mount.video(), null, 'the failed player is replaced');
-    assert.match(mount.card().textContent, /Watch it on ESPN/);
+    assert.match(mount.card().textContent, /This video clip is unavailable for playback right now\./);
   } finally {
     globalThis.fetch = original;
     await mount.unmount();

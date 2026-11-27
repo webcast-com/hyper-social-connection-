@@ -136,7 +136,7 @@ export default function SportsPredictionsTips({
       <TipsSection
         loading={loading}
         apiStatus={apiStatus}
-        apiNote={activeBoard.status === "partial" ? "Some ESPN feeds were unavailable." : null}
+        apiNote={activeBoard.status === "partial" ? "Some feeds were unavailable." : null}
         tipsCount={tips.length}
         selectedDate={selectedDate}
         leagues={leagues}

@@ -11,7 +11,7 @@ import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Sports Predictions and Odds',
-  description: 'Upcoming ESPN fixtures and bookmaker odds, with optional reported model estimates, game probabilities and strength metrics where available. Record a pick and it is graded once ESPN reports the result.',
+  description: 'Upcoming fixtures and bookmaker odds, with optional reported model estimates, game probabilities and strength metrics where available. Record a pick and it is graded once the final result is reported.',
   path: '/sports/predictions',
   keywords: [
     "today's tips",
@@ -42,7 +42,7 @@ export const metadata: Metadata = getPageMetadata({
     'upcoming fixtures',
     'bet slip',
     'stake calculator',
-    'ESPN odds',
+    'match odds',
   ],
 });
 

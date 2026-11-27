@@ -15,7 +15,7 @@ import JsonLd from '@/components/JsonLd';
 
 export const metadata: Metadata = getPageMetadata({
   title: 'Match Highlights',
-  description: 'Every ESPN highlight clip this site has read, on one page: the live board plus a permanent stored index across every competition, filterable by competition, match state and age.',
+  description: 'Match highlight clips on one page: the live board plus a permanent stored index across every competition, filterable by competition, match state and age.',
   path: '/sports/highlights',
   keywords: SPORTS_BOARD_KEYWORDS,
 });

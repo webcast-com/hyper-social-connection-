@@ -306,7 +306,7 @@ export default function SportsHighlightsPage({
       const pass = payload.pass;
       if (!pass.ok) {
         setNote(pass.reason === 'rate-limited'
-          ? 'A sweep ran moments ago, so this one did nothing. Coverage advances a bounded slice at a time, on a rate limit, so ESPN is never hammered.'
+          ? 'A sweep ran moments ago, so this one did nothing. Coverage advances a bounded slice at a time on a rate limit.'
           : pass.reason === 'no-database'
             ? 'No database is configured, so there is nowhere to store clips. The live board above is all this page can show.'
             : pass.reason === 'scheduled'
@@ -517,8 +517,7 @@ export default function SportsHighlightsPage({
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">{storedLeague.length}</span>
       </h2>
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Clips ESPN publishes as competition video. They have no fixture behind them, so no score, kickoff or match page is
-        shown for one.
+        Competition video clips. They have no fixture behind them, so no score, kickoff or match page is shown for one.
       </p>
       <div className="space-y-4">
         {storedLeague.map((clip) => <SportsVideoNewsCard key={`league-${clip.id}`} clip={clip} currentUser={currentUser} />)}
@@ -569,12 +568,12 @@ export default function SportsHighlightsPage({
         <p className="mt-1">
           {sample
             ? 'The highlights feed could not be read at all, so there is nothing to show. Sample cards are always labelled as samples where they do appear, and this page substitutes none of them for a missing clip.'
-            : 'ESPN published no clips for the fixtures this board asked about, and nothing is stored yet. Clips are published per game, and coverage varies by competition; a sweep walks the catalog a bounded slice at a time.'}
+            : 'No clips are available for the fixtures this board asked about, and nothing is stored yet. Clips are published per game, and coverage varies by competition; a sweep walks the catalog a bounded slice at a time.'}
         </p>
       </div>)}
 
     <details className="mt-5 min-w-0 rounded-xl border border-gray-200 p-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">
-      <summary className="min-h-11 cursor-pointer font-semibold">ESPN highlights feed and stored index details</summary>
+      <summary className="min-h-11 cursor-pointer font-semibold">Highlights feed and stored index details</summary>
       <p className="mt-2 break-words">
         Live board: {board.status} · {board.clips.length} {board.clips.length === 1 ? 'clip' : 'clips'} from {board.games} {board.games === 1 ? 'game' : 'games'}
         {sample ? ' · sample cards, no posts to engage with' : ''}
@@ -594,20 +593,16 @@ export default function SportsHighlightsPage({
       {scheduled ? <>
         <p className="mt-1 break-words">
           Clips are kept permanently: nothing deletes a stored clip. The list is a folder of JSON files in this site’s
-          GitHub repository. A scheduled job reads ESPN a few times an hour and adds what it finds — a bounded slice of
-          scoreboards and game collections each time, because ESPN has no bulk highlights endpoint and no date range, so
-          every clip costs one request per game. The videos themselves stay on ESPN.
+          GitHub repository. A scheduled job collects clips a few times an hour in bounded slices of scoreboards and
+          game collections.
         </p>
-        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code>; the stored half of that read costs no ESPN
-          request.</p>
+        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code> from the stored index.</p>
       </> : <>
         <p className="mt-1 break-words">
           Clips are kept permanently: nothing deletes a stored clip. Coverage grows one bounded pass at a time — at most 24
-          scoreboards and 24 game collections per pass, inside a four-second deadline — because ESPN has no bulk highlights
-          endpoint and no date range, so every clip costs one request per game.
+          scoreboards and 24 game collections per pass, inside a four-second deadline.
         </p>
-        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code>; the stored half of that read costs no ESPN
-          request. Sweep calls <code className="break-all">/api/sports/highlights/sweep?force=1</code>, which is rate-limited per process.</p>
+        <p className="mt-2 break-words">Refresh re-reads <code className="break-all">/api/sports/highlights?index=1</code> from the stored index. Sweep calls <code className="break-all">/api/sports/highlights/sweep?force=1</code>, which is rate-limited per process.</p>
       </>}
     </details>
   </div>;

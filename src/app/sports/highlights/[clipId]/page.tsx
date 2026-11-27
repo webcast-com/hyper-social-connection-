@@ -152,6 +152,7 @@ export default async function HighlightClipPage({ params }: Props) {
               preload="metadata"
               autoPlay
               durationLabel={length}
+              showFooter={false}
             />
           </div>
         ) : clip.thumbnail ? (
@@ -178,7 +179,7 @@ export default async function HighlightClipPage({ params }: Props) {
             data-clip-unplayable=""
             className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-gray-300"
           >
-            ESPN has not reported a playable file for this clip.
+            No playable file is available for this clip.
           </p>
         )}
 
@@ -210,16 +211,6 @@ export default async function HighlightClipPage({ params }: Props) {
           >
             All match highlights
           </Link>
-          {clip.page ? (
-            // ESPN one labelled click away, never a redirect: the clip stays on Hyper.
-            <a
-              href={clip.page}
-              rel="noopener noreferrer"
-              className="rounded-full px-3 py-1.5 font-medium text-fuchsia-300 hover:underline"
-            >
-              Open original on ESPN
-            </a>
-          ) : null}
         </div>
       </article>
 

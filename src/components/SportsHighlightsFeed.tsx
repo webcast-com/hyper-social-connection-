@@ -86,6 +86,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
         preload="metadata"
         autoPlay
         durationLabel={durationLabel}
+        showFooter={false}
         onError={() => setUnplayable(true)}
       />
     </div>
@@ -135,15 +136,15 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
       engagement={engagement}
       signedIn={signedIn}
       dense={dense}
+      compactBody
       shareNoun="highlight"
       shareImage={clip.thumbnail}
       menuLinks={[
         { label: 'Open Competition', href: cardHref },
-        ...(clip.page ? [{ label: 'Watch on ESPN', href: clip.page }] : []),
       ]}
       footnote={clip.mp4 && !unplayable
-        ? 'Highlights are ESPN clips.'
-        : 'This clip cannot play here. Open it on ESPN to watch the full highlight.'}
+        ? undefined
+        : 'This clip cannot play here right now.'}
     />
   );
 }
@@ -176,8 +177,8 @@ export default function SportsHighlightsFeed({ board, limit = 4, engagement = {}
           </h2>
           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             {sample
-              ? 'Sample cards · ESPN highlight videos are unreachable right now'
-              : `Highlights from ${board.games} ESPN ${board.games === 1 ? 'game' : 'games'}`}
+              ? 'Sample cards · highlight videos are unreachable right now'
+              : `Highlights from ${board.games} ${board.games === 1 ? 'game' : 'games'}`}
           </p>
         </div>
         <Link href="/sports" className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-gray-200 px-3 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:border-gray-700 dark:text-blue-400 dark:hover:bg-gray-700/60">

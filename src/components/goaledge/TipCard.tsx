@@ -55,7 +55,8 @@ export function TipCard({
   onCompare?: () => void;
 }) {
   const currentOdds = liveOddsData?.odds ?? tip.odds;
-  const potentialReturn = (Number(currentOdds) * (Number(calcStake ?? "100") || 0)).toFixed(0);
+  const rawReturn = Number(currentOdds) * (Number(calcStake ?? "100") || 0);
+  const potentialReturn = Number.isFinite(rawReturn) ? rawReturn : 0;
 
   return (
     <div
@@ -278,7 +279,7 @@ export function TipCard({
           </div>
           <div className="mt-2 flex items-center gap-2">
             <div className="flex-1">
-              <label className="text-[10px] font-medium text-slate-400">Stake (Ksh)</label>
+              <label className="text-[10px] font-medium text-slate-400">Stake (USD)</label>
               <input
                 type="number"
                 value={calcStake ?? "100"}
@@ -289,7 +290,7 @@ export function TipCard({
             </div>
             <div className="flex-1 text-right">
               <p className="text-[10px] font-medium text-slate-400">Return</p>
-              <p className="mt-0.5 text-lg font-extrabold text-emerald-600 tabular-nums dark:text-emerald-400">Ksh {Number(potentialReturn).toLocaleString()}</p>
+              <p className="mt-0.5 text-lg font-extrabold text-emerald-600 tabular-nums dark:text-emerald-400">${potentialReturn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           </div>
           <div className="mt-2 flex gap-1.5">

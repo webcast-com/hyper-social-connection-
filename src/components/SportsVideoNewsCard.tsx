@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Clapperboard, ExternalLink, MessageCircle, Play, Send, Share2, X } from 'lucide-react';
+import { Clapperboard, MessageCircle, Play, Send, Share2, X } from 'lucide-react';
 import { createPost } from '@/app/actions';
 import { SPORT_LABELS } from '@/lib/sports-catalog';
 import type { SportsVideoNewsClip } from '@/lib/espn-video-news';
@@ -177,16 +177,13 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
 
         {state === 'unplayable' && (
           <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-            ESPN will not serve this clip to your connection.{' '}
-            <Link href={clip.page} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 font-bold underline hover:no-underline">
-              Watch it on ESPN <ExternalLink className="h-3 w-3" />
-            </Link>
+            This video clip is unavailable for playback right now.
           </p>
         )}
 
         <h3 className="mt-3 break-words text-sm font-black text-gray-900 sm:text-base dark:text-white">{clip.title}</h3>
         {clip.description && (
-          <p className="mt-1 break-words text-xs text-gray-600 sm:text-sm dark:text-gray-300">{clip.description}</p>
+          <p className="mt-1 break-words text-xs leading-relaxed text-slate-600 dark:text-slate-300">{clip.description}</p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
@@ -200,14 +197,6 @@ export default function SportsVideoNewsCard({ clip, currentUser }: { clip: Sport
               {team}
             </span>
           ))}
-          <Link
-            href={clip.page}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="inline-flex min-h-11 items-center gap-1 font-bold text-blue-600 hover:underline dark:text-blue-400"
-          >
-            ESPN clip page <ExternalLink className="h-3 w-3" />
-          </Link>
         </div>
       </div>
 
