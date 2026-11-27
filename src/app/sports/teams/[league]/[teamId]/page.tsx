@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ league: s
   catch { notFound(); }
   return getPageMetadata({
     title: `${resolved.meta.name} team details`,
-    description: `ESPN-reported record, fixtures and squad for this ${resolved.meta.name} team on Hyper.`,
+    description: `ESPN-reported standings, team news, highlights, fixtures and squad for ${resolved.meta.name} on Hyper.`,
     path: teamHref(resolved.reference),
     index: false,
   });
