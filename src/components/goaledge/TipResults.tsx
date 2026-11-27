@@ -207,19 +207,19 @@ export function TipResults({
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800/60">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Staked</p>
               <p className="mt-1 text-base font-extrabold text-slate-900 dark:text-white">
-                {loading ? "—" : `Ksh ${totalStaked.toLocaleString()}`}
+                {loading ? "—" : `$${totalStaked.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800/60">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Total Returns</p>
               <p className="mt-1 text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                {loading ? "—" : `Ksh ${totalReturns.toLocaleString()}`}
+                {loading ? "—" : `$${totalReturns.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800/60">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Net P&L</p>
               <p className={`mt-1 text-base font-extrabold ${netPL >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-                {loading ? "—" : `${netPL >= 0 ? "+" : ""}Ksh ${netPL.toLocaleString()}`}
+                {loading ? "—" : `${netPL >= 0 ? "+" : "-"}$${Math.abs(netPL).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-center dark:border-slate-700 dark:bg-slate-800/60">

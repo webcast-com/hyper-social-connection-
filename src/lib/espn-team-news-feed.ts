@@ -62,8 +62,8 @@ async function fetchTeamNews(league: string, eventId: string): Promise<TeamNewsB
   board.status = okCount === 0 ? 'unavailable'
     : okCount < sources.length ? 'partial'
       : board.injuries.length || board.articles.length ? 'ready' : 'empty';
-  board.message = board.status === 'unavailable' ? 'ESPN team news is unavailable for this fixture right now.'
-    : board.status === 'partial' ? 'Some ESPN team news feeds were unavailable; shown items may be incomplete.' : null;
+  board.message = board.status === 'unavailable' ? 'Team news is unavailable for this fixture right now.'
+    : board.status === 'partial' ? 'Some team news feeds were unavailable; shown items may be incomplete.' : null;
   return board;
 }
 

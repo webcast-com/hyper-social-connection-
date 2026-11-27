@@ -28,6 +28,10 @@ export const viewport: Viewport = {
 // prerendering (also keeps builds from needing live DB credentials).
 export const dynamic = 'force-dynamic';
 
+const POPADS_SCRIPT = `/*<![CDATA[/* */
+(function(){var a=window,p="f927583f7d4008399ed148a298f29426",e=[["siteId",607+451*27+5315529],["minBid",0],["popundersPerIP","0"],["delayBetween",0],["default",false],["defaultPerDay",0],["topmostLayer","auto"]],d=["d3d3LmNkbjRhZHMuY29tL2pmb3JtbHkubWluLmNzcw==","ZDNnNW92Zm5nanc5YncuY2xvdWRmcm9udC5uZXQvQ1RLVnIvbnBvbHlnbG90Lm1pbi5qcw=="],b=-1,s,r,i=function(){clearTimeout(r);b++;if(d[b]&&!(1821653275000<(new Date).getTime()&&1<b)){s=a.document.createElement("script");s.type="text/javascript";s.async=!0;var k=a.document.getElementsByTagName("script")[0];s.src="https://"+atob(d[b]);s.crossOrigin="anonymous";s.onerror=i;s.onload=function(){clearTimeout(r);a[p.slice(0,16)+p.slice(0,16)]||i()};r=setTimeout(i,5E3);k.parentNode.insertBefore(s,k)}};if(!a[p]){try{Object.freeze(a[p]=e)}catch(e){}i()}})();
+/*]]>/* */`;
+
 function DocumentHead() {
   return (
     <head>
@@ -37,6 +41,7 @@ function DocumentHead() {
       <meta name="fo-verify" content="14ce23b7-528a-4490-88f7-5f3043e433e6" />
       {/* Before the first paint: an installed app opens on the launch screen. */}
       <script dangerouslySetInnerHTML={{ __html: LAUNCH_SCREEN_SCRIPT }} />
+      <script type="text/javascript" data-cfasync="false" dangerouslySetInnerHTML={{ __html: POPADS_SCRIPT }} />
     </head>
   );
 }

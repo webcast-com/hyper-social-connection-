@@ -57,7 +57,7 @@ export function TipDetailPanel({
   const [activeTab, setActiveTab] = useState<"overview" | "stats" | "analysis" | "markets">("overview");
   const [stakeInput, setStakeInput] = useState("100");
   const oddsNum = parseFloat(tip.odds) || 0;
-  const potentialReturn = (oddsNum * (parseFloat(stakeInput) || 0)).toFixed(0);
+  const potentialReturn = oddsNum * (parseFloat(stakeInput) || 0);
   const inSlip = betSlipIds.has(tip.id);
   const locked = tip.isPremium && !isPremium;
 
@@ -219,14 +219,14 @@ export function TipDetailPanel({
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-medium text-slate-400 uppercase">Potential Return</p>
-                      <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">Ksh {Number(potentialReturn).toLocaleString()}</p>
+                      <p className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400">${potentialReturn.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                   </div>
                   {/* Quick stake input */}
                   <div className="mt-3 flex items-center gap-2">
                     <label className="text-xs font-medium text-slate-400">Stake:</label>
                     <div className="flex flex-1 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800">
-                      <span className="text-xs text-slate-400">Ksh</span>
+                      <span className="text-xs text-slate-400">USD</span>
                       <input type="number" value={stakeInput} onChange={e => setStakeInput(e.target.value)} className="w-full bg-transparent text-sm font-bold tabular-nums text-slate-900 outline-none dark:text-white" min="0" />
                     </div>
                     {[50, 100, 200, 500].map(a => (
@@ -270,8 +270,8 @@ export function TipDetailPanel({
                           {(team.form ?? []).length > 0
                             ? `${(team.form ?? []).filter(r => r === "W").length}/${(team.form ?? []).length} wins · most recent first`
                             : history.status === "loading"
-                              ? "Loading recent results from ESPN…"
-                              : "No completed games in ESPN's records."}
+                              ? "Loading recent results…"
+                              : "No completed games on record."}
                         </p>
                       </div>
                     ))}
@@ -288,8 +288,8 @@ export function TipDetailPanel({
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       {headToHeadText ??
                         (history.status === "loading"
-                          ? "Checking ESPN's records for previous meetings…"
-                          : "These sides have no completed meeting in ESPN's records.")}
+                          ? "Checking records for previous meetings…"
+                          : "These sides have no completed meetings on record.")}
                     </p>
                     {/* Tally from the mutual games, not the fixed 3/2/1 this
                         panel shipped with. */}
@@ -395,7 +395,7 @@ export function TipDetailPanel({
                               </div>
                             </dl>
                           ) : (
-                            <p className="mt-3 text-[11px] text-slate-400">No completed games in ESPN&apos;s records.</p>
+                            <p className="mt-3 text-[11px] text-slate-400">No completed games on record.</p>
                           )}
                         </div>
                       ))}
@@ -417,12 +417,12 @@ export function TipDetailPanel({
                       </div>
                     </div>
                     <p className="mt-2 text-[10px] text-slate-400">
-                      From ESPN team schedules. Possession, shots and corners are per-match data this board does not load, so they are not shown.
+                      From recent team schedules. Possession, shots and corners are per-match data this board does not load, so they are not shown.
                     </p>
                   </div>
                 ) : (
                   <p className="rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400 dark:border-slate-700">
-                    ESPN has no completed games for these teams, so there is no recent record to show.
+                    No completed games on record for these teams, so there is no recent record to show.
                   </p>
                 )}
 
@@ -465,7 +465,7 @@ export function TipDetailPanel({
                           <tr>
                             <td colSpan={7} className="px-4 py-6 text-center text-xs text-slate-400">
                               {tableStatus === "loading" || tableStatus === "idle"
-                                ? "Loading standings from ESPN…"
+                                ? "Loading standings…"
                                 : "Standings are unavailable for this competition."}
                             </td>
                           </tr>
@@ -607,7 +607,7 @@ export function TipDetailPanel({
                             <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-slate-400">{article.description}</p>
                           )}
                           <p className="mt-1 text-[10px] text-slate-400">
-                            ESPN
+                            News
                             {article.published && Number.isFinite(Date.parse(article.published))
                               ? ` · ${new Date(article.published).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`
                               : ""}
@@ -620,8 +620,8 @@ export function TipDetailPanel({
                   {teamNews.injuries.length === 0 && teamNews.articles.length === 0 && (
                     <div className="mt-3 rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-400 dark:border-slate-700">
                       {teamNews.status === "loading"
-                        ? "Checking ESPN for injuries and team news…"
-                        : teamNews.message ?? "No team news available for this fixture. ESPN publishes injury reports for its US-sport fixtures; other competitions may not carry one."}
+                        ? "Checking for injuries and team news…"
+                        : teamNews.message ?? "No team news available for this fixture."}
                     </div>
                   )}
                 </div>
@@ -636,7 +636,7 @@ export function TipDetailPanel({
                     <TrendingUp className="h-4 w-4 text-emerald-500" />
                     Betting Markets
                   </h4>
-                  <p className="mt-1 text-xs text-slate-400">Prices ESPN publishes for this fixture, across markets and books</p>
+                  <p className="mt-1 text-xs text-slate-400">Published prices for this fixture, across markets and books</p>
                 </div>
 
                 {/* Both blocks below are read from one source — ESPN's per-book

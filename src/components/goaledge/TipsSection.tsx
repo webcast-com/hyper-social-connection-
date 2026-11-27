@@ -103,7 +103,7 @@ export function TipsSection({
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   </span>
-                  Live Data · {tipsCount} matches from ESPN
+                  Live Data · {tipsCount} {tipsCount === 1 ? "match" : "matches"}
                 </span>
               )}
               {apiStatus !== "live" && apiStatus !== "loading" && (

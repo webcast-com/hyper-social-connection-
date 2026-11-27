@@ -24,6 +24,7 @@ export default function LinkMediaPlayer({
   preload,
   autoPlay = false,
   durationLabel,
+  showFooter = true,
   onError,
   onRemove,
 }: {
@@ -37,6 +38,8 @@ export default function LinkMediaPlayer({
   autoPlay?: boolean;
   /** Length shown as a badge on the media, e.g. "2:34". */
   durationLabel?: string | null;
+  /** Show the provider name and "Open original" footer below the player. */
+  showFooter?: boolean;
   /** Called when the media itself fails to load, so the caller can fall back. */
   onError?: () => void;
   onRemove?: () => void;
@@ -212,18 +215,20 @@ export default function LinkMediaPlayer({
       </div>
 
       {/* Footer: provider + escape hatch to the original link */}
-      <div className="flex items-center gap-2 px-1 pt-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
-        <span className="font-medium truncate min-w-0">{resolved.provider}</span>
-        <a
-          href={resolved.originalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="ml-auto flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
-        >
-          Open original <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
+      {showFooter && (
+        <div className="flex items-center gap-2 px-1 pt-1.5 text-[11px] text-gray-500 dark:text-gray-400 min-w-0">
+          <span className="font-medium truncate min-w-0">{resolved.provider}</span>
+          <a
+            href={resolved.originalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="ml-auto flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+          >
+            Open original <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

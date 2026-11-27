@@ -105,7 +105,7 @@ function BookmakerMarkets({
           <BarChart3 className="h-3.5 w-3.5 text-emerald-500" />
           {quote.provider ?? "Bookmaker"} markets
         </p>
-        <p className="text-[10px] font-medium text-slate-400">via ESPN · decimal odds</p>
+        <p className="text-[10px] font-medium text-slate-400">Decimal odds</p>
       </div>
       <div className="mt-3">
         {rows.map((row) => (
@@ -126,7 +126,7 @@ export function BookmakerCompare({
 }: Props) {
   const oddsNum = Number.parseFloat(publishedOdds);
   const validOdds = Number.isFinite(oddsNum) && oddsNum > 1;
-  const potential = validOdds && stake > 0 ? (oddsNum * stake).toFixed(2) : null;
+  const potential = validOdds && stake > 0 ? oddsNum * stake : null;
 
   return (
     <div className="mt-3 space-y-3">
@@ -145,9 +145,9 @@ export function BookmakerCompare({
             <p className="text-2xl font-extrabold tabular-nums text-emerald-600 dark:text-emerald-400">
               {validOdds ? oddsNum.toFixed(2) : "—"}
             </p>
-            {potential && (
+            {potential !== null && (
               <p className="text-[11px] text-slate-400">
-                Ksh {stake.toLocaleString()} → Ksh {Number(potential).toLocaleString()}
+                ${stake.toLocaleString("en-US")} → ${potential.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
           </div>

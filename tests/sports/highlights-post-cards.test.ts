@@ -106,10 +106,9 @@ test('a highlight clip is a post card with the home crest and a playable video',
     assert.equal(video.getAttribute('preload'), 'none');
     assert.match(video.className, /block w-full max-h-\[min\(70vh,520px\)\] object-contain bg-black/);
     assert.match(video.closest('div')!.className, /rounded-xl sm:rounded-2xl overflow-hidden border border-gray-200/);
-    // The play card names the provider and keeps a way out to the original.
-    assert.match(card.textContent, /ESPN/);
-    const original = [...card.querySelectorAll('a')].find((node: any) => node.textContent.includes('Open original'))!;
-    assert.equal(original.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
+    // Highlight cards omit the provider name and external "Open original" footer.
+    assert.ok(!card.textContent.includes('ESPN'));
+    assert.equal([...card.querySelectorAll('a')].find((node: any) => node.textContent.includes('Open original')), undefined);
 
     // Clip details below the video.
     assert.deepEqual([...card.querySelectorAll('dt')].map((node: any) => node.textContent), ['Length', 'Competition', 'State']);
@@ -172,7 +171,7 @@ test('a highlight card reads its saved thread and posts through form actions', a
     assert.equal(card.querySelector('form input[name="note"]'), null, 'the card\u2019s own share menu is gone');
     await click(findButton(document, 'Close share dialog'));
     assert.equal(shareSheet(document), null);
-    assert.match(card.textContent, /Highlights are ESPN clips\./);
+    assert.ok(!card.textContent.includes('ESPN'));
 
     // And the more menu links to the post every reader shares.
     await click(findButton(document, 'More options'));
@@ -211,21 +210,18 @@ test('a highlight card stays read-only for a guest and for a sample board', asyn
   }
 });
 
-test('a clip with no media file links out instead of pretending to play', async () => {
+test('a clip with no media file shows its thumbnail instead of pretending to play', async () => {
   const mount = await mountHighlights([clip({ mp4: null, playable: false, hls: 'https://cdn.example.espn.com/video/77/master.m3u8' })]);
   try {
-    const { document, click } = mount;
+    const { document } = mount;
     const card = document.querySelector('article')!;
     assert.equal(card.querySelector('video'), null);
-    const play = card.querySelector('a[aria-label^="Watch"]')!;
-    assert.equal(play.getAttribute('aria-label'), 'Watch Saka opens the scoring on ESPN');
-    assert.equal(play.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
     // The thumbnail still shows, with a readable caption inside the image.
     const poster = card.querySelector('img[src*="espncdn.com/media"]')!;
     assert.equal(poster.getAttribute('src'), 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
     // The card says so under the composer, rather than failing silently.
     await mount.click(findButton(document, 'Comment on Arsenal vs Chelsea'));
-    assert.match(card.textContent, /This clip cannot play here\. Open it on ESPN/);
+    assert.match(card.textContent, /This clip cannot play here right now\./);
   } finally {
     mount.unmount();
   }
@@ -247,12 +243,7 @@ test('a clip ESPN refuses to serve falls back to its thumbnail, not a dead playe
     assert.equal(card.querySelector('img[src*="espncdn.com/media"]')!.getAttribute('src'), 'https://a.espncdn.com/media/2026/0907/49861382.jpg');
     // The card says so under the composer, rather than failing silently.
     await mount.click(findButton(document, 'Comment on Arsenal vs Chelsea'));
-    assert.match(card.textContent, /This clip cannot play here\. Open it on ESPN/);
-    // The thumbnail carries the labelled way out, and the card still goes
-    // somewhere on Hyper.
-    const play = card.querySelector('a[aria-label^="Watch"]')!;
-    assert.equal(play.getAttribute('href'), 'https://www.espn.com/video/clip/_/id/49861382');
-    assert.equal(play.getAttribute('target'), '_blank');
+    assert.match(card.textContent, /This clip cannot play here right now\./);
     assert.equal(card.querySelector('a.absolute.inset-0')!.getAttribute('href'), '/sports?league=epl');
   } finally {
     mount.unmount();
@@ -270,7 +261,7 @@ test('the sample board says the highlights are unreachable and offers more clips
   try {
     const { document, click } = mount;
     const section = document.querySelector('section')!;
-    assert.match(section.textContent, /Sample cards · ESPN highlight videos are unreachable right now/);
+    assert.match(section.textContent, /Sample cards · highlight videos are unreachable right now/);
     // Four cards at a time, with the rest behind one control.
     assert.equal(document.querySelectorAll('article').length, 4);
     const more = [...document.querySelectorAll('button')].find((node: any) => node.textContent.includes('Show all'))!;

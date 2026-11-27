@@ -99,7 +99,7 @@ export function buildHeadToHead(
   const games = homeWins + awayWins + draws;
   if (!games) return { text: null, record: null };
   return {
-    text: `Last ${games} ESPN-recorded meeting${games === 1 ? "" : "s"}: ${homeTeam} won ${homeWins}, ${draws} drawn, ${awayTeam} won ${awayWins}.`,
+    text: `Last ${games} recorded meeting${games === 1 ? "" : "s"}: ${homeTeam} won ${homeWins}, ${draws} drawn, ${awayTeam} won ${awayWins}.`,
     record: { games, homeWins, awayWins, draws },
   };
 }

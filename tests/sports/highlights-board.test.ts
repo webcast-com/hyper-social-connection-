@@ -326,7 +326,7 @@ test('a stored board renders as real cards, not sample data, and stays likeable'
     });
     const { document } = mounted;
     const section = document.querySelector('section[aria-label="Match highlights"]')!;
-    assert.ok(section.textContent.includes('Highlights from 2 ESPN games'), `saw: ${section.textContent.slice(0, 200)}`);
+    assert.ok(section.textContent.includes('Highlights from 2 games'), `saw: ${section.textContent.slice(0, 200)}`);
     assert.ok(!section.textContent.includes('Sample cards'), 'stored clips are not placeholder data');
     assert.equal(document.querySelectorAll('article').length, 2);
     // A sample card gets no anchor, so no Like button: these are real cards.

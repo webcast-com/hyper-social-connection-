@@ -80,6 +80,7 @@ export default function SportsPostCard({
   engagement = null,
   signedIn = false,
   dense = false,
+  compactBody = false,
 }: {
   /**
    * The card is one of a row of narrow cards on a desktop (`CardRow`). From `lg`
@@ -87,6 +88,8 @@ export default function SportsPostCard({
    * row puts its media at the same height. Below `lg` it changes nothing.
    */
   dense?: boolean;
+  /** Match the news card description font size (`text-xs leading-relaxed`). */
+  compactBody?: boolean;
   /** Where the card goes when it is clicked. */
   href: string;
   /** Where the author image goes - the team or competition page. */
@@ -253,11 +256,11 @@ export default function SportsPostCard({
       </div>
 
       {/* Post text content - the item's line. */}
-      <div className={`px-4 pb-3 text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words text-[15px] leading-relaxed${dense ? ' lg:text-sm lg:leading-snug' : ''}`}>
+      <div className={`px-4 pb-3 whitespace-pre-wrap break-words ${compactBody ? 'text-xs leading-relaxed text-slate-600 dark:text-slate-300' : `text-gray-900 dark:text-gray-100 text-[15px] leading-relaxed${dense ? ' lg:text-sm lg:leading-snug' : ''}`}`}>
         {dense ? (
           // The clamp sits inside the padding, or the padding would show the top
           // of a fourth line. The whole line stays one hover away.
-          <div title={body} className="lg:line-clamp-3 lg:min-h-[3.61rem]">{body}</div>
+          <div title={body} className={compactBody ? 'lg:line-clamp-3 lg:min-h-[3.66rem]' : 'lg:line-clamp-3 lg:min-h-[3.61rem]'}>{body}</div>
         ) : body}
       </div>
 
