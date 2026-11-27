@@ -83,7 +83,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
         url={cardHref}
         media={clipMedia(clip)}
         poster={clip.thumbnail}
-        preload="metadata"
+        preload="none"
         autoPlay
         durationLabel={durationLabel}
         showFooter={false}
@@ -122,6 +122,7 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
   return (
     <SportsPostCard
       href={cardHref}
+      permalink={{ href: clipHref(clip), label: 'View highlight' }}
       authorHref={cardHref}
       authorImage={clip.homeLogo}
       authorName={clip.home}
@@ -130,7 +131,11 @@ export function HighlightPostCard({ clip, anchor, engagement, signedIn, dense = 
       subtitle={`${clip.leagueName} · ${STATUS_LABEL[clip.status]}`}
       body={clip.description ? `${clip.title} — ${clip.description}` : clip.title}
       media={media}
-      details={[]}
+      details={[
+        { label: 'Length', value: durationLabel ?? '—' },
+        { label: 'Competition', value: clip.leagueName },
+        { label: 'State', value: STATUS_LABEL[clip.status] },
+      ]}
       likeLabel={`Like ${clip.title}`}
       anchor={anchor}
       engagement={engagement}

@@ -22,7 +22,7 @@ test('a player card uses the post card layout with the team crest as the author 
     assert.ok(card, 'the Luka Dončić card renders');
 
     // The card is the feed's post card, not the dashboard's player card.
-    assert.match(card.className, /bg-white dark:bg-gray-800 rounded-xl shadow border/);
+    assert.match(card.className, /bg-white dark:bg-gray-800 rounded-none sm:rounded-xl shadow-none sm:shadow border-y sm:border/);
     assert.equal(card.querySelectorAll('.sh-player').length, 0);
 
     // Author image = the team crest, linked to the team page.

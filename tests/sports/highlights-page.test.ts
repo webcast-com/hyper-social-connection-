@@ -286,7 +286,7 @@ test('a board with no clips says so, with the reason the feed reported', async (
   try {
     assert.equal(page.cards().length, 0);
     assert.match(page.text(), /No highlight clips right now\./);
-    assert.match(page.text(), /ESPN published no clips for the fixtures this board asked about, and nothing is stored yet\./);
+    assert.match(page.text(), /No clips are available for the fixtures this board asked about, and nothing is stored yet\./);
     assert.equal(page.container.querySelector('video'), null, 'no player is rendered for a clip that does not exist');
     // No filters are offered for a board that holds nothing.
     assert.equal(page.container.querySelectorAll('[role="group"]').length, 0);
@@ -613,7 +613,7 @@ test('the sweep button reports what the pass asked and stored, including a pass 
     }));
     await limited.click(limited.button('Sweep more competitions')!);
     await limited.settle();
-    assert.match(limited.text(), /A sweep ran moments ago, so this one did nothing\. Coverage advances a bounded slice at a time, on a rate limit, so ESPN is never hammered\./);
+    assert.match(limited.text(), /A sweep ran moments ago, so this one did nothing\. Coverage advances a bounded slice at a time on a rate limit\./);
     assert.equal(limited.urls.length, 1, 'a pass that did nothing re-reads nothing');
     // An index that is readable but empty must not badge the board's own clips
     // with stored counts: a zero next to a card would be a lie about that card.

@@ -55,8 +55,19 @@ export default function LinkMediaPlayer({
     if (!video || typeof window === 'undefined') return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
+    // Browsers normally return a Promise, but test doubles and older media
+    // implementations may return nothing; autoplay can also throw synchronously.
+    const play = () => {
+      try {
+        const result = video.play();
+        if (result && typeof result.catch === 'function') void result.catch(() => undefined);
+      } catch {
+        // A rejected/unsupported autoplay attempt must not break card rendering.
+      }
+    };
+
     if (typeof IntersectionObserver === 'undefined') {
-      video.play().catch(() => undefined);
+      play();
       return;
     }
 
@@ -64,7 +75,7 @@ export default function LinkMediaPlayer({
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            video.play().catch(() => undefined);
+            play();
           } else {
             video.pause();
           }
