@@ -23,50 +23,11 @@ export type SponsorBanner = {
   image?: string;
 };
 
-/**
- * The first set: the homepage (centre column, both sidebars, and under the
- * scores on smaller screens) and the live-stream screen.
- */
-export const SPONSOR_BANNERS: readonly SponsorBanner[] = [
-  {
-    id: 'betting-a',
-    href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
-    video: 'https://1w-aff.run/promo-files-uploads/0a45daadc7366df1f4c3e4fda01294aa1dafb663f1ecd7a36e.mp4',
-  },
-  {
-    id: 'betting-b',
-    href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
-    video: 'https://1w-aff.run/promo-files-uploads/2b95b9df4b0f8070e078b4faf542d1b69d258cb6cce655374e.mp4',
-  },
-  {
-    id: 'gainrock',
-    href: 'https://gainrock.com/?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
-    image: 'https://gainrock.com/img/banners/gr/banner_gainrock_728x90.jpg',
-  },
-  {
-    id: 'adsy-marketers',
-    href: 'https://ref.adsy.com/marketers?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
-    image: 'https://gainrock.com/img/banners/adsy/marketers/Banner_Promote_728x90.jpg',
-  },
-  {
-    id: 'magenet',
-    href: 'https://www.magenet.com/?ref=referral&ref_type=banner&ref_id=gwpk0ewkps61qwxc&ref_item=9',
-    image: 'https://gainrock.com/img/banners/mn/728x90-Monetize_Your_Website.gif',
-  },
-];
+/** Paid banner placements are paused; all shared slots stay empty until re-enabled. */
+export const SPONSOR_BANNERS: readonly SponsorBanner[] = [];
 
-/**
- * The second set: the sports scores page, the highlights page and a post's own
- * page. Kept apart from the first so that adding a banner here changes nothing
- * about where the first set is shown, and the other way round.
- */
-export const SPONSOR_INLINE_BANNERS: readonly SponsorBanner[] = [
-  {
-    id: 'betting-c',
-    href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
-    image: 'https://1w-aff.run/promo-files-uploads/548b5809b2bf4b0ad3070d8f9ea4f3d4e8dc70e6f8d394d4ea.jpg',
-  },
-];
+/** Inline paid banner placements are paused as well. */
+export const SPONSOR_INLINE_BANNERS: readonly SponsorBanner[] = [];
 
 /**
  * How search engines and the opened page are told what this link is: paid
