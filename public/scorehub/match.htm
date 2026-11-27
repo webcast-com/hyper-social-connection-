@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050d17">
+  <meta name="description" content="Match details, stats, lineups and key events from ESPN on ScoreHub.">
+  <title>Match Details — ScoreHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="match-detail.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.htm" aria-label="ScoreHub home"><span class="brand-mark">↗</span><span><b>Score<span>Hub</span></b><small>Every Score. Every Moment.</small></span></a>
+    <button class="mobile-menu" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="main-nav" id="mainNav" aria-label="Main navigation">
+      <a href="index.htm#home">Home</a><a class="active" href="index.htm#live">Live Scores</a><a href="index.htm#fixtures">Fixtures</a><a href="index.htm#leagues">Leagues</a><a href="index.htm#news">News</a><a href="index.htm#teams">Teams</a><a href="index.htm#stats">Stats</a><a href="index.htm#more">More⌄</a>
+    </nav>
+    <div class="header-actions"><label class="search"><span>⌕</span><input id="searchInput" aria-label="Search teams, matches, leagues" placeholder="Search teams, matches, leagues…"></label><button class="icon-btn" id="themeToggle" aria-label="Toggle theme">☾</button><button class="icon-btn" aria-label="Notifications">♧</button><a class="login" href="index.htm#home">Home</a></div>
+  </header>
+  <nav class="sport-nav" aria-label="Sports">
+    <a href="index.htm#sports">♧ <span>All Sports</span></a><a class="selected" href="index.htm#football">⚽ <span>Football</span></a><a href="index.htm#basketball">🏀 <span>Basketball</span></a><a href="index.htm#tennis">🟡 <span>Tennis</span></a><a href="index.htm#baseball">⚾ <span>Baseball</span></a><a href="index.htm#hockey">🏒 <span>Ice Hockey</span></a><a href="index.htm#rugby">🏉 <span>Rugby</span></a><a href="index.htm#esports">🎮 <span>Esports</span></a>
+  </nav>
+  <main class="page match-page">
+    <nav class="match-crumb" aria-label="Breadcrumb"><a href="index.htm#fixtures">‹ &nbsp;Back to scores</a><span aria-hidden="true">/</span><span id="crumbLeague">Match centre</span></nav>
+    <div class="match-layout">
+      <div class="match-main">
+        <section class="panel match-hero" aria-labelledby="matchTitle">
+          <div class="match-meta"><span id="matchLeague">ESPN match centre</span><b id="matchStatus" role="status">Loading…</b></div>
+          <h1 id="matchTitle" class="match-title">Loading match details…</h1>
+          <div class="match-teams" aria-live="polite">
+            <div class="detail-team"><span class="detail-crest" id="awayCrest" aria-hidden="true">—</span><strong id="awayName">Away team</strong></div>
+            <div class="detail-score"><strong id="score">—</strong><small id="period">Score not reported</small></div>
+            <div class="detail-team"><span class="detail-crest" id="homeCrest" aria-hidden="true">—</span><strong id="homeName">Home team</strong></div>
+          </div>
+          <p id="matchKickoff" class="match-kickoff">Match information is loading from ESPN.</p>
+        </section>
+        <nav class="detail-tabs" role="tablist" aria-label="Match details sections">
+          <button class="active" id="tab-overview" role="tab" aria-selected="true" aria-controls="detailPanel" data-section="overview">Overview</button>
+          <button id="tab-statistics" role="tab" aria-selected="false" aria-controls="detailPanel" data-section="statistics">Statistics</button>
+          <button id="tab-lineups" role="tab" aria-selected="false" aria-controls="detailPanel" data-section="lineups">Lineups</button>
+          <button id="tab-players" role="tab" aria-selected="false" aria-controls="detailPanel" data-section="players">Player stats</button>
+          <button id="tab-events" role="tab" aria-selected="false" aria-controls="detailPanel" data-section="events">Events</button>
+        </nav>
+        <section class="panel detail-panel" id="detailPanel" role="tabpanel" aria-labelledby="tab-overview" aria-live="polite" aria-busy="true">
+          <h2 id="sectionTitle">Match overview</h2>
+          <div id="sectionContent"><p class="detail-message" role="status">Loading ESPN match details…</p></div>
+        </section>
+      </div>
+      <aside class="match-aside">
+        <section class="panel aside-card"><div class="panel-title"><h2>Match centre</h2></div><p>ScoreHub match details are supplied by ESPN. Statistics, lineups and events appear only when ESPN reports them.</p><a class="table-link" href="index.htm#fixtures">Browse all matches →</a></section>
+        <section class="panel aside-card"><div class="panel-title"><h2>More on ScoreHub</h2></div><a class="aside-link" href="index.htm#stats">League standings <span>→</span></a><a class="aside-link" href="index.htm#news">Latest sports news <span>→</span></a><a class="aside-link" href="index.htm#fixtures">Live scores & fixtures <span>→</span></a></section>
+      </aside>
+    </div>
+  </main>
+  <footer class="footer"><div class="footer-main"><div class="footer-brand"><a class="brand" href="index.htm"><span class="brand-mark">↗</span><span><b>Score<span>Hub</span></b><small>Every Score. Every Moment.</small></span></a><p>Your ultimate destination for live scores,<br> sports news, stats and much more.</p><div class="socials"><a href="index.htm#home" aria-label="ScoreHub home">f</a><a href="index.htm#home" aria-label="ScoreHub community">♥</a><a href="index.htm#home" aria-label="ScoreHub updates">◎</a><a href="index.htm#home" aria-label="ScoreHub video">▶</a><a href="index.htm#home" aria-label="ScoreHub share">➤</a></div></div><div><h3>Quick Links</h3><a href="index.htm#home">Home</a><a href="index.htm#live">Live Scores</a><a href="index.htm#fixtures">Fixtures</a><a href="index.htm#news">News</a><a href="index.htm#teams">Teams</a></div><div><h3>Leagues</h3><a href="index.htm#leagues">Premier League</a><a href="index.htm#leagues">La Liga</a><a href="index.htm#leagues">Serie A</a><a href="index.htm#leagues">Bundesliga</a><a href="index.htm#leagues">Champions League</a></div><div><h3>Support</h3><a href="index.htm#about">About Us</a><a href="index.htm#contact">Contact Us</a><a href="index.htm#privacy">Privacy Policy</a><a href="index.htm#terms">Terms of Use</a><a href="index.htm#faq">FAQ</a></div><div class="app-links"><h3>Download Our App</h3><p>Get the latest scores and updates<br> on your mobile device.</p><div><a href="index.htm#home">▶ Google Play</a><a href="index.htm#home">● App Store</a></div></div></div><div class="footer-bottom"><span>© 2024 ScoreHub. All Rights Reserved.</span><span>Made with <b>♥</b> for sports fans</span></div></footer>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="match-detail.js"></script>
+</body>
+</html>

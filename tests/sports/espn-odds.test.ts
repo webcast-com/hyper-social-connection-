@@ -11,7 +11,10 @@ test('ESPN odds use decimal prices converted from American money lines', () => {
   assert.equal(americanToDecimal(100), 2);
   for (const value of [null, '', 'OFF', false, 0, 1.8, -20, Infinity]) assert.equal(americanToDecimal(value), null);
   const odds = mapOdds(oddsEvent().competitions[0]);
-  assert.deepEqual(odds, { home: 1.8, away: 2.2, draw: null, over_under: 2.5, spread: null, provider: 'Review bookmaker' });
+  assert.deepEqual(odds, {
+    home: 1.8, away: 2.2, draw: null, over_under: 2.5, spread: null, provider: 'Review bookmaker',
+    bookmakers: [{ provider: 'Review bookmaker', home: 1.8, draw: null, away: 2.2 }],
+  });
 });
 test('explicit decimal odds and nested close/open money lines are supported without mixing providers', () => {
   const odds = mapOdds({ odds: [{
@@ -113,7 +116,13 @@ test('provider ID fallback never mixes bookmaker prices or selects an empty prov
     { provider: { id: 37 }, homeTeamOdds: { moneyLine: -125 } },
     { provider: { id: 41 }, awayTeamOdds: { moneyLine: 120 }, overUnder: 225.5 },
   ] });
-  assert.deepEqual(odds, { home: 1.8, away: null, draw: null, spread: null, over_under: null, provider: 'FanDuel' });
+  assert.deepEqual(odds, {
+    home: 1.8, away: null, draw: null, spread: null, over_under: null, provider: 'FanDuel',
+    bookmakers: [
+      { provider: 'FanDuel', home: 1.8, draw: null, away: null },
+      { provider: 'DraftKings', home: null, draw: null, away: 2.2 },
+    ],
+  });
   assert.equal(mapOdds({ odds: [{ provider: { id: 37 } }] }).provider, null);
 });
 

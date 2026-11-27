@@ -29,6 +29,10 @@ const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></
   url: 'https://hyper.co.ke/',
   pretendToBeVisual: true,
 });
+// jsdom does not implement media methods. Returning undefined here exercises the
+// player's defensive handling without emitting jsdom's "not implemented" noise.
+(dom.window.HTMLMediaElement.prototype as any).play = () => undefined;
+(dom.window.HTMLMediaElement.prototype as any).pause = () => undefined;
 
 (globalThis as any).window = dom.window;
 (globalThis as any).self = dom.window;

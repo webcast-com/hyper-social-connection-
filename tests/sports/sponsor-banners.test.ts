@@ -24,32 +24,14 @@ const played: string[] = [];
 dom.window.HTMLMediaElement.prototype.play = function play(this: HTMLVideoElement) { played.push(`play:${this.dataset.sponsorVideo}`); return Promise.resolve(); };
 dom.window.HTMLMediaElement.prototype.pause = function pause(this: HTMLVideoElement) { played.push(`pause:${this.dataset.sponsorVideo}`); };
 
-test('the two banners link to the advertiser, over https, with the creatives it supplied', () => {
-  assert.deepEqual(SPONSOR_BANNERS.map((banner) => banner.href), [
-    'https://r1wovcg.com/betting?open=register&p=xtz5',
-    'https://r1wovcg.com/betting?open=register&p=xtz5',
-  ]);
-  assert.deepEqual(SPONSOR_BANNERS.map((banner) => banner.video), [
-    'https://1w-aff.run/promo-files-uploads/0a45daadc7366df1f4c3e4fda01294aa1dafb663f1ecd7a36e.mp4',
-    'https://1w-aff.run/promo-files-uploads/2b95b9df4b0f8070e078b4faf542d1b69d258cb6cce655374e.mp4',
-  ]);
-  assert.equal(usableSponsorBanners().length, 2);
-  // A paid link says so, and the opened page gets no handle on this one.
+test('all paid banner placements are paused and empty by default', () => {
+  assert.deepEqual(SPONSOR_BANNERS, []);
+  assert.deepEqual(SPONSOR_INLINE_BANNERS, []);
+  assert.deepEqual(usableSponsorBanners(), []);
+  assert.deepEqual(usableSponsorBanners(SPONSOR_INLINE_BANNERS), []);
+  assert.deepEqual(sponsorBannerFor(0), []);
+  // A paid link, if re-enabled later, must retain these protections.
   assert.deepEqual(SPONSOR_REL.split(' ').sort(), ['nofollow', 'noopener', 'sponsored']);
-});
-
-test('the still banner is its own set: the first set, and where it is shown, is unchanged', () => {
-  assert.deepEqual(SPONSOR_INLINE_BANNERS, [{
-    id: 'betting-c',
-    href: 'https://r1wovcg.com/betting?open=register&p=xtz5',
-    image: 'https://1w-aff.run/promo-files-uploads/548b5809b2bf4b0ad3070d8f9ea4f3d4e8dc70e6f8d394d4ea.jpg',
-  }]);
-  assert.deepEqual(usableSponsorBanners(SPONSOR_INLINE_BANNERS), [...SPONSOR_INLINE_BANNERS]);
-  // The homepage and the live screen take the first set, by default or by slot.
-  assert.deepEqual(usableSponsorBanners().map((banner) => banner.id), ['betting-a', 'betting-b']);
-  assert.deepEqual([...sponsorBannerFor(0), ...sponsorBannerFor(1)].map((banner) => banner.id), ['betting-a', 'betting-b']);
-  const first = new Set(SPONSOR_BANNERS.map((banner) => banner.id));
-  assert.ok(SPONSOR_INLINE_BANNERS.every((banner) => !first.has(banner.id)), 'no id is in both sets');
 });
 
 test('a creative is a video or an image: an entry with both, or neither, is not shown', () => {
@@ -94,14 +76,19 @@ test('strips are stacked at full width; squares and portraits sit side by side',
   assert.equal(sponsorLayout([]), 'stack');
 });
 
-test('each sidebar gets one banner, and the two sidebars get different ones', () => {
-  const [left] = sponsorBannerFor(0);
-  const [right] = sponsorBannerFor(1);
-  assert.equal(sponsorBannerFor(0).length, 1);
-  assert.equal(sponsorBannerFor(1).length, 1);
-  assert.equal(left.id, SPONSOR_BANNERS[0].id);
-  assert.equal(right.id, SPONSOR_BANNERS[1].id);
+test('slots rotate custom banner lists while paused default placements stay empty', () => {
+  const two = [
+    { id: 'left', href: 'https://ads.example/go', video: 'https://ads.example/left.mp4' },
+    { id: 'right', href: 'https://ads.example/go', video: 'https://ads.example/right.mp4' },
+  ];
+  const [left] = sponsorBannerFor(0, two);
+  const [right] = sponsorBannerFor(1, two);
+  assert.equal(sponsorBannerFor(0, two).length, 1);
+  assert.equal(sponsorBannerFor(1, two).length, 1);
+  assert.equal(left.id, 'left');
+  assert.equal(right.id, 'right');
   assert.notEqual(left.video, right.video);
+  assert.deepEqual(sponsorBannerFor(0), []);
   // With one banner both slots show it; with none, or a slot that is not one, nothing.
   const only = [{ id: 'solo', href: 'https://ads.example/go', video: 'https://ads.example/a.mp4' }];
   assert.deepEqual(sponsorBannerFor(1, only).map((banner) => banner.id), ['solo']);

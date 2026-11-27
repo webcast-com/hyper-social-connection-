@@ -22,7 +22,19 @@ test('ESPN uses home/away metadata rather than provider array order, and support
   assert.equal(event.home.logo, 'https://example.test/home.png');
   assert.equal(event.away.score, 2);
   assert.equal(event.status, 'live');
+  assert.equal(event.leagueLogo ?? null, null);
 });
+
+test('competition logo metadata is preserved when it is a safe HTTPS URL', () => {
+  const payload = {
+    leagues: [{ name: 'English Premier League', logos: [{ href: 'https://a.espncdn.com/leaguelogos/epl.png' }] }],
+    events: [{ id: '1', competitions: [competition()] }],
+  };
+  assert.equal(parseEspnEvents(payload, epl)[0].leagueLogo, 'https://a.espncdn.com/leaguelogos/epl.png');
+  const unsafe = { ...payload, leagues: [{ name: 'English Premier League', logos: [{ href: 'javascript:alert(1)' }] }] };
+  assert.equal(parseEspnEvents(unsafe, epl)[0].leagueLogo ?? null, null);
+});
+
 test('ESPN scheduled, in-progress, completed and event-level status fallbacks normalize correctly', () => {
   for (const [state, expected] of [['pre', 'upcoming'], ['in', 'live'], ['post', 'final']]) {
     assert.equal(parseEspnEvents({ events: [{ id: '1', competitions: [competition(state)] }] }, epl)[0].status, expected);

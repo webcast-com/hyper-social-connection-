@@ -1,4 +1,5 @@
 import { matchReference } from './espn-match';
+import { safeProviderImage } from './espn-image';
 import type { EspnLeague } from './sports-catalog';
 import type { EventStatus, SportsEvent, SportsTeam } from './sports';
 
@@ -42,9 +43,17 @@ function broadcastName(competition: any): string | null {
   return typeof first === 'string' && first.trim() ? first.trim() : null;
 }
 
+/** Prefer ESPN's own logo metadata; older/minimal scoreboards may omit it. */
+function reportedLeagueLogo(payload: any): string | null {
+  const league = Array.isArray(payload?.leagues) ? payload.leagues[0] : null;
+  const candidates = [league?.logo, ...(Array.isArray(league?.logos) ? league.logos.map((logo: any) => logo?.href) : [])];
+  return candidates.map(safeProviderImage).find((href): href is string => href !== null) ?? null;
+}
+
 /** Normalize scoreboards, not standings; missing/invalid payloads are failures. */
 export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
   if (!Array.isArray(payload?.events)) throw new Error('Invalid ESPN scoreboard response: events array missing');
+  const leagueLogo = reportedLeagueLogo(payload);
   const out: SportsEvent[] = [];
   for (const event of payload.events) {
     const competitions = Array.isArray(event?.competitions) ? event.competitions : [];
@@ -66,6 +75,7 @@ export function parseEspnEvents(payload: any, meta: EspnLeague): SportsEvent[] {
         sourceId: String(id),
         source: 'espn' as const, sport: meta.kind, league: meta.slug,
         leagueName: payload.leagues?.[0]?.name || meta.name,
+        ...(leagueLogo ? { leagueLogo } : {}),
         startAt: new Date(date).toISOString(), status, detail,
         venue: competition.venue?.fullName || competition.circuit?.fullName || null,
         broadcast: broadcastName(competition),

@@ -182,6 +182,36 @@ test('a team page asks this site\u2019s own endpoint and lays out only what ESPN
   }
 });
 
+test('team tabs expose standings, news, injuries, transfers and team-matched highlights honestly', async () => {
+  const page = await mountTeam(() => Response.json(readyTeam));
+  try {
+    for (const label of ['Standings', 'Team news', 'Injuries', 'Transfers', 'Highlights']) {
+      assert.ok(page.button(label), `${label} is directly reachable from the team tabs`);
+    }
+    await page.click(page.button('Standings')!);
+    await page.settle();
+    assert.match(page.text(), /ESPN standings are currently unavailable/);
+    assert.ok(page.apiCalls().includes('/api/sports/standings/epl'));
+
+    await page.click(page.button('Team news')!);
+    await page.settle();
+    assert.match(page.text(), /Team news is unavailable right now/);
+    assert.ok(page.apiCalls().includes('/api/sports/teams/epl/359/news'));
+
+    await page.click(page.button('Injuries')!);
+    assert.match(page.text(), /Match-summary injury reports are fixture-specific/);
+    await page.click(page.button('Transfers')!);
+    assert.match(page.text(), /No verified team-specific transfer feed/);
+
+    await page.click(page.button('Highlights')!);
+    await page.settle();
+    assert.match(page.text(), /No team-matched clips are available/);
+    assert.ok(page.apiCalls().some((url) => url.startsWith('/api/sports/highlights?index=1&kind=match&league=epl')));
+  } finally {
+    await page.unmount();
+  }
+});
+
 test('a team page says which part ESPN refused, and keeps the rest', async () => {
   const partial: TeamBoard = {
     ...readyTeam,

@@ -56,6 +56,8 @@ test('ScoreHub uses same-origin feeds, displays real scores and standings, and f
     assert.ok(urls.includes('/api/sports/standings/epl'));
     assert.ok(urls.includes('/api/sports/matches/ncaaw/123'));
     assert.equal(doc.querySelectorAll('.match-card').length, 1);
+    assert.equal(doc.querySelector('.match-card .full-match-link').getAttribute('href'), '/scorehub/match.htm?league=ncaaw&eventId=123');
+    assert.equal(doc.querySelector('.featured-match .event-list a').getAttribute('href'), '/scorehub/match.htm?league=ncaaw&eventId=123');
     assert.match(doc.querySelector('#matchList').textContent, /Away[\s\S]*25 - 30[\s\S]*Home/);
     assert.doesNotMatch(doc.querySelector('#matchList').textContent, /Fake/);
     assert.match(doc.querySelector('.matches-panel h2').textContent, /partial/);

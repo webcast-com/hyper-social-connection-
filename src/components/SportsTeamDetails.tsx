@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, PlayCircle } from 'lucide-react';
 import EspnResponseDetails from './EspnResponseDetails';
 import { formatPredictionKickoff } from '@/lib/sports';
 import { competitionCountry } from '@/lib/sports-navigation';
@@ -11,9 +11,13 @@ import { matchHref } from '@/lib/espn-match';
 import { athleteHref } from '@/lib/espn-athlete';
 import { teamHref, validEntityId, validTeamBoard, type TeamBoard, type TeamFixture, type TeamRosterEntry, type TeamSide } from '@/lib/espn-team';
 import { browserTeamBoard } from '@/lib/espn-browser';
+import { isStandingsBoard, type StandingsBoard } from '@/lib/espn-standings';
+import type { SportsHighlightClip } from '@/lib/espn-highlights';
+import type { SportsNewsArticle } from '@/lib/espn-news';
 
 /**
- * One team's page: identity, fixtures and squad.
+ * One team's page: identity, standings, team news, fixture-matched highlights,
+ * fixtures and squad, with explicit empty states for data ESPN does not publish.
  *
  * Its own component in the team detail stack — it does not render through the
  * match details card, the league table or the leaders board, and none of them
@@ -37,7 +41,7 @@ import { browserTeamBoard } from '@/lib/espn-browser';
 const transportLabel = (transport: 'browser' | 'server' | undefined) =>
   transport === 'browser' ? 'Asked by this browser' : 'Asked by this site’s server';
 
-const sections = [['overview', 'Overview'], ['fixtures', 'Fixtures & results'], ['squad', 'Squad']] as const;
+const sections = [['overview', 'Overview'], ['standings', 'Standings'], ['news', 'Team news'], ['injuries', 'Injuries'], ['transfers', 'Transfers'], ['highlights', 'Highlights'], ['fixtures', 'Fixtures & results'], ['squad', 'Squad']] as const;
 type Section = typeof sections[number][0];
 
 /** How many fixtures are listed per group; the board itself is bounded at 60. */
@@ -97,10 +101,11 @@ function FixtureRow({ fixture, league, showScore }: { fixture: TeamFixture; leag
   const sides = [fixture.home, fixture.away].filter((side): side is TeamSide => !!side);
   return <li className="min-w-0 border-t border-white/[0.07] py-3 first:border-t-0">
     <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <Link href={matchHref({ league, eventId: fixture.id })} prefetch={false} className="inline-flex min-h-11 min-w-0 items-center gap-2 text-sm hover:underline">
-        {sides.length === 2 ? <span className="min-w-0 break-words"><SideName side={sides[0]} league={league} /> <span className="text-gray-400">v</span> <SideName side={sides[1]} league={league} /></span>
-          : <span className="min-w-0 break-words">{fixture.opponent ? <>vs <SideName side={fixture.opponent} league={league} /></> : 'Opponent not reported'}</span>}
-      </Link>
+      <span className="min-w-0 break-words text-sm">
+        {sides.length === 2 ? <><SideName side={sides[0]} league={league} /> <span className="text-gray-400">v</span> <SideName side={sides[1]} league={league} /></>
+          : fixture.opponent ? <>vs <SideName side={fixture.opponent} league={league} /></> : 'Opponent not reported'}
+      </span>
+      <Link href={matchHref({ league, eventId: fixture.id })} prefetch={false} className="inline-flex min-h-11 shrink-0 items-center text-xs font-semibold text-fuchsia-300 hover:underline">Match details</Link>
       {showScore && <span className="shrink-0 text-sm font-black tabular-nums">{sides.map((side) => side.score ?? '—').join(' – ')}</span>}
     </div>
     <p className="mt-1 break-words text-xs text-gray-400" suppressHydrationWarning>
@@ -139,6 +144,10 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
   const [loading, setLoading] = useState(!initial.team);
   const [error, setError] = useState('');
   const [failure, setFailure] = useState<TeamBoard['sources'] | null>(null);
+  const [standings, setStandings] = useState<StandingsBoard | null>(null);
+  const [news, setNews] = useState<{ status: string; articles: SportsNewsArticle[] } | null>(null);
+  const [clips, setClips] = useState<SportsHighlightClip[] | null>(null);
+  const [sectionLoading, setSectionLoading] = useState(false);
   const request = useRef<AbortController | null>(null);
   const sectionId = useId();
 
@@ -186,6 +195,56 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
   const lastResult = results[0] ?? null;
   const partLabel = (part: string) => part === 'info' ? 'team identity' : part === 'schedule' ? 'fixtures' : 'the squad';
 
+  const loadSection = async (id: Section) => {
+    setSection(id);
+    if (id === 'standings' && !standings) {
+      setSectionLoading(true);
+      try {
+        const response = await fetch(`/api/sports/standings/${encodeURIComponent(reference.league)}`, { cache: 'no-store' });
+        const data: unknown = await response.json();
+        if (response.ok && isStandingsBoard(data, reference.league, null)) {
+          setStandings(data);
+        } else {
+          setStandings({ league: reference.league, requestedSeason: null, season: null, status: 'unavailable', groups: [], fetchedAt: new Date().toISOString(), source: { ok: false, url: '', httpStatus: response.status } });
+        }
+      } catch {
+        setStandings({ league: reference.league, requestedSeason: null, season: null, status: 'unavailable', groups: [], fetchedAt: new Date().toISOString(), source: { ok: false, url: '', httpStatus: null } });
+      } finally {
+        setSectionLoading(false);
+      }
+    }
+    if (id === 'news' && !news) {
+      setSectionLoading(true);
+      try {
+        const response = await fetch(`/api/sports/teams/${encodeURIComponent(reference.league)}/${encodeURIComponent(reference.teamId)}/news`, { cache: 'no-store' });
+        const data = await response.json();
+        setNews(response.ok && data && Array.isArray(data.articles) && typeof data.status === 'string'
+          ? data
+          : { status: 'unavailable', articles: [] });
+      } catch {
+        setNews({ status: 'unavailable', articles: [] });
+      } finally {
+        setSectionLoading(false);
+      }
+    }
+    if (id === 'highlights' && !clips) {
+      setSectionLoading(true);
+      try {
+        const response = await fetch(`/api/sports/highlights?index=1&kind=match&league=${encodeURIComponent(reference.league)}&days=365&limit=60`, { cache: 'no-store' });
+        const data = await response.json();
+        const rows = data?.index?.match;
+        const normalize = (value: string) => value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase();
+        const exactTeamMatch = (clip: SportsHighlightClip) => !!team && [clip.home, clip.away].some((side) =>
+          normalize(side) === normalize(team.name) || (!!team.abbreviation && normalize(side) === normalize(team.abbreviation)));
+        setClips(response.ok && Array.isArray(rows) ? rows.filter(exactTeamMatch).slice(0, 12) : []);
+      } catch {
+        setClips([]);
+      } finally {
+        setSectionLoading(false);
+      }
+    }
+  };
+
   return <div className="theme-player mx-auto max-w-5xl p-3 text-white sm:p-5">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
       <Link href={safeSportsReturnPath(returnTo)} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-fuchsia-300"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to sports scores</Link>
@@ -230,13 +289,31 @@ export default function SportsTeamDetails({ initial, reference, returnTo }: { in
         : 'ESPN team details are currently unavailable.'}
       {' '}No sample squad, record or fixtures are substituted.
     </p> : <>
-      <div role="group" aria-label="Team detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 gap-2 overflow-x-auto rounded-2xl bg-[#0f0b1c]/90 py-2">
-        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => setSection(id)} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold outline-none transition focus-visible:ring-2 focus-visible:ring-fuchsia-300 ${section === id ? 'border-fuchsia-200 bg-fuchsia-200 text-gray-950' : 'border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]'}`}>{label}</button>)}
+      <div role="group" aria-label="Team detail sections" className="sticky top-16 z-20 mb-4 flex min-w-0 flex-wrap gap-2 rounded-2xl bg-[#0f0b1c]/90 py-2">
+        {sections.map(([id, label]) => <button key={id} type="button" aria-pressed={section === id} aria-controls={sectionId} onClick={() => void loadSection(id)} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-bold outline-none transition focus-visible:ring-2 focus-visible:ring-fuchsia-300 ${section === id ? 'border-fuchsia-200 bg-fuchsia-200 text-gray-950' : 'border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08]'}`}>{label}</button>)}
       </div>
 
-      <section id={sectionId} aria-label={sections.find(([id]) => id === section)?.[1]} aria-busy={loading} className="min-w-0 rounded-3xl border border-white/[0.07] bg-white/[0.03] p-3 sm:p-5">
+      <section id={sectionId} aria-label={sections.find(([id]) => id === section)?.[1]} aria-busy={loading || sectionLoading} className="min-w-0 rounded-3xl border border-white/[0.07] bg-white/[0.03] p-3 sm:p-5">
         <h2 className="mb-4 text-lg font-bold">{sections.find(([id]) => id === section)?.[1]}</h2>
         {missing.length > 0 && <p className="mb-3 rounded-xl bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200">ESPN did not answer for {missing.map(partLabel).join(' or ')}. What is shown below is what was reported.</p>}
+
+        {sectionLoading && <p role="status" className="mb-3 rounded-xl border border-white/10 p-4 text-sm text-gray-300">Loading ESPN {section === 'news' ? 'team news' : section}…</p>}
+
+        {section === 'standings' && !sectionLoading && (standings?.status === 'ready' ? <div className="space-y-5">
+          <p className="text-xs text-gray-400">ESPN standings · {standings.season?.label ?? standings.season?.year ?? 'current season'} · team row highlighted when present.</p>
+          {standings.groups.map((group) => <div key={group.id} className="min-w-0 overflow-hidden rounded-2xl border border-white/[0.08]">
+            <h3 className="bg-white/[0.05] px-3 py-2 text-sm font-bold">{group.label}</h3>
+            <div className="overflow-x-auto"><table className="w-full min-w-max text-left text-xs"><thead className="text-gray-400"><tr><th className="px-3 py-2">Team</th>{group.columns.map((column) => <th key={column.name} title={column.description} className="px-3 py-2">{column.label}</th>)}</tr></thead><tbody>{group.rows.map((row) => <tr key={row.teamId} className={`border-t border-white/[0.06] ${row.teamId === reference.teamId ? 'bg-fuchsia-300/10 font-bold text-fuchsia-100' : ''}`}><th scope="row" className="px-3 py-2"><Link href={`/sports/teams/${encodeURIComponent(reference.league)}/${encodeURIComponent(row.teamId)}`} prefetch={false} className="inline-flex min-h-10 items-center gap-2 hover:underline">{row.rank && <span className="text-gray-400">{row.rank}</span>}{row.team}</Link>{row.note && <span className="ml-2 text-gray-400">{row.note}</span>}</th>{group.columns.map((column) => <td key={column.name} className="px-3 py-2 tabular-nums">{row.values[column.name] ?? '—'}</td>)}</tr>)}</tbody></table></div>
+          </div>)}
+        </div> : <EmptySection>{standings?.status === 'empty' ? 'ESPN answered, but no standings table is published for this competition right now.' : standings ? 'ESPN standings are currently unavailable for this competition.' : 'Open Standings to load the league table.'}</EmptySection>)}
+
+        {section === 'news' && !sectionLoading && (news?.status === 'ready' ? <ul className="grid min-w-0 gap-3 md:grid-cols-2">{news.articles.map((article) => <li key={article.id} className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4"><a href={article.url} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex min-h-11 items-center text-sm font-bold text-fuchsia-200 hover:underline">{article.headline}</a>{article.description && <p className="mt-1 line-clamp-3 text-sm text-gray-300">{article.description}</p>}<p className="mt-2 text-xs text-gray-500">ESPN · {article.leagueName}{article.published ? ` · ${formatPredictionKickoff(article.published)}` : ''}</p></li>)}</ul> : <EmptySection>{news?.status === 'empty' ? 'ESPN’s current competition news feed has no articles explicitly mentioning this team.' : news ? 'Team news is unavailable right now. No unverified headlines are substituted.' : 'Open Team news to load recent ESPN articles mentioning this team.'}</EmptySection>)}
+
+        {section === 'injuries' && <EmptySection>ESPN does not provide a verified team-wide injury list for this team page. Match-summary injury reports are fixture-specific, so they are not presented here as a current team injury roster.</EmptySection>}
+
+        {section === 'transfers' && <EmptySection>No verified team-specific transfer feed is available for this competition. Transfer rumours or league-wide articles are not presented as confirmed team transfers.</EmptySection>}
+
+        {section === 'highlights' && !sectionLoading && (clips?.length ? <ul className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <li key={clip.id} className="min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">{clip.thumbnail && (clip.page ? <a href={clip.page} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Watch ${clip.title}`} className="block"><img src={clip.thumbnail} alt="" loading="lazy" decoding="async" className="aspect-video w-full object-cover" /></a> : <div><img src={clip.thumbnail} alt="" loading="lazy" decoding="async" className="aspect-video w-full object-cover" /></div>)}<div className="p-3"><p className="line-clamp-2 text-sm font-bold">{clip.title}</p><p className="mt-1 text-xs text-gray-400">{clip.home} vs {clip.away} · ESPN</p>{clip.page && <a href={clip.page} target="_blank" rel="noopener noreferrer nofollow" className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-fuchsia-200 hover:underline"><PlayCircle aria-hidden="true" className="h-4 w-4" />Watch highlight</a>}</div></li>)}</ul> : <EmptySection>{clips ? 'No team-matched clips are available in the ESPN highlight index yet. Match videos are shown only when the indexed home or away team exactly matches.' : 'Open Highlights to check ESPN’s indexed match clips for this team.'}</EmptySection>)}
 
         {section === 'overview' && <>
           <Facts facts={[
