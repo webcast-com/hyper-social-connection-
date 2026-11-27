@@ -36,6 +36,8 @@ export type SportsEvent = {
   sport: SportKind;
   league: string;
   leagueName: string;
+  /** ESPN's reported competition crest, when the scoreboard metadata includes one. */
+  leagueLogo?: string | null;
   status: EventStatus;
   startAt: string;
   venue?: string | null;

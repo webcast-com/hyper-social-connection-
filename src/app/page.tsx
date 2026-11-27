@@ -692,23 +692,25 @@ export default async function Home() {
   };
 
   const leagueCounts = new Map<string, HomeLeagueItem>();
-  const addLeagueCount = (rawName?: string | null) => {
+  const addLeagueCount = (rawName?: string | null, reportedLogo?: string | null) => {
     const name = rawName?.trim();
     if (!name) return;
     const key = name.toLowerCase();
+    const logo = reportedLogo || resolveLeagueLogo(key);
     const existing = leagueCounts.get(key);
     if (existing) {
       existing.count += 1;
+      existing.logo ||= logo;
     } else {
       leagueCounts.set(key, {
         id: key,
         name,
         count: 1,
-        logo: resolveLeagueLogo(key),
+        logo,
       });
     }
   };
-  for (const event of sportsBoard.events) addLeagueCount(event.leagueName || event.league);
+  for (const event of sportsBoard.events) addLeagueCount(event.leagueName || event.league, event.leagueLogo);
   for (const pred of sportsPredictions) addLeagueCount(pred.competition || pred.federation);
   const homeLeagues = Array.from(leagueCounts.values()).sort((a, b) => b.count - a.count);
   const totalBoardCount = homeLeagues.reduce((sum, item) => sum + item.count, 0);
