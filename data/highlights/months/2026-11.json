@@ -14,5 +14,6 @@
 "2026-11-24":{"n":262,"cube":{"league|afcon|":1,"league|mls|":2,"league|nba|":8,"league|nfl|":11,"league|ucl|":3,"match|mls|final":4,"match|nba|final":98,"match|ncaam|final":45,"match|ncaaw|final":27,"match|nfl|final":13,"match|nhl|final":45,"match|ucl|final":5}},
 "2026-11-25":{"n":208,"cube":{"league|epl|":1,"league|laliga|":1,"league|mls|":1,"league|nba|":5,"league|nfl|":3,"league|ucl|":6,"match|nba|final":7,"match|ncaam|final":98,"match|ncaam|live":18,"match|ncaaw|final":50,"match|ncaaw|live":7,"match|nhl|live":7,"match|ucl|final":4}},
 "2026-11-26":{"n":357,"cube":{"league|nba|":10,"league|nfl|":10,"league|ucl|":2,"match|nba|final":78,"match|ncaam|final":93,"match|ncaam|live":2,"match|ncaaw|final":24,"match|nfl|final":24,"match|nhl|final":114}},
-"2026-11-27":{"n":73,"cube":{"league|epl|":3,"league|laliga|":2,"league|nfl|":9,"match|epl|final":1,"match|laliga|final":4,"match|ncaam|final":35,"match|ncaam|live":4,"match|ncaaw|final":1,"match|ncaaw|live":4,"match|nfl|final":7,"match|nhl|live":3}}
+"2026-11-27":{"n":73,"cube":{"league|epl|":3,"league|laliga|":2,"league|nfl|":9,"match|epl|final":1,"match|laliga|final":4,"match|ncaam|final":35,"match|ncaam|live":4,"match|ncaaw|final":1,"match|ncaaw|live":4,"match|nfl|final":7,"match|nhl|live":3}},
+"2026-11-28":{"n":8,"cube":{"league|mls|":1,"league|nba|":7}}
 }}
